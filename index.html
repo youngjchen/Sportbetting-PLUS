@@ -66,19 +66,44 @@
   .btn:hover{border-color:#3a4756;background:#222a36;}
   .btn.danger:hover{border-color:var(--danger);color:var(--danger);}
 
-  /* ---------- canvas ---------- */
+  /* ---------- canvas viewport + world ---------- */
   #canvas{
-    position:relative;flex:1 1 auto;overflow:auto;
+    position:relative;flex:1 1 auto;overflow:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none;
+    cursor:grab;
+  }
+  #canvas.panning{cursor:grabbing;}
+  #world{
+    position:absolute;top:0;left:0;width:0;height:0;
+    transform-origin:0 0;will-change:transform;
+  }
+  /* grid drawn on the viewport, scaled via JS background-size */
+  #canvas{
     background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
-    background-size:20px 20px;
-    touch-action:pan-x pan-y;
-    -webkit-overflow-scrolling:touch;
+    background-size:20px 20px;background-position:0 0;
   }
   #empty{
     position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    color:var(--ink-dim);font-size:15px;pointer-events:none;text-align:center;line-height:1.7;
+    color:var(--ink-dim);font-size:15px;pointer-events:none;text-align:center;line-height:1.7;z-index:1;
   }
   #empty b{color:#aeb9c8;font-weight:700;}
+
+  /* zoom controls (bottom-right of canvas) */
+  #zoomctl{
+    position:absolute;right:12px;bottom:12px;z-index:200;display:flex;flex-direction:column;gap:6px;
+  }
+  #zoomctl button{
+    width:42px;height:42px;border-radius:11px;border:1px solid var(--line);
+    background:rgba(21,26,34,.92);color:var(--ink);font-size:21px;font-weight:700;line-height:1;
+    cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.4);
+    display:grid;place-items:center;transition:.12s;touch-action:none;
+  }
+  #zoomctl button:hover{border-color:#3a4756;background:rgba(34,42,54,.95);}
+  #zoomctl button.fit{font-size:15px;}
+  #zoomctl .zlabel{
+    text-align:center;font-family:"Oswald";font-size:11px;color:var(--ink-dim);
+    background:rgba(21,26,34,.92);border:1px solid var(--line);border-radius:8px;padding:2px 0;backdrop-filter:blur(6px);
+  }
 
   /* single token */
   .token{
@@ -251,6 +276,48 @@
   .chip:hover{background:#222a36;transform:translateY(-1px);}
   .chip:active{cursor:grabbing;}
 
+  /* tray collapse */
+  #tray.collapsed{max-height:none;}
+  #tray.collapsed .tabs,#tray.collapsed .chips{display:none;}
+  .tray-handle{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:7px;cursor:pointer;color:var(--ink-dim);font-size:12px;
+    border-bottom:1px solid transparent;transition:.12s;
+  }
+  #tray.collapsed .tray-handle{border-bottom:none;}
+  .tray-handle:hover{color:var(--ink);}
+  .tray-handle .bar{width:34px;height:4px;border-radius:3px;background:#3a4756;}
+  .tray-handle .lbl{font-family:"Oswald";letter-spacing:.06em;}
+
+  /* floating overflow menu */
+  #moreWrap{position:relative;}
+  #moreMenu{
+    position:absolute;right:0;top:calc(100% + 6px);z-index:300;display:none;flex-direction:column;gap:2px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;
+    box-shadow:0 16px 40px rgba(0,0,0,.55);min-width:150px;
+  }
+  #moreMenu.show{display:flex;}
+  #moreMenu button{
+    text-align:left;font-family:"Noto Sans TC";font-size:14px;color:var(--ink);
+    background:transparent;border:none;border-radius:8px;padding:9px 12px;cursor:pointer;white-space:nowrap;
+  }
+  #moreMenu button:hover{background:var(--panel-2);}
+  #moreMenu button.danger:hover{color:var(--danger);}
+  #moreMenu .sep{height:1px;background:var(--line);margin:4px 2px;}
+
+  /* bigger touch targets on coarse pointers (phones/tablets) */
+  @media (pointer:coarse){
+    .light{width:22px;height:22px;}
+    .light.add{font-size:16px;}
+    .lights{gap:7px;}
+    .pick button{padding:7px 13px;font-size:14px;}
+    .ico{width:30px;height:30px;font-size:17px;}
+    .chip{padding:11px 16px;font-size:15px;}
+    .sec .val{width:46px;font-size:13px;padding:5px 2px;}
+    .grip{padding:13px 12px 11px;}
+    #zoomctl button{width:48px;height:48px;}
+  }
+
   /* drag ghost */
   #ghost{
     position:fixed;pointer-events:none;z-index:10000;font-weight:700;font-size:15px;
@@ -324,25 +391,24 @@
 
   /* ---------- mobile / narrow screens ---------- */
   @media (max-width:760px){
-    header{flex-wrap:wrap;gap:8px;padding:10px 12px;}
+    header{gap:8px;padding:10px 12px;}
     .logo{font-size:17px;}
     .logo small{display:none;}
     .hint{display:none;}
-    .spacer{display:none;}
-    .btn{padding:9px 12px;font-size:14px;flex:1 1 auto;text-align:center;}
+    .btn{padding:10px 13px;font-size:14px;text-align:center;}
+    #addBlank{flex:0 0 auto;}
     #tray{max-height:34vh;}
     .tab{padding:9px 14px;font-size:15px;}
     .chips{gap:11px;padding:12px;}
     .chip{font-size:15px;padding:11px 16px;}      /* bigger touch target */
-    /* enlarge interactive bits inside cards for fingers */
-    .light{width:20px;height:20px;}
-    .light.add{font-size:15px;}
+    .light{width:22px;height:22px;}
+    .light.add{font-size:16px;}
     .ico{width:30px;height:30px;font-size:17px;}
-    .pick button{padding:7px 12px;font-size:14px;}
-    .resize{width:26px;height:26px;}
+    .pick button{padding:8px 13px;font-size:14px;}
+    .resize{width:28px;height:28px;}
+    #moreMenu button{padding:12px 14px;font-size:15px;}
   }
   @media (hover:none){
-    /* on touch devices, show resize/add affordances at full opacity */
     .resize{opacity:.7;}
   }
 </style>
@@ -351,21 +417,37 @@
   <header>
     <div class="logo"><span class="dot"></span>排盤板 <small>中職 · 日職 · 韓職 · MLB</small></div>
     <div class="spacer"></div>
-    <button class="btn" id="undoBtn" title="復原 (Ctrl/⌘+Z)" disabled>↶ 復原</button>
-    <button class="btn" id="layoutBtn" title="依聯盟自動排版">⊞ 排版</button>
-    <button class="btn" id="exportBtn" title="匯出文字總結">⎘ 匯出</button>
-    <button class="btn" id="pngBtn" title="存成圖片">⤓ 圖片</button>
     <button class="btn" id="addBlank">+ 空白卡</button>
-    <button class="btn danger" id="clearAll">清空</button>
+    <button class="btn" id="fitBtn" title="適中縮放：看到全部卡片">⊡ 適中</button>
+    <div id="moreWrap">
+      <button class="btn" id="moreBtn" title="更多">⋯</button>
+      <div id="moreMenu">
+        <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
+        <button id="layoutBtn">⊞ 依聯盟排版</button>
+        <div class="sep"></div>
+        <button id="exportBtn">⎘ 匯出文字</button>
+        <button id="pngBtn">⤓ 存成圖片</button>
+        <div class="sep"></div>
+        <button id="clearAll" class="danger">✕ 清空這天</button>
+      </div>
+    </div>
   </header>
 
   <div id="datebar"></div>
 
   <div id="canvas">
-    <div id="empty">把下方的隊伍標籤<b>拖上來</b>，<br>再把兩隊<b>疊在一起</b>就會吸成一場對戰</div>
+    <div id="empty">把下方的隊伍標籤<b>拖上來</b>，<br>再把兩隊<b>疊在一起</b>就會吸成一場對戰<br><span style="font-size:13px">單指拖空白＝移動畫面　·　兩指＝縮放</span></div>
+    <div id="world"></div>
+    <div id="zoomctl">
+      <button id="zoomIn" title="放大">＋</button>
+      <div class="zlabel" id="zlabel">100%</div>
+      <button id="zoomOut" title="縮小">－</button>
+      <button class="fit" id="fitBtn2" title="適中縮放">⊡</button>
+    </div>
   </div>
 
   <div id="tray">
+    <div class="tray-handle" id="trayHandle"><span class="bar"></span><span class="lbl" id="trayLbl">隊伍 ▾</span></div>
     <div class="tabs" id="tabs"></div>
     <div class="chips" id="chips"></div>
   </div>
@@ -401,6 +483,55 @@ let activeTab = "cpbl";
 let uid = 1;
 const $ = s => document.querySelector(s);
 const canvas = $("#canvas"), ghost = $("#ghost"), emptyMsg = $("#empty");
+const world = $("#world");
+
+/* ---------------- viewport (pan + zoom) ---------------- */
+// view stored per-board in state.view = {x,y,k}
+let view = { x:0, y:0, k:1 };
+const ZMIN = 0.3, ZMAX = 2.5;
+function applyView(){
+  world.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`;
+  // grid follows pan & zoom
+  const g = GRID*view.k;
+  canvas.style.backgroundSize = `${g}px ${g}px`;
+  canvas.style.backgroundPosition = `${view.x}px ${view.y}px`;
+  const zl = $("#zlabel"); if(zl) zl.textContent = Math.round(view.k*100)+"%";
+}
+// screen (client) coords -> world coords
+function screenToWorld(cx, cy){
+  const r = canvas.getBoundingClientRect();
+  return { x:(cx - r.left - view.x)/view.k, y:(cy - r.top - view.y)/view.k };
+}
+function setZoom(k, centerClientX, centerClientY){
+  k = Math.max(ZMIN, Math.min(ZMAX, k));
+  const r = canvas.getBoundingClientRect();
+  const cx = (centerClientX!=null?centerClientX:r.left+r.width/2);
+  const cy = (centerClientY!=null?centerClientY:r.top+r.height/2);
+  // keep the point under the cursor fixed while zooming
+  const wx = (cx - r.left - view.x)/view.k;
+  const wy = (cy - r.top - view.y)/view.k;
+  view.k = k;
+  view.x = cx - r.left - wx*view.k;
+  view.y = cy - r.top - wy*view.k;
+  applyView(); saveViewSoon();
+}
+function nudgeZoom(factor){ setZoom(view.k*factor); }
+// fit all items into view with padding
+function fitView(){
+  const items = state.items;
+  const r = canvas.getBoundingClientRect();
+  if(!items.length){ view={x:r.width/2-20,y:30,k:1}; applyView(); saveViewSoon(); return; }
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  items.forEach(it=>{ const b=itemBox(it); minX=Math.min(minX,it.x); minY=Math.min(minY,it.y); maxX=Math.max(maxX,it.x+b.w); maxY=Math.max(maxY,it.y+b.h); });
+  const pad=40, bw=maxX-minX, bh=maxY-minY;
+  const k = Math.max(ZMIN, Math.min(ZMAX, Math.min((r.width-pad*2)/bw, (r.height-pad*2)/bh, 1.4)));
+  view.k = k;
+  view.x = (r.width - bw*k)/2 - minX*k;
+  view.y = pad - minY*k;
+  applyView(); saveViewSoon();
+}
+let _vt=null;
+function saveViewSoon(){ if(_vt) clearTimeout(_vt); _vt=setTimeout(()=>{ state.view={...view}; save(); },400); }
 
 /* ---------------- undo history ---------------- */
 const history = [];
@@ -433,12 +564,15 @@ function ensureBoard(date){
 }
 function syncStateToDoc(){
   const b = ensureBoard(doc.activeDate);
-  b.items = state.items; b.summaryPos = state.summaryPos;
+  b.items = state.items; b.summaryPos = state.summaryPos; b.view = state.view || view;
 }
 function loadActiveBoard(){
   const b = ensureBoard(doc.activeDate);
   state.items = b.items; state.summaryPos = b.summaryPos;
+  state.view = b.view || null;
+  view = state.view ? {...state.view} : { x:0, y:0, k:1 };
   state.items.forEach(i=>{ if(i.id>=uid) uid=i.id+1; });
+  if(typeof applyView==="function") applyView();
 }
 
 /* ---------------- persistence (graceful, optional) ---------------- */
@@ -513,7 +647,7 @@ function usedTeams(){
 
 /* ---------------- rendering items ---------------- */
 function render(){
-  [...canvas.querySelectorAll(".token,.card")].forEach(n=>n.remove());
+  [...world.querySelectorAll(".token,.card")].forEach(n=>n.remove());
   emptyMsg.style.display = state.items.length ? "none" : "flex";
   state.items.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
   renderSummary();
@@ -527,7 +661,7 @@ function renderToken(it){
   el.style.left = it.x+"px"; el.style.top = it.y+"px";
   el.style.borderLeftColor = it.color;
   el.addEventListener("pointerdown", e=> startItemDrag(e, it, el));
-  canvas.appendChild(el);
+  world.appendChild(el);
 }
 
 function normMatch(it){
@@ -568,9 +702,18 @@ function renderCard(it){
   del.onclick = ()=>{ snapshot(); state.items = state.items.filter(x=>x.id!==it.id); save(); render(); };
   const col = document.createElement("div"); col.className="ico collapse no-drag"; col.title=it.collapsed?"展開":"收合";
   col.textContent = it.collapsed?"▸":"▾";
-  col.onclick = ()=>{ it.collapsed=!it.collapsed; save(); render(); };
+  col.onclick = ()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
   grip.append(vs,swap,col,del);
   grip.addEventListener("pointerdown", e=>{ if(e.target.closest(".no-drag")) return; startItemDrag(e,it,el); });
+  // double-tap / double-click the header to collapse/expand
+  let lastTapG=0;
+  grip.addEventListener("pointerup", e=>{
+    if(e.target.closest(".no-drag")) return;
+    if(drag && drag.moved) return; // was a drag, not a tap
+    const now=Date.now();
+    if(now-lastTapG < 320){ snapshot(); it.collapsed=!it.collapsed; save(); render(); lastTapG=0; }
+    else lastTapG=now;
+  });
   el.appendChild(grip);
 
   // ---- helpers ----
@@ -661,7 +804,7 @@ function renderCard(it){
   rz.addEventListener("pointerdown", e=> startResize(e, it, el));
   el.appendChild(rz);
 
-  canvas.appendChild(el);
+  world.appendChild(el);
 }
 
 function mkTeam(it,side){
@@ -731,7 +874,8 @@ function renderSummary(){
   const {strong, conflicts} = collectSummary();
   if(strong.length===0 && conflicts.length===0) return;
 
-  const pos = state.summaryPos || {x: canvas.scrollLeft + Math.max(20, canvas.clientWidth-320), y: canvas.scrollTop+18};
+  const r = canvas.getBoundingClientRect();
+  const pos = state.summaryPos || {x: Math.max(12, r.width-312), y: 12};
   const box = document.createElement("div"); box.id="summary";
   box.style.left = pos.x+"px"; box.style.top = pos.y+"px";
 
@@ -773,7 +917,7 @@ function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 
 let sumDrag = null;
 function startSummaryDrag(e){
-  e.preventDefault();
+  e.preventDefault(); e.stopPropagation();
   const box = canvas.querySelector("#summary");
   const r = box.getBoundingClientRect();
   sumDrag = { box, offX:e.clientX-r.left, offY:e.clientY-r.top };
@@ -782,19 +926,19 @@ function startSummaryDrag(e){
 function moveSummaryDrag(e){
   if(!sumDrag) return;
   const cr = canvas.getBoundingClientRect();
-  const x = Math.max(0, e.clientX-cr.left-sumDrag.offX + canvas.scrollLeft);
-  const y = Math.max(0, e.clientY-cr.top -sumDrag.offY + canvas.scrollTop);
+  const x = Math.max(0, Math.min(cr.width-60, e.clientX-cr.left-sumDrag.offX));
+  const y = Math.max(0, Math.min(cr.height-40, e.clientY-cr.top -sumDrag.offY));
   state.summaryPos = {x,y};
   sumDrag.box.style.left = x+"px"; sumDrag.box.style.top = y+"px";
 }
 function endSummaryDrag(){ if(sumDrag){ sumDrag=null; save(); } }
 
-/* ---------------- snapping ---------------- */
-// on-screen footprint of an item (includes CSS scale transform)
+/* ---------------- snapping (all in WORLD coords) ---------------- */
+// world-space footprint of an item (offsetWidth is unaffected by the world transform)
 function itemBox(it){
   const id = typeof it==="object" ? it.id : it;
   const obj = typeof it==="object" ? it : state.items.find(s=>s.id===id);
-  const el = canvas.querySelector(`[data-id="${id}"]`);
+  const el = world.querySelector(`[data-id="${id}"]`);
   const s = (obj && obj.scale) ? obj.scale : 1;
   if(!el) return {w:0,h:0};
   return {w:el.offsetWidth*s, h:el.offsetHeight*s};
@@ -828,16 +972,19 @@ let drag = null;
 function startItemDrag(e, it, el){
   if(e.target.closest(".no-drag")) return;
   e.preventDefault();
-  const r = el.getBoundingClientRect();
-  drag = { it, el, offX:e.clientX-r.left, offY:e.clientY-r.top, moved:false, pid:e.pointerId };
+  // grab offset in WORLD space
+  const w0 = screenToWorld(e.clientX, e.clientY);
+  drag = { it, el, offX:w0.x-it.x, offY:w0.y-it.y, moved:false, pid:e.pointerId, snapped:false };
   el.classList.add("dragging");
   try{ el.setPointerCapture(e.pointerId); }catch(_){}
 }
 function moveItemDrag(e){
   if(!drag) return;
-  const cr = canvas.getBoundingClientRect();
-  let x = e.clientX - cr.left - drag.offX + canvas.scrollLeft;
-  let y = e.clientY - cr.top  - drag.offY + canvas.scrollTop;
+  const w0 = screenToWorld(e.clientX, e.clientY);
+  let x = w0.x - drag.offX;
+  let y = w0.y - drag.offY;
+
+  if(!drag.snapped){ snapshot(); drag.snapped=true; } // one undo step per drag
 
   // live snap for cards (tokens snap on drop so merge stays easy)
   if(drag.it.type==="match"){
@@ -848,10 +995,10 @@ function moveItemDrag(e){
   drag.el.style.left = x+"px"; drag.el.style.top = y+"px";
 
   // highlight merge target for single tokens
-  canvas.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
+  world.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
   if(drag.it.type==="single"){
     const t = findMergeTarget(drag.it);
-    if(t){ const te = canvas.querySelector(`.token[data-id="${t.id}"]`); if(te) te.classList.add("merge-target"); }
+    if(t){ const te = world.querySelector(`.token[data-id="${t.id}"]`); if(te) te.classList.add("merge-target"); }
   }
 }
 function endItemDrag(e){
@@ -859,11 +1006,11 @@ function endItemDrag(e){
   const it = drag.it;
   if(it.type==="single"){
     const target = findMergeTarget(it);
-    if(target){ snapshot(); mergeTokens(target, it); drag=null; save(); render(); return; }
+    if(target){ mergeTokens(target, it); drag=null; save(); render(); return; }
   }
   const p = snap(it, it.x, it.y); it.x=p.x; it.y=p.y;
   drag.el.classList.remove("dragging");
-  canvas.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
+  world.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
   drag = null; save(); render();
 }
 function center(it){ const w = it.type==="single"?70:115, h=it.type==="single"?20:46; return {cx:it.x+w, cy:it.y+h}; }
@@ -872,6 +1019,7 @@ function center(it){ const w = it.type==="single"?70:115, h=it.type==="single"?2
 let rsz = null;
 function startResize(e, it, el){
   e.preventDefault(); e.stopPropagation();
+  snapshot();
   rsz = { it, el, startX:e.clientX, startY:e.clientY,
           startScale: it.scale || 1, baseW: el.offsetWidth, pid:e.pointerId };
   el.classList.add("resizing");
@@ -879,8 +1027,8 @@ function startResize(e, it, el){
 }
 function moveResize(e){
   if(!rsz) return;
-  // drive scale by horizontal drag relative to the card's unscaled width
-  const dx = e.clientX - rsz.startX;
+  // drive scale by horizontal drag, in world space (divide by zoom so it tracks the finger)
+  const dx = (e.clientX - rsz.startX) / view.k;
   let s = rsz.startScale + dx / rsz.baseW;
   s = Math.max(0.7, Math.min(2.4, s));
   // snap scale to clean stops for tidy alignment
@@ -936,8 +1084,11 @@ function endChipDrag(e){
   if(overCanvas || !chipDrag.moved){
     snapshot();
     let x,y;
-    if(overCanvas){ x = e.clientX-cr.left-40 + canvas.scrollLeft; y = e.clientY-cr.top-16 + canvas.scrollTop; }
-    else { const n=state.items.length; x = 40 + (n%6)*30 + canvas.scrollLeft; y = 40 + (n%6)*30 + canvas.scrollTop; }
+    if(overCanvas){ const w0 = screenToWorld(e.clientX-40*view.k, e.clientY-16*view.k); x=w0.x; y=w0.y; }
+    else { // tap-to-add: drop near top-left of current view in world coords
+      const tl = screenToWorld(cr.left+40, cr.top+40);
+      const n=state.items.length; x = tl.x + (n%6)*30; y = tl.y + (n%6)*30;
+    }
     // drop onto an existing single token => instant merge
     const tmp = {id:-1,type:"single",x,y};
     const tgt = findMergeTarget(tmp);
@@ -949,6 +1100,7 @@ function endChipDrag(e){
       state.items.push({ id:uid++, type:"single", team:chipDrag.team, color:chipDrag.color, x:p.x, y:p.y });
     }
     save(); render();
+    collapseTray(true); // auto-collapse tray after placing a team
   }
   chipDrag = null;
 }
@@ -968,7 +1120,92 @@ window.addEventListener("pointercancel", e=>{
   if(rsz){ endResize(e); }
   if(drag){ endItemDrag(e); }
   if(chipDrag){ endChipDrag(e); }
+  if(gesture.pointers.has(e.pointerId)) endGesturePointer(e);
 });
+
+/* ---------------- canvas gestures: pan (1 finger) + pinch zoom (2 fingers) ---------------- */
+const gesture = { pointers:new Map(), mode:null, startX:0, startY:0, startView:null, pinch:null, lastTap:0 };
+function isInteractive(target){
+  return !!(target.closest(".card,.token,#summary,#zoomctl,.no-drag"));
+}
+canvas.addEventListener("pointerdown", e=>{
+  // ignore presses that begin on a card/token/summary/zoom — those have their own handlers
+  if(isInteractive(e.target)) return;
+  gesture.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+
+  if(gesture.pointers.size===1){
+    gesture.mode = "pan";
+    gesture.startX = e.clientX; gesture.startY = e.clientY;
+    gesture.startView = {...view};
+    canvas.classList.add("panning");
+  } else if(gesture.pointers.size===2){
+    gesture.mode = "pinch";
+    const pts = [...gesture.pointers.values()];
+    gesture.pinch = {
+      cx:(pts[0].x+pts[1].x)/2, cy:(pts[0].y+pts[1].y)/2,
+      dist:Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y),
+      startK:view.k, startView:{...view}
+    };
+    canvas.classList.remove("panning");
+  }
+});
+canvas.addEventListener("pointermove", e=>{
+  if(!gesture.pointers.has(e.pointerId)) return;
+  gesture.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(e.cancelable) e.preventDefault();
+
+  if(gesture.mode==="pan" && gesture.pointers.size===1){
+    view.x = gesture.startView.x + (e.clientX - gesture.startX);
+    view.y = gesture.startView.y + (e.clientY - gesture.startY);
+    applyView();
+  } else if(gesture.mode==="pinch" && gesture.pointers.size>=2){
+    const pts = [...gesture.pointers.values()].slice(0,2);
+    const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    const cx = (pts[0].x+pts[1].x)/2, cy = (pts[0].y+pts[1].y)/2;
+    const r = canvas.getBoundingClientRect();
+    // world point under the pinch center at gesture start
+    const sv = gesture.pinch.startView;
+    const wx = (gesture.pinch.cx - r.left - sv.x)/sv.k;
+    const wy = (gesture.pinch.cy - r.top  - sv.y)/sv.k;
+    let k = sv.k * (dist/gesture.pinch.dist);
+    k = Math.max(ZMIN, Math.min(ZMAX, k));
+    view.k = k;
+    // keep the (moving) pinch center anchored to its world point
+    view.x = cx - r.left - wx*k;
+    view.y = cy - r.top  - wy*k;
+    applyView();
+  }
+}, {passive:false});
+function endGesturePointer(e){
+  gesture.pointers.delete(e.pointerId);
+  try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+  if(gesture.pointers.size===0){
+    // tap detection (no real move) -> double-tap empty = fit
+    if(gesture.mode==="pan"){
+      const moved = Math.hypot(e.clientX-gesture.startX, e.clientY-gesture.startY) > 6;
+      if(!moved){
+        const now=Date.now();
+        if(now-gesture.lastTap < 300){ fitView(); gesture.lastTap=0; }
+        else gesture.lastTap=now;
+      }
+    }
+    gesture.mode=null; gesture.pinch=null; canvas.classList.remove("panning");
+    saveViewSoon();
+  } else if(gesture.pointers.size===1){
+    // dropped from pinch to pan
+    const p=[...gesture.pointers.values()][0];
+    gesture.mode="pan"; gesture.startX=p.x; gesture.startY=p.y; gesture.startView={...view};
+  }
+}
+canvas.addEventListener("pointerup", endGesturePointer);
+// desktop wheel / trackpad zoom
+canvas.addEventListener("wheel", e=>{
+  if(isInteractive(e.target)) return;
+  e.preventDefault();
+  const factor = e.deltaY<0 ? 1.12 : 1/1.12;
+  setZoom(view.k*factor, e.clientX, e.clientY);
+}, {passive:false});
 
 /* ---------------- date bar ---------------- */
 function fmtDate(d){ const [y,m,dd]=d.split("-"); return `${parseInt(m)}/${parseInt(dd)}`; }
@@ -1089,15 +1326,15 @@ function autoLayout(){
     });
     colX += COL_W + COL_GAP;
   });
-  save(); render();
+  save(); render(); fitView();
 }
-$("#layoutBtn").onclick = autoLayout;
+$("#layoutBtn").onclick = ()=>{ autoLayout(); closeMore(); };
 
 /* ---------------- export PNG ---------------- */
 async function exportPNG(){
   const btn = $("#pngBtn"); const orig = btn.textContent; btn.textContent="產生中…";
   try{
-    const cards = [...canvas.querySelectorAll(".card,.token")];
+    const cards = [...world.querySelectorAll(".card,.token")];
     if(!cards.length){ alert("畫布上沒有東西可以匯出"); btn.textContent=orig; return; }
     // compute bounding box of all items in canvas coords
     let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
@@ -1158,26 +1395,52 @@ function wrapForeign(node, W, H){
   wrap.appendChild(node); fo.appendChild(wrap); svg.appendChild(fo);
   return svg;
 }
-$("#pngBtn").onclick = exportPNG;
+$("#pngBtn").onclick = ()=>{ closeMore(); exportPNG(); };
 
-/* ---------------- toolbar ---------------- */
-$("#undoBtn").onclick = undo;
+/* ---------------- toolbar & new UI wiring ---------------- */
+$("#undoBtn").onclick = ()=>{ undo(); };
 document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); } });
 
 $("#addBlank").onclick = ()=>{
   snapshot();
-  const x = snap({id:-1}, 40+canvas.scrollLeft, 40+canvas.scrollTop);
-  state.items.push({ id:uid++, type:"match", x:x.x, y:x.y, away:"客隊", home:"主隊",
+  // place near top-left of current view, in world coords
+  const cr = canvas.getBoundingClientRect();
+  const tl = screenToWorld(cr.left+40, cr.top+40);
+  const p = snap({id:-1}, tl.x, tl.y);
+  state.items.push({ id:uid++, type:"match", x:p.x, y:p.y, away:"客隊", home:"主隊",
     awayColor:"var(--ink-dim)", homeColor:"var(--ink-dim)",
     mlAway:{lights:0}, mlHome:{lights:0},
     hdFav:"home", hdVal:"", hdGive:{lights:0}, hdRecv:{lights:0},
     totVal:"", over:{lights:0}, under:{lights:0}, collapsed:false });
   save(); render();
 };
-$("#clearAll").onclick = ()=>{ if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } };
+$("#clearAll").onclick = ()=>{ closeMore(); if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } };
+$("#exportBtn").onclick = ()=>{ closeMore(); openExport(); };
+
+/* zoom controls */
+$("#zoomIn").onclick  = ()=> nudgeZoom(1.2);
+$("#zoomOut").onclick = ()=> nudgeZoom(1/1.2);
+const doFit = ()=> fitView();
+$("#fitBtn").onclick  = doFit;
+$("#fitBtn2").onclick = doFit;
+
+/* overflow menu */
+function closeMore(){ $("#moreMenu").classList.remove("show"); }
+$("#moreBtn").onclick = (e)=>{ e.stopPropagation(); $("#moreMenu").classList.toggle("show"); };
+document.addEventListener("pointerdown", e=>{ if(!e.target.closest("#moreWrap")) closeMore(); }, true);
+
+/* tray collapse */
+function collapseTray(state_){ const t=$("#tray"); t.classList.toggle("collapsed", state_); $("#trayLbl").textContent = t.classList.contains("collapsed")?"隊伍 ▴":"隊伍 ▾"; }
+$("#trayHandle").onclick = ()=>{ const t=$("#tray"); collapseTray(!t.classList.contains("collapsed")); };
 
 /* ---------------- init ---------------- */
-(async()=>{ await load(); buildTray(); buildDateBar(); render(); updateUndoBtn(); })();
+(async()=>{
+  await load();
+  buildTray(); buildDateBar(); render(); updateUndoBtn();
+  applyView();
+  // if no saved view, fit to content (or center empty canvas)
+  if(!state.view) fitView();
+})();
 </script>
 </body>
 </html>
