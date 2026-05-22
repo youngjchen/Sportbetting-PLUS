@@ -53,6 +53,10 @@
   header{
     display:flex;align-items:center;gap:14px;
     padding:12px 18px;
+    /* clear the iPhone notch / Dynamic Island in standalone (home-screen) mode */
+    padding-top:calc(12px + env(safe-area-inset-top, 0px));
+    padding-left:calc(18px + env(safe-area-inset-left, 0px));
+    padding-right:calc(18px + env(safe-area-inset-right, 0px));
     border-bottom:1px solid var(--line);
     background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);
     flex:0 0 auto;
@@ -288,6 +292,7 @@
   .chips{
     padding:14px;overflow:auto;display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;
     border-top:1px solid var(--line);
+    padding-bottom:calc(14px + env(safe-area-inset-bottom, 0px));
   }
   .chip{
     font-weight:700;font-size:14px;padding:8px 14px;border-radius:10px;cursor:grab;
@@ -300,6 +305,7 @@
   /* tray collapse */
   #tray.collapsed{max-height:none;}
   #tray.collapsed .tabs,#tray.collapsed .chips{display:none;}
+  #tray.collapsed .tray-handle{padding-bottom:calc(7px + env(safe-area-inset-bottom, 0px));}
   .tray-handle{
     display:flex;align-items:center;justify-content:center;gap:8px;
     padding:7px;cursor:pointer;color:var(--ink-dim);font-size:12px;
@@ -325,6 +331,14 @@
   #moreMenu button:hover{background:var(--panel-2);}
   #moreMenu button.danger:hover{color:var(--danger);}
   #moreMenu .sep{height:1px;background:var(--line);margin:4px 2px;}
+  #moreMenu .colrow{display:flex;align-items:center;gap:5px;padding:4px 10px 6px;}
+  #moreMenu .colrow .collabel{font-size:12px;color:var(--ink-dim);margin-right:2px;}
+  #moreMenu .colbtn{
+    flex:0 0 auto;min-width:30px;padding:6px 8px;border-radius:7px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
+  }
+  #moreMenu .colbtn:hover{color:var(--ink);border-color:#46566a;background:transparent;}
+  #moreMenu .colbtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
 
   /* bigger touch targets on coarse pointers (phones/tablets) */
   @media (pointer:coarse){
@@ -446,6 +460,14 @@
       <div id="moreMenu">
         <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
         <button id="layoutBtn">⊞ 依聯盟排版</button>
+        <div class="colrow">
+          <span class="collabel">每排</span>
+          <button class="colbtn" data-cols="auto">自動</button>
+          <button class="colbtn" data-cols="2">2</button>
+          <button class="colbtn" data-cols="3">3</button>
+          <button class="colbtn" data-cols="4">4</button>
+          <button class="colbtn" data-cols="5">5</button>
+        </div>
         <button id="clearLights">○ 清空所有圓圈</button>
         <div class="sep"></div>
         <button id="exportBtn">⎘ 匯出文字</button>
@@ -508,6 +530,7 @@ let doc = { version:2, activeDate: todayStr(), boards:{} };
 let state = { items:[], summaryPos:null };   // working pointer = active board
 let activeTab = "cpbl";
 let uid = 1;
+let layoutCols = "auto";  // grid columns per row: "auto" or a fixed number
 const $ = s => document.querySelector(s);
 const canvas = $("#canvas"), ghost = $("#ghost"), emptyMsg = $("#empty");
 const world = $("#world");
@@ -608,6 +631,7 @@ let _saveTimer = null;
 // debounced + immediate save to localStorage (and preview storage if present)
 function save(){
   syncStateToDoc();
+  doc.layoutCols = layoutCols;
   const json = JSON.stringify(doc);
   try{ localStorage.setItem(LS_KEY, json); }catch(e){}
   // also write to preview-env storage when available (harmless on GitHub Pages)
@@ -618,7 +642,7 @@ function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTime
 function loadDocFromString(str){
   try{
     const d = JSON.parse(str);
-    if(d && d.boards){ doc = d; if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr(); return true; }
+    if(d && d.boards){ doc = d; if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr(); if(d.layoutCols!==undefined) layoutCols = d.layoutCols; return true; }
   }catch(e){}
   return false;
 }
@@ -1333,16 +1357,19 @@ function leagueOf(it){
   }
   return "zz"; // unknown / custom -> last group
 }
-// choose columns for a near-square grid (rows >= cols looks tidy stacked)
+// columns per row: "auto" (by screen width) or a fixed number the user picked
+function autoColsForScreen(){
+  const w = (canvas && canvas.clientWidth) ? canvas.clientWidth : window.innerWidth;
+  if(w < 560) return 2;     // phones
+  if(w < 820) return 3;     // small tablets / landscape phones
+  if(w < 1100) return 4;    // tablets / small laptops
+  return 5;                 // desktop
+}
+// choose columns for a group of n cards
 function gridCols(n){
   if(n<=1) return 1;
-  if(n<=3) return n;            // 2->2x1, 3->3x1 (a single tidy row)
-  if(n===4) return 2;           // 2x2
-  if(n<=6) return 3;            // 5->3x2, 6->3x2
-  if(n<=9) return 3;            // 7-9 -> 3 cols
-  if(n<=12) return 4;           // 10-12 -> 4 cols
-  if(n<=16) return 4;           // 13-16 -> 4 cols (15 -> 4x4 w/ gap, or set 5 below)
-  return 5;                     // 17+ -> 5 cols
+  const cap = (layoutCols==="auto") ? autoColsForScreen() : layoutCols;
+  return Math.min(cap, n);  // never more columns than cards
 }
 function autoLayout(){
   snapshot();
@@ -1361,7 +1388,6 @@ function autoLayout(){
     const list = groups[k]; if(!list.length) return;
     const cols = gridCols(list.length);
     const rows = Math.ceil(list.length/cols);
-    // place row by row; each row's vertical advance = tallest card in that row + gap
     for(let r=0; r<rows; r++){
       const rowItems = list.slice(r*cols, r*cols+cols);
       let rowMaxH = 0;
@@ -1379,6 +1405,23 @@ function autoLayout(){
   save(); render(); fitView();
 }
 $("#layoutBtn").onclick = ()=>{ closeMore(); autoLayout(); };
+
+/* per-row column selector (auto / 2 / 3 / 4 / 5) */
+function refreshColBtns(){
+  document.querySelectorAll("#moreMenu .colbtn").forEach(b=>{
+    b.classList.toggle("on", String(layoutCols)===b.dataset.cols);
+  });
+}
+document.querySelectorAll("#moreMenu .colbtn").forEach(b=>{
+  b.onclick = (e)=>{
+    e.stopPropagation();
+    const v = b.dataset.cols;
+    layoutCols = (v==="auto") ? "auto" : parseInt(v,10);
+    refreshColBtns();
+    save();
+    autoLayout();   // apply immediately so the change is visible
+  };
+});
 
 /* ---------------- export PNG ---------------- */
 async function exportPNG(){
@@ -1545,7 +1588,7 @@ $("#importDataBtn").onclick = importData;
   // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
   const t = todayStr();
   if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
-  buildTray(); buildDateBar(); render(); updateUndoBtn();
+  buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns();
   applyView();
   if(!state.view) fitView();
 })();
