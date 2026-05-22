@@ -1,0 +1,1513 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>賽事排盤板</title>
+<!-- PWA / 加到主畫面：讓 iOS 把儲存升級成持久等級 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0c0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="排盤板">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0f14;
+    --panel:#151a22;
+    --panel-2:#1b222c;
+    --line:#2a3340;
+    --ink:#e9eef5;
+    --ink-dim:#8a96a6;
+    --cpbl:#f2b705;
+    --npb:#e23b3b;
+    --kbo:#3d8bfd;
+    --mlb:#28c76f;
+    --lit:#ffb02e;
+    --lit-glow:rgba(255,176,46,.55);
+    --hot:#ff7a1a;
+    --hot-glow:rgba(255,110,20,.6);
+    --conflict:#ff3b5c;
+    --conflict-glow:rgba(255,59,92,.5);
+    --danger:#ff5b6e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;height:100dvh;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 50% -10%, #18202b 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent 0 38px, rgba(255,255,255,.012) 38px 39px),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Noto Sans TC",system-ui,sans-serif;
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  /* ---------- top bar ---------- */
+  header{
+    display:flex;align-items:center;gap:14px;
+    padding:12px 18px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);
+    flex:0 0 auto;
+  }
+  .logo{
+    font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:.06em;
+    font-size:20px;text-transform:uppercase;display:flex;align-items:center;gap:10px;
+  }
+  .logo .dot{width:11px;height:11px;border-radius:50%;background:var(--lit);box-shadow:0 0 12px var(--lit-glow);}
+  .logo small{font-family:"Noto Sans TC";font-weight:500;letter-spacing:0;color:var(--ink-dim);font-size:12px;}
+  .spacer{flex:1;}
+  .hint{font-size:12px;color:var(--ink-dim);max-width:340px;line-height:1.4;text-align:right;}
+  .btn{
+    font-family:"Noto Sans TC";font-size:13px;font-weight:500;color:var(--ink);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+    padding:8px 13px;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .btn:hover{border-color:#3a4756;background:#222a36;}
+  .btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+
+  /* ---------- canvas viewport + world ---------- */
+  #canvas{
+    position:relative;flex:1 1 auto;overflow:hidden;
+    touch-action:none;-webkit-user-select:none;user-select:none;
+    cursor:grab;
+  }
+  #canvas.panning{cursor:grabbing;}
+  #world{
+    position:absolute;top:0;left:0;width:0;height:0;
+    transform-origin:0 0;will-change:transform;
+  }
+  /* grid drawn on the viewport, scaled via JS background-size */
+  #canvas{
+    background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size:20px 20px;background-position:0 0;
+  }
+  #empty{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--ink-dim);font-size:15px;pointer-events:none;text-align:center;line-height:1.7;z-index:1;
+  }
+  #empty b{color:#aeb9c8;font-weight:700;}
+
+  /* zoom controls (bottom-right of canvas) */
+  #zoomctl{
+    position:absolute;right:12px;bottom:12px;z-index:200;display:flex;flex-direction:column;gap:6px;
+  }
+  #zoomctl button{
+    width:42px;height:42px;border-radius:11px;border:1px solid var(--line);
+    background:rgba(21,26,34,.92);color:var(--ink);font-size:21px;font-weight:700;line-height:1;
+    cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.4);
+    display:grid;place-items:center;transition:.12s;touch-action:none;
+  }
+  #zoomctl button:hover{border-color:#3a4756;background:rgba(34,42,54,.95);}
+  #zoomctl button.fit{font-size:15px;}
+  #zoomctl .zlabel{
+    text-align:center;font-family:"Oswald";font-size:11px;color:var(--ink-dim);
+    background:rgba(21,26,34,.92);border:1px solid var(--line);border-radius:8px;padding:2px 0;backdrop-filter:blur(6px);
+  }
+  #saveBadge{
+    position:absolute;left:12px;bottom:12px;z-index:200;
+    font-size:12px;color:#8fe3b0;background:rgba(15,28,20,.92);border:1px solid #2a4a36;
+    border-radius:9px;padding:5px 11px;backdrop-filter:blur(6px);pointer-events:none;
+    opacity:0;transform:translateY(6px);transition:.25s;
+  }
+  #saveBadge.show{opacity:1;transform:translateY(0);}
+
+  /* single token */
+  .token{
+    position:absolute;display:flex;align-items:center;
+    background:var(--panel-2);border:1.5px solid var(--line);border-radius:11px;
+    padding:9px 14px;font-weight:700;font-size:15px;cursor:grab;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);touch-action:none;
+    border-left-width:4px;
+  }
+  .token.dragging{cursor:grabbing;z-index:999;transform:scale(1.04);}
+  .token.merge-target{border-color:var(--lit);box-shadow:0 0 0 2px var(--lit-glow),0 6px 18px rgba(0,0,0,.4);}
+
+  /* matchup card */
+  .card{
+    position:absolute;width:230px;
+    transform-origin:top left;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 10px 26px rgba(0,0,0,.45);
+    touch-action:none;overflow:hidden;
+  }
+  .card.dragging{z-index:999;box-shadow:0 16px 40px rgba(0,0,0,.6);}
+  .card.resizing{z-index:999;}
+  .resize{
+    position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;
+    background:
+      linear-gradient(135deg, transparent 0 45%, var(--ink-dim) 45% 55%, transparent 55% 65%, var(--ink-dim) 65% 75%, transparent 75% 85%, var(--ink-dim) 85% 95%, transparent 95%);
+    opacity:.45;border-bottom-right-radius:13px;
+  }
+  .resize:hover{opacity:1;}
+  .card .grip{
+    display:flex;align-items:center;gap:6px;
+    padding:10px 12px 8px;cursor:grab;
+    background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);
+  }
+  .card.dragging .grip{cursor:grabbing;}
+  .vs{
+    flex:1;display:flex;align-items:center;gap:7px;font-weight:900;font-size:16px;flex-wrap:wrap;
+  }
+  .vs .team{padding:1px 3px;border-radius:5px;outline:none;}
+  .vs .team:focus{background:#0c0f14;box-shadow:0 0 0 1.5px var(--lit);}
+  .vs .slash{color:var(--ink-dim);font-weight:400;}
+  .ico{
+    width:24px;height:24px;display:grid;place-items:center;border-radius:7px;cursor:pointer;
+    color:var(--ink-dim);font-size:15px;transition:.15s;flex:0 0 auto;
+  }
+  .ico:hover{background:#222a36;color:var(--ink);}
+  .ico.x:hover{color:var(--danger);}
+
+  .row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:1px solid rgba(255,255,255,.05);}
+  .row .tag{font-family:"Oswald";font-size:12px;letter-spacing:.08em;color:var(--ink-dim);width:30px;flex:0 0 auto;text-transform:uppercase;}
+  .row .tag.big{font-family:"Noto Sans TC";font-weight:900;font-size:15px;color:var(--ink);}
+
+  .pick{display:flex;gap:5px;flex:0 0 auto;}
+  .pick button{
+    font-family:"Noto Sans TC";font-weight:700;font-size:13px;color:var(--ink-dim);
+    background:transparent;border:1px solid var(--line);border-radius:7px;
+    padding:4px 9px;cursor:pointer;transition:.12s;
+  }
+  .pick button:hover{border-color:#46566a;color:var(--ink);}
+  .pick button.on{background:var(--lit);border-color:var(--lit);color:#1a1205;box-shadow:0 0 10px var(--lit-glow);}
+  .hval{
+    width:34px;background:#0c0f14;border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);font-size:13px;font-weight:700;text-align:center;padding:3px 2px;outline:none;
+  }
+  .hval:focus{border-color:var(--lit);}
+
+  .lights{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto;}
+  .light{
+    width:17px;height:17px;border-radius:50%;cursor:pointer;flex:0 0 auto;transition:.12s;
+  }
+  .light.on{
+    background:radial-gradient(circle at 35% 30%, #ffe39a, var(--lit) 70%);
+    box-shadow:0 0 9px var(--lit-glow);
+  }
+  /* 4th light onward turns hot (red-orange) to flag a strong signal */
+  .lights.hot .light.on{
+    background:radial-gradient(circle at 35% 30%, #ffd0a0, var(--hot) 72%);
+    box-shadow:0 0 11px var(--hot-glow);
+  }
+  .light.add{
+    border:1.5px dashed #3a4756;color:#3a4756;display:grid;place-items:center;
+    font-size:13px;line-height:1;font-weight:700;
+  }
+  .light.add:hover{border-color:var(--lit);color:var(--lit);}
+
+  /* market sections + independent option rows */
+  .sec{
+    display:flex;align-items:center;gap:8px;padding:9px 12px 2px;
+    font-family:"Oswald";font-size:11px;letter-spacing:.14em;color:var(--ink-dim);
+    text-transform:uppercase;border-top:1px solid rgba(255,255,255,.06);
+  }
+  .sec .ln{flex:1;height:1px;background:rgba(255,255,255,.07);}
+  .sec .val{
+    width:40px;background:#0c0f14;border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);font-size:12px;font-weight:700;text-align:center;padding:3px 2px;outline:none;
+    font-family:"Noto Sans TC";
+  }
+  .sec .val:focus{border-color:var(--lit);}
+  .sec .ico{width:20px;height:20px;font-size:13px;}
+  .opt{display:flex;align-items:center;gap:7px;padding:4px 12px;}
+  .opt .side{
+    font-family:"Oswald";font-size:10px;letter-spacing:.05em;color:#0c0f14;background:var(--ink-dim);
+    border-radius:5px;padding:2px 6px;font-weight:600;flex:0 0 auto;
+  }
+  .opt .side.give{background:var(--lit);}
+  .opt .side.recv{background:#5b6b80;color:#dfe6ef;}
+  .opt .nm{font-weight:700;font-size:14px;}
+
+  /* conflict: both sides of one market lit -> flag the whole block */
+  .sec.conflict{color:var(--conflict);}
+  .sec.conflict .ln{background:var(--conflict-glow);}
+  .sec.conflict .warn{
+    color:var(--conflict);font-family:"Noto Sans TC";font-weight:700;font-size:11px;
+    letter-spacing:0;display:flex;align-items:center;gap:3px;
+  }
+  .opt.conflict{background:rgba(255,59,92,.08);box-shadow:inset 3px 0 0 var(--conflict);}
+  .opt.conflict .side{background:var(--conflict);color:#fff;}
+
+  /* summary panel on canvas */
+  #summary{
+    position:absolute;top:18px;left:18px;width:300px;z-index:50;
+    background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96));
+    border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(6px);
+    box-shadow:0 12px 30px rgba(0,0,0,.5);overflow:hidden;
+  }
+  #summary .sumhead{
+    display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:grab;touch-action:none;
+    font-family:"Oswald";font-weight:600;letter-spacing:.08em;font-size:13px;text-transform:uppercase;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);border-bottom:1px solid var(--line);
+  }
+  #summary .sumhead .dot{width:9px;height:9px;border-radius:50%;background:var(--hot);box-shadow:0 0 8px var(--hot-glow);}
+  #summary .sumhead .count{margin-left:auto;color:var(--ink-dim);font-family:"Noto Sans TC";font-weight:700;font-size:12px;letter-spacing:0;}
+  #summary .sumbody{padding:8px 0;max-height:46vh;overflow:auto;}
+  .sumrow{display:flex;align-items:baseline;gap:9px;padding:6px 14px;font-size:13px;}
+  .sumrow .mt{color:var(--ink-dim);font-size:11px;flex:0 0 64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sumrow .pk{font-weight:700;flex:1;}
+  .sumrow .pk .mk{color:var(--ink-dim);font-weight:500;font-size:11px;margin-left:5px;}
+  .sumrow .n{font-family:"Oswald";font-weight:700;color:var(--hot);font-size:14px;flex:0 0 auto;}
+  .sumrow .n.warm{color:var(--lit);}
+  #summary .sumempty{padding:14px;color:var(--ink-dim);font-size:12px;line-height:1.6;}
+  .sumsec{padding:7px 14px 2px;font-family:"Oswald";font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;}
+  .sumrow.conflict .pk{color:var(--conflict);}
+  .sumrow.conflict .n{color:var(--conflict);}
+
+  /* ---------- tray ---------- */
+  #tray{
+    flex:0 0 auto;border-top:1px solid var(--line);
+    background:linear-gradient(180deg,#10151c,#0c0f14);
+    max-height:38vh;display:flex;flex-direction:column;
+  }
+  .tabs{display:flex;gap:6px;padding:10px 14px 0;flex-wrap:wrap;}
+  .tab{
+    font-family:"Oswald";font-weight:600;letter-spacing:.05em;font-size:14px;
+    padding:7px 15px;border-radius:10px 10px 0 0;cursor:pointer;color:var(--ink-dim);
+    border:1px solid transparent;border-bottom:none;transition:.15s;
+  }
+  .tab:hover{color:var(--ink);}
+  .tab.active{color:var(--ink);background:var(--panel);border-color:var(--line);}
+  .tab .swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .chips{
+    padding:14px;overflow:auto;display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;
+    border-top:1px solid var(--line);
+  }
+  .chip{
+    font-weight:700;font-size:14px;padding:8px 14px;border-radius:10px;cursor:grab;
+    background:var(--panel-2);border:1.5px solid var(--line);border-left-width:4px;
+    transition:.12s;touch-action:none;
+  }
+  .chip:hover{background:#222a36;transform:translateY(-1px);}
+  .chip:active{cursor:grabbing;}
+
+  /* tray collapse */
+  #tray.collapsed{max-height:none;}
+  #tray.collapsed .tabs,#tray.collapsed .chips{display:none;}
+  .tray-handle{
+    display:flex;align-items:center;justify-content:center;gap:8px;
+    padding:7px;cursor:pointer;color:var(--ink-dim);font-size:12px;
+    border-bottom:1px solid transparent;transition:.12s;
+  }
+  #tray.collapsed .tray-handle{border-bottom:none;}
+  .tray-handle:hover{color:var(--ink);}
+  .tray-handle .bar{width:34px;height:4px;border-radius:3px;background:#3a4756;}
+  .tray-handle .lbl{font-family:"Oswald";letter-spacing:.06em;}
+
+  /* floating overflow menu */
+  #moreWrap{position:relative;}
+  #moreMenu{
+    position:absolute;right:0;top:calc(100% + 6px);z-index:300;display:none;flex-direction:column;gap:2px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;
+    box-shadow:0 16px 40px rgba(0,0,0,.55);min-width:150px;
+  }
+  #moreMenu.show{display:flex;}
+  #moreMenu button{
+    text-align:left;font-family:"Noto Sans TC";font-size:14px;color:var(--ink);
+    background:transparent;border:none;border-radius:8px;padding:9px 12px;cursor:pointer;white-space:nowrap;
+  }
+  #moreMenu button:hover{background:var(--panel-2);}
+  #moreMenu button.danger:hover{color:var(--danger);}
+  #moreMenu .sep{height:1px;background:var(--line);margin:4px 2px;}
+
+  /* bigger touch targets on coarse pointers (phones/tablets) */
+  @media (pointer:coarse){
+    .light{width:22px;height:22px;}
+    .light.add{font-size:16px;}
+    .lights{gap:7px;}
+    .pick button{padding:7px 13px;font-size:14px;}
+    .ico{width:30px;height:30px;font-size:17px;}
+    .chip{padding:11px 16px;font-size:15px;}
+    .sec .val{width:46px;font-size:13px;padding:5px 2px;}
+    .grip{padding:13px 12px 11px;}
+    #zoomctl button{width:48px;height:48px;}
+  }
+
+  /* drag ghost */
+  #ghost{
+    position:fixed;pointer-events:none;z-index:10000;font-weight:700;font-size:15px;
+    background:var(--panel-2);border:1.5px solid var(--lit);border-left-width:4px;border-radius:11px;
+    padding:9px 14px;box-shadow:0 8px 22px rgba(0,0,0,.5);opacity:.95;display:none;transform:translate(-50%,-50%);
+  }
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#2a3340;border-radius:8px;}
+
+  /* ---------- date bar ---------- */
+  #datebar{
+    flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 14px;
+    border-bottom:1px solid var(--line);background:rgba(255,255,255,.015);overflow-x:auto;
+  }
+  .datechip{
+    font-family:"Oswald";font-size:13px;letter-spacing:.03em;color:var(--ink-dim);white-space:nowrap;
+    padding:5px 12px;border-radius:8px;border:1px solid var(--line);cursor:pointer;transition:.13s;background:transparent;
+  }
+  .datechip:hover{color:var(--ink);border-color:#3a4756;}
+  .datechip.active{color:#1a1205;background:var(--lit);border-color:var(--lit);font-weight:600;}
+  .datechip .cnt{opacity:.6;margin-left:5px;font-size:11px;}
+  .datechip.adddate{color:var(--ink-dim);border-style:dashed;}
+  .datechip.adddate:hover{color:var(--lit);border-color:var(--lit);}
+  #datebar .dlabel{font-family:"Oswald";font-size:11px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;margin-right:4px;flex:0 0 auto;}
+
+  /* ---------- net-lean badge in section header ---------- */
+  .sec .lean{
+    font-family:"Noto Sans TC";font-weight:700;font-size:11px;letter-spacing:0;
+    padding:1px 7px;border-radius:9px;background:#0c0f14;border:1px solid var(--line);color:var(--ink-dim);
+  }
+  .sec .lean.pos{color:#1a1205;background:var(--lit);border-color:var(--lit);}
+  .sec .lean.hotlean{color:#fff;background:var(--hot);border-color:var(--hot);}
+
+  /* ---------- collapsed card ---------- */
+  .card .collapse{cursor:pointer;}
+  .card.collapsed .sec,.card.collapsed .opt,.card.collapsed .resize{display:none;}
+  .summary-line{
+    display:none;padding:8px 12px 11px;gap:6px;flex-wrap:wrap;align-items:center;
+    border-top:1px solid rgba(255,255,255,.05);
+  }
+  .card.collapsed .summary-line{display:flex;}
+  .summary-line .pill{
+    font-size:12px;font-weight:700;padding:3px 9px;border-radius:8px;background:#0c0f14;border:1px solid var(--line);
+    display:flex;align-items:center;gap:5px;
+  }
+  .summary-line .pill .pin{width:8px;height:8px;border-radius:50%;background:var(--lit);box-shadow:0 0 7px var(--lit-glow);}
+  .summary-line .pill.hot .pin{background:var(--hot);box-shadow:0 0 7px var(--hot-glow);}
+  .summary-line .none{color:var(--ink-dim);font-size:12px;}
+
+  /* ---------- conflict glow on whole card ---------- */
+  .card.has-conflict{border-color:var(--conflict);box-shadow:0 0 0 1px var(--conflict-glow),0 0 22px var(--conflict-glow),0 10px 26px rgba(0,0,0,.45);}
+
+  /* ---------- export modal ---------- */
+  #modal{
+    position:fixed;inset:0;z-index:20000;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.6);backdrop-filter:blur(3px);padding:20px;
+  }
+  #modal.show{display:flex;}
+  .modal-box{
+    width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.6);
+  }
+  .modal-box h3{margin:0;padding:15px 18px;font-size:15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+  .modal-box h3 .spacer{flex:1;}
+  .modal-box textarea{
+    flex:1;min-height:240px;resize:none;border:none;outline:none;background:#0c0f14;color:var(--ink);
+    font-family:"Noto Sans TC",monospace;font-size:13px;line-height:1.7;padding:16px 18px;
+  }
+  .modal-actions{display:flex;gap:8px;padding:13px 18px;border-top:1px solid var(--line);}
+  .modal-actions .grow{flex:1;}
+
+  /* ---------- mobile / narrow screens ---------- */
+  @media (max-width:760px){
+    header{gap:8px;padding:10px 12px;}
+    .logo{font-size:17px;}
+    .logo small{display:none;}
+    .hint{display:none;}
+    .btn{padding:10px 13px;font-size:14px;text-align:center;}
+    #addBlank{flex:0 0 auto;}
+    #tray{max-height:34vh;}
+    .tab{padding:9px 14px;font-size:15px;}
+    .chips{gap:11px;padding:12px;}
+    .chip{font-size:15px;padding:11px 16px;}      /* bigger touch target */
+    .light{width:22px;height:22px;}
+    .light.add{font-size:16px;}
+    .ico{width:30px;height:30px;font-size:17px;}
+    .pick button{padding:8px 13px;font-size:14px;}
+    .resize{width:28px;height:28px;}
+    #moreMenu button{padding:12px 14px;font-size:15px;}
+  }
+  @media (hover:none){
+    .resize{opacity:.7;}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo"><span class="dot"></span>排盤板 <small>中職 · 日職 · 韓職 · MLB</small></div>
+    <div class="spacer"></div>
+    <button class="btn" id="addBlank">+ 空白卡</button>
+    <button class="btn" id="fitBtn" title="適中縮放：看到全部卡片">⊡ 適中</button>
+    <div id="moreWrap">
+      <button class="btn" id="moreBtn" title="更多">⋯</button>
+      <div id="moreMenu">
+        <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
+        <button id="layoutBtn">⊞ 依聯盟排版</button>
+        <div class="sep"></div>
+        <button id="exportBtn">⎘ 匯出文字</button>
+        <button id="pngBtn">⤓ 存成圖片</button>
+        <div class="sep"></div>
+        <button id="exportDataBtn">💾 匯出備份檔</button>
+        <button id="importDataBtn">📂 匯入備份檔</button>
+        <div class="sep"></div>
+        <button id="clearAll" class="danger">✕ 清空這天</button>
+      </div>
+    </div>
+  </header>
+
+  <div id="datebar"></div>
+
+  <div id="canvas">
+    <div id="empty">把下方的隊伍標籤<b>拖上來</b>，<br>再把兩隊<b>疊在一起</b>就會吸成一場對戰<br><span style="font-size:13px">單指拖空白＝移動畫面　·　兩指＝縮放</span></div>
+    <div id="world"></div>
+    <div id="saveBadge"></div>
+    <div id="zoomctl">
+      <button id="zoomIn" title="放大">＋</button>
+      <div class="zlabel" id="zlabel">100%</div>
+      <button id="zoomOut" title="縮小">－</button>
+      <button class="fit" id="fitBtn2" title="適中縮放">⊡</button>
+    </div>
+  </div>
+
+  <div id="tray">
+    <div class="tray-handle" id="trayHandle"><span class="bar"></span><span class="lbl" id="trayLbl">隊伍 ▾</span></div>
+    <div class="tabs" id="tabs"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="ghost"></div>
+
+  <div id="modal">
+    <div class="modal-box">
+      <h3>當日重點總結 <span class="spacer"></span><span class="ico x no-drag" id="modalClose" style="cursor:pointer">✕</span></h3>
+      <textarea id="modalText" readonly></textarea>
+      <div class="modal-actions">
+        <span class="grow"></span>
+        <button class="btn" id="copyBtn">複製到剪貼簿</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const LEAGUES = {
+  cpbl: { name:"中職", color:"var(--cpbl)", teams:["中信兄弟","統一獅","樂天桃猿","富邦悍將","味全龍","台鋼雄鷹"] },
+  npb:  { name:"日職", color:"var(--npb)", teams:["讀賣巨人","阪神虎","橫濱DeNA","廣島鯉魚","養樂多燕子","中日龍","軟銀鷹","日本火腿","羅德","樂天金鷲","西武獅","歐力士"] },
+  kbo:  { name:"韓職", color:"var(--kbo)", teams:["LG雙子","KT巫師","SSG登陸者","NC恐龍","斗山熊","起亞虎","樂天巨人","三星獅","韓華鷹","培證英雄"] },
+  mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
+};
+const GRID = 20, SNAP = 11, MERGE_DIST = 64;
+
+const todayStr = ()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+
+// full document: multiple dated boards
+let doc = { version:2, activeDate: todayStr(), boards:{} };
+let state = { items:[], summaryPos:null };   // working pointer = active board
+let activeTab = "cpbl";
+let uid = 1;
+const $ = s => document.querySelector(s);
+const canvas = $("#canvas"), ghost = $("#ghost"), emptyMsg = $("#empty");
+const world = $("#world");
+
+/* ---------------- viewport (pan + zoom) ---------------- */
+// view stored per-board in state.view = {x,y,k}
+let view = { x:0, y:0, k:1 };
+const ZMIN = 0.3, ZMAX = 2.5;
+function applyView(){
+  world.style.transform = `translate(${view.x}px,${view.y}px) scale(${view.k})`;
+  // grid follows pan & zoom
+  const g = GRID*view.k;
+  canvas.style.backgroundSize = `${g}px ${g}px`;
+  canvas.style.backgroundPosition = `${view.x}px ${view.y}px`;
+  const zl = $("#zlabel"); if(zl) zl.textContent = Math.round(view.k*100)+"%";
+}
+// screen (client) coords -> world coords
+function screenToWorld(cx, cy){
+  const r = canvas.getBoundingClientRect();
+  return { x:(cx - r.left - view.x)/view.k, y:(cy - r.top - view.y)/view.k };
+}
+function setZoom(k, centerClientX, centerClientY){
+  k = Math.max(ZMIN, Math.min(ZMAX, k));
+  const r = canvas.getBoundingClientRect();
+  const cx = (centerClientX!=null?centerClientX:r.left+r.width/2);
+  const cy = (centerClientY!=null?centerClientY:r.top+r.height/2);
+  // keep the point under the cursor fixed while zooming
+  const wx = (cx - r.left - view.x)/view.k;
+  const wy = (cy - r.top - view.y)/view.k;
+  view.k = k;
+  view.x = cx - r.left - wx*view.k;
+  view.y = cy - r.top - wy*view.k;
+  applyView(); saveViewSoon();
+}
+function nudgeZoom(factor){ setZoom(view.k*factor); }
+// fit all items into view with padding
+function fitView(){
+  const items = state.items;
+  const r = canvas.getBoundingClientRect();
+  if(!items.length){ view={x:r.width/2-20,y:30,k:1}; applyView(); saveViewSoon(); return; }
+  let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+  items.forEach(it=>{ const b=itemBox(it); minX=Math.min(minX,it.x); minY=Math.min(minY,it.y); maxX=Math.max(maxX,it.x+b.w); maxY=Math.max(maxY,it.y+b.h); });
+  const pad=40, bw=maxX-minX, bh=maxY-minY;
+  const k = Math.max(ZMIN, Math.min(ZMAX, Math.min((r.width-pad*2)/bw, (r.height-pad*2)/bh, 1.4)));
+  view.k = k;
+  view.x = (r.width - bw*k)/2 - minX*k;
+  view.y = pad - minY*k;
+  applyView(); saveViewSoon();
+}
+let _vt=null;
+function saveViewSoon(){ if(_vt) clearTimeout(_vt); _vt=setTimeout(()=>{ state.view={...view}; save(); },400); }
+
+/* ---------------- undo history ---------------- */
+const history = [];
+let suppress = false;
+function snapshot(){
+  // call BEFORE a mutating action to enable undo
+  if(suppress) return;
+  syncStateToDoc();
+  history.push(JSON.stringify(doc));
+  if(history.length>60) history.shift();
+  updateUndoBtn();
+}
+function undo(){
+  if(!history.length) return;
+  const prev = history.pop();
+  try{
+    doc = JSON.parse(prev);
+    if(!doc.boards[doc.activeDate]) doc.activeDate = Object.keys(doc.boards)[0] || todayStr();
+    loadActiveBoard();
+    save(); render(); buildDateBar();
+  }catch(e){}
+  updateUndoBtn();
+}
+function updateUndoBtn(){ const b=$("#undoBtn"); if(b) b.disabled = history.length===0; }
+
+/* ---------------- board <-> doc sync ---------------- */
+function ensureBoard(date){
+  if(!doc.boards[date]) doc.boards[date] = { items:[], summaryPos:null };
+  return doc.boards[date];
+}
+function syncStateToDoc(){
+  const b = ensureBoard(doc.activeDate);
+  b.items = state.items; b.summaryPos = state.summaryPos; b.view = state.view || view;
+}
+function loadActiveBoard(){
+  const b = ensureBoard(doc.activeDate);
+  state.items = b.items; state.summaryPos = b.summaryPos;
+  state.view = b.view || null;
+  view = state.view ? {...state.view} : { x:0, y:0, k:1 };
+  state.items.forEach(i=>{ if(i.id>=uid) uid=i.id+1; });
+  if(typeof applyView==="function") applyView();
+}
+
+/* ---------------- persistence (graceful, optional) ---------------- */
+const LS_KEY = "sportbetting_plus_doc_v2";
+let _saveTimer = null;
+// debounced + immediate save to localStorage (and preview storage if present)
+function save(){
+  syncStateToDoc();
+  const json = JSON.stringify(doc);
+  try{ localStorage.setItem(LS_KEY, json); }catch(e){}
+  // also write to preview-env storage when available (harmless on GitHub Pages)
+  if(window.storage){ try{ window.storage.set("board_doc_v2", json, false); }catch(_){} }
+  updateSaveBadge();
+}
+function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTimeout(save, 250); }
+function loadDocFromString(str){
+  try{
+    const d = JSON.parse(str);
+    if(d && d.boards){ doc = d; if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr(); return true; }
+  }catch(e){}
+  return false;
+}
+async function load(){
+  let loaded=false;
+  // 1) localStorage (primary, works on GitHub Pages / Safari)
+  try{ const s = localStorage.getItem(LS_KEY); if(s) loaded = loadDocFromString(s); }catch(e){}
+  // 2) preview-env storage (only in this builder; ignored on GitHub Pages)
+  if(!loaded && window.storage){
+    try{ const r = await window.storage.get("board_doc_v2", false); if(r && r.value) loaded = loadDocFromString(r.value); }catch(_){}
+  }
+  // 3) migrate any older single-board localStorage format
+  if(!loaded){
+    try{ const old = localStorage.getItem("board_state"); if(old){ const s=JSON.parse(old); if(s&&s.items){ doc={version:2,activeDate:todayStr(),boards:{[todayStr()]:{items:s.items,summaryPos:s.summaryPos||null}}}; loaded=true; } } }catch(_){}
+  }
+  loadActiveBoard();
+}
+
+/* ---------------- tray ---------------- */
+function buildTray(){
+  const tabs = $("#tabs"); tabs.innerHTML = "";
+  Object.entries(LEAGUES).forEach(([k,v])=>{
+    const t = document.createElement("div");
+    t.className = "tab" + (k===activeTab?" active":"");
+    t.innerHTML = `<span class="swatch" style="background:${v.color}"></span>${v.name}`;
+    t.onclick = ()=>{ activeTab=k; buildTray(); };
+    tabs.appendChild(t);
+  });
+  const chips = $("#chips"); chips.innerHTML = "";
+  const lg = LEAGUES[activeTab];
+  const used = usedTeams();
+  let shown = 0;
+  lg.teams.forEach(team=>{
+    if(used.has(team)) return;
+    const c = document.createElement("div");
+    c.className = "chip"; c.textContent = team;
+    c.style.borderLeftColor = lg.color;
+    c.addEventListener("pointerdown", e=> startChipDrag(e, team, lg.color));
+    chips.appendChild(c);
+    shown++;
+  });
+  if(shown===0){
+    const e = document.createElement("div");
+    e.style.cssText = "color:var(--ink-dim);font-size:13px;padding:4px 2px;";
+    e.textContent = "本聯盟隊伍都已排上了";
+    chips.appendChild(e);
+  }
+}
+
+/* teams currently placed on the board (as token or inside a match) */
+function usedTeams(){
+  const s = new Set();
+  state.items.forEach(it=>{
+    if(it.type==="single") s.add(it.team);
+    else { s.add(it.away); s.add(it.home); }
+  });
+  return s;
+}
+
+/* ---------------- rendering items ---------------- */
+function render(){
+  [...world.querySelectorAll(".token,.card")].forEach(n=>n.remove());
+  emptyMsg.style.display = state.items.length ? "none" : "flex";
+  state.items.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
+  renderSummary();
+  buildTray();
+}
+
+function renderToken(it){
+  const el = document.createElement("div");
+  el.className = "token"; el.dataset.id = it.id;
+  el.textContent = it.team;
+  el.style.left = it.x+"px"; el.style.top = it.y+"px";
+  el.style.borderLeftColor = it.color;
+  el.addEventListener("pointerdown", e=> startItemDrag(e, it, el));
+  world.appendChild(el);
+}
+
+function normMatch(it){
+  it.mlAway = it.mlAway || {lights: (it.win&&it.win.side==="away")?it.win.lights:0};
+  it.mlHome = it.mlHome || {lights: (it.win&&it.win.side==="home")?it.win.lights:0};
+  if(it.hdFav===undefined) it.hdFav = (it.handi&&it.handi.side) ? it.handi.side : "home";
+  if(it.hdVal===undefined) it.hdVal = (it.handi&&it.handi.val)||"";
+  it.hdGive = it.hdGive || {lights: (it.handi&&it.handi.lights)||0};
+  it.hdRecv = it.hdRecv || {lights:0};
+  it.over = it.over || {lights:0};
+  it.under = it.under || {lights:0};
+  if(it.totVal===undefined) it.totVal = "";
+  if(it.collapsed===undefined) it.collapsed = false;
+  delete it.win; delete it.handi; delete it.total;
+}
+
+function renderCard(it){
+  normMatch(it);
+  const el = document.createElement("div");
+  el.className = "card"; el.dataset.id = it.id;
+  el.style.left = it.x+"px"; el.style.top = it.y+"px";
+  if(it.scale && it.scale!==1) el.style.transform = "scale("+it.scale+")";
+
+  // ---- header ----
+  const grip = document.createElement("div"); grip.className="grip";
+  const vs = document.createElement("div"); vs.className="vs";
+  const slash = document.createElement("span"); slash.className="slash"; slash.textContent="/";
+  vs.append(mkTeam(it,"away"), slash, mkTeam(it,"home"));
+  const swap = document.createElement("div"); swap.className="ico no-drag"; swap.title="主客對調"; swap.textContent="⇄";
+  swap.onclick = ()=>{
+    snapshot();
+    [it.away,it.home]=[it.home,it.away]; [it.awayColor,it.homeColor]=[it.homeColor,it.awayColor];
+    [it.mlAway,it.mlHome]=[it.mlHome,it.mlAway];
+    it.hdFav = it.hdFav==="away"?"home":"away";
+    save(); render();
+  };
+  const del = document.createElement("div"); del.className="ico x no-drag"; del.title="刪除"; del.textContent="✕";
+  del.onclick = ()=>{ snapshot(); state.items = state.items.filter(x=>x.id!==it.id); save(); render(); };
+  const col = document.createElement("div"); col.className="ico collapse no-drag"; col.title=it.collapsed?"展開":"收合";
+  col.textContent = it.collapsed?"▸":"▾";
+  col.onclick = ()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
+  grip.append(vs,swap,col,del);
+  grip.addEventListener("pointerdown", e=>{ if(e.target.closest(".no-drag")) return; startItemDrag(e,it,el); });
+  // double-tap / double-click the header to collapse/expand
+  let lastTapG=0;
+  grip.addEventListener("pointerup", e=>{
+    if(e.target.closest(".no-drag")) return;
+    if(drag && drag.moved) return; // was a drag, not a tap
+    const now=Date.now();
+    if(now-lastTapG < 320){ snapshot(); it.collapsed=!it.collapsed; save(); render(); lastTapG=0; }
+    else lastTapG=now;
+  });
+  el.appendChild(grip);
+
+  // ---- helpers ----
+  const teamColor = side => side==="away"?it.awayColor:it.homeColor;
+  function optRow(badge, badgeClass, name, color, obj, conflict){
+    const row = document.createElement("div"); row.className="row opt"+(conflict?" conflict":"");
+    const b = document.createElement("div"); b.className="side "+badgeClass; b.textContent=badge;
+    const nm = document.createElement("div"); nm.className="nm"; nm.textContent=name; if(color) nm.style.color=color;
+    row.append(b, nm, mkLights(obj));
+    return row;
+  }
+  function sec(label, valObj, valKey, extraIco, conflict, lean){
+    const s = document.createElement("div"); s.className="sec"+(conflict?" conflict":"");
+    const t = document.createElement("span"); t.textContent=label;
+    const ln = document.createElement("span"); ln.className="ln";
+    s.append(t, ln);
+    if(lean){
+      const le = document.createElement("span");
+      le.className = "lean"+(lean.n>=4?" hotlean":(lean.n>=1?" pos":""));
+      le.textContent = lean.txt;
+      s.appendChild(le);
+    }
+    if(conflict){
+      const w = document.createElement("span"); w.className="warn"; w.textContent="⚠ 衝突";
+      s.appendChild(w);
+    }
+    if(extraIco) s.appendChild(extraIco);
+    if(valObj){
+      const v = document.createElement("input"); v.className="val no-drag"; v.value=valObj[valKey]; v.placeholder="盤";
+      v.title="盤口數值（選填）";
+      v.oninput=()=>{ valObj[valKey]=v.value; save(); };
+      v.onpointerdown=e=>e.stopPropagation();
+      s.appendChild(v);
+    }
+    return s;
+  }
+
+  // conflict = both sides of the same market are lit
+  const mlConflict  = it.mlAway.lights>0 && it.mlHome.lights>0;
+  const hdConflict  = it.hdGive.lights>0 && it.hdRecv.lights>0;
+  const totConflict = it.over.lights>0  && it.under.lights>0;
+  if(mlConflict||hdConflict||totConflict) el.classList.add("has-conflict");
+  if(it.collapsed) el.classList.add("collapsed");
+
+  const favSide0 = it.hdFav, undSide0 = it.hdFav==="away"?"home":"away";
+  // net lean: returns {txt for badge, n magnitude, winLabel for pill}
+  function lean(aLit,aLabel,bLit,bLabel){
+    if(aLit===bLit) return null;
+    const winLabel = aLit>bLit ? aLabel : bLabel;
+    const n = Math.abs(aLit-bLit);
+    return { txt:`${winLabel} +${n}`, n, winLabel };
+  }
+  const mlLean  = mlConflict ?null: lean(it.mlAway.lights, it.away, it.mlHome.lights, it.home);
+  const hdLean  = hdConflict ?null: lean(it.hdGive.lights, `${it[favSide0]}讓`, it.hdRecv.lights, `${it[undSide0]}受讓`);
+  const totLean = totConflict?null: lean(it.over.lights, "大分", it.under.lights, "小分");
+
+  // ---- 獨贏 ----
+  el.appendChild(sec("獨贏", null, null, null, mlConflict, mlLean));
+  el.appendChild(optRow("客", "", it.away, teamColor("away"), it.mlAway, mlConflict));
+  el.appendChild(optRow("主", "", it.home, teamColor("home"), it.mlHome, mlConflict));
+
+  // ---- 讓分 / 受讓 ----
+  const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
+  favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
+  el.appendChild(sec("讓分", it, "hdVal", favSwap, hdConflict, hdLean));
+  const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
+  el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
+  el.appendChild(optRow("受讓", "recv", it[undSide], teamColor(undSide), it.hdRecv, hdConflict));
+
+  // ---- 大小分 ----
+  el.appendChild(sec("大小分", it, "totVal", null, totConflict, totLean));
+  el.appendChild(optRow("大", "", "大分", null, it.over, totConflict));
+  el.appendChild(optRow("小", "", "小分", null, it.under, totConflict));
+
+  // ---- collapsed one-line summary ----
+  const sl = document.createElement("div"); sl.className="summary-line";
+  const pills = [];
+  const pill = (txt,n)=>{ const p=document.createElement("span"); p.className="pill"+(n>=4?" hot":""); p.innerHTML=`<span class="pin"></span>${esc(txt)} ●${n}`; pills.push(p); };
+  if(mlLean  && mlLean.n>=3)  pill(mlLean.winLabel, mlLean.n);
+  if(hdLean  && hdLean.n>=3)  pill(`${hdLean.winLabel}${it.hdVal?` ${it.hdVal}`:""}`, hdLean.n);
+  if(totLean && totLean.n>=3) pill(`${totLean.winLabel}${it.totVal?` ${it.totVal}`:""}`, totLean.n);
+  if(mlConflict||hdConflict||totConflict){ const w=document.createElement("span"); w.className="pill"; w.style.color="var(--conflict)"; w.style.borderColor="var(--conflict)"; w.textContent="⚠ 有衝突"; pills.push(w); }
+  if(pills.length){ pills.forEach(p=>sl.appendChild(p)); }
+  else { const n=document.createElement("span"); n.className="none"; n.textContent="尚無 3 燈以上的選擇"; sl.appendChild(n); }
+  el.appendChild(sl);
+
+  const rz = document.createElement("div"); rz.className="resize no-drag"; rz.title="拖曳調整寬度";
+  rz.addEventListener("pointerdown", e=> startResize(e, it, el));
+  el.appendChild(rz);
+
+  world.appendChild(el);
+}
+
+function mkTeam(it,side){
+  const s = document.createElement("span");
+  s.className="team no-drag"; s.contentEditable=true; s.textContent=it[side];
+  s.style.color = side==="away"?it.awayColor:it.homeColor;
+  s.onpointerdown = e=> e.stopPropagation();
+  s.onblur = ()=>{ it[side]=s.textContent.trim()||it[side]; save(); render(); };
+  s.onkeydown = e=>{ if(e.key==="Enter"){ e.preventDefault(); s.blur(); } };
+  return s;
+}
+
+function mkLights(obj){
+  const wrap = document.createElement("div"); wrap.className="lights no-drag";
+  if(obj.lights>3) wrap.classList.add("hot");
+  // long-press anywhere on the light cluster clears it to zero
+  let lpTimer=null, lpFired=false;
+  const startLP = ()=>{ lpFired=false; lpTimer=setTimeout(()=>{ lpFired=true; if(obj.lights>0){ snapshot(); obj.lights=0; save(); render(); } }, 550); };
+  const cancelLP = ()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } };
+  wrap.addEventListener("pointerdown", startLP);
+  wrap.addEventListener("pointerup", cancelLP);
+  wrap.addEventListener("pointerleave", cancelLP);
+  wrap.addEventListener("pointercancel", cancelLP);
+  for(let i=0;i<obj.lights;i++){
+    const d = document.createElement("div"); d.className="light on";
+    d.title="點掉減少（長按整排清零）"; d.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights=Math.max(0,obj.lights-1); save(); render(); };
+    wrap.appendChild(d);
+  }
+  if(obj.lights<12){
+    const add = document.createElement("div"); add.className="light add"; add.textContent="+";
+    add.title="點亮一個"; add.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights++; save(); render(); };
+    wrap.appendChild(add);
+  }
+  return wrap;
+}
+
+/* ---------------- summary panel ---------------- */
+// collect picks with >3 lights and no conflict in their market
+function collectSummary(){
+  const strong = [], conflicts = [];
+  state.items.forEach(it=>{
+    if(it.type!=="match") return;
+    normMatch(it);
+    const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
+    const matchName = `${it.away}/${it.home}`;
+    const mlC  = it.mlAway.lights>0 && it.mlHome.lights>0;
+    const hdC  = it.hdGive.lights>0 && it.hdRecv.lights>0;
+    const totC = it.over.lights>0  && it.under.lights>0;
+    if(mlC)  conflicts.push({matchName, market:"獨贏"});
+    if(hdC)  conflicts.push({matchName, market:"讓分"});
+    if(totC) conflicts.push({matchName, market:"大小分"});
+    const add=(cond,lights,pick,mk)=>{ if(cond && lights>=3) strong.push({matchName, pick, mk, n:lights}); };
+    add(!mlC,  it.mlAway.lights, it.away, "獨贏");
+    add(!mlC,  it.mlHome.lights, it.home, "獨贏");
+    add(!hdC,  it.hdGive.lights, it[favSide], "讓"+(it.hdVal?` ${it.hdVal}`:""));
+    add(!hdC,  it.hdRecv.lights, it[undSide], "受讓"+(it.hdVal?` ${it.hdVal}`:""));
+    add(!totC, it.over.lights,  "大分", "大小分"+(it.totVal?` ${it.totVal}`:""));
+    add(!totC, it.under.lights, "小分", "大小分"+(it.totVal?` ${it.totVal}`:""));
+  });
+  strong.sort((a,b)=>b.n-a.n);
+  return {strong, conflicts};
+}
+
+function renderSummary(){
+  const old = canvas.querySelector("#summary"); if(old) old.remove();
+  if(!state.items.some(i=>i.type==="match")) return;
+  const {strong, conflicts} = collectSummary();
+  if(strong.length===0 && conflicts.length===0) return;
+
+  const r = canvas.getBoundingClientRect();
+  const pos = state.summaryPos || {x: Math.max(12, r.width-312), y: 12};
+  const box = document.createElement("div"); box.id="summary";
+  box.style.left = pos.x+"px"; box.style.top = pos.y+"px";
+
+  const head = document.createElement("div"); head.className="sumhead";
+  head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${strong.length} 個強訊號</span>`;
+  head.addEventListener("pointerdown", startSummaryDrag);
+  box.appendChild(head);
+
+  const body = document.createElement("div"); body.className="sumbody";
+  if(strong.length){
+    const t = document.createElement("div"); t.className="sumsec"; t.textContent="3 個以上（無衝突）";
+    body.appendChild(t);
+    strong.forEach(s=>{
+      const r = document.createElement("div"); r.className="sumrow";
+      r.innerHTML = `<span class="mt">${esc(s.matchName)}</span>`+
+                    `<span class="pk">${esc(s.pick)}<span class="mk">${esc(s.mk)}</span></span>`+
+                    `<span class="n${s.n>3?'':' warm'}">●${s.n}</span>`;
+      body.appendChild(r);
+    });
+  }
+  if(conflicts.length){
+    const t = document.createElement("div"); t.className="sumsec"; t.textContent="衝突（兩邊都點了）";
+    body.appendChild(t);
+    conflicts.forEach(c=>{
+      const r = document.createElement("div"); r.className="sumrow conflict";
+      r.innerHTML = `<span class="mt">${esc(c.matchName)}</span>`+
+                    `<span class="pk">${esc(c.market)} 兩邊都有燈</span>`+
+                    `<span class="n">⚠</span>`;
+      body.appendChild(r);
+    });
+  }
+  if(!strong.length && conflicts.length){
+    // still useful, no empty note needed
+  }
+  box.appendChild(body);
+  canvas.appendChild(box);
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+let sumDrag = null;
+function startSummaryDrag(e){
+  e.preventDefault(); e.stopPropagation();
+  const box = canvas.querySelector("#summary");
+  const r = box.getBoundingClientRect();
+  sumDrag = { box, offX:e.clientX-r.left, offY:e.clientY-r.top };
+  try{ box.setPointerCapture(e.pointerId); }catch(_){}
+}
+function moveSummaryDrag(e){
+  if(!sumDrag) return;
+  const cr = canvas.getBoundingClientRect();
+  const x = Math.max(0, Math.min(cr.width-60, e.clientX-cr.left-sumDrag.offX));
+  const y = Math.max(0, Math.min(cr.height-40, e.clientY-cr.top -sumDrag.offY));
+  state.summaryPos = {x,y};
+  sumDrag.box.style.left = x+"px"; sumDrag.box.style.top = y+"px";
+}
+function endSummaryDrag(){ if(sumDrag){ sumDrag=null; save(); } }
+
+/* ---------------- snapping (all in WORLD coords) ---------------- */
+// world-space footprint of an item (offsetWidth is unaffected by the world transform)
+function itemBox(it){
+  const id = typeof it==="object" ? it.id : it;
+  const obj = typeof it==="object" ? it : state.items.find(s=>s.id===id);
+  const el = world.querySelector(`[data-id="${id}"]`);
+  const s = (obj && obj.scale) ? obj.scale : 1;
+  if(!el) return {w:0,h:0};
+  return {w:el.offsetWidth*s, h:el.offsetHeight*s};
+}
+// edge-aware snap: aligns left/right/top/bottom edges to other items, falls back to grid
+function snap(it, x, y){
+  let sx = Math.round(x/GRID)*GRID, sy = Math.round(y/GRID)*GRID;
+  const me = itemBox(it);
+  let bestX = SNAP, bestY = SNAP;
+  state.items.forEach(o=>{
+    if(o.id===it.id) return;
+    const ob = itemBox(o);
+    // align my-left or my-right to other's left/right
+    [ [x,       o.x,       0],      // my left  -> other left
+      [x,       o.x+ob.w,  0],      // my left  -> other right
+      [x+me.w,  o.x+ob.w, -me.w],   // my right -> other right
+      [x+me.w,  o.x,      -me.w]    // my right -> other left
+    ].forEach(([a,b,adj])=>{ const d=Math.abs(a-b); if(d<bestX){ bestX=d; sx=b+adj; } });
+    // align my-top or my-bottom to other's top/bottom
+    [ [y,       o.y,       0],
+      [y,       o.y+ob.h,  0],
+      [y+me.h,  o.y+ob.h, -me.h],
+      [y+me.h,  o.y,      -me.h]
+    ].forEach(([a,b,adj])=>{ const d=Math.abs(a-b); if(d<bestY){ bestY=d; sy=b+adj; } });
+  });
+  return {x:Math.max(0,Math.round(sx)), y:Math.max(0,Math.round(sy))};
+}
+
+/* ---------------- dragging existing items ---------------- */
+let drag = null;
+function startItemDrag(e, it, el){
+  if(e.target.closest(".no-drag")) return;
+  e.preventDefault();
+  // grab offset in WORLD space
+  const w0 = screenToWorld(e.clientX, e.clientY);
+  drag = { it, el, offX:w0.x-it.x, offY:w0.y-it.y, moved:false, pid:e.pointerId, snapped:false };
+  el.classList.add("dragging");
+  try{ el.setPointerCapture(e.pointerId); }catch(_){}
+}
+function moveItemDrag(e){
+  if(!drag) return;
+  const w0 = screenToWorld(e.clientX, e.clientY);
+  let x = w0.x - drag.offX;
+  let y = w0.y - drag.offY;
+
+  if(!drag.snapped){ snapshot(); drag.snapped=true; } // one undo step per drag
+
+  // live snap for cards (tokens snap on drop so merge stays easy)
+  if(drag.it.type==="match"){
+    const p = snap(drag.it, x, y); x = p.x; y = p.y;
+  }
+
+  drag.it.x = x; drag.it.y = y; drag.moved = true;
+  drag.el.style.left = x+"px"; drag.el.style.top = y+"px";
+
+  // highlight merge target for single tokens
+  world.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
+  if(drag.it.type==="single"){
+    const t = findMergeTarget(drag.it);
+    if(t){ const te = world.querySelector(`.token[data-id="${t.id}"]`); if(te) te.classList.add("merge-target"); }
+  }
+}
+function endItemDrag(e){
+  if(!drag) return;
+  const it = drag.it;
+  if(it.type==="single"){
+    const target = findMergeTarget(it);
+    if(target){ mergeTokens(target, it); drag=null; save(); render(); return; }
+  }
+  const p = snap(it, it.x, it.y); it.x=p.x; it.y=p.y;
+  drag.el.classList.remove("dragging");
+  world.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
+  drag = null; save(); render();
+}
+function center(it){ const w = it.type==="single"?70:115, h=it.type==="single"?20:46; return {cx:it.x+w, cy:it.y+h}; }
+
+/* ---------------- resizing cards (proportional scale) ---------------- */
+let rsz = null;
+function startResize(e, it, el){
+  e.preventDefault(); e.stopPropagation();
+  snapshot();
+  rsz = { it, el, startX:e.clientX, startY:e.clientY,
+          startScale: it.scale || 1, baseW: el.offsetWidth, pid:e.pointerId };
+  el.classList.add("resizing");
+  try{ el.setPointerCapture(e.pointerId); }catch(_){}
+}
+function moveResize(e){
+  if(!rsz) return;
+  // drive scale by horizontal drag, in world space (divide by zoom so it tracks the finger)
+  const dx = (e.clientX - rsz.startX) / view.k;
+  let s = rsz.startScale + dx / rsz.baseW;
+  s = Math.max(0.7, Math.min(2.4, s));
+  // snap scale to clean stops for tidy alignment
+  [0.75,1,1.25,1.5,1.75,2].forEach(stop=>{ if(Math.abs(s-stop)<0.05) s=stop; });
+  rsz.it.scale = Math.round(s*100)/100;
+  rsz.el.style.transform = "scale("+rsz.it.scale+")";
+}
+function endResize(){
+  if(!rsz) return;
+  rsz.el.classList.remove("resizing");
+  // re-snap position after size change so edges line back up
+  const p = snap(rsz.it, rsz.it.x, rsz.it.y); rsz.it.x=p.x; rsz.it.y=p.y;
+  rsz.el.style.left = rsz.it.x+"px"; rsz.el.style.top = rsz.it.y+"px";
+  rsz = null; save();
+}
+
+function findMergeTarget(it){
+  const c = center(it); let best=null, bd=MERGE_DIST;
+  state.items.forEach(o=>{ if(o.id===it.id || o.type!=="single") return;
+    const oc = center(o); const d = Math.hypot(c.cx-oc.cx, c.cy-oc.cy);
+    if(d<bd){ bd=d; best=o; }
+  });
+  return best;
+}
+function mergeTokens(target, dragged){
+  const m = { id:uid++, type:"match", x:target.x, y:target.y,
+    away:target.team, home:dragged.team, awayColor:target.color, homeColor:dragged.color,
+    mlAway:{lights:0}, mlHome:{lights:0},
+    hdFav:"home", hdVal:"", hdGive:{lights:0}, hdRecv:{lights:0},
+    totVal:"", over:{lights:0}, under:{lights:0} };
+  state.items = state.items.filter(x=>x.id!==target.id && x.id!==dragged.id);
+  state.items.push(m);
+}
+
+/* ---------------- dragging new chip from tray ---------------- */
+let chipDrag = null;
+function startChipDrag(e, team, color){
+  e.preventDefault();
+  chipDrag = { team, color, pid:e.pointerId, sx:e.clientX, sy:e.clientY, moved:false };
+  ghost.textContent = team; ghost.style.borderLeftColor = color;
+  ghost.style.display="block"; ghost.style.left=e.clientX+"px"; ghost.style.top=e.clientY+"px";
+}
+function moveChipDrag(e){
+  if(!chipDrag) return;
+  if(Math.hypot(e.clientX-chipDrag.sx, e.clientY-chipDrag.sy)>6) chipDrag.moved=true;
+  ghost.style.left=e.clientX+"px"; ghost.style.top=e.clientY+"px";
+}
+function endChipDrag(e){
+  if(!chipDrag) return;
+  ghost.style.display="none";
+  const cr = canvas.getBoundingClientRect();
+  const overCanvas = e.clientX>=cr.left && e.clientX<=cr.right && e.clientY>=cr.top && e.clientY<=cr.bottom;
+  if(overCanvas || !chipDrag.moved){
+    snapshot();
+    let x,y;
+    if(overCanvas){ const w0 = screenToWorld(e.clientX-40*view.k, e.clientY-16*view.k); x=w0.x; y=w0.y; }
+    else { // tap-to-add: drop near top-left of current view in world coords
+      const tl = screenToWorld(cr.left+40, cr.top+40);
+      const n=state.items.length; x = tl.x + (n%6)*30; y = tl.y + (n%6)*30;
+    }
+    // drop onto an existing single token => instant merge
+    const tmp = {id:-1,type:"single",x,y};
+    const tgt = findMergeTarget(tmp);
+    if(tgt){
+      const dragged = {id:uid++, type:"single", team:chipDrag.team, color:chipDrag.color, x, y};
+      mergeTokens(tgt, dragged);
+    }else{
+      const p = snap({id:-1}, x, y);
+      state.items.push({ id:uid++, type:"single", team:chipDrag.team, color:chipDrag.color, x:p.x, y:p.y });
+    }
+    save(); render();
+  }
+  chipDrag = null;
+}
+
+/* ---------------- global pointer handlers ---------------- */
+function anyDragActive(){ return !!(sumDrag || rsz || drag || chipDrag); }
+window.addEventListener("pointermove", e=>{
+  if(anyDragActive() && e.cancelable) e.preventDefault();
+  moveSummaryDrag(e); moveResize(e); moveItemDrag(e); moveChipDrag(e);
+}, {passive:false});
+window.addEventListener("pointerup",   e=>{ endSummaryDrag(e); endResize(e); endItemDrag(e); endChipDrag(e); });
+// also catch touch fallbacks so a drag still finishes if pointer events misbehave
+window.addEventListener("touchmove", e=>{ if(anyDragActive() && e.cancelable) e.preventDefault(); }, {passive:false});
+window.addEventListener("pointercancel", e=>{
+  // commit the drag instead of throwing it away (iOS fires cancel mid-gesture)
+  if(sumDrag){ endSummaryDrag(e); }
+  if(rsz){ endResize(e); }
+  if(drag){ endItemDrag(e); }
+  if(chipDrag){ endChipDrag(e); }
+  if(gesture.pointers.has(e.pointerId)) endGesturePointer(e);
+});
+
+/* ---------------- canvas gestures: pan (1 finger) + pinch zoom (2 fingers) ---------------- */
+const gesture = { pointers:new Map(), mode:null, startX:0, startY:0, startView:null, pinch:null, lastTap:0 };
+function isInteractive(target){
+  return !!(target.closest(".card,.token,#summary,#zoomctl,.no-drag"));
+}
+canvas.addEventListener("pointerdown", e=>{
+  // ignore presses that begin on a card/token/summary/zoom — those have their own handlers
+  if(isInteractive(e.target)) return;
+  gesture.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
+
+  if(gesture.pointers.size===1){
+    gesture.mode = "pan";
+    gesture.startX = e.clientX; gesture.startY = e.clientY;
+    gesture.startView = {...view};
+    canvas.classList.add("panning");
+  } else if(gesture.pointers.size===2){
+    gesture.mode = "pinch";
+    const pts = [...gesture.pointers.values()];
+    gesture.pinch = {
+      cx:(pts[0].x+pts[1].x)/2, cy:(pts[0].y+pts[1].y)/2,
+      dist:Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y),
+      startK:view.k, startView:{...view}
+    };
+    canvas.classList.remove("panning");
+  }
+});
+canvas.addEventListener("pointermove", e=>{
+  if(!gesture.pointers.has(e.pointerId)) return;
+  gesture.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
+  if(e.cancelable) e.preventDefault();
+
+  if(gesture.mode==="pan" && gesture.pointers.size===1){
+    view.x = gesture.startView.x + (e.clientX - gesture.startX);
+    view.y = gesture.startView.y + (e.clientY - gesture.startY);
+    applyView();
+  } else if(gesture.mode==="pinch" && gesture.pointers.size>=2){
+    const pts = [...gesture.pointers.values()].slice(0,2);
+    const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
+    const cx = (pts[0].x+pts[1].x)/2, cy = (pts[0].y+pts[1].y)/2;
+    const r = canvas.getBoundingClientRect();
+    // world point under the pinch center at gesture start
+    const sv = gesture.pinch.startView;
+    const wx = (gesture.pinch.cx - r.left - sv.x)/sv.k;
+    const wy = (gesture.pinch.cy - r.top  - sv.y)/sv.k;
+    let k = sv.k * (dist/gesture.pinch.dist);
+    k = Math.max(ZMIN, Math.min(ZMAX, k));
+    view.k = k;
+    // keep the (moving) pinch center anchored to its world point
+    view.x = cx - r.left - wx*k;
+    view.y = cy - r.top  - wy*k;
+    applyView();
+  }
+}, {passive:false});
+function endGesturePointer(e){
+  gesture.pointers.delete(e.pointerId);
+  try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
+  if(gesture.pointers.size===0){
+    // tap detection (no real move) -> double-tap empty = fit
+    if(gesture.mode==="pan"){
+      const moved = Math.hypot(e.clientX-gesture.startX, e.clientY-gesture.startY) > 6;
+      if(!moved){
+        const now=Date.now();
+        if(now-gesture.lastTap < 300){ fitView(); gesture.lastTap=0; }
+        else gesture.lastTap=now;
+      }
+    }
+    gesture.mode=null; gesture.pinch=null; canvas.classList.remove("panning");
+    saveViewSoon();
+  } else if(gesture.pointers.size===1){
+    // dropped from pinch to pan
+    const p=[...gesture.pointers.values()][0];
+    gesture.mode="pan"; gesture.startX=p.x; gesture.startY=p.y; gesture.startView={...view};
+  }
+}
+canvas.addEventListener("pointerup", endGesturePointer);
+// desktop wheel / trackpad zoom
+canvas.addEventListener("wheel", e=>{
+  if(isInteractive(e.target)) return;
+  e.preventDefault();
+  const factor = e.deltaY<0 ? 1.12 : 1/1.12;
+  setZoom(view.k*factor, e.clientX, e.clientY);
+}, {passive:false});
+
+/* ---------------- date bar ---------------- */
+function fmtDate(d){ const [y,m,dd]=d.split("-"); return `${parseInt(m)}/${parseInt(dd)}`; }
+function buildDateBar(){
+  const bar = $("#datebar"); if(!bar) return;
+  bar.innerHTML = "";
+  const lbl = document.createElement("span"); lbl.className="dlabel"; lbl.textContent="日期"; bar.appendChild(lbl);
+  const dates = Object.keys(doc.boards).sort();
+  if(!dates.includes(doc.activeDate)) dates.push(doc.activeDate);
+  dates.sort();
+  dates.forEach(d=>{
+    const b = doc.boards[d];
+    const n = b ? b.items.filter(i=>i.type==="match").length : 0;
+    const chip = document.createElement("button");
+    chip.className = "datechip"+(d===doc.activeDate?" active":"");
+    chip.innerHTML = `${fmtDate(d)}${n?`<span class="cnt">${n}</span>`:""}`;
+    chip.title = d;
+    chip.onclick = ()=> switchDate(d);
+    // long-press a date to delete it
+    let lp=null,fired=false;
+    chip.addEventListener("pointerdown",()=>{ fired=false; lp=setTimeout(()=>{ fired=true; deleteDate(d); },650); });
+    const cx=()=>{ if(lp)clearTimeout(lp); }; chip.addEventListener("pointerup",cx); chip.addEventListener("pointerleave",cx);
+    bar.appendChild(chip);
+  });
+  const add = document.createElement("button"); add.className="datechip adddate"; add.textContent="＋ 新日期";
+  add.onclick = addDate; bar.appendChild(add);
+}
+function switchDate(d){
+  if(d===doc.activeDate) return;
+  save(); doc.activeDate = d; loadActiveBoard(); save(); render(); buildDateBar();
+}
+function addDate(){
+  const def = todayStr();
+  const input = prompt("輸入日期（YYYY-MM-DD），或直接確定使用今天：", def);
+  if(input===null) return;
+  let d = input.trim() || def;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ alert("格式需為 YYYY-MM-DD"); return; }
+  snapshot(); ensureBoard(d); switchDate(d);
+}
+function deleteDate(d){
+  if(Object.keys(doc.boards).length<=1){ alert("至少要保留一個日期"); return; }
+  if(!confirm(`刪除 ${d} 這天的所有對戰？`)) return;
+  snapshot();
+  delete doc.boards[d];
+  if(doc.activeDate===d){ doc.activeDate = Object.keys(doc.boards).sort()[0]; loadActiveBoard(); }
+  save(); render(); buildDateBar();
+}
+
+/* ---------------- export text summary ---------------- */
+function buildExportText(){
+  const lines = [];
+  lines.push(`【排盤總結｜${doc.activeDate}】`);
+  const matches = state.items.filter(i=>i.type==="match");
+  if(!matches.length){ lines.push("（尚無對戰）"); return lines.join("\n"); }
+  matches.forEach(it=>{
+    normMatch(it);
+    const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
+    const mlC = it.mlAway.lights>0 && it.mlHome.lights>0;
+    const hdC = it.hdGive.lights>0 && it.hdRecv.lights>0;
+    const totC= it.over.lights>0 && it.under.lights>0;
+    const picks = [];
+    const dots = n => "●".repeat(n);
+    const pushIf = (cond,lights,label)=>{ if(cond && lights>=3) picks.push(`${label} ${dots(lights)}${lights}`); };
+    pushIf(!mlC, it.mlAway.lights, `獨贏 ${it.away}`);
+    pushIf(!mlC, it.mlHome.lights, `獨贏 ${it.home}`);
+    pushIf(!hdC, it.hdGive.lights, `${it[favSide]}讓${it.hdVal?it.hdVal:""}`);
+    pushIf(!hdC, it.hdRecv.lights, `${it[undSide]}受讓${it.hdVal?it.hdVal:""}`);
+    pushIf(!totC, it.over.lights, `大分${it.totVal?it.totVal:""}`);
+    pushIf(!totC, it.under.lights, `小分${it.totVal?it.totVal:""}`);
+    const warns = [];
+    if(mlC) warns.push("獨贏衝突"); if(hdC) warns.push("讓分衝突"); if(totC) warns.push("大小分衝突");
+    if(picks.length || warns.length){
+      lines.push("");
+      lines.push(`${it.away} / ${it.home}`);
+      picks.forEach(p=> lines.push(`  ・${p}`));
+      warns.forEach(w=> lines.push(`  ⚠ ${w}`));
+    }
+  });
+  if(lines.length<=1) lines.push("", "（沒有 3 燈以上的選擇）");
+  return lines.join("\n");
+}
+function openExport(){
+  $("#modalText").value = buildExportText();
+  $("#modal").classList.add("show");
+}
+$("#exportBtn").onclick = openExport;
+$("#modalClose").onclick = ()=> $("#modal").classList.remove("show");
+$("#modal").addEventListener("click", e=>{ if(e.target.id==="modal") $("#modal").classList.remove("show"); });
+$("#copyBtn").onclick = async ()=>{
+  const ta = $("#modalText");
+  try{ await navigator.clipboard.writeText(ta.value); $("#copyBtn").textContent="已複製 ✓"; setTimeout(()=>$("#copyBtn").textContent="複製到剪貼簿",1500); }
+  catch(_){ ta.removeAttribute("readonly"); ta.select(); document.execCommand("copy"); ta.setAttribute("readonly",""); $("#copyBtn").textContent="已複製 ✓"; setTimeout(()=>$("#copyBtn").textContent="複製到剪貼簿",1500); }
+};
+
+/* ---------------- auto-layout by league ---------------- */
+function leagueOf(it){
+  const names = (it.type==="match") ? [it.away,it.home] : [it.team];
+  for(const [k,v] of Object.entries(LEAGUES)){
+    if(names.some(n=>v.teams.includes(n))) return k;
+  }
+  return "zz"; // unknown / custom -> last group
+}
+function autoLayout(){
+  snapshot();
+  const order = ["cpbl","npb","kbo","mlb","zz"];
+  const groups = {}; order.forEach(k=>groups[k]=[]);
+  state.items.forEach(it=>{ (groups[leagueOf(it)]||groups.zz).push(it); });
+  const COL_W = 250, ROW_GAP = 18, COL_GAP = 22, TOP = 20;
+  let colX = 20;
+  order.forEach(k=>{
+    const list = groups[k]; if(!list.length) return;
+    let y = TOP;
+    list.forEach(it=>{
+      it.collapsed = false; it.scale = 1;
+      it.x = colX; it.y = y;
+      const bx = itemBox(it);
+      y += (bx.h || 300) + ROW_GAP;
+    });
+    colX += COL_W + COL_GAP;
+  });
+  save(); render(); fitView();
+}
+$("#layoutBtn").onclick = ()=>{ autoLayout(); closeMore(); };
+
+/* ---------------- export PNG ---------------- */
+async function exportPNG(){
+  const btn = $("#pngBtn"); const orig = btn.textContent; btn.textContent="產生中…";
+  try{
+    const cards = [...world.querySelectorAll(".card,.token")];
+    if(!cards.length){ alert("畫布上沒有東西可以匯出"); btn.textContent=orig; return; }
+    // compute bounding box of all items in canvas coords
+    let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+    state.items.forEach(it=>{ const b=itemBox(it); minX=Math.min(minX,it.x); minY=Math.min(minY,it.y); maxX=Math.max(maxX,it.x+b.w); maxY=Math.max(maxY,it.y+b.h); });
+    const pad=30;
+    const W=Math.ceil(maxX-minX+pad*2), H=Math.ceil(maxY-minY+pad*2+40);
+    // Build an SVG foreignObject snapshot
+    const clone = document.createElement("div");
+    clone.style.cssText=`position:relative;width:${W}px;height:${H}px;background:#0c0f14;`;
+    const title=document.createElement("div");
+    title.textContent=`排盤板 ${doc.activeDate}`;
+    title.style.cssText=`position:absolute;left:${pad}px;top:10px;color:#ffb02e;font-weight:700;font-size:16px;font-family:sans-serif;`;
+    clone.appendChild(title);
+    cards.forEach(c=>{
+      const cc=c.cloneNode(true);
+      const it=state.items.find(i=>String(i.id)===c.dataset.id);
+      cc.style.left=(it.x-minX+pad)+"px"; cc.style.top=(it.y-minY+pad+40)+"px";
+      clone.appendChild(cc);
+    });
+    document.body.appendChild(clone);
+    const data = new XMLSerializer().serializeToString(wrapForeign(clone, W, H));
+    document.body.removeChild(clone);
+    const svgBlob = new Blob([data], {type:"image/svg+xml;charset=utf-8"});
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    // race the load against a timeout so the button never hangs (Safari may never fire onload)
+    await new Promise((res,rej)=>{
+      let done=false;
+      const finish=(fn)=>(...a)=>{ if(done) return; done=true; fn(...a); };
+      img.onload=finish(res); img.onerror=finish(()=>rej(new Error("img load failed")));
+      setTimeout(finish(()=>rej(new Error("timeout"))), 4000);
+      img.src=url;
+    });
+    const cv=document.createElement("canvas"); cv.width=W*2; cv.height=H*2;
+    const ctx=cv.getContext("2d"); ctx.scale(2,2); ctx.drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    cv.toBlob(b=>{
+      if(!b){ btn.textContent=orig; alert("圖片匯出在這個瀏覽器受限，可改用「匯出」複製文字，或直接截圖。"); return; }
+      const a=document.createElement("a"); a.href=URL.createObjectURL(b);
+      a.download=`排盤板_${doc.activeDate}.png`; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      btn.textContent=orig;
+    });
+  }catch(e){
+    btn.textContent=orig;
+    // graceful fallback: hand the user the text summary instead of a dead end
+    if(typeof openExport==="function") openExport();
+    else alert("這個瀏覽器不支援直接匯出圖片，已改用文字匯出，或請直接截圖。");
+  }
+}
+function wrapForeign(node, W, H){
+  const svgNS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(svgNS,"svg");
+  svg.setAttribute("xmlns",svgNS); svg.setAttribute("width",W); svg.setAttribute("height",H);
+  const fo=document.createElementNS(svgNS,"foreignObject");
+  fo.setAttribute("width",W); fo.setAttribute("height",H);
+  const wrap=document.createElement("div"); wrap.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+  wrap.appendChild(node); fo.appendChild(wrap); svg.appendChild(fo);
+  return svg;
+}
+$("#pngBtn").onclick = ()=>{ closeMore(); exportPNG(); };
+
+/* ---------------- data backup (export / import a file) ---------------- */
+function exportData(){
+  closeMore();
+  syncStateToDoc();
+  const blob = new Blob([JSON.stringify(doc)], {type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`排盤備份_${todayStr()}.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function importData(){
+  closeMore();
+  const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json,.json";
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      snapshot();
+      if(loadDocFromString(String(rd.result))){
+        loadActiveBoard(); save(); render(); buildDateBar(); applyView(); fitView();
+        alert("已匯入備份 ✓");
+      }else{
+        alert("這個檔案讀不出來，請確認是本程式匯出的備份檔。");
+      }
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+
+/* tiny "saved" indicator */
+let _badgeTimer=null;
+function updateSaveBadge(){
+  const b=$("#saveBadge"); if(!b) return;
+  b.textContent="已儲存 ✓"; b.classList.add("show");
+  if(_badgeTimer) clearTimeout(_badgeTimer);
+  _badgeTimer=setTimeout(()=>b.classList.remove("show"), 1400);
+}
+
+/* ---------------- toolbar & new UI wiring ---------------- */
+$("#undoBtn").onclick = ()=>{ undo(); };
+document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); } });
+
+$("#addBlank").onclick = ()=>{
+  snapshot();
+  // place near top-left of current view, in world coords
+  const cr = canvas.getBoundingClientRect();
+  const tl = screenToWorld(cr.left+40, cr.top+40);
+  const p = snap({id:-1}, tl.x, tl.y);
+  state.items.push({ id:uid++, type:"match", x:p.x, y:p.y, away:"客隊", home:"主隊",
+    awayColor:"var(--ink-dim)", homeColor:"var(--ink-dim)",
+    mlAway:{lights:0}, mlHome:{lights:0},
+    hdFav:"home", hdVal:"", hdGive:{lights:0}, hdRecv:{lights:0},
+    totVal:"", over:{lights:0}, under:{lights:0}, collapsed:false });
+  save(); render();
+};
+$("#clearAll").onclick = ()=>{ closeMore(); if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } };
+$("#exportBtn").onclick = ()=>{ closeMore(); openExport(); };
+
+/* zoom controls */
+$("#zoomIn").onclick  = ()=> nudgeZoom(1.2);
+$("#zoomOut").onclick = ()=> nudgeZoom(1/1.2);
+const doFit = ()=> fitView();
+$("#fitBtn").onclick  = doFit;
+$("#fitBtn2").onclick = doFit;
+
+/* overflow menu */
+function closeMore(){ $("#moreMenu").classList.remove("show"); }
+$("#moreBtn").onclick = (e)=>{ e.stopPropagation(); $("#moreMenu").classList.toggle("show"); };
+document.addEventListener("pointerdown", e=>{ if(!e.target.closest("#moreWrap")) closeMore(); }, true);
+
+/* tray collapse (manual only) */
+function collapseTray(state_){ const t=$("#tray"); t.classList.toggle("collapsed", state_); $("#trayLbl").textContent = t.classList.contains("collapsed")?"隊伍 ▴":"隊伍 ▾"; }
+$("#trayHandle").onclick = ()=>{ const t=$("#tray"); collapseTray(!t.classList.contains("collapsed")); };
+
+/* data backup buttons */
+$("#exportDataBtn").onclick = exportData;
+$("#importDataBtn").onclick = importData;
+
+/* ---------------- init ---------------- */
+(async()=>{
+  await load();
+  // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
+  const t = todayStr();
+  if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
+  buildTray(); buildDateBar(); render(); updateUndoBtn();
+  applyView();
+  if(!state.view) fitView();
+})();
+</script>
+</body>
+</html>
