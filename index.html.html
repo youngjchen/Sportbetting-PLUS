@@ -1,0 +1,1183 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>賽事排盤板</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0f14;
+    --panel:#151a22;
+    --panel-2:#1b222c;
+    --line:#2a3340;
+    --ink:#e9eef5;
+    --ink-dim:#8a96a6;
+    --cpbl:#f2b705;
+    --npb:#e23b3b;
+    --kbo:#3d8bfd;
+    --mlb:#28c76f;
+    --lit:#ffb02e;
+    --lit-glow:rgba(255,176,46,.55);
+    --hot:#ff7a1a;
+    --hot-glow:rgba(255,110,20,.6);
+    --conflict:#ff3b5c;
+    --conflict-glow:rgba(255,59,92,.5);
+    --danger:#ff5b6e;
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{margin:0;height:100%;height:100dvh;}
+  body{
+    background:
+      radial-gradient(1200px 500px at 50% -10%, #18202b 0%, transparent 60%),
+      repeating-linear-gradient(0deg, transparent 0 38px, rgba(255,255,255,.012) 38px 39px),
+      var(--bg);
+    color:var(--ink);
+    font-family:"Noto Sans TC",system-ui,sans-serif;
+    display:flex;flex-direction:column;
+    overflow:hidden;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  /* ---------- top bar ---------- */
+  header{
+    display:flex;align-items:center;gap:14px;
+    padding:12px 18px;
+    border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);
+    flex:0 0 auto;
+  }
+  .logo{
+    font-family:"Oswald",sans-serif;font-weight:700;letter-spacing:.06em;
+    font-size:20px;text-transform:uppercase;display:flex;align-items:center;gap:10px;
+  }
+  .logo .dot{width:11px;height:11px;border-radius:50%;background:var(--lit);box-shadow:0 0 12px var(--lit-glow);}
+  .logo small{font-family:"Noto Sans TC";font-weight:500;letter-spacing:0;color:var(--ink-dim);font-size:12px;}
+  .spacer{flex:1;}
+  .hint{font-size:12px;color:var(--ink-dim);max-width:340px;line-height:1.4;text-align:right;}
+  .btn{
+    font-family:"Noto Sans TC";font-size:13px;font-weight:500;color:var(--ink);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:9px;
+    padding:8px 13px;cursor:pointer;transition:.15s;white-space:nowrap;
+  }
+  .btn:hover{border-color:#3a4756;background:#222a36;}
+  .btn.danger:hover{border-color:var(--danger);color:var(--danger);}
+
+  /* ---------- canvas ---------- */
+  #canvas{
+    position:relative;flex:1 1 auto;overflow:auto;
+    background-image:radial-gradient(rgba(255,255,255,.05) 1px, transparent 1px);
+    background-size:20px 20px;
+    touch-action:pan-x pan-y;
+    -webkit-overflow-scrolling:touch;
+  }
+  #empty{
+    position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    color:var(--ink-dim);font-size:15px;pointer-events:none;text-align:center;line-height:1.7;
+  }
+  #empty b{color:#aeb9c8;font-weight:700;}
+
+  /* single token */
+  .token{
+    position:absolute;display:flex;align-items:center;
+    background:var(--panel-2);border:1.5px solid var(--line);border-radius:11px;
+    padding:9px 14px;font-weight:700;font-size:15px;cursor:grab;
+    box-shadow:0 6px 18px rgba(0,0,0,.35);touch-action:none;
+    border-left-width:4px;
+  }
+  .token.dragging{cursor:grabbing;z-index:999;transform:scale(1.04);}
+  .token.merge-target{border-color:var(--lit);box-shadow:0 0 0 2px var(--lit-glow),0 6px 18px rgba(0,0,0,.4);}
+
+  /* matchup card */
+  .card{
+    position:absolute;width:230px;
+    transform-origin:top left;
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:14px;
+    box-shadow:0 10px 26px rgba(0,0,0,.45);
+    touch-action:none;overflow:hidden;
+  }
+  .card.dragging{z-index:999;box-shadow:0 16px 40px rgba(0,0,0,.6);}
+  .card.resizing{z-index:999;}
+  .resize{
+    position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;
+    background:
+      linear-gradient(135deg, transparent 0 45%, var(--ink-dim) 45% 55%, transparent 55% 65%, var(--ink-dim) 65% 75%, transparent 75% 85%, var(--ink-dim) 85% 95%, transparent 95%);
+    opacity:.45;border-bottom-right-radius:13px;
+  }
+  .resize:hover{opacity:1;}
+  .card .grip{
+    display:flex;align-items:center;gap:6px;
+    padding:10px 12px 8px;cursor:grab;
+    background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);
+  }
+  .card.dragging .grip{cursor:grabbing;}
+  .vs{
+    flex:1;display:flex;align-items:center;gap:7px;font-weight:900;font-size:16px;flex-wrap:wrap;
+  }
+  .vs .team{padding:1px 3px;border-radius:5px;outline:none;}
+  .vs .team:focus{background:#0c0f14;box-shadow:0 0 0 1.5px var(--lit);}
+  .vs .slash{color:var(--ink-dim);font-weight:400;}
+  .ico{
+    width:24px;height:24px;display:grid;place-items:center;border-radius:7px;cursor:pointer;
+    color:var(--ink-dim);font-size:15px;transition:.15s;flex:0 0 auto;
+  }
+  .ico:hover{background:#222a36;color:var(--ink);}
+  .ico.x:hover{color:var(--danger);}
+
+  .row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:1px solid rgba(255,255,255,.05);}
+  .row .tag{font-family:"Oswald";font-size:12px;letter-spacing:.08em;color:var(--ink-dim);width:30px;flex:0 0 auto;text-transform:uppercase;}
+  .row .tag.big{font-family:"Noto Sans TC";font-weight:900;font-size:15px;color:var(--ink);}
+
+  .pick{display:flex;gap:5px;flex:0 0 auto;}
+  .pick button{
+    font-family:"Noto Sans TC";font-weight:700;font-size:13px;color:var(--ink-dim);
+    background:transparent;border:1px solid var(--line);border-radius:7px;
+    padding:4px 9px;cursor:pointer;transition:.12s;
+  }
+  .pick button:hover{border-color:#46566a;color:var(--ink);}
+  .pick button.on{background:var(--lit);border-color:var(--lit);color:#1a1205;box-shadow:0 0 10px var(--lit-glow);}
+  .hval{
+    width:34px;background:#0c0f14;border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);font-size:13px;font-weight:700;text-align:center;padding:3px 2px;outline:none;
+  }
+  .hval:focus{border-color:var(--lit);}
+
+  .lights{display:flex;align-items:center;gap:5px;flex-wrap:wrap;margin-left:auto;}
+  .light{
+    width:17px;height:17px;border-radius:50%;cursor:pointer;flex:0 0 auto;transition:.12s;
+  }
+  .light.on{
+    background:radial-gradient(circle at 35% 30%, #ffe39a, var(--lit) 70%);
+    box-shadow:0 0 9px var(--lit-glow);
+  }
+  /* 4th light onward turns hot (red-orange) to flag a strong signal */
+  .lights.hot .light.on{
+    background:radial-gradient(circle at 35% 30%, #ffd0a0, var(--hot) 72%);
+    box-shadow:0 0 11px var(--hot-glow);
+  }
+  .light.add{
+    border:1.5px dashed #3a4756;color:#3a4756;display:grid;place-items:center;
+    font-size:13px;line-height:1;font-weight:700;
+  }
+  .light.add:hover{border-color:var(--lit);color:var(--lit);}
+
+  /* market sections + independent option rows */
+  .sec{
+    display:flex;align-items:center;gap:8px;padding:9px 12px 2px;
+    font-family:"Oswald";font-size:11px;letter-spacing:.14em;color:var(--ink-dim);
+    text-transform:uppercase;border-top:1px solid rgba(255,255,255,.06);
+  }
+  .sec .ln{flex:1;height:1px;background:rgba(255,255,255,.07);}
+  .sec .val{
+    width:40px;background:#0c0f14;border:1px solid var(--line);border-radius:6px;
+    color:var(--ink);font-size:12px;font-weight:700;text-align:center;padding:3px 2px;outline:none;
+    font-family:"Noto Sans TC";
+  }
+  .sec .val:focus{border-color:var(--lit);}
+  .sec .ico{width:20px;height:20px;font-size:13px;}
+  .opt{display:flex;align-items:center;gap:7px;padding:4px 12px;}
+  .opt .side{
+    font-family:"Oswald";font-size:10px;letter-spacing:.05em;color:#0c0f14;background:var(--ink-dim);
+    border-radius:5px;padding:2px 6px;font-weight:600;flex:0 0 auto;
+  }
+  .opt .side.give{background:var(--lit);}
+  .opt .side.recv{background:#5b6b80;color:#dfe6ef;}
+  .opt .nm{font-weight:700;font-size:14px;}
+
+  /* conflict: both sides of one market lit -> flag the whole block */
+  .sec.conflict{color:var(--conflict);}
+  .sec.conflict .ln{background:var(--conflict-glow);}
+  .sec.conflict .warn{
+    color:var(--conflict);font-family:"Noto Sans TC";font-weight:700;font-size:11px;
+    letter-spacing:0;display:flex;align-items:center;gap:3px;
+  }
+  .opt.conflict{background:rgba(255,59,92,.08);box-shadow:inset 3px 0 0 var(--conflict);}
+  .opt.conflict .side{background:var(--conflict);color:#fff;}
+
+  /* summary panel on canvas */
+  #summary{
+    position:absolute;top:18px;left:18px;width:300px;z-index:50;
+    background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96));
+    border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(6px);
+    box-shadow:0 12px 30px rgba(0,0,0,.5);overflow:hidden;
+  }
+  #summary .sumhead{
+    display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:grab;touch-action:none;
+    font-family:"Oswald";font-weight:600;letter-spacing:.08em;font-size:13px;text-transform:uppercase;
+    background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);border-bottom:1px solid var(--line);
+  }
+  #summary .sumhead .dot{width:9px;height:9px;border-radius:50%;background:var(--hot);box-shadow:0 0 8px var(--hot-glow);}
+  #summary .sumhead .count{margin-left:auto;color:var(--ink-dim);font-family:"Noto Sans TC";font-weight:700;font-size:12px;letter-spacing:0;}
+  #summary .sumbody{padding:8px 0;max-height:46vh;overflow:auto;}
+  .sumrow{display:flex;align-items:baseline;gap:9px;padding:6px 14px;font-size:13px;}
+  .sumrow .mt{color:var(--ink-dim);font-size:11px;flex:0 0 64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sumrow .pk{font-weight:700;flex:1;}
+  .sumrow .pk .mk{color:var(--ink-dim);font-weight:500;font-size:11px;margin-left:5px;}
+  .sumrow .n{font-family:"Oswald";font-weight:700;color:var(--hot);font-size:14px;flex:0 0 auto;}
+  .sumrow .n.warm{color:var(--lit);}
+  #summary .sumempty{padding:14px;color:var(--ink-dim);font-size:12px;line-height:1.6;}
+  .sumsec{padding:7px 14px 2px;font-family:"Oswald";font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;}
+  .sumrow.conflict .pk{color:var(--conflict);}
+  .sumrow.conflict .n{color:var(--conflict);}
+
+  /* ---------- tray ---------- */
+  #tray{
+    flex:0 0 auto;border-top:1px solid var(--line);
+    background:linear-gradient(180deg,#10151c,#0c0f14);
+    max-height:38vh;display:flex;flex-direction:column;
+  }
+  .tabs{display:flex;gap:6px;padding:10px 14px 0;flex-wrap:wrap;}
+  .tab{
+    font-family:"Oswald";font-weight:600;letter-spacing:.05em;font-size:14px;
+    padding:7px 15px;border-radius:10px 10px 0 0;cursor:pointer;color:var(--ink-dim);
+    border:1px solid transparent;border-bottom:none;transition:.15s;
+  }
+  .tab:hover{color:var(--ink);}
+  .tab.active{color:var(--ink);background:var(--panel);border-color:var(--line);}
+  .tab .swatch{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;}
+  .chips{
+    padding:14px;overflow:auto;display:flex;flex-wrap:wrap;gap:9px;align-content:flex-start;
+    border-top:1px solid var(--line);
+  }
+  .chip{
+    font-weight:700;font-size:14px;padding:8px 14px;border-radius:10px;cursor:grab;
+    background:var(--panel-2);border:1.5px solid var(--line);border-left-width:4px;
+    transition:.12s;touch-action:none;
+  }
+  .chip:hover{background:#222a36;transform:translateY(-1px);}
+  .chip:active{cursor:grabbing;}
+
+  /* drag ghost */
+  #ghost{
+    position:fixed;pointer-events:none;z-index:10000;font-weight:700;font-size:15px;
+    background:var(--panel-2);border:1.5px solid var(--lit);border-left-width:4px;border-radius:11px;
+    padding:9px 14px;box-shadow:0 8px 22px rgba(0,0,0,.5);opacity:.95;display:none;transform:translate(-50%,-50%);
+  }
+  ::-webkit-scrollbar{width:10px;height:10px;}
+  ::-webkit-scrollbar-thumb{background:#2a3340;border-radius:8px;}
+
+  /* ---------- date bar ---------- */
+  #datebar{
+    flex:0 0 auto;display:flex;align-items:center;gap:6px;padding:7px 14px;
+    border-bottom:1px solid var(--line);background:rgba(255,255,255,.015);overflow-x:auto;
+  }
+  .datechip{
+    font-family:"Oswald";font-size:13px;letter-spacing:.03em;color:var(--ink-dim);white-space:nowrap;
+    padding:5px 12px;border-radius:8px;border:1px solid var(--line);cursor:pointer;transition:.13s;background:transparent;
+  }
+  .datechip:hover{color:var(--ink);border-color:#3a4756;}
+  .datechip.active{color:#1a1205;background:var(--lit);border-color:var(--lit);font-weight:600;}
+  .datechip .cnt{opacity:.6;margin-left:5px;font-size:11px;}
+  .datechip.adddate{color:var(--ink-dim);border-style:dashed;}
+  .datechip.adddate:hover{color:var(--lit);border-color:var(--lit);}
+  #datebar .dlabel{font-family:"Oswald";font-size:11px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;margin-right:4px;flex:0 0 auto;}
+
+  /* ---------- net-lean badge in section header ---------- */
+  .sec .lean{
+    font-family:"Noto Sans TC";font-weight:700;font-size:11px;letter-spacing:0;
+    padding:1px 7px;border-radius:9px;background:#0c0f14;border:1px solid var(--line);color:var(--ink-dim);
+  }
+  .sec .lean.pos{color:#1a1205;background:var(--lit);border-color:var(--lit);}
+  .sec .lean.hotlean{color:#fff;background:var(--hot);border-color:var(--hot);}
+
+  /* ---------- collapsed card ---------- */
+  .card .collapse{cursor:pointer;}
+  .card.collapsed .sec,.card.collapsed .opt,.card.collapsed .resize{display:none;}
+  .summary-line{
+    display:none;padding:8px 12px 11px;gap:6px;flex-wrap:wrap;align-items:center;
+    border-top:1px solid rgba(255,255,255,.05);
+  }
+  .card.collapsed .summary-line{display:flex;}
+  .summary-line .pill{
+    font-size:12px;font-weight:700;padding:3px 9px;border-radius:8px;background:#0c0f14;border:1px solid var(--line);
+    display:flex;align-items:center;gap:5px;
+  }
+  .summary-line .pill .pin{width:8px;height:8px;border-radius:50%;background:var(--lit);box-shadow:0 0 7px var(--lit-glow);}
+  .summary-line .pill.hot .pin{background:var(--hot);box-shadow:0 0 7px var(--hot-glow);}
+  .summary-line .none{color:var(--ink-dim);font-size:12px;}
+
+  /* ---------- conflict glow on whole card ---------- */
+  .card.has-conflict{border-color:var(--conflict);box-shadow:0 0 0 1px var(--conflict-glow),0 0 22px var(--conflict-glow),0 10px 26px rgba(0,0,0,.45);}
+
+  /* ---------- export modal ---------- */
+  #modal{
+    position:fixed;inset:0;z-index:20000;display:none;align-items:center;justify-content:center;
+    background:rgba(0,0,0,.6);backdrop-filter:blur(3px);padding:20px;
+  }
+  #modal.show{display:flex;}
+  .modal-box{
+    width:min(560px,100%);max-height:80vh;display:flex;flex-direction:column;
+    background:var(--panel);border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:0 24px 60px rgba(0,0,0,.6);
+  }
+  .modal-box h3{margin:0;padding:15px 18px;font-size:15px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px;}
+  .modal-box h3 .spacer{flex:1;}
+  .modal-box textarea{
+    flex:1;min-height:240px;resize:none;border:none;outline:none;background:#0c0f14;color:var(--ink);
+    font-family:"Noto Sans TC",monospace;font-size:13px;line-height:1.7;padding:16px 18px;
+  }
+  .modal-actions{display:flex;gap:8px;padding:13px 18px;border-top:1px solid var(--line);}
+  .modal-actions .grow{flex:1;}
+
+  /* ---------- mobile / narrow screens ---------- */
+  @media (max-width:760px){
+    header{flex-wrap:wrap;gap:8px;padding:10px 12px;}
+    .logo{font-size:17px;}
+    .logo small{display:none;}
+    .hint{display:none;}
+    .spacer{display:none;}
+    .btn{padding:9px 12px;font-size:14px;flex:1 1 auto;text-align:center;}
+    #tray{max-height:34vh;}
+    .tab{padding:9px 14px;font-size:15px;}
+    .chips{gap:11px;padding:12px;}
+    .chip{font-size:15px;padding:11px 16px;}      /* bigger touch target */
+    /* enlarge interactive bits inside cards for fingers */
+    .light{width:20px;height:20px;}
+    .light.add{font-size:15px;}
+    .ico{width:30px;height:30px;font-size:17px;}
+    .pick button{padding:7px 12px;font-size:14px;}
+    .resize{width:26px;height:26px;}
+  }
+  @media (hover:none){
+    /* on touch devices, show resize/add affordances at full opacity */
+    .resize{opacity:.7;}
+  }
+</style>
+</head>
+<body>
+  <header>
+    <div class="logo"><span class="dot"></span>排盤板 <small>中職 · 日職 · 韓職 · MLB</small></div>
+    <div class="spacer"></div>
+    <button class="btn" id="undoBtn" title="復原 (Ctrl/⌘+Z)" disabled>↶ 復原</button>
+    <button class="btn" id="layoutBtn" title="依聯盟自動排版">⊞ 排版</button>
+    <button class="btn" id="exportBtn" title="匯出文字總結">⎘ 匯出</button>
+    <button class="btn" id="pngBtn" title="存成圖片">⤓ 圖片</button>
+    <button class="btn" id="addBlank">+ 空白卡</button>
+    <button class="btn danger" id="clearAll">清空</button>
+  </header>
+
+  <div id="datebar"></div>
+
+  <div id="canvas">
+    <div id="empty">把下方的隊伍標籤<b>拖上來</b>，<br>再把兩隊<b>疊在一起</b>就會吸成一場對戰</div>
+  </div>
+
+  <div id="tray">
+    <div class="tabs" id="tabs"></div>
+    <div class="chips" id="chips"></div>
+  </div>
+
+  <div id="ghost"></div>
+
+  <div id="modal">
+    <div class="modal-box">
+      <h3>當日重點總結 <span class="spacer"></span><span class="ico x no-drag" id="modalClose" style="cursor:pointer">✕</span></h3>
+      <textarea id="modalText" readonly></textarea>
+      <div class="modal-actions">
+        <span class="grow"></span>
+        <button class="btn" id="copyBtn">複製到剪貼簿</button>
+      </div>
+    </div>
+  </div>
+
+<script>
+const LEAGUES = {
+  cpbl: { name:"中職", color:"var(--cpbl)", teams:["中信兄弟","統一獅","樂天桃猿","富邦悍將","味全龍","台鋼雄鷹"] },
+  npb:  { name:"日職", color:"var(--npb)", teams:["讀賣巨人","阪神虎","橫濱DeNA","廣島鯉魚","養樂多燕子","中日龍","軟銀鷹","日本火腿","羅德","樂天金鷲","西武獅","歐力士"] },
+  kbo:  { name:"韓職", color:"var(--kbo)", teams:["LG雙子","KT巫師","SSG登陸者","NC恐龍","斗山熊","起亞虎","樂天巨人","三星獅","韓華鷹","培證英雄"] },
+  mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
+};
+const GRID = 20, SNAP = 11, MERGE_DIST = 64;
+
+const todayStr = ()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+
+// full document: multiple dated boards
+let doc = { version:2, activeDate: todayStr(), boards:{} };
+let state = { items:[], summaryPos:null };   // working pointer = active board
+let activeTab = "cpbl";
+let uid = 1;
+const $ = s => document.querySelector(s);
+const canvas = $("#canvas"), ghost = $("#ghost"), emptyMsg = $("#empty");
+
+/* ---------------- undo history ---------------- */
+const history = [];
+let suppress = false;
+function snapshot(){
+  // call BEFORE a mutating action to enable undo
+  if(suppress) return;
+  syncStateToDoc();
+  history.push(JSON.stringify(doc));
+  if(history.length>60) history.shift();
+  updateUndoBtn();
+}
+function undo(){
+  if(!history.length) return;
+  const prev = history.pop();
+  try{
+    doc = JSON.parse(prev);
+    if(!doc.boards[doc.activeDate]) doc.activeDate = Object.keys(doc.boards)[0] || todayStr();
+    loadActiveBoard();
+    save(); render(); buildDateBar();
+  }catch(e){}
+  updateUndoBtn();
+}
+function updateUndoBtn(){ const b=$("#undoBtn"); if(b) b.disabled = history.length===0; }
+
+/* ---------------- board <-> doc sync ---------------- */
+function ensureBoard(date){
+  if(!doc.boards[date]) doc.boards[date] = { items:[], summaryPos:null };
+  return doc.boards[date];
+}
+function syncStateToDoc(){
+  const b = ensureBoard(doc.activeDate);
+  b.items = state.items; b.summaryPos = state.summaryPos;
+}
+function loadActiveBoard(){
+  const b = ensureBoard(doc.activeDate);
+  state.items = b.items; state.summaryPos = b.summaryPos;
+  state.items.forEach(i=>{ if(i.id>=uid) uid=i.id+1; });
+}
+
+/* ---------------- persistence (graceful, optional) ---------------- */
+async function save(){
+  syncStateToDoc();
+  try{ if(window.storage) await window.storage.set("board_doc_v2", JSON.stringify(doc), false); }catch(e){}
+}
+async function load(){
+  try{
+    if(window.storage){
+      // try new format
+      let r = null;
+      try{ r = await window.storage.get("board_doc_v2", false); }catch(_){}
+      if(r && r.value){
+        const d = JSON.parse(r.value);
+        if(d && d.boards){ doc = d; if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr(); }
+      }else{
+        // migrate old single-board format
+        let old=null; try{ old = await window.storage.get("board_state", false); }catch(_){}
+        if(old && old.value){
+          const s = JSON.parse(old.value);
+          if(s && s.items){
+            doc = { version:2, activeDate: todayStr(), boards:{ [todayStr()]: {items:s.items, summaryPos:s.summaryPos||null} } };
+          }
+        }
+      }
+    }
+  }catch(e){}
+  loadActiveBoard();
+}
+
+/* ---------------- tray ---------------- */
+function buildTray(){
+  const tabs = $("#tabs"); tabs.innerHTML = "";
+  Object.entries(LEAGUES).forEach(([k,v])=>{
+    const t = document.createElement("div");
+    t.className = "tab" + (k===activeTab?" active":"");
+    t.innerHTML = `<span class="swatch" style="background:${v.color}"></span>${v.name}`;
+    t.onclick = ()=>{ activeTab=k; buildTray(); };
+    tabs.appendChild(t);
+  });
+  const chips = $("#chips"); chips.innerHTML = "";
+  const lg = LEAGUES[activeTab];
+  const used = usedTeams();
+  let shown = 0;
+  lg.teams.forEach(team=>{
+    if(used.has(team)) return;
+    const c = document.createElement("div");
+    c.className = "chip"; c.textContent = team;
+    c.style.borderLeftColor = lg.color;
+    c.addEventListener("pointerdown", e=> startChipDrag(e, team, lg.color));
+    chips.appendChild(c);
+    shown++;
+  });
+  if(shown===0){
+    const e = document.createElement("div");
+    e.style.cssText = "color:var(--ink-dim);font-size:13px;padding:4px 2px;";
+    e.textContent = "本聯盟隊伍都已排上了";
+    chips.appendChild(e);
+  }
+}
+
+/* teams currently placed on the board (as token or inside a match) */
+function usedTeams(){
+  const s = new Set();
+  state.items.forEach(it=>{
+    if(it.type==="single") s.add(it.team);
+    else { s.add(it.away); s.add(it.home); }
+  });
+  return s;
+}
+
+/* ---------------- rendering items ---------------- */
+function render(){
+  [...canvas.querySelectorAll(".token,.card")].forEach(n=>n.remove());
+  emptyMsg.style.display = state.items.length ? "none" : "flex";
+  state.items.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
+  renderSummary();
+  buildTray();
+}
+
+function renderToken(it){
+  const el = document.createElement("div");
+  el.className = "token"; el.dataset.id = it.id;
+  el.textContent = it.team;
+  el.style.left = it.x+"px"; el.style.top = it.y+"px";
+  el.style.borderLeftColor = it.color;
+  el.addEventListener("pointerdown", e=> startItemDrag(e, it, el));
+  canvas.appendChild(el);
+}
+
+function normMatch(it){
+  it.mlAway = it.mlAway || {lights: (it.win&&it.win.side==="away")?it.win.lights:0};
+  it.mlHome = it.mlHome || {lights: (it.win&&it.win.side==="home")?it.win.lights:0};
+  if(it.hdFav===undefined) it.hdFav = (it.handi&&it.handi.side) ? it.handi.side : "home";
+  if(it.hdVal===undefined) it.hdVal = (it.handi&&it.handi.val)||"";
+  it.hdGive = it.hdGive || {lights: (it.handi&&it.handi.lights)||0};
+  it.hdRecv = it.hdRecv || {lights:0};
+  it.over = it.over || {lights:0};
+  it.under = it.under || {lights:0};
+  if(it.totVal===undefined) it.totVal = "";
+  if(it.collapsed===undefined) it.collapsed = false;
+  delete it.win; delete it.handi; delete it.total;
+}
+
+function renderCard(it){
+  normMatch(it);
+  const el = document.createElement("div");
+  el.className = "card"; el.dataset.id = it.id;
+  el.style.left = it.x+"px"; el.style.top = it.y+"px";
+  if(it.scale && it.scale!==1) el.style.transform = "scale("+it.scale+")";
+
+  // ---- header ----
+  const grip = document.createElement("div"); grip.className="grip";
+  const vs = document.createElement("div"); vs.className="vs";
+  const slash = document.createElement("span"); slash.className="slash"; slash.textContent="/";
+  vs.append(mkTeam(it,"away"), slash, mkTeam(it,"home"));
+  const swap = document.createElement("div"); swap.className="ico no-drag"; swap.title="主客對調"; swap.textContent="⇄";
+  swap.onclick = ()=>{
+    snapshot();
+    [it.away,it.home]=[it.home,it.away]; [it.awayColor,it.homeColor]=[it.homeColor,it.awayColor];
+    [it.mlAway,it.mlHome]=[it.mlHome,it.mlAway];
+    it.hdFav = it.hdFav==="away"?"home":"away";
+    save(); render();
+  };
+  const del = document.createElement("div"); del.className="ico x no-drag"; del.title="刪除"; del.textContent="✕";
+  del.onclick = ()=>{ snapshot(); state.items = state.items.filter(x=>x.id!==it.id); save(); render(); };
+  const col = document.createElement("div"); col.className="ico collapse no-drag"; col.title=it.collapsed?"展開":"收合";
+  col.textContent = it.collapsed?"▸":"▾";
+  col.onclick = ()=>{ it.collapsed=!it.collapsed; save(); render(); };
+  grip.append(vs,swap,col,del);
+  grip.addEventListener("pointerdown", e=>{ if(e.target.closest(".no-drag")) return; startItemDrag(e,it,el); });
+  el.appendChild(grip);
+
+  // ---- helpers ----
+  const teamColor = side => side==="away"?it.awayColor:it.homeColor;
+  function optRow(badge, badgeClass, name, color, obj, conflict){
+    const row = document.createElement("div"); row.className="row opt"+(conflict?" conflict":"");
+    const b = document.createElement("div"); b.className="side "+badgeClass; b.textContent=badge;
+    const nm = document.createElement("div"); nm.className="nm"; nm.textContent=name; if(color) nm.style.color=color;
+    row.append(b, nm, mkLights(obj));
+    return row;
+  }
+  function sec(label, valObj, valKey, extraIco, conflict, lean){
+    const s = document.createElement("div"); s.className="sec"+(conflict?" conflict":"");
+    const t = document.createElement("span"); t.textContent=label;
+    const ln = document.createElement("span"); ln.className="ln";
+    s.append(t, ln);
+    if(lean){
+      const le = document.createElement("span");
+      le.className = "lean"+(lean.n>=4?" hotlean":(lean.n>=1?" pos":""));
+      le.textContent = lean.txt;
+      s.appendChild(le);
+    }
+    if(conflict){
+      const w = document.createElement("span"); w.className="warn"; w.textContent="⚠ 衝突";
+      s.appendChild(w);
+    }
+    if(extraIco) s.appendChild(extraIco);
+    if(valObj){
+      const v = document.createElement("input"); v.className="val no-drag"; v.value=valObj[valKey]; v.placeholder="盤";
+      v.title="盤口數值（選填）";
+      v.oninput=()=>{ valObj[valKey]=v.value; save(); };
+      v.onpointerdown=e=>e.stopPropagation();
+      s.appendChild(v);
+    }
+    return s;
+  }
+
+  // conflict = both sides of the same market are lit
+  const mlConflict  = it.mlAway.lights>0 && it.mlHome.lights>0;
+  const hdConflict  = it.hdGive.lights>0 && it.hdRecv.lights>0;
+  const totConflict = it.over.lights>0  && it.under.lights>0;
+  if(mlConflict||hdConflict||totConflict) el.classList.add("has-conflict");
+  if(it.collapsed) el.classList.add("collapsed");
+
+  const favSide0 = it.hdFav, undSide0 = it.hdFav==="away"?"home":"away";
+  // net lean: returns {txt for badge, n magnitude, winLabel for pill}
+  function lean(aLit,aLabel,bLit,bLabel){
+    if(aLit===bLit) return null;
+    const winLabel = aLit>bLit ? aLabel : bLabel;
+    const n = Math.abs(aLit-bLit);
+    return { txt:`${winLabel} +${n}`, n, winLabel };
+  }
+  const mlLean  = mlConflict ?null: lean(it.mlAway.lights, it.away, it.mlHome.lights, it.home);
+  const hdLean  = hdConflict ?null: lean(it.hdGive.lights, `${it[favSide0]}讓`, it.hdRecv.lights, `${it[undSide0]}受讓`);
+  const totLean = totConflict?null: lean(it.over.lights, "大分", it.under.lights, "小分");
+
+  // ---- 獨贏 ----
+  el.appendChild(sec("獨贏", null, null, null, mlConflict, mlLean));
+  el.appendChild(optRow("客", "", it.away, teamColor("away"), it.mlAway, mlConflict));
+  el.appendChild(optRow("主", "", it.home, teamColor("home"), it.mlHome, mlConflict));
+
+  // ---- 讓分 / 受讓 ----
+  const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
+  favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
+  el.appendChild(sec("讓分", it, "hdVal", favSwap, hdConflict, hdLean));
+  const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
+  el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
+  el.appendChild(optRow("受讓", "recv", it[undSide], teamColor(undSide), it.hdRecv, hdConflict));
+
+  // ---- 大小分 ----
+  el.appendChild(sec("大小分", it, "totVal", null, totConflict, totLean));
+  el.appendChild(optRow("大", "", "大分", null, it.over, totConflict));
+  el.appendChild(optRow("小", "", "小分", null, it.under, totConflict));
+
+  // ---- collapsed one-line summary ----
+  const sl = document.createElement("div"); sl.className="summary-line";
+  const pills = [];
+  const pill = (txt,n)=>{ const p=document.createElement("span"); p.className="pill"+(n>=4?" hot":""); p.innerHTML=`<span class="pin"></span>${esc(txt)} ●${n}`; pills.push(p); };
+  if(mlLean  && mlLean.n>=3)  pill(mlLean.winLabel, mlLean.n);
+  if(hdLean  && hdLean.n>=3)  pill(`${hdLean.winLabel}${it.hdVal?` ${it.hdVal}`:""}`, hdLean.n);
+  if(totLean && totLean.n>=3) pill(`${totLean.winLabel}${it.totVal?` ${it.totVal}`:""}`, totLean.n);
+  if(mlConflict||hdConflict||totConflict){ const w=document.createElement("span"); w.className="pill"; w.style.color="var(--conflict)"; w.style.borderColor="var(--conflict)"; w.textContent="⚠ 有衝突"; pills.push(w); }
+  if(pills.length){ pills.forEach(p=>sl.appendChild(p)); }
+  else { const n=document.createElement("span"); n.className="none"; n.textContent="尚無 3 燈以上的選擇"; sl.appendChild(n); }
+  el.appendChild(sl);
+
+  const rz = document.createElement("div"); rz.className="resize no-drag"; rz.title="拖曳調整寬度";
+  rz.addEventListener("pointerdown", e=> startResize(e, it, el));
+  el.appendChild(rz);
+
+  canvas.appendChild(el);
+}
+
+function mkTeam(it,side){
+  const s = document.createElement("span");
+  s.className="team no-drag"; s.contentEditable=true; s.textContent=it[side];
+  s.style.color = side==="away"?it.awayColor:it.homeColor;
+  s.onpointerdown = e=> e.stopPropagation();
+  s.onblur = ()=>{ it[side]=s.textContent.trim()||it[side]; save(); render(); };
+  s.onkeydown = e=>{ if(e.key==="Enter"){ e.preventDefault(); s.blur(); } };
+  return s;
+}
+
+function mkLights(obj){
+  const wrap = document.createElement("div"); wrap.className="lights no-drag";
+  if(obj.lights>3) wrap.classList.add("hot");
+  // long-press anywhere on the light cluster clears it to zero
+  let lpTimer=null, lpFired=false;
+  const startLP = ()=>{ lpFired=false; lpTimer=setTimeout(()=>{ lpFired=true; if(obj.lights>0){ snapshot(); obj.lights=0; save(); render(); } }, 550); };
+  const cancelLP = ()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } };
+  wrap.addEventListener("pointerdown", startLP);
+  wrap.addEventListener("pointerup", cancelLP);
+  wrap.addEventListener("pointerleave", cancelLP);
+  wrap.addEventListener("pointercancel", cancelLP);
+  for(let i=0;i<obj.lights;i++){
+    const d = document.createElement("div"); d.className="light on";
+    d.title="點掉減少（長按整排清零）"; d.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights=Math.max(0,obj.lights-1); save(); render(); };
+    wrap.appendChild(d);
+  }
+  if(obj.lights<12){
+    const add = document.createElement("div"); add.className="light add"; add.textContent="+";
+    add.title="點亮一個"; add.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights++; save(); render(); };
+    wrap.appendChild(add);
+  }
+  return wrap;
+}
+
+/* ---------------- summary panel ---------------- */
+// collect picks with >3 lights and no conflict in their market
+function collectSummary(){
+  const strong = [], conflicts = [];
+  state.items.forEach(it=>{
+    if(it.type!=="match") return;
+    normMatch(it);
+    const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
+    const matchName = `${it.away}/${it.home}`;
+    const mlC  = it.mlAway.lights>0 && it.mlHome.lights>0;
+    const hdC  = it.hdGive.lights>0 && it.hdRecv.lights>0;
+    const totC = it.over.lights>0  && it.under.lights>0;
+    if(mlC)  conflicts.push({matchName, market:"獨贏"});
+    if(hdC)  conflicts.push({matchName, market:"讓分"});
+    if(totC) conflicts.push({matchName, market:"大小分"});
+    const add=(cond,lights,pick,mk)=>{ if(cond && lights>=3) strong.push({matchName, pick, mk, n:lights}); };
+    add(!mlC,  it.mlAway.lights, it.away, "獨贏");
+    add(!mlC,  it.mlHome.lights, it.home, "獨贏");
+    add(!hdC,  it.hdGive.lights, it[favSide], "讓"+(it.hdVal?` ${it.hdVal}`:""));
+    add(!hdC,  it.hdRecv.lights, it[undSide], "受讓"+(it.hdVal?` ${it.hdVal}`:""));
+    add(!totC, it.over.lights,  "大分", "大小分"+(it.totVal?` ${it.totVal}`:""));
+    add(!totC, it.under.lights, "小分", "大小分"+(it.totVal?` ${it.totVal}`:""));
+  });
+  strong.sort((a,b)=>b.n-a.n);
+  return {strong, conflicts};
+}
+
+function renderSummary(){
+  const old = canvas.querySelector("#summary"); if(old) old.remove();
+  if(!state.items.some(i=>i.type==="match")) return;
+  const {strong, conflicts} = collectSummary();
+  if(strong.length===0 && conflicts.length===0) return;
+
+  const pos = state.summaryPos || {x: canvas.scrollLeft + Math.max(20, canvas.clientWidth-320), y: canvas.scrollTop+18};
+  const box = document.createElement("div"); box.id="summary";
+  box.style.left = pos.x+"px"; box.style.top = pos.y+"px";
+
+  const head = document.createElement("div"); head.className="sumhead";
+  head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${strong.length} 個強訊號</span>`;
+  head.addEventListener("pointerdown", startSummaryDrag);
+  box.appendChild(head);
+
+  const body = document.createElement("div"); body.className="sumbody";
+  if(strong.length){
+    const t = document.createElement("div"); t.className="sumsec"; t.textContent="3 個以上（無衝突）";
+    body.appendChild(t);
+    strong.forEach(s=>{
+      const r = document.createElement("div"); r.className="sumrow";
+      r.innerHTML = `<span class="mt">${esc(s.matchName)}</span>`+
+                    `<span class="pk">${esc(s.pick)}<span class="mk">${esc(s.mk)}</span></span>`+
+                    `<span class="n${s.n>3?'':' warm'}">●${s.n}</span>`;
+      body.appendChild(r);
+    });
+  }
+  if(conflicts.length){
+    const t = document.createElement("div"); t.className="sumsec"; t.textContent="衝突（兩邊都點了）";
+    body.appendChild(t);
+    conflicts.forEach(c=>{
+      const r = document.createElement("div"); r.className="sumrow conflict";
+      r.innerHTML = `<span class="mt">${esc(c.matchName)}</span>`+
+                    `<span class="pk">${esc(c.market)} 兩邊都有燈</span>`+
+                    `<span class="n">⚠</span>`;
+      body.appendChild(r);
+    });
+  }
+  if(!strong.length && conflicts.length){
+    // still useful, no empty note needed
+  }
+  box.appendChild(body);
+  canvas.appendChild(box);
+}
+function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
+
+let sumDrag = null;
+function startSummaryDrag(e){
+  e.preventDefault();
+  const box = canvas.querySelector("#summary");
+  const r = box.getBoundingClientRect();
+  sumDrag = { box, offX:e.clientX-r.left, offY:e.clientY-r.top };
+  try{ box.setPointerCapture(e.pointerId); }catch(_){}
+}
+function moveSummaryDrag(e){
+  if(!sumDrag) return;
+  const cr = canvas.getBoundingClientRect();
+  const x = Math.max(0, e.clientX-cr.left-sumDrag.offX + canvas.scrollLeft);
+  const y = Math.max(0, e.clientY-cr.top -sumDrag.offY + canvas.scrollTop);
+  state.summaryPos = {x,y};
+  sumDrag.box.style.left = x+"px"; sumDrag.box.style.top = y+"px";
+}
+function endSummaryDrag(){ if(sumDrag){ sumDrag=null; save(); } }
+
+/* ---------------- snapping ---------------- */
+// on-screen footprint of an item (includes CSS scale transform)
+function itemBox(it){
+  const id = typeof it==="object" ? it.id : it;
+  const obj = typeof it==="object" ? it : state.items.find(s=>s.id===id);
+  const el = canvas.querySelector(`[data-id="${id}"]`);
+  const s = (obj && obj.scale) ? obj.scale : 1;
+  if(!el) return {w:0,h:0};
+  return {w:el.offsetWidth*s, h:el.offsetHeight*s};
+}
+// edge-aware snap: aligns left/right/top/bottom edges to other items, falls back to grid
+function snap(it, x, y){
+  let sx = Math.round(x/GRID)*GRID, sy = Math.round(y/GRID)*GRID;
+  const me = itemBox(it);
+  let bestX = SNAP, bestY = SNAP;
+  state.items.forEach(o=>{
+    if(o.id===it.id) return;
+    const ob = itemBox(o);
+    // align my-left or my-right to other's left/right
+    [ [x,       o.x,       0],      // my left  -> other left
+      [x,       o.x+ob.w,  0],      // my left  -> other right
+      [x+me.w,  o.x+ob.w, -me.w],   // my right -> other right
+      [x+me.w,  o.x,      -me.w]    // my right -> other left
+    ].forEach(([a,b,adj])=>{ const d=Math.abs(a-b); if(d<bestX){ bestX=d; sx=b+adj; } });
+    // align my-top or my-bottom to other's top/bottom
+    [ [y,       o.y,       0],
+      [y,       o.y+ob.h,  0],
+      [y+me.h,  o.y+ob.h, -me.h],
+      [y+me.h,  o.y,      -me.h]
+    ].forEach(([a,b,adj])=>{ const d=Math.abs(a-b); if(d<bestY){ bestY=d; sy=b+adj; } });
+  });
+  return {x:Math.max(0,Math.round(sx)), y:Math.max(0,Math.round(sy))};
+}
+
+/* ---------------- dragging existing items ---------------- */
+let drag = null;
+function startItemDrag(e, it, el){
+  if(e.target.closest(".no-drag")) return;
+  e.preventDefault();
+  const r = el.getBoundingClientRect();
+  drag = { it, el, offX:e.clientX-r.left, offY:e.clientY-r.top, moved:false, pid:e.pointerId };
+  el.classList.add("dragging");
+  try{ el.setPointerCapture(e.pointerId); }catch(_){}
+}
+function moveItemDrag(e){
+  if(!drag) return;
+  const cr = canvas.getBoundingClientRect();
+  let x = e.clientX - cr.left - drag.offX + canvas.scrollLeft;
+  let y = e.clientY - cr.top  - drag.offY + canvas.scrollTop;
+
+  // live snap for cards (tokens snap on drop so merge stays easy)
+  if(drag.it.type==="match"){
+    const p = snap(drag.it, x, y); x = p.x; y = p.y;
+  }
+
+  drag.it.x = x; drag.it.y = y; drag.moved = true;
+  drag.el.style.left = x+"px"; drag.el.style.top = y+"px";
+
+  // highlight merge target for single tokens
+  canvas.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
+  if(drag.it.type==="single"){
+    const t = findMergeTarget(drag.it);
+    if(t){ const te = canvas.querySelector(`.token[data-id="${t.id}"]`); if(te) te.classList.add("merge-target"); }
+  }
+}
+function endItemDrag(e){
+  if(!drag) return;
+  const it = drag.it;
+  if(it.type==="single"){
+    const target = findMergeTarget(it);
+    if(target){ snapshot(); mergeTokens(target, it); drag=null; save(); render(); return; }
+  }
+  const p = snap(it, it.x, it.y); it.x=p.x; it.y=p.y;
+  drag.el.classList.remove("dragging");
+  canvas.querySelectorAll(".token.merge-target").forEach(n=>n.classList.remove("merge-target"));
+  drag = null; save(); render();
+}
+function center(it){ const w = it.type==="single"?70:115, h=it.type==="single"?20:46; return {cx:it.x+w, cy:it.y+h}; }
+
+/* ---------------- resizing cards (proportional scale) ---------------- */
+let rsz = null;
+function startResize(e, it, el){
+  e.preventDefault(); e.stopPropagation();
+  rsz = { it, el, startX:e.clientX, startY:e.clientY,
+          startScale: it.scale || 1, baseW: el.offsetWidth, pid:e.pointerId };
+  el.classList.add("resizing");
+  try{ el.setPointerCapture(e.pointerId); }catch(_){}
+}
+function moveResize(e){
+  if(!rsz) return;
+  // drive scale by horizontal drag relative to the card's unscaled width
+  const dx = e.clientX - rsz.startX;
+  let s = rsz.startScale + dx / rsz.baseW;
+  s = Math.max(0.7, Math.min(2.4, s));
+  // snap scale to clean stops for tidy alignment
+  [0.75,1,1.25,1.5,1.75,2].forEach(stop=>{ if(Math.abs(s-stop)<0.05) s=stop; });
+  rsz.it.scale = Math.round(s*100)/100;
+  rsz.el.style.transform = "scale("+rsz.it.scale+")";
+}
+function endResize(){
+  if(!rsz) return;
+  rsz.el.classList.remove("resizing");
+  // re-snap position after size change so edges line back up
+  const p = snap(rsz.it, rsz.it.x, rsz.it.y); rsz.it.x=p.x; rsz.it.y=p.y;
+  rsz.el.style.left = rsz.it.x+"px"; rsz.el.style.top = rsz.it.y+"px";
+  rsz = null; save();
+}
+
+function findMergeTarget(it){
+  const c = center(it); let best=null, bd=MERGE_DIST;
+  state.items.forEach(o=>{ if(o.id===it.id || o.type!=="single") return;
+    const oc = center(o); const d = Math.hypot(c.cx-oc.cx, c.cy-oc.cy);
+    if(d<bd){ bd=d; best=o; }
+  });
+  return best;
+}
+function mergeTokens(target, dragged){
+  const m = { id:uid++, type:"match", x:target.x, y:target.y,
+    away:target.team, home:dragged.team, awayColor:target.color, homeColor:dragged.color,
+    mlAway:{lights:0}, mlHome:{lights:0},
+    hdFav:"home", hdVal:"", hdGive:{lights:0}, hdRecv:{lights:0},
+    totVal:"", over:{lights:0}, under:{lights:0} };
+  state.items = state.items.filter(x=>x.id!==target.id && x.id!==dragged.id);
+  state.items.push(m);
+}
+
+/* ---------------- dragging new chip from tray ---------------- */
+let chipDrag = null;
+function startChipDrag(e, team, color){
+  e.preventDefault();
+  chipDrag = { team, color, pid:e.pointerId, sx:e.clientX, sy:e.clientY, moved:false };
+  ghost.textContent = team; ghost.style.borderLeftColor = color;
+  ghost.style.display="block"; ghost.style.left=e.clientX+"px"; ghost.style.top=e.clientY+"px";
+}
+function moveChipDrag(e){
+  if(!chipDrag) return;
+  if(Math.hypot(e.clientX-chipDrag.sx, e.clientY-chipDrag.sy)>6) chipDrag.moved=true;
+  ghost.style.left=e.clientX+"px"; ghost.style.top=e.clientY+"px";
+}
+function endChipDrag(e){
+  if(!chipDrag) return;
+  ghost.style.display="none";
+  const cr = canvas.getBoundingClientRect();
+  const overCanvas = e.clientX>=cr.left && e.clientX<=cr.right && e.clientY>=cr.top && e.clientY<=cr.bottom;
+  if(overCanvas || !chipDrag.moved){
+    snapshot();
+    let x,y;
+    if(overCanvas){ x = e.clientX-cr.left-40 + canvas.scrollLeft; y = e.clientY-cr.top-16 + canvas.scrollTop; }
+    else { const n=state.items.length; x = 40 + (n%6)*30 + canvas.scrollLeft; y = 40 + (n%6)*30 + canvas.scrollTop; }
+    // drop onto an existing single token => instant merge
+    const tmp = {id:-1,type:"single",x,y};
+    const tgt = findMergeTarget(tmp);
+    if(tgt){
+      const dragged = {id:uid++, type:"single", team:chipDrag.team, color:chipDrag.color, x, y};
+      mergeTokens(tgt, dragged);
+    }else{
+      const p = snap({id:-1}, x, y);
+      state.items.push({ id:uid++, type:"single", team:chipDrag.team, color:chipDrag.color, x:p.x, y:p.y });
+    }
+    save(); render();
+  }
+  chipDrag = null;
+}
+
+/* ---------------- global pointer handlers ---------------- */
+function anyDragActive(){ return !!(sumDrag || rsz || drag || chipDrag); }
+window.addEventListener("pointermove", e=>{
+  if(anyDragActive() && e.cancelable) e.preventDefault();
+  moveSummaryDrag(e); moveResize(e); moveItemDrag(e); moveChipDrag(e);
+}, {passive:false});
+window.addEventListener("pointerup",   e=>{ endSummaryDrag(e); endResize(e); endItemDrag(e); endChipDrag(e); });
+// also catch touch fallbacks so a drag still finishes if pointer events misbehave
+window.addEventListener("touchmove", e=>{ if(anyDragActive() && e.cancelable) e.preventDefault(); }, {passive:false});
+window.addEventListener("pointercancel", e=>{
+  // commit the drag instead of throwing it away (iOS fires cancel mid-gesture)
+  if(sumDrag){ endSummaryDrag(e); }
+  if(rsz){ endResize(e); }
+  if(drag){ endItemDrag(e); }
+  if(chipDrag){ endChipDrag(e); }
+});
+
+/* ---------------- date bar ---------------- */
+function fmtDate(d){ const [y,m,dd]=d.split("-"); return `${parseInt(m)}/${parseInt(dd)}`; }
+function buildDateBar(){
+  const bar = $("#datebar"); if(!bar) return;
+  bar.innerHTML = "";
+  const lbl = document.createElement("span"); lbl.className="dlabel"; lbl.textContent="日期"; bar.appendChild(lbl);
+  const dates = Object.keys(doc.boards).sort();
+  if(!dates.includes(doc.activeDate)) dates.push(doc.activeDate);
+  dates.sort();
+  dates.forEach(d=>{
+    const b = doc.boards[d];
+    const n = b ? b.items.filter(i=>i.type==="match").length : 0;
+    const chip = document.createElement("button");
+    chip.className = "datechip"+(d===doc.activeDate?" active":"");
+    chip.innerHTML = `${fmtDate(d)}${n?`<span class="cnt">${n}</span>`:""}`;
+    chip.title = d;
+    chip.onclick = ()=> switchDate(d);
+    // long-press a date to delete it
+    let lp=null,fired=false;
+    chip.addEventListener("pointerdown",()=>{ fired=false; lp=setTimeout(()=>{ fired=true; deleteDate(d); },650); });
+    const cx=()=>{ if(lp)clearTimeout(lp); }; chip.addEventListener("pointerup",cx); chip.addEventListener("pointerleave",cx);
+    bar.appendChild(chip);
+  });
+  const add = document.createElement("button"); add.className="datechip adddate"; add.textContent="＋ 新日期";
+  add.onclick = addDate; bar.appendChild(add);
+}
+function switchDate(d){
+  if(d===doc.activeDate) return;
+  save(); doc.activeDate = d; loadActiveBoard(); save(); render(); buildDateBar();
+}
+function addDate(){
+  const def = todayStr();
+  const input = prompt("輸入日期（YYYY-MM-DD），或直接確定使用今天：", def);
+  if(input===null) return;
+  let d = input.trim() || def;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ alert("格式需為 YYYY-MM-DD"); return; }
+  snapshot(); ensureBoard(d); switchDate(d);
+}
+function deleteDate(d){
+  if(Object.keys(doc.boards).length<=1){ alert("至少要保留一個日期"); return; }
+  if(!confirm(`刪除 ${d} 這天的所有對戰？`)) return;
+  snapshot();
+  delete doc.boards[d];
+  if(doc.activeDate===d){ doc.activeDate = Object.keys(doc.boards).sort()[0]; loadActiveBoard(); }
+  save(); render(); buildDateBar();
+}
+
+/* ---------------- export text summary ---------------- */
+function buildExportText(){
+  const lines = [];
+  lines.push(`【排盤總結｜${doc.activeDate}】`);
+  const matches = state.items.filter(i=>i.type==="match");
+  if(!matches.length){ lines.push("（尚無對戰）"); return lines.join("\n"); }
+  matches.forEach(it=>{
+    normMatch(it);
+    const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
+    const mlC = it.mlAway.lights>0 && it.mlHome.lights>0;
+    const hdC = it.hdGive.lights>0 && it.hdRecv.lights>0;
+    const totC= it.over.lights>0 && it.under.lights>0;
+    const picks = [];
+    const dots = n => "●".repeat(n);
+    const pushIf = (cond,lights,label)=>{ if(cond && lights>=3) picks.push(`${label} ${dots(lights)}${lights}`); };
+    pushIf(!mlC, it.mlAway.lights, `獨贏 ${it.away}`);
+    pushIf(!mlC, it.mlHome.lights, `獨贏 ${it.home}`);
+    pushIf(!hdC, it.hdGive.lights, `${it[favSide]}讓${it.hdVal?it.hdVal:""}`);
+    pushIf(!hdC, it.hdRecv.lights, `${it[undSide]}受讓${it.hdVal?it.hdVal:""}`);
+    pushIf(!totC, it.over.lights, `大分${it.totVal?it.totVal:""}`);
+    pushIf(!totC, it.under.lights, `小分${it.totVal?it.totVal:""}`);
+    const warns = [];
+    if(mlC) warns.push("獨贏衝突"); if(hdC) warns.push("讓分衝突"); if(totC) warns.push("大小分衝突");
+    if(picks.length || warns.length){
+      lines.push("");
+      lines.push(`${it.away} / ${it.home}`);
+      picks.forEach(p=> lines.push(`  ・${p}`));
+      warns.forEach(w=> lines.push(`  ⚠ ${w}`));
+    }
+  });
+  if(lines.length<=1) lines.push("", "（沒有 3 燈以上的選擇）");
+  return lines.join("\n");
+}
+function openExport(){
+  $("#modalText").value = buildExportText();
+  $("#modal").classList.add("show");
+}
+$("#exportBtn").onclick = openExport;
+$("#modalClose").onclick = ()=> $("#modal").classList.remove("show");
+$("#modal").addEventListener("click", e=>{ if(e.target.id==="modal") $("#modal").classList.remove("show"); });
+$("#copyBtn").onclick = async ()=>{
+  const ta = $("#modalText");
+  try{ await navigator.clipboard.writeText(ta.value); $("#copyBtn").textContent="已複製 ✓"; setTimeout(()=>$("#copyBtn").textContent="複製到剪貼簿",1500); }
+  catch(_){ ta.removeAttribute("readonly"); ta.select(); document.execCommand("copy"); ta.setAttribute("readonly",""); $("#copyBtn").textContent="已複製 ✓"; setTimeout(()=>$("#copyBtn").textContent="複製到剪貼簿",1500); }
+};
+
+/* ---------------- auto-layout by league ---------------- */
+function leagueOf(it){
+  const names = (it.type==="match") ? [it.away,it.home] : [it.team];
+  for(const [k,v] of Object.entries(LEAGUES)){
+    if(names.some(n=>v.teams.includes(n))) return k;
+  }
+  return "zz"; // unknown / custom -> last group
+}
+function autoLayout(){
+  snapshot();
+  const order = ["cpbl","npb","kbo","mlb","zz"];
+  const groups = {}; order.forEach(k=>groups[k]=[]);
+  state.items.forEach(it=>{ (groups[leagueOf(it)]||groups.zz).push(it); });
+  const COL_W = 250, ROW_GAP = 18, COL_GAP = 22, TOP = 20;
+  let colX = 20;
+  order.forEach(k=>{
+    const list = groups[k]; if(!list.length) return;
+    let y = TOP;
+    list.forEach(it=>{
+      it.collapsed = false; it.scale = 1;
+      it.x = colX; it.y = y;
+      const bx = itemBox(it);
+      y += (bx.h || 300) + ROW_GAP;
+    });
+    colX += COL_W + COL_GAP;
+  });
+  save(); render();
+}
+$("#layoutBtn").onclick = autoLayout;
+
+/* ---------------- export PNG ---------------- */
+async function exportPNG(){
+  const btn = $("#pngBtn"); const orig = btn.textContent; btn.textContent="產生中…";
+  try{
+    const cards = [...canvas.querySelectorAll(".card,.token")];
+    if(!cards.length){ alert("畫布上沒有東西可以匯出"); btn.textContent=orig; return; }
+    // compute bounding box of all items in canvas coords
+    let minX=1e9,minY=1e9,maxX=-1e9,maxY=-1e9;
+    state.items.forEach(it=>{ const b=itemBox(it); minX=Math.min(minX,it.x); minY=Math.min(minY,it.y); maxX=Math.max(maxX,it.x+b.w); maxY=Math.max(maxY,it.y+b.h); });
+    const pad=30;
+    const W=Math.ceil(maxX-minX+pad*2), H=Math.ceil(maxY-minY+pad*2+40);
+    // Build an SVG foreignObject snapshot
+    const clone = document.createElement("div");
+    clone.style.cssText=`position:relative;width:${W}px;height:${H}px;background:#0c0f14;`;
+    const title=document.createElement("div");
+    title.textContent=`排盤板 ${doc.activeDate}`;
+    title.style.cssText=`position:absolute;left:${pad}px;top:10px;color:#ffb02e;font-weight:700;font-size:16px;font-family:sans-serif;`;
+    clone.appendChild(title);
+    cards.forEach(c=>{
+      const cc=c.cloneNode(true);
+      const it=state.items.find(i=>String(i.id)===c.dataset.id);
+      cc.style.left=(it.x-minX+pad)+"px"; cc.style.top=(it.y-minY+pad+40)+"px";
+      clone.appendChild(cc);
+    });
+    document.body.appendChild(clone);
+    const data = new XMLSerializer().serializeToString(wrapForeign(clone, W, H));
+    document.body.removeChild(clone);
+    const svgBlob = new Blob([data], {type:"image/svg+xml;charset=utf-8"});
+    const url = URL.createObjectURL(svgBlob);
+    const img = new Image();
+    // race the load against a timeout so the button never hangs (Safari may never fire onload)
+    await new Promise((res,rej)=>{
+      let done=false;
+      const finish=(fn)=>(...a)=>{ if(done) return; done=true; fn(...a); };
+      img.onload=finish(res); img.onerror=finish(()=>rej(new Error("img load failed")));
+      setTimeout(finish(()=>rej(new Error("timeout"))), 4000);
+      img.src=url;
+    });
+    const cv=document.createElement("canvas"); cv.width=W*2; cv.height=H*2;
+    const ctx=cv.getContext("2d"); ctx.scale(2,2); ctx.drawImage(img,0,0);
+    URL.revokeObjectURL(url);
+    cv.toBlob(b=>{
+      if(!b){ btn.textContent=orig; alert("圖片匯出在這個瀏覽器受限，可改用「匯出」複製文字，或直接截圖。"); return; }
+      const a=document.createElement("a"); a.href=URL.createObjectURL(b);
+      a.download=`排盤板_${doc.activeDate}.png`; a.click();
+      setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+      btn.textContent=orig;
+    });
+  }catch(e){
+    btn.textContent=orig;
+    // graceful fallback: hand the user the text summary instead of a dead end
+    if(typeof openExport==="function") openExport();
+    else alert("這個瀏覽器不支援直接匯出圖片，已改用文字匯出，或請直接截圖。");
+  }
+}
+function wrapForeign(node, W, H){
+  const svgNS="http://www.w3.org/2000/svg";
+  const svg=document.createElementNS(svgNS,"svg");
+  svg.setAttribute("xmlns",svgNS); svg.setAttribute("width",W); svg.setAttribute("height",H);
+  const fo=document.createElementNS(svgNS,"foreignObject");
+  fo.setAttribute("width",W); fo.setAttribute("height",H);
+  const wrap=document.createElement("div"); wrap.setAttribute("xmlns","http://www.w3.org/1999/xhtml");
+  wrap.appendChild(node); fo.appendChild(wrap); svg.appendChild(fo);
+  return svg;
+}
+$("#pngBtn").onclick = exportPNG;
+
+/* ---------------- toolbar ---------------- */
+$("#undoBtn").onclick = undo;
+document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); } });
+
+$("#addBlank").onclick = ()=>{
+  snapshot();
+  const x = snap({id:-1}, 40+canvas.scrollLeft, 40+canvas.scrollTop);
+  state.items.push({ id:uid++, type:"match", x:x.x, y:x.y, away:"客隊", home:"主隊",
+    awayColor:"var(--ink-dim)", homeColor:"var(--ink-dim)",
+    mlAway:{lights:0}, mlHome:{lights:0},
+    hdFav:"home", hdVal:"", hdGive:{lights:0}, hdRecv:{lights:0},
+    totVal:"", over:{lights:0}, under:{lights:0}, collapsed:false });
+  save(); render();
+};
+$("#clearAll").onclick = ()=>{ if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } };
+
+/* ---------------- init ---------------- */
+(async()=>{ await load(); buildTray(); buildDateBar(); render(); updateUndoBtn(); })();
+</script>
+</body>
+</html>
