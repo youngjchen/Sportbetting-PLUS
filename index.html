@@ -2,8 +2,15 @@
 <html lang="zh-Hant">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>賽事排盤板</title>
+<!-- PWA / 加到主畫面：讓 iOS 把儲存升級成持久等級 -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0c0f14">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="排盤板">
+<link rel="apple-touch-icon" href="icon-180.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
@@ -104,6 +111,13 @@
     text-align:center;font-family:"Oswald";font-size:11px;color:var(--ink-dim);
     background:rgba(21,26,34,.92);border:1px solid var(--line);border-radius:8px;padding:2px 0;backdrop-filter:blur(6px);
   }
+  #saveBadge{
+    position:absolute;left:12px;bottom:12px;z-index:200;
+    font-size:12px;color:#8fe3b0;background:rgba(15,28,20,.92);border:1px solid #2a4a36;
+    border-radius:9px;padding:5px 11px;backdrop-filter:blur(6px);pointer-events:none;
+    opacity:0;transform:translateY(6px);transition:.25s;
+  }
+  #saveBadge.show{opacity:1;transform:translateY(0);}
 
   /* single token */
   .token{
@@ -428,6 +442,9 @@
         <button id="exportBtn">⎘ 匯出文字</button>
         <button id="pngBtn">⤓ 存成圖片</button>
         <div class="sep"></div>
+        <button id="exportDataBtn">💾 匯出備份檔</button>
+        <button id="importDataBtn">📂 匯入備份檔</button>
+        <div class="sep"></div>
         <button id="clearAll" class="danger">✕ 清空這天</button>
       </div>
     </div>
@@ -438,6 +455,7 @@
   <div id="canvas">
     <div id="empty">把下方的隊伍標籤<b>拖上來</b>，<br>再把兩隊<b>疊在一起</b>就會吸成一場對戰<br><span style="font-size:13px">單指拖空白＝移動畫面　·　兩指＝縮放</span></div>
     <div id="world"></div>
+    <div id="saveBadge"></div>
     <div id="zoomctl">
       <button id="zoomIn" title="放大">＋</button>
       <div class="zlabel" id="zlabel">100%</div>
@@ -576,31 +594,37 @@ function loadActiveBoard(){
 }
 
 /* ---------------- persistence (graceful, optional) ---------------- */
-async function save(){
+const LS_KEY = "sportbetting_plus_doc_v2";
+let _saveTimer = null;
+// debounced + immediate save to localStorage (and preview storage if present)
+function save(){
   syncStateToDoc();
-  try{ if(window.storage) await window.storage.set("board_doc_v2", JSON.stringify(doc), false); }catch(e){}
+  const json = JSON.stringify(doc);
+  try{ localStorage.setItem(LS_KEY, json); }catch(e){}
+  // also write to preview-env storage when available (harmless on GitHub Pages)
+  if(window.storage){ try{ window.storage.set("board_doc_v2", json, false); }catch(_){} }
+  updateSaveBadge();
+}
+function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTimeout(save, 250); }
+function loadDocFromString(str){
+  try{
+    const d = JSON.parse(str);
+    if(d && d.boards){ doc = d; if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr(); return true; }
+  }catch(e){}
+  return false;
 }
 async function load(){
-  try{
-    if(window.storage){
-      // try new format
-      let r = null;
-      try{ r = await window.storage.get("board_doc_v2", false); }catch(_){}
-      if(r && r.value){
-        const d = JSON.parse(r.value);
-        if(d && d.boards){ doc = d; if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr(); }
-      }else{
-        // migrate old single-board format
-        let old=null; try{ old = await window.storage.get("board_state", false); }catch(_){}
-        if(old && old.value){
-          const s = JSON.parse(old.value);
-          if(s && s.items){
-            doc = { version:2, activeDate: todayStr(), boards:{ [todayStr()]: {items:s.items, summaryPos:s.summaryPos||null} } };
-          }
-        }
-      }
-    }
-  }catch(e){}
+  let loaded=false;
+  // 1) localStorage (primary, works on GitHub Pages / Safari)
+  try{ const s = localStorage.getItem(LS_KEY); if(s) loaded = loadDocFromString(s); }catch(e){}
+  // 2) preview-env storage (only in this builder; ignored on GitHub Pages)
+  if(!loaded && window.storage){
+    try{ const r = await window.storage.get("board_doc_v2", false); if(r && r.value) loaded = loadDocFromString(r.value); }catch(_){}
+  }
+  // 3) migrate any older single-board localStorage format
+  if(!loaded){
+    try{ const old = localStorage.getItem("board_state"); if(old){ const s=JSON.parse(old); if(s&&s.items){ doc={version:2,activeDate:todayStr(),boards:{[todayStr()]:{items:s.items,summaryPos:s.summaryPos||null}}}; loaded=true; } } }catch(_){}
+  }
   loadActiveBoard();
 }
 
@@ -1100,7 +1124,6 @@ function endChipDrag(e){
       state.items.push({ id:uid++, type:"single", team:chipDrag.team, color:chipDrag.color, x:p.x, y:p.y });
     }
     save(); render();
-    collapseTray(true); // auto-collapse tray after placing a team
   }
   chipDrag = null;
 }
@@ -1397,6 +1420,44 @@ function wrapForeign(node, W, H){
 }
 $("#pngBtn").onclick = ()=>{ closeMore(); exportPNG(); };
 
+/* ---------------- data backup (export / import a file) ---------------- */
+function exportData(){
+  closeMore();
+  syncStateToDoc();
+  const blob = new Blob([JSON.stringify(doc)], {type:"application/json"});
+  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+  a.download=`排盤備份_${todayStr()}.json`; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+}
+function importData(){
+  closeMore();
+  const inp=document.createElement("input"); inp.type="file"; inp.accept="application/json,.json";
+  inp.onchange=()=>{
+    const f=inp.files&&inp.files[0]; if(!f) return;
+    const rd=new FileReader();
+    rd.onload=()=>{
+      snapshot();
+      if(loadDocFromString(String(rd.result))){
+        loadActiveBoard(); save(); render(); buildDateBar(); applyView(); fitView();
+        alert("已匯入備份 ✓");
+      }else{
+        alert("這個檔案讀不出來，請確認是本程式匯出的備份檔。");
+      }
+    };
+    rd.readAsText(f);
+  };
+  inp.click();
+}
+
+/* tiny "saved" indicator */
+let _badgeTimer=null;
+function updateSaveBadge(){
+  const b=$("#saveBadge"); if(!b) return;
+  b.textContent="已儲存 ✓"; b.classList.add("show");
+  if(_badgeTimer) clearTimeout(_badgeTimer);
+  _badgeTimer=setTimeout(()=>b.classList.remove("show"), 1400);
+}
+
 /* ---------------- toolbar & new UI wiring ---------------- */
 $("#undoBtn").onclick = ()=>{ undo(); };
 document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); } });
@@ -1429,16 +1490,22 @@ function closeMore(){ $("#moreMenu").classList.remove("show"); }
 $("#moreBtn").onclick = (e)=>{ e.stopPropagation(); $("#moreMenu").classList.toggle("show"); };
 document.addEventListener("pointerdown", e=>{ if(!e.target.closest("#moreWrap")) closeMore(); }, true);
 
-/* tray collapse */
+/* tray collapse (manual only) */
 function collapseTray(state_){ const t=$("#tray"); t.classList.toggle("collapsed", state_); $("#trayLbl").textContent = t.classList.contains("collapsed")?"隊伍 ▴":"隊伍 ▾"; }
 $("#trayHandle").onclick = ()=>{ const t=$("#tray"); collapseTray(!t.classList.contains("collapsed")); };
+
+/* data backup buttons */
+$("#exportDataBtn").onclick = exportData;
+$("#importDataBtn").onclick = importData;
 
 /* ---------------- init ---------------- */
 (async()=>{
   await load();
+  // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
+  const t = todayStr();
+  if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
   buildTray(); buildDateBar(); render(); updateUndoBtn();
   applyView();
-  // if no saved view, fit to content (or center empty canvas)
   if(!state.view) fitView();
 })();
 </script>
