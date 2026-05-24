@@ -262,6 +262,10 @@
   }
   #summary .sumhead .dot{width:9px;height:9px;border-radius:50%;background:var(--hot);box-shadow:0 0 8px var(--hot-glow);}
   #summary .sumhead .count{margin-left:auto;color:var(--ink-dim);font-family:"Noto Sans TC";font-weight:700;font-size:12px;letter-spacing:0;}
+  #summary .sumhead .sumtoggle{margin-left:8px;color:var(--ink-dim);font-size:13px;cursor:pointer;padding:2px 4px;border-radius:6px;}
+  #summary .sumhead .sumtoggle:hover{color:var(--ink);background:rgba(255,255,255,.06);}
+  #summary.mini{width:auto;}
+  #summary.mini .sumhead{border-bottom:none;}
   #summary .sumbody{padding:8px 0;max-height:46vh;overflow:auto;}
   .sumrow{display:flex;align-items:baseline;gap:9px;padding:6px 14px;font-size:13px;}
   .sumrow .mt{color:var(--ink-dim);font-size:11px;flex:0 0 64px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -273,6 +277,8 @@
   .sumsec{padding:7px 14px 2px;font-family:"Oswald";font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;}
   .sumrow.conflict .pk{color:var(--conflict);}
   .sumrow.conflict .n{color:var(--conflict);}
+  .sumrow.conflict.cross .pk{color:#ff9c2e;}
+  .sumrow.conflict.cross .n{color:#ff9c2e;}
 
   /* ---------- tray ---------- */
   #tray{
@@ -404,7 +410,10 @@
 
   /* ---------- conflict glow on whole card ---------- */
   .card.has-conflict{border-color:var(--conflict);box-shadow:0 0 0 1px var(--conflict-glow),0 0 22px var(--conflict-glow),0 10px 26px rgba(0,0,0,.45);}
+  .card.has-cross{border-color:#ff9c2e;box-shadow:0 0 0 1px rgba(255,156,46,.5),0 0 20px rgba(255,156,46,.45),0 10px 26px rgba(0,0,0,.45);}
   .card.has-strong{border-color:var(--lit);box-shadow:0 0 0 1px var(--lit-glow),0 0 20px var(--lit-glow),0 10px 26px rgba(0,0,0,.45);}
+  .sec.cross{color:#ff9c2e;}
+  .sec .warn.cross{color:#ff9c2e;font-weight:700;}
 
   /* ---------- export modal ---------- */
   #modal{
@@ -460,6 +469,7 @@
       <div id="moreMenu">
         <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
         <button id="layoutBtn">⊞ 依聯盟排版</button>
+        <button id="copyDayBtn">📋 複製某天到今天</button>
         <div class="colrow">
           <span class="collabel">每排</span>
           <button class="colbtn" data-cols="auto">自動</button>
@@ -611,6 +621,26 @@ function updateUndoBtn(){ const b=$("#undoBtn"); if(b) b.disabled = history.leng
 function ensureBoard(date){
   if(!doc.boards[date]) doc.boards[date] = { items:[], summaryPos:null };
   return doc.boards[date];
+}
+// produce fresh copies of all matchups in `srcItems`, with all lights cleared
+function cloneMatchupsCleared(srcItems){
+  return srcItems.filter(i=>i.type==="match").map(it=>({
+    id: uid++, type:"match", x:it.x, y:it.y,
+    away:it.away, home:it.home, awayColor:it.awayColor, homeColor:it.homeColor,
+    hdFav:it.hdFav, hdVal:"", scale:it.scale||1, collapsed:false,
+    mlAway:{lights:0}, mlHome:{lights:0},
+    hdGive:{lights:0}, hdRecv:{lights:0},
+    totVal:"", over:{lights:0}, under:{lights:0}
+  }));
+}
+// most recent date before `date` that has matchups
+function prevDateWithMatches(date){
+  const dates = Object.keys(doc.boards).filter(d=>d<date).sort();
+  for(let i=dates.length-1;i>=0;i--){
+    const b=doc.boards[dates[i]];
+    if(b && b.items && b.items.some(x=>x.type==="match")) return dates[i];
+  }
+  return null;
 }
 function syncStateToDoc(){
   const b = ensureBoard(doc.activeDate);
@@ -782,13 +812,16 @@ function renderCard(it){
     row.append(b, nm, mkLights(obj));
     return row;
   }
-  function sec(label, extraIco, conflict){
-    const s = document.createElement("div"); s.className="sec"+(conflict?" conflict":"");
+  function sec(label, extraIco, conflict, crossWarn){
+    const s = document.createElement("div"); s.className="sec"+(conflict?" conflict":"")+(crossWarn?" cross":"");
     const t = document.createElement("span"); t.textContent=label;
     const ln = document.createElement("span"); ln.className="ln";
     s.append(t, ln);
     if(conflict){
       const w = document.createElement("span"); w.className="warn"; w.textContent="⚠ 衝突";
+      s.appendChild(w);
+    }else if(crossWarn){
+      const w = document.createElement("span"); w.className="warn cross"; w.textContent=crossWarn;
       s.appendChild(w);
     }
     if(extraIco) s.appendChild(extraIco);
@@ -799,12 +832,20 @@ function renderCard(it){
   const mlConflict  = it.mlAway.lights>0 && it.mlHome.lights>0;
   const hdConflict  = it.hdGive.lights>0 && it.hdRecv.lights>0;
   const totConflict = it.over.lights>0  && it.under.lights>0;
+
+  // cross-market conflict: betting the favorite to COVER the spread (讓) while
+  // also betting the OPPONENT to win outright (對手獨贏) is self-contradictory.
+  const favSideX = it.hdFav, undSideX = it.hdFav==="away"?"home":"away";
+  const oppML = (undSideX==="away") ? it.mlAway.lights : it.mlHome.lights;   // opponent's moneyline
+  const crossConflict = it.hdGive.lights>0 && oppML>0;
+
   // strong signal = some side has >=3 lights in a market that is NOT in conflict
   const strongSignal =
     (!mlConflict  && (it.mlAway.lights>=3 || it.mlHome.lights>=3)) ||
     (!hdConflict  && (it.hdGive.lights>=3 || it.hdRecv.lights>=3)) ||
     (!totConflict && (it.over.lights>=3  || it.under.lights>=3));
   if(mlConflict||hdConflict||totConflict) el.classList.add("has-conflict");
+  else if(crossConflict) el.classList.add("has-cross");
   else if(strongSignal) el.classList.add("has-strong");
   if(it.collapsed) el.classList.add("collapsed");
 
@@ -821,14 +862,14 @@ function renderCard(it){
   const totLean = totConflict?null: lean(it.over.lights, "大分", it.under.lights, "小分");
 
   // ---- 獨贏 ----
-  el.appendChild(sec("獨贏", null, mlConflict));
+  el.appendChild(sec("獨贏", null, mlConflict, crossConflict?"⚠ 與讓分矛盾":null));
   el.appendChild(optRow("客", "", it.away, teamColor("away"), it.mlAway, mlConflict));
   el.appendChild(optRow("主", "", it.home, teamColor("home"), it.mlHome, mlConflict));
 
   // ---- 讓分 / 受讓 ----
   const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
   favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
-  el.appendChild(sec("讓分", favSwap, hdConflict));
+  el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null));
   const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
   el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
   el.appendChild(optRow("受讓", "recv", it[undSide], teamColor(undSide), it.hdRecv, hdConflict));
@@ -903,9 +944,12 @@ function collectSummary(){
     const mlC  = it.mlAway.lights>0 && it.mlHome.lights>0;
     const hdC  = it.hdGive.lights>0 && it.hdRecv.lights>0;
     const totC = it.over.lights>0  && it.under.lights>0;
-    if(mlC)  conflicts.push({matchName, market:"獨贏"});
-    if(hdC)  conflicts.push({matchName, market:"讓分"});
-    if(totC) conflicts.push({matchName, market:"大小分"});
+    const oppML = (undSide==="away") ? it.mlAway.lights : it.mlHome.lights;
+    const crossC = it.hdGive.lights>0 && oppML>0;
+    if(mlC)  conflicts.push({matchName, market:"獨贏", kind:"same"});
+    if(hdC)  conflicts.push({matchName, market:"讓分", kind:"same"});
+    if(totC) conflicts.push({matchName, market:"大小分", kind:"same"});
+    if(crossC) conflicts.push({matchName, market:"讓分↔對手獨贏", kind:"cross"});
     const add=(cond,lights,pick,mk)=>{ if(cond && lights>=3) strong.push({matchName, pick, mk, n:lights}); };
     add(!mlC,  it.mlAway.lights, it.away, "獨贏");
     add(!mlC,  it.mlHome.lights, it.home, "獨贏");
@@ -927,12 +971,21 @@ function renderSummary(){
   const r = canvas.getBoundingClientRect();
   const pos = state.summaryPos || {x: Math.max(12, r.width-312), y: 12};
   const box = document.createElement("div"); box.id="summary";
+  if(doc.summaryCollapsed) box.classList.add("mini");
   box.style.left = pos.x+"px"; box.style.top = pos.y+"px";
 
   const head = document.createElement("div"); head.className="sumhead";
-  head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${strong.length} 個強訊號</span>`;
+  const caret = doc.summaryCollapsed ? "▸" : "▾";
+  head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${strong.length} 個強訊號</span>`+
+                   `<span class="sumtoggle no-drag" title="收合／展開">${caret}</span>`;
   head.addEventListener("pointerdown", startSummaryDrag);
+  head.querySelector(".sumtoggle").addEventListener("click", (e)=>{
+    e.stopPropagation();
+    doc.summaryCollapsed = !doc.summaryCollapsed; save(); render();
+  });
   box.appendChild(head);
+
+  if(doc.summaryCollapsed){ canvas.appendChild(box); return; }
 
   const body = document.createElement("div"); body.className="sumbody";
   if(strong.length){
@@ -947,12 +1000,13 @@ function renderSummary(){
     });
   }
   if(conflicts.length){
-    const t = document.createElement("div"); t.className="sumsec"; t.textContent="衝突（兩邊都點了）";
+    const t = document.createElement("div"); t.className="sumsec"; t.textContent="衝突 / 矛盾";
     body.appendChild(t);
     conflicts.forEach(c=>{
-      const r = document.createElement("div"); r.className="sumrow conflict";
+      const r = document.createElement("div"); r.className="sumrow conflict"+(c.kind==="cross"?" cross":"");
+      const desc = c.kind==="cross" ? `${esc(c.market)} 矛盾` : `${esc(c.market)} 兩邊都有燈`;
       r.innerHTML = `<span class="mt">${esc(c.matchName)}</span>`+
-                    `<span class="pk">${esc(c.market)} 兩邊都有燈</span>`+
+                    `<span class="pk">${desc}</span>`+
                     `<span class="n">⚠</span>`;
       body.appendChild(r);
     });
@@ -1175,7 +1229,12 @@ window.addEventListener("pointercancel", e=>{
 /* ---------------- canvas gestures: pan (1 finger) + pinch zoom (2 fingers) ---------------- */
 const gesture = { pointers:new Map(), mode:null, startX:0, startY:0, startView:null, pinch:null, lastTap:0 };
 function isInteractive(target){
-  return !!(target.closest(".card,.token,#summary,#zoomctl,.no-drag"));
+  // These elements handle their own gestures, so the canvas must NOT pan when they're pressed:
+  //  - .grip  : the card's top bar (drags the card itself)
+  //  - .no-drag: lights, +/- buttons, swap/collapse/delete icons, resize handle, editable names
+  //  - #summary / #zoomctl : floating panels
+  // Pressing anywhere else on a card body falls through to panning (move-canvas).
+  return !!(target.closest(".grip,.no-drag,#summary,#zoomctl,.token"));
 }
 canvas.addEventListener("pointerdown", e=>{
   // ignore presses that begin on a card/token/summary/zoom — those have their own handlers
@@ -1292,7 +1351,35 @@ function addDate(){
   if(input===null) return;
   let d = input.trim() || def;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ alert("格式需為 YYYY-MM-DD"); return; }
-  snapshot(); ensureBoard(d); switchDate(d);
+  const existed = !!doc.boards[d];
+  snapshot();
+  const b = ensureBoard(d);
+  // if this is a brand-new empty day, offer to bring over the previous day's matchups
+  if(!existed && (!b.items || b.items.length===0)){
+    const src = prevDateWithMatches(d);
+    if(src){
+      const n = doc.boards[src].items.filter(x=>x.type==="match").length;
+      if(confirm(`要把 ${fmtDate(src)} 的 ${n} 場對戰組合複製過來嗎？\n（隊伍、主客、讓分方向都保留，圓圈會清空）`)){
+        b.items = cloneMatchupsCleared(doc.boards[src].items);
+      }
+    }
+  }
+  switchDate(d);
+}
+// copy matchups from a chosen day into the current day
+function copyMatchupsFromDay(){
+  closeMore();
+  const others = Object.keys(doc.boards).filter(d=>d!==doc.activeDate && doc.boards[d].items.some(x=>x.type==="match")).sort().reverse();
+  if(!others.length){ alert("沒有其他含對戰的日期可以複製。"); return; }
+  const list = others.map((d,i)=>`${i+1}. ${fmtDate(d)}（${doc.boards[d].items.filter(x=>x.type==="match").length} 場）`).join("\n");
+  const pick = prompt(`要複製哪一天的對戰組合到今天（${fmtDate(doc.activeDate)}）？\n輸入編號：\n\n${list}`, "1");
+  if(pick===null) return;
+  const idx = parseInt(pick,10)-1;
+  if(isNaN(idx)||idx<0||idx>=others.length){ alert("編號不正確"); return; }
+  snapshot();
+  const cloned = cloneMatchupsCleared(doc.boards[others[idx]].items);
+  state.items.push(...cloned);
+  save(); render(); fitView();
 }
 function deleteDate(d){
   if(Object.keys(doc.boards).length<=1){ alert("至少要保留一個日期"); return; }
@@ -1405,6 +1492,7 @@ function autoLayout(){
   save(); render(); fitView();
 }
 $("#layoutBtn").onclick = ()=>{ closeMore(); autoLayout(); };
+$("#copyDayBtn").onclick = copyMatchupsFromDay;
 
 /* per-row column selector (auto / 2 / 3 / 4 / 5) */
 function refreshColBtns(){
