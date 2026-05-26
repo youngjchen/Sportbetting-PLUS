@@ -32,6 +32,8 @@
     --hot-glow:rgba(255,110,20,.6);
     --conflict:#ff3b5c;
     --conflict-glow:rgba(255,59,92,.5);
+    --cross:#b56bff;
+    --cross-glow:rgba(160,90,255,.5);
     --danger:#ff5b6e;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
@@ -277,8 +279,8 @@
   .sumsec{padding:7px 14px 2px;font-family:"Oswald";font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;}
   .sumrow.conflict .pk{color:var(--conflict);}
   .sumrow.conflict .n{color:var(--conflict);}
-  .sumrow.conflict.cross .pk{color:#ff9c2e;}
-  .sumrow.conflict.cross .n{color:#ff9c2e;}
+  .sumrow.conflict.cross .pk{color:var(--cross);}
+  .sumrow.conflict.cross .n{color:var(--cross);}
 
   /* ---------- tray ---------- */
   #tray{
@@ -345,6 +347,11 @@
   }
   #moreMenu .colbtn:hover{color:var(--ink);border-color:#46566a;background:transparent;}
   #moreMenu .colbtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
+  #moreMenu .sortbtn{
+    flex:0 0 auto;padding:6px 10px;border-radius:7px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
+  }
+  #moreMenu .sortbtn:hover{color:var(--ink);border-color:#46566a;}
 
   /* bigger touch targets on coarse pointers (phones/tablets) */
   @media (pointer:coarse){
@@ -410,10 +417,10 @@
 
   /* ---------- conflict glow on whole card ---------- */
   .card.has-conflict{border-color:var(--conflict);box-shadow:0 0 0 1px var(--conflict-glow),0 0 22px var(--conflict-glow),0 10px 26px rgba(0,0,0,.45);}
-  .card.has-cross{border-color:#ff9c2e;box-shadow:0 0 0 1px rgba(255,156,46,.5),0 0 20px rgba(255,156,46,.45),0 10px 26px rgba(0,0,0,.45);}
+  .card.has-cross{border-color:var(--cross);box-shadow:0 0 0 1px var(--cross-glow),0 0 22px var(--cross-glow),0 10px 26px rgba(0,0,0,.45);}
   .card.has-strong{border-color:var(--lit);box-shadow:0 0 0 1px var(--lit-glow),0 0 20px var(--lit-glow),0 10px 26px rgba(0,0,0,.45);}
-  .sec.cross{color:#ff9c2e;}
-  .sec .warn.cross{color:#ff9c2e;font-weight:700;}
+  .sec.cross{color:var(--cross);}
+  .sec .warn.cross{color:var(--cross);font-weight:700;}
 
   /* ---------- export modal ---------- */
   #modal{
@@ -478,6 +485,13 @@
           <button class="colbtn" data-cols="4">4</button>
           <button class="colbtn" data-cols="5">5</button>
         </div>
+        <div class="colrow">
+          <span class="collabel">排序</span>
+          <button class="sortbtn" data-sort="ml">獨贏</button>
+          <button class="sortbtn" data-sort="hd">讓分</button>
+          <button class="sortbtn" data-sort="tot">大小分</button>
+        </div>
+        <button id="collapseAllBtn">⊟ 收合／展開全部</button>
         <button id="clearLights">○ 清空所有圓圈</button>
         <div class="sep"></div>
         <button id="exportBtn">⎘ 匯出文字</button>
@@ -913,7 +927,7 @@ function mkLights(obj){
   if(obj.lights>3) wrap.classList.add("hot");
   // long-press anywhere on the light cluster clears it to zero
   let lpTimer=null, lpFired=false;
-  const startLP = ()=>{ lpFired=false; lpTimer=setTimeout(()=>{ lpFired=true; if(obj.lights>0){ snapshot(); obj.lights=0; save(); render(); } }, 550); };
+  const startLP = ()=>{ lpFired=false; lpTimer=setTimeout(()=>{ lpFired=true; if(obj.lights>0){ snapshot(); obj.lights=0; save(); render(); repackColumns(); } }, 550); };
   const cancelLP = ()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } };
   wrap.addEventListener("pointerdown", startLP);
   wrap.addEventListener("pointerup", cancelLP);
@@ -921,12 +935,12 @@ function mkLights(obj){
   wrap.addEventListener("pointercancel", cancelLP);
   for(let i=0;i<obj.lights;i++){
     const d = document.createElement("div"); d.className="light on";
-    d.title="點掉減少（長按整排清零）"; d.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights=Math.max(0,obj.lights-1); save(); render(); };
+    d.title="點掉減少（長按整排清零）"; d.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights=Math.max(0,obj.lights-1); save(); render(); repackColumns(); };
     wrap.appendChild(d);
   }
   if(obj.lights<12){
     const add = document.createElement("div"); add.className="light add"; add.textContent="+";
-    add.title="點亮一個"; add.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights++; save(); render(); };
+    add.title="點亮一個"; add.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights++; save(); render(); repackColumns(); };
     wrap.appendChild(add);
   }
   return wrap;
@@ -1452,47 +1466,119 @@ function autoColsForScreen(){
   if(w < 1100) return 4;    // tablets / small laptops
   return 5;                 // desktop
 }
-// choose columns for a group of n cards
+// place a list of match-items into rows of `cols`, starting at cursorY, return new cursorY
+const LAY = { COL_W:246, COL_GAP:24, ROW_GAP:28, GROUP_GAP:46, TOP:24, LEFT:24 };
 function gridCols(n){
   if(n<=1) return 1;
   const cap = (layoutCols==="auto") ? autoColsForScreen() : layoutCols;
   return Math.min(cap, n);  // never more columns than cards
+}
+function placeRows(list, cols, cursorY){
+  const rows = Math.ceil(list.length/cols);
+  for(let r=0; r<rows; r++){
+    const rowItems = list.slice(r*cols, r*cols+cols);
+    let rowMaxH = 0;
+    rowItems.forEach((it,c)=>{
+      it.x = LAY.LEFT + c*(LAY.COL_W+LAY.COL_GAP);
+      it.y = cursorY;
+      const bx = itemBox(it);
+      if(bx.h>rowMaxH) rowMaxH = bx.h;
+    });
+    cursorY += (rowMaxH || 300) + LAY.ROW_GAP;
+  }
+  return cursorY;
 }
 function autoLayout(){
   snapshot();
   const order = ["cpbl","npb","kbo","mlb","zz"];
   const groups = {}; order.forEach(k=>groups[k]=[]);
   state.items.forEach(it=>{ (groups[leagueOf(it)]||groups.zz).push(it); });
-
   // reset size/collapse so every card measures at its natural full height
-  state.items.forEach(it=>{ if(it.type==="match"){ it.collapsed=false; it.scale=1; } else { it.scale=1; } });
+  state.items.forEach(it=>{ if(it.type==="match"){ it.collapsed=false; } it.scale=1; });
   render(); // lay out DOM so we can measure real heights (incl. wrapped lights)
-
-  const COL_W = 246, COL_GAP = 24, ROW_GAP = 28, GROUP_GAP = 46, TOP = 24, LEFT = 24;
-  let cursorY = TOP;
-
+  let cursorY = LAY.TOP;
   order.forEach(k=>{
     const list = groups[k]; if(!list.length) return;
-    const cols = gridCols(list.length);
-    const rows = Math.ceil(list.length/cols);
-    for(let r=0; r<rows; r++){
-      const rowItems = list.slice(r*cols, r*cols+cols);
-      let rowMaxH = 0;
-      rowItems.forEach((it,c)=>{
-        it.x = LEFT + c*(COL_W+COL_GAP);
-        it.y = cursorY;
-        const bx = itemBox(it);
-        if(bx.h>rowMaxH) rowMaxH = bx.h;
-      });
-      cursorY += (rowMaxH || 300) + ROW_GAP;  // generous gap so tall (wrapped) cards never overlap next row
-    }
-    cursorY += GROUP_GAP; // breathing room between leagues
+    cursorY = placeRows(list, gridCols(list.length), cursorY);
+    cursorY += LAY.GROUP_GAP;
   });
-
   save(); render(); fitView();
 }
 $("#layoutBtn").onclick = ()=>{ closeMore(); autoLayout(); };
 $("#copyDayBtn").onclick = copyMatchupsFromDay;
+
+/* ---- sort by a chosen market block, conflicts sink to the bottom ---- */
+function blockValue(it, which){
+  // higher side of the chosen market; conflicted markets count as 0 here
+  if(which==="ml")  return (it.mlAway.lights>0 && it.mlHome.lights>0) ? 0 : Math.max(it.mlAway.lights, it.mlHome.lights);
+  if(which==="hd")  return (it.hdGive.lights>0 && it.hdRecv.lights>0) ? 0 : Math.max(it.hdGive.lights, it.hdRecv.lights);
+  return (it.over.lights>0 && it.under.lights>0) ? 0 : Math.max(it.over.lights, it.under.lights);
+}
+function hasAnyConflict(it){
+  const ml=it.mlAway.lights>0&&it.mlHome.lights>0, hd=it.hdGive.lights>0&&it.hdRecv.lights>0, tot=it.over.lights>0&&it.under.lights>0;
+  const undS=it.hdFav==="away"?"home":"away"; const oppML=(undS==="away")?it.mlAway.lights:it.mlHome.lights;
+  const cross=it.hdGive.lights>0&&oppML>0;
+  return ml||hd||tot||cross;
+}
+function sortByBlock(which){
+  closeMore();
+  const order = ["cpbl","npb","kbo","mlb","zz"];
+  const groups = {}; order.forEach(k=>groups[k]=[]);
+  state.items.forEach(it=>{ if(it.type==="match") (groups[leagueOf(it)]||groups.zz).push(it); });
+  if(!Object.values(groups).some(g=>g.length)){ alert("沒有對戰可以排序。"); return; }
+  snapshot();
+  state.items.forEach(it=>{ if(it.type==="match"){ it.collapsed=false; } it.scale=1; });
+  render();
+  // within each league: sort by chosen block value desc; conflicts (and 0s) sink to the end
+  order.forEach(k=>{
+    groups[k].sort((a,b)=>{
+      const ca=hasAnyConflict(a)?1:0, cb=hasAnyConflict(b)?1:0;
+      if(ca!==cb) return ca-cb;            // non-conflict first
+      return blockValue(b,which)-blockValue(a,which); // higher lights first
+    });
+  });
+  let cursorY = LAY.TOP;
+  order.forEach(k=>{
+    const list = groups[k]; if(!list.length) return;
+    cursorY = placeRows(list, gridCols(list.length), cursorY);
+    cursorY += LAY.GROUP_GAP;
+  });
+  save(); render(); fitView();
+}
+document.querySelectorAll("#moreMenu .sortbtn").forEach(b=>{
+  b.onclick = (e)=>{ e.stopPropagation(); sortByBlock(b.dataset.sort); };
+});
+
+/* ---- collapse / expand all ---- */
+function toggleCollapseAll(){
+  closeMore();
+  const matches = state.items.filter(i=>i.type==="match");
+  if(!matches.length) return;
+  const anyExpanded = matches.some(m=>!m.collapsed);
+  snapshot();
+  matches.forEach(m=> m.collapsed = anyExpanded); // if any open -> collapse all; else expand all
+  save(); render();
+  repackColumns(false); // tidy spacing after height change
+}
+$("#collapseAllBtn").onclick = toggleCollapseAll;
+
+/* ---- repack: after a card changes height, push same-column cards down so none overlap ---- */
+function repackColumns(doSave){
+  // group cards by their x (column), then ensure vertical gaps >= card height + min gap
+  const MIN_GAP = 18;
+  const cols = {};
+  state.items.forEach(it=>{ if(it.type!=="match") return; const key=Math.round(it.x); (cols[key]=cols[key]||[]).push(it); });
+  let moved=false;
+  Object.values(cols).forEach(list=>{
+    list.sort((a,b)=>a.y-b.y);
+    for(let i=1;i<list.length;i++){
+      const prev=list[i-1], cur=list[i];
+      const needTop = prev.y + itemBox(prev).h + MIN_GAP;
+      if(cur.y < needTop){ cur.y = needTop; moved=true; }
+    }
+  });
+  if(moved){ render(); if(doSave!==false){ save(); } }
+}
 
 /* per-row column selector (auto / 2 / 3 / 4 / 5) */
 function refreshColBtns(){
