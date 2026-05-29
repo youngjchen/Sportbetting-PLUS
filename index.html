@@ -282,6 +282,125 @@
   .sumrow.conflict.cross .pk{color:var(--cross);}
   .sumrow.conflict.cross .n{color:var(--cross);}
 
+  /* ---------- stats page (full-screen overlay over canvas) ---------- */
+  #statspage{
+    position:absolute;inset:0;z-index:120;background:var(--bg);
+    display:none;flex-direction:column;overflow:hidden;
+  }
+  #statspage.show{display:flex;}
+  .stats-toolbar{
+    display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);
+    background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);flex-wrap:wrap;
+  }
+  .stats-toolbar .title{font-weight:700;font-size:16px;margin-right:6px;}
+  .stats-toolbar select, .stats-toolbar input{
+    background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit;
+  }
+  .stats-toolbar .closebtn{margin-left:auto;}
+  .stats-body{flex:1 1 auto;overflow:auto;padding:12px;}
+
+  /* Desktop wide table */
+  .stats-table{
+    width:100%;border-collapse:separate;border-spacing:0;font-size:13px;color:var(--ink);
+  }
+  .stats-table th, .stats-table td{
+    padding:8px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap;
+  }
+  .stats-table th{
+    color:var(--ink-dim);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;
+    position:sticky;top:0;background:var(--panel);z-index:2;
+  }
+  .stats-table th.group{border-left:1px solid var(--line);background:var(--panel-2);}
+  .stats-table td.group{border-left:1px solid var(--line);}
+  .stats-table td.team{text-align:left;font-weight:700;font-size:14px;}
+  .stats-table tr:hover td{background:rgba(255,255,255,.02);}
+  .statcell{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;border-radius:6px;padding:4px 6px;}
+  .statcell:hover{background:rgba(255,255,255,.05);}
+  .statcell .wl{font-family:"Oswald";font-size:13px;font-weight:600;}
+  .statcell .pct{font-size:11px;color:var(--ink-dim);}
+  .statcell.empty .wl{color:#3a4756;}
+  .statcell.empty .pct{visibility:hidden;}
+  .pcthi{color:#28c76f;}
+  .pctlo{color:var(--conflict);}
+
+  /* Mobile stacked card layout (one team = one card with all markets listed vertically) */
+  .stats-team{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--line);border-radius:12px;
+    padding:10px 12px;margin-bottom:10px;
+  }
+  .stats-team .tname{font-weight:700;font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:6px;}
+  .stats-team .tname .swatch{width:8px;height:8px;border-radius:50%;}
+  .stats-team .mkt{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.05);}
+  .stats-team .mkt:first-of-type{border-top:none;}
+  .stats-team .mkt .label{flex:0 0 56px;color:var(--ink-dim);font-size:12px;font-family:"Oswald";letter-spacing:.05em;}
+  .stats-team .mkt .cells{flex:1;display:flex;gap:6px;}
+  .stats-team .mkt .cells .statcell{flex:1;background:rgba(255,255,255,.02);}
+  .stats-team .mkt .cells .colhd{font-size:10px;color:var(--ink-dim);}
+
+  /* Edit modal */
+  #editStat{
+    position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  #editStat.show{display:flex;}
+  #editStat .box{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;width:340px;max-width:100%;box-shadow:0 16px 48px rgba(0,0,0,.7);
+  }
+  #editStat .box h3{margin:0 0 4px;font-size:16px;}
+  #editStat .box .sub{color:var(--ink-dim);font-size:12px;margin-bottom:14px;}
+  #editStat .row{display:flex;gap:10px;margin-bottom:10px;align-items:center;}
+  #editStat .row label{flex:0 0 60px;color:var(--ink-dim);font-size:13px;}
+  #editStat .row input{
+    flex:1;background:var(--panel-2);color:var(--ink);border:1px solid var(--line);
+    border-radius:8px;padding:8px 10px;font-size:14px;font-family:"Oswald";text-align:center;
+  }
+  #editStat .actions{display:flex;gap:8px;justify-content:flex-end;margin-top:12px;}
+
+  /* Settlement modal */
+  #settleModal{
+    position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  #settleModal.show{display:flex;}
+  #settleModal .box{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;width:380px;max-width:100%;box-shadow:0 16px 48px rgba(0,0,0,.7);
+    max-height:90vh;overflow:auto;
+  }
+  #settleModal h3{margin:0 0 4px;font-size:16px;}
+  #settleModal .sub{color:var(--ink-dim);font-size:12px;margin-bottom:14px;}
+  .settle-q{margin:14px 0;}
+  .settle-q .qlabel{font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-family:"Oswald";letter-spacing:.05em;}
+  .settle-q .opts{display:flex;gap:6px;flex-wrap:wrap;}
+  .settle-q .opt{
+    flex:1 1 auto;min-width:80px;padding:10px 12px;border-radius:9px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    font-size:14px;font-weight:700;cursor:pointer;text-align:center;
+  }
+  .settle-q .opt:hover{border-color:#46566a;}
+  .settle-q .opt.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
+  .settle-q .opt.tie{background:#2a3340;color:#aeb9c8;}
+  .settle-q .opt.tie.on{background:#5b6b80;color:#fff;}
+
+  /* settled-mark on cards */
+  .card.settled .grip{position:relative;}
+  .settled-mark{
+    background:#28c76f;color:#0c0f14;font-size:10px;font-weight:700;
+    padding:2px 7px;border-radius:6px;letter-spacing:.04em;cursor:pointer;margin-left:6px;
+  }
+
+  /* pct hint shown on card section headers */
+  .sec .pctline{
+    margin-left:auto;font-size:11px;color:var(--ink-dim);font-family:"Noto Sans TC";
+    font-weight:500;letter-spacing:0;text-transform:none;
+  }
+  .sec .pctline .v{color:#aeb9c8;font-weight:700;font-family:"Oswald";}
+  .sec .pctline .v.hi{color:#28c76f;}
+  .sec .pctline .v.lo{color:var(--conflict);}
+
   /* ---------- tray ---------- */
   #tray{
     flex:0 0 auto;border-top:1px solid var(--line);
@@ -352,6 +471,12 @@
     background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
   }
   #moreMenu .sortbtn:hover{color:var(--ink);border-color:#46566a;}
+  #moreMenu .winbtn{
+    flex:0 0 auto;min-width:38px;padding:6px 8px;border-radius:7px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
+  }
+  #moreMenu .winbtn:hover{color:var(--ink);border-color:#46566a;}
+  #moreMenu .winbtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
 
   /* bigger touch targets on coarse pointers (phones/tablets) */
   @media (pointer:coarse){
@@ -494,6 +619,15 @@
         <button id="collapseAllBtn">⊟ 收合／展開全部</button>
         <button id="clearLights">○ 清空所有圓圈</button>
         <div class="sep"></div>
+        <button id="statsBtn">📊 隊伍統計</button>
+        <div class="colrow">
+          <span class="collabel">過盤率</span>
+          <button class="winbtn" data-win="season">本季</button>
+          <button class="winbtn" data-win="10">10</button>
+          <button class="winbtn" data-win="30">30</button>
+          <button class="winbtn" data-win="50">50</button>
+        </div>
+        <div class="sep"></div>
         <button id="exportBtn">⎘ 匯出文字</button>
         <button id="pngBtn">⤓ 存成圖片</button>
         <div class="sep"></div>
@@ -527,6 +661,51 @@
 
   <div id="ghost"></div>
 
+  <!-- Stats page (overlay) -->
+  <div id="statspage">
+    <div class="stats-toolbar">
+      <span class="title">📊 隊伍統計</span>
+      <select id="statsLeague">
+        <option value="mlb">MLB</option>
+        <option value="npb">日職</option>
+        <option value="kbo">韓職</option>
+        <option value="cpbl">中職</option>
+      </select>
+      <select id="statsSeason"></select>
+      <select id="statsFilter">
+        <option value="today">今日對戰</option>
+        <option value="all">全部隊伍</option>
+      </select>
+      <button class="btn closebtn" id="statsClose">關閉</button>
+    </div>
+    <div class="stats-body" id="statsBody"></div>
+  </div>
+
+  <!-- Edit one stat cell -->
+  <div id="editStat"><div class="box">
+    <h3 id="editTitle">編輯統計</h3>
+    <div class="sub" id="editSub"></div>
+    <div class="row"><label>勝（W）</label><input id="editW" type="text" inputmode="numeric"></div>
+    <div class="row"><label>敗（L）</label><input id="editL" type="text" inputmode="numeric"></div>
+    <div class="row" id="editTRow" style="display:none"><label>和（T）</label><input id="editT" type="text" inputmode="numeric"></div>
+    <div class="actions">
+      <button class="btn" id="editCancel">取消</button>
+      <button class="btn" id="editSave" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">儲存</button>
+    </div>
+  </div></div>
+
+  <!-- Settle a match -->
+  <div id="settleModal"><div class="box">
+    <h3 id="settleTitle">結算比賽</h3>
+    <div class="sub" id="settleSub"></div>
+    <div id="settleBody"></div>
+    <div class="actions">
+      <button class="btn" id="settleCancel">取消</button>
+      <button class="btn" id="settleRemove" style="display:none;color:var(--danger);">取消結算</button>
+      <button class="btn" id="settleConfirm" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">確認結算</button>
+    </div>
+  </div></div>
+
   <div id="modal">
     <div class="modal-box">
       <h3>當日重點總結 <span class="spacer"></span><span class="ico x no-drag" id="modalClose" style="cursor:pointer">✕</span></h3>
@@ -540,19 +719,19 @@
 
 <script>
 const LEAGUES = {
-  cpbl: { name:"中職", color:"var(--cpbl)", teams:["中信兄弟","統一獅","樂天桃猿","富邦悍將","味全龍","台鋼雄鷹"] },
+  mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
   npb:  { name:"日職", color:"var(--npb)", teams:["讀賣巨人","阪神虎","橫濱DeNA","廣島鯉魚","養樂多燕子","中日龍","軟銀鷹","日本火腿","羅德","樂天金鷲","西武獅","歐力士"] },
   kbo:  { name:"韓職", color:"var(--kbo)", teams:["LG雙子","KT巫師","SSG登陸者","NC恐龍","斗山熊","起亞虎","樂天巨人","三星獅","韓華鷹","培證英雄"] },
-  mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
+  cpbl: { name:"中職", color:"var(--cpbl)", teams:["中信兄弟","統一獅","樂天桃猿","富邦悍將","味全龍","台鋼雄鷹"] },
 };
 const GRID = 20, SNAP = 11, MERGE_DIST = 64;
 
 const todayStr = ()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
 
 // full document: multiple dated boards
-let doc = { version:2, activeDate: todayStr(), boards:{} };
+let doc = { version:2, activeDate: todayStr(), boards:{}, stats:{}, recent:[] };
 let state = { items:[], summaryPos:null };   // working pointer = active board
-let activeTab = "cpbl";
+let activeTab = "mlb";
 let uid = 1;
 let layoutCols = "auto";  // grid columns per row: "auto" or a fixed number
 const $ = s => document.querySelector(s);
@@ -669,6 +848,93 @@ function loadActiveBoard(){
   if(typeof applyView==="function") applyView();
 }
 
+/* ---------------- team stats (W-L cover rates per market/venue/season) ---------------- */
+// Markets:
+//   ml   = 獨贏       (has w/l/t — tie possible, esp. NPB)
+//   hd   = 讓分       (the giving/favorite side covering)
+//   recv = 受讓       (the receiving/underdog side covering)
+//   tot  = 大分       (over)  — shared signal but stored per team because filter is per team
+// Venues: "home" / "away"
+// Season key: 4-digit year string ("2026"). Tie/push are excluded from both numerator AND denominator.
+const RECENT_CAP = 800;
+function seasonOf(dateStr){ // "2026-05-29" -> "2026"
+  return (dateStr && /^\d{4}/.test(dateStr)) ? dateStr.slice(0,4) : String(new Date().getFullYear());
+}
+function emptyTeamRow(){
+  return {
+    ml:   { home:{w:0,l:0,t:0}, away:{w:0,l:0,t:0} },
+    hd:   { home:{w:0,l:0},     away:{w:0,l:0}     },
+    recv: { home:{w:0,l:0},     away:{w:0,l:0}     },
+    tot:  { home:{w:0,l:0},     away:{w:0,l:0}     }
+  };
+}
+function ensureTeamRow(season, team){
+  if(!doc.stats) doc.stats={};
+  if(!doc.stats[season]) doc.stats[season]={};
+  if(!doc.stats[season][team]) doc.stats[season][team] = emptyTeamRow();
+  // self-heal any old/incomplete rows
+  const row = doc.stats[season][team];
+  ["ml","hd","recv","tot"].forEach(m=>{
+    if(!row[m]) row[m] = m==="ml" ? {home:{w:0,l:0,t:0},away:{w:0,l:0,t:0}} : {home:{w:0,l:0},away:{w:0,l:0}};
+    ["home","away"].forEach(v=>{
+      if(!row[m][v]) row[m][v] = m==="ml" ? {w:0,l:0,t:0} : {w:0,l:0};
+      if(m==="ml" && row[m][v].t===undefined) row[m][v].t = 0;
+    });
+  });
+  return row;
+}
+// add delta to one cell; market is "ml"/"hd"/"recv"/"tot"; result is "w"/"l"/"t"
+function statAdd(season, team, market, venue, result, delta){
+  const cell = ensureTeamRow(season, team)[market][venue];
+  if(result==="w") cell.w = Math.max(0,(cell.w||0)+delta);
+  else if(result==="l") cell.l = Math.max(0,(cell.l||0)+delta);
+  else if(result==="t") cell.t = Math.max(0,(cell.t||0)+delta);
+}
+// read totals (sums home+away unless venue specified). Returns {w,l,t} where t may be undefined.
+function statRead(season, team, market, venue/*optional*/){
+  if(!doc.stats || !doc.stats[season] || !doc.stats[season][team]) return {w:0,l:0,t:0};
+  const row = ensureTeamRow(season, team)[market];
+  if(venue) return {...row[venue], t:row[venue].t||0};
+  const h=row.home, a=row.away;
+  return { w:(h.w||0)+(a.w||0), l:(h.l||0)+(a.l||0), t:(h.t||0)+(a.t||0) };
+}
+// percent string: w / (w+l), ties excluded from both. Returns null when no samples.
+function pctStr(rec){
+  const denom = (rec.w||0)+(rec.l||0);
+  if(denom===0) return null;
+  return Math.round((rec.w/denom)*100) + "%";
+}
+function pctNum(rec){
+  const denom = (rec.w||0)+(rec.l||0);
+  if(denom===0) return null;
+  return rec.w/denom;
+}
+// add a recent-game entry (post-program settlements only). Keeps list capped.
+function recentAdd(entry){
+  if(!doc.recent) doc.recent = [];
+  doc.recent.push(entry);
+  if(doc.recent.length > RECENT_CAP) doc.recent.splice(0, doc.recent.length-RECENT_CAP);
+}
+// Compute W-L from the last N entries that match (team, market, venue?)
+// Returns null if no recent samples are available for the filter at all.
+function recentRead(team, market, venue, n){
+  if(!doc.recent || !doc.recent.length) return null;
+  let w=0, l=0, t=0, count=0;
+  for(let i=doc.recent.length-1; i>=0; i--){
+    const r = doc.recent[i];
+    if(r.team!==team || r.market!==market) continue;
+    if(venue && r.venue!==venue) continue;
+    if(r.result==="w") w++; else if(r.result==="l") l++; else if(r.result==="t") t++;
+    count++;
+    if(count>=n) break;
+  }
+  if(count===0) return null;
+  return {w,l,t};
+}
+
+/* user preference: which window to show on cards. "season" or 10/30/50 */
+let pctWindow = "season";
+
 /* ---------------- persistence (graceful, optional) ---------------- */
 const LS_KEY = "sportbetting_plus_doc_v2";
 let _saveTimer = null;
@@ -676,6 +942,7 @@ let _saveTimer = null;
 function save(){
   syncStateToDoc();
   doc.layoutCols = layoutCols;
+  doc.pctWindow = pctWindow;
   const json = JSON.stringify(doc);
   try{ localStorage.setItem(LS_KEY, json); }catch(e){}
   // also write to preview-env storage when available (harmless on GitHub Pages)
@@ -686,7 +953,15 @@ function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTime
 function loadDocFromString(str){
   try{
     const d = JSON.parse(str);
-    if(d && d.boards){ doc = d; if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr(); if(d.layoutCols!==undefined) layoutCols = d.layoutCols; return true; }
+    if(d && d.boards){
+      doc = d;
+      if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr();
+      if(d.layoutCols!==undefined) layoutCols = d.layoutCols;
+      if(d.pctWindow!==undefined) pctWindow = d.pctWindow;
+      if(!doc.stats) doc.stats = {};
+      if(!doc.recent) doc.recent = [];
+      return true;
+    }
   }catch(e){}
   return false;
 }
@@ -791,6 +1066,12 @@ function renderCard(it){
   const vs = document.createElement("div"); vs.className="vs";
   const slash = document.createElement("span"); slash.className="slash"; slash.textContent="/";
   vs.append(mkTeam(it,"away"), slash, mkTeam(it,"home"));
+  // settled mark (click to revise; clicking should NOT start drag)
+  if(it.settled){
+    const sm = document.createElement("span"); sm.className="settled-mark no-drag"; sm.textContent="✓ 已結算"; sm.title="按一下重新結算 / 取消結算";
+    sm.onclick = (e)=>{ e.stopPropagation(); openSettleModal(it); };
+    vs.appendChild(sm);
+  }
   const swap = document.createElement("div"); swap.className="ico no-drag"; swap.title="主客對調"; swap.textContent="⇄";
   swap.onclick = ()=>{
     snapshot();
@@ -805,6 +1086,7 @@ function renderCard(it){
   col.textContent = it.collapsed?"▸":"▾";
   col.onclick = ()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
   grip.append(vs,swap,col,del);
+  if(it.settled) el.classList.add("settled");
   grip.addEventListener("pointerdown", e=>{ if(e.target.closest(".no-drag")) return; startItemDrag(e,it,el); });
   // double-tap / double-click the header to collapse/expand
   let lastTapG=0;
@@ -814,6 +1096,26 @@ function renderCard(it){
     const now=Date.now();
     if(now-lastTapG < 320){ snapshot(); it.collapsed=!it.collapsed; save(); render(); lastTapG=0; }
     else lastTapG=now;
+  });
+  // long-press the grip to open the settlement modal
+  let lpSettleTimer=null, lpSettleFired=false;
+  grip.addEventListener("pointerdown", e=>{
+    if(e.target.closest(".no-drag")) return;
+    lpSettleFired=false;
+    lpSettleTimer = setTimeout(()=>{
+      lpSettleFired = true;
+      // cancel the in-progress card-drag so the modal opens cleanly
+      if(drag && drag.it===it){ drag.el.classList.remove("dragging"); drag=null; }
+      openSettleModal(it);
+    }, 600);
+  });
+  const cancelLPSettle = ()=>{ if(lpSettleTimer){ clearTimeout(lpSettleTimer); lpSettleTimer=null; } };
+  grip.addEventListener("pointerup", cancelLPSettle);
+  grip.addEventListener("pointerleave", cancelLPSettle);
+  grip.addEventListener("pointercancel", cancelLPSettle);
+  grip.addEventListener("pointermove", e=>{
+    // if user moves while pressed, treat as drag, not long-press
+    if(lpSettleTimer && drag) cancelLPSettle();
   });
   el.appendChild(grip);
 
@@ -826,7 +1128,7 @@ function renderCard(it){
     row.append(b, nm, mkLights(obj));
     return row;
   }
-  function sec(label, extraIco, conflict, crossWarn){
+  function sec(label, extraIco, conflict, crossWarn, pctHTML){
     const s = document.createElement("div"); s.className="sec"+(conflict?" conflict":"")+(crossWarn?" cross":"");
     const t = document.createElement("span"); t.textContent=label;
     const ln = document.createElement("span"); ln.className="ln";
@@ -837,6 +1139,11 @@ function renderCard(it){
     }else if(crossWarn){
       const w = document.createElement("span"); w.className="warn cross"; w.textContent=crossWarn;
       s.appendChild(w);
+    }
+    if(pctHTML){
+      const p = document.createElement("span"); p.innerHTML = pctHTML; // already wrapped in .pctline
+      // unwrap (pctHTML returns <span class="pctline">...</span>): append the inner span directly
+      if(p.firstElementChild) s.appendChild(p.firstElementChild);
     }
     if(extraIco) s.appendChild(extraIco);
     return s;
@@ -853,11 +1160,12 @@ function renderCard(it){
   const oppML = (undSideX==="away") ? it.mlAway.lights : it.mlHome.lights;   // opponent's moneyline
   const crossConflict = it.hdGive.lights>0 && oppML>0;
 
-  // strong signal = some side has >=3 lights in a market that is NOT in conflict
-  const strongSignal =
+  // strong signal = some side has >=3 lights in a market that is NOT in conflict AND no cross-conflict
+  const strongSignal = !crossConflict && (
     (!mlConflict  && (it.mlAway.lights>=3 || it.mlHome.lights>=3)) ||
     (!hdConflict  && (it.hdGive.lights>=3 || it.hdRecv.lights>=3)) ||
-    (!totConflict && (it.over.lights>=3  || it.under.lights>=3));
+    (!totConflict && (it.over.lights>=3  || it.under.lights>=3))
+  );
   if(mlConflict||hdConflict||totConflict) el.classList.add("has-conflict");
   else if(crossConflict) el.classList.add("has-cross");
   else if(strongSignal) el.classList.add("has-strong");
@@ -876,17 +1184,24 @@ function renderCard(it){
   const totLean = totConflict?null: lean(it.over.lights, "大分", it.under.lights, "小分");
 
   // ---- 獨贏 ----
-  el.appendChild(sec("獨贏", null, mlConflict, crossConflict?"⚠ 與讓分矛盾":null));
+  el.appendChild(sec("獨贏", null, mlConflict, crossConflict?"⚠ 與讓分矛盾":null, sectionPctHTML(it,"ml")));
   el.appendChild(optRow("客", "", it.away, teamColor("away"), it.mlAway, mlConflict));
   el.appendChild(optRow("主", "", it.home, teamColor("home"), it.mlHome, mlConflict));
 
   // ---- 讓分 / 受讓 ----
   const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
   favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
-  el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null));
+  el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null, sectionPctHTML(it,"hd")));
   const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
   el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
   el.appendChild(optRow("受讓", "recv", it[undSide], teamColor(undSide), it.hdRecv, hdConflict));
+  // tiny受讓 pct on its own line if available
+  const recvPct = sectionPctHTML(it,"recv");
+  if(recvPct){ const r=document.createElement("div"); r.className="sec"; r.style.padding="2px 12px 0"; r.style.borderTop="none";
+    const x=document.createElement("span"); x.innerHTML=recvPct;
+    if(x.firstElementChild) r.appendChild(x.firstElementChild);
+    el.appendChild(r);
+  }
 
   // ---- 大小分 ----
   el.appendChild(sec("大小分", null, totConflict));
@@ -965,10 +1280,17 @@ function collectSummary(){
     if(totC) conflicts.push({matchName, market:"大小分", kind:"same"});
     if(crossC) conflicts.push({matchName, market:"讓分↔對手獨贏", kind:"cross"});
     const add=(cond,lights,pick,mk)=>{ if(cond && lights>=3) strong.push({matchName, pick, mk, n:lights}); };
-    add(!mlC,  it.mlAway.lights, it.away, "獨贏");
-    add(!mlC,  it.mlHome.lights, it.home, "獨贏");
-    add(!hdC,  it.hdGive.lights, it[favSide], "讓"+(it.hdVal?` ${it.hdVal}`:""));
-    add(!hdC,  it.hdRecv.lights, it[undSide], "受讓"+(it.hdVal?` ${it.hdVal}`:""));
+    // a market also "fails" if it participates in cross-conflict:
+    // - mlHome side (undSide==home) crosses when crossC and undSide=home
+    // - hdGive (the favorite's spread bet) crosses with the opposing moneyline
+    const mlAwayOK  = !mlC && !(crossC && undSide==="away");
+    const mlHomeOK  = !mlC && !(crossC && undSide==="home");
+    const hdGiveOK  = !hdC && !crossC;
+    const hdRecvOK  = !hdC;                     // receiving side isn't part of the contradiction
+    add(mlAwayOK, it.mlAway.lights, it.away, "獨贏");
+    add(mlHomeOK, it.mlHome.lights, it.home, "獨贏");
+    add(hdGiveOK, it.hdGive.lights, it[favSide], "讓"+(it.hdVal?` ${it.hdVal}`:""));
+    add(hdRecvOK, it.hdRecv.lights, it[undSide], "受讓"+(it.hdVal?` ${it.hdVal}`:""));
     add(!totC, it.over.lights,  "大分", "大小分"+(it.totVal?` ${it.totVal}`:""));
     add(!totC, it.under.lights, "小分", "大小分"+(it.totVal?` ${it.totVal}`:""));
   });
@@ -993,7 +1315,10 @@ function renderSummary(){
   head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${strong.length} 個強訊號</span>`+
                    `<span class="sumtoggle no-drag" title="收合／展開">${caret}</span>`;
   head.addEventListener("pointerdown", startSummaryDrag);
-  head.querySelector(".sumtoggle").addEventListener("click", (e)=>{
+  const tog = head.querySelector(".sumtoggle");
+  // intercept pointer events on the toggle so the drag handler never runs
+  tog.addEventListener("pointerdown", (e)=>{ e.stopPropagation(); });
+  tog.addEventListener("click", (e)=>{
     e.stopPropagation();
     doc.summaryCollapsed = !doc.summaryCollapsed; save(); render();
   });
@@ -1035,6 +1360,7 @@ function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",
 
 let sumDrag = null;
 function startSummaryDrag(e){
+  if(e.target.closest(".no-drag")) return;
   e.preventDefault(); e.stopPropagation();
   const box = canvas.querySelector("#summary");
   const r = box.getBoundingClientRect();
@@ -1241,7 +1567,37 @@ window.addEventListener("pointercancel", e=>{
 });
 
 /* ---------------- canvas gestures: pan (1 finger) + pinch zoom (2 fingers) ---------------- */
-const gesture = { pointers:new Map(), mode:null, startX:0, startY:0, startView:null, pinch:null, lastTap:0 };
+const gesture = { pointers:new Map(), mode:null, startX:0, startY:0, startView:null, pinch:null, lastTap:0,
+                  // velocity tracking for inertia
+                  velSamples:[], lastX:0, lastY:0, lastT:0 };
+// inertia animation state
+let inertia = null; // {vx, vy, raf}
+function stopInertia(){
+  if(inertia){ cancelAnimationFrame(inertia.raf); inertia=null; }
+}
+function startInertia(vx, vy){
+  stopInertia();
+  // require a meaningful flick to engage inertia (pixels/ms)
+  const speed = Math.hypot(vx, vy);
+  if(speed < 0.25) return;
+  inertia = { vx, vy, raf:0 };
+  const friction = 0.94;            // per frame at ~60fps -> ~6% loss/frame
+  const minSpeed = 0.04;            // stop threshold (px/ms)
+  let prev = performance.now();
+  const step = (now)=>{
+    if(!inertia) return;
+    const dt = Math.min(40, now-prev); prev = now;
+    view.x += inertia.vx * dt;
+    view.y += inertia.vy * dt;
+    applyView();
+    // decay (friction^frames at 60fps), where frames ~= dt/16.67
+    const decay = Math.pow(friction, dt/16.67);
+    inertia.vx *= decay; inertia.vy *= decay;
+    if(Math.hypot(inertia.vx, inertia.vy) < minSpeed){ stopInertia(); saveViewSoon(); return; }
+    inertia.raf = requestAnimationFrame(step);
+  };
+  inertia.raf = requestAnimationFrame(step);
+}
 function isInteractive(target){
   // These elements handle their own gestures, so the canvas must NOT pan when they're pressed:
   //  - .grip  : the card's top bar (drags the card itself)
@@ -1253,6 +1609,7 @@ function isInteractive(target){
 canvas.addEventListener("pointerdown", e=>{
   // ignore presses that begin on a card/token/summary/zoom — those have their own handlers
   if(isInteractive(e.target)) return;
+  stopInertia(); // any new press cancels coasting
   gesture.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
   try{ canvas.setPointerCapture(e.pointerId); }catch(_){}
 
@@ -1260,6 +1617,8 @@ canvas.addEventListener("pointerdown", e=>{
     gesture.mode = "pan";
     gesture.startX = e.clientX; gesture.startY = e.clientY;
     gesture.startView = {...view};
+    gesture.velSamples.length=0;
+    gesture.lastX = e.clientX; gesture.lastY = e.clientY; gesture.lastT = performance.now();
     canvas.classList.add("panning");
   } else if(gesture.pointers.size===2){
     gesture.mode = "pinch";
@@ -1281,6 +1640,14 @@ canvas.addEventListener("pointermove", e=>{
     view.x = gesture.startView.x + (e.clientX - gesture.startX);
     view.y = gesture.startView.y + (e.clientY - gesture.startY);
     applyView();
+    // record velocity sample (px per ms)
+    const now = performance.now();
+    const dt = now - gesture.lastT;
+    if(dt > 0){
+      gesture.velSamples.push({ vx:(e.clientX-gesture.lastX)/dt, vy:(e.clientY-gesture.lastY)/dt, t:now });
+      if(gesture.velSamples.length>5) gesture.velSamples.shift();
+      gesture.lastX = e.clientX; gesture.lastY = e.clientY; gesture.lastT = now;
+    }
   } else if(gesture.mode==="pinch" && gesture.pointers.size>=2){
     const pts = [...gesture.pointers.values()].slice(0,2);
     const dist = Math.hypot(pts[0].x-pts[1].x, pts[0].y-pts[1].y);
@@ -1300,6 +1667,7 @@ canvas.addEventListener("pointermove", e=>{
   }
 }, {passive:false});
 function endGesturePointer(e){
+  const wasPan = gesture.mode==="pan" && gesture.pointers.size===1;
   gesture.pointers.delete(e.pointerId);
   try{ canvas.releasePointerCapture(e.pointerId); }catch(_){}
   if(gesture.pointers.size===0){
@@ -1310,6 +1678,13 @@ function endGesturePointer(e){
         const now=Date.now();
         if(now-gesture.lastTap < 300){ fitView(); gesture.lastTap=0; }
         else gesture.lastTap=now;
+      } else if(wasPan){
+        // average the most recent samples for stable launch velocity
+        const recent = gesture.velSamples.filter(s=> performance.now()-s.t < 80);
+        if(recent.length){
+          let vx=0, vy=0; recent.forEach(s=>{vx+=s.vx; vy+=s.vy;});
+          startInertia(vx/recent.length, vy/recent.length);
+        }
       }
     }
     gesture.mode=null; gesture.pinch=null; canvas.classList.remove("panning");
@@ -1318,9 +1693,12 @@ function endGesturePointer(e){
     // dropped from pinch to pan
     const p=[...gesture.pointers.values()][0];
     gesture.mode="pan"; gesture.startX=p.x; gesture.startY=p.y; gesture.startView={...view};
+    gesture.velSamples.length=0; gesture.lastX=p.x; gesture.lastY=p.y; gesture.lastT=performance.now();
   }
 }
 canvas.addEventListener("pointerup", endGesturePointer);
+// Stop inertia when starting a card drag, resize, summary drag, etc.
+window.addEventListener("pointerdown", ()=>{ if(inertia) stopInertia(); }, true);
 // desktop wheel / trackpad zoom
 canvas.addEventListener("wheel", e=>{
   if(isInteractive(e.target)) return;
@@ -1490,7 +1868,7 @@ function placeRows(list, cols, cursorY){
 }
 function autoLayout(){
   snapshot();
-  const order = ["cpbl","npb","kbo","mlb","zz"];
+  const order = ["mlb","npb","kbo","cpbl","zz"];
   const groups = {}; order.forEach(k=>groups[k]=[]);
   state.items.forEach(it=>{ (groups[leagueOf(it)]||groups.zz).push(it); });
   // reset size/collapse so every card measures at its natural full height
@@ -1522,7 +1900,7 @@ function hasAnyConflict(it){
 }
 function sortByBlock(which){
   closeMore();
-  const order = ["cpbl","npb","kbo","mlb","zz"];
+  const order = ["mlb","npb","kbo","cpbl","zz"];
   const groups = {}; order.forEach(k=>groups[k]=[]);
   state.items.forEach(it=>{ if(it.type==="match") (groups[leagueOf(it)]||groups.zz).push(it); });
   if(!Object.values(groups).some(g=>g.length)){ alert("沒有對戰可以排序。"); return; }
@@ -1756,13 +2134,396 @@ $("#trayHandle").onclick = ()=>{ const t=$("#tray"); collapseTray(!t.classList.c
 $("#exportDataBtn").onclick = exportData;
 $("#importDataBtn").onclick = importData;
 
+/* ============================================================
+   STATS PAGE — list teams, show W-L per market, click to edit
+   ============================================================ */
+function isMobileLayout(){ return (canvas?.clientWidth||window.innerWidth) < 760; }
+function teamsForToday(league){
+  // teams appearing on the current board for the given league
+  const set = new Set();
+  state.items.forEach(it=>{
+    if(it.type!=="match") return;
+    const lg = leagueOf(it);
+    if(lg!==league) return;
+    set.add(it.away); set.add(it.home);
+  });
+  return set;
+}
+function openStatsPage(){
+  closeMore();
+  const sp = $("#statspage"); if(!sp) return;
+  // populate season selector (years from 2026 onwards, up to current year+1)
+  const sel = $("#statsSeason");
+  if(sel && !sel.dataset.built){
+    const thisYear = new Date().getFullYear();
+    const years = [];
+    for(let y=2026; y<=Math.max(thisYear, 2026); y++) years.push(y);
+    sel.innerHTML = years.map(y=>`<option value="${y}">${y} 賽季</option>`).join("");
+    sel.value = String(seasonOf(doc.activeDate));
+    sel.dataset.built = "1";
+  }
+  // ensure league selector defaults to a sensible value
+  const lg = $("#statsLeague");
+  // try to default to today's leagues if any
+  const todayLeagues = new Set();
+  state.items.forEach(it=>{ if(it.type==="match"){ todayLeagues.add(leagueOf(it)); } });
+  if(todayLeagues.size===1) lg.value = [...todayLeagues][0];
+  sp.classList.add("show");
+  renderStatsPage();
+}
+function closeStatsPage(){ const sp=$("#statspage"); if(sp) sp.classList.remove("show"); }
+$("#statsBtn") && ($("#statsBtn").onclick = openStatsPage);
+$("#statsClose") && ($("#statsClose").onclick = closeStatsPage);
+
+function renderStatsPage(){
+  const body = $("#statsBody"); if(!body) return;
+  const league = $("#statsLeague").value;
+  const season = $("#statsSeason").value || String(seasonOf(doc.activeDate));
+  const filter = $("#statsFilter").value;
+  const todaySet = teamsForToday(league);
+  let teams = LEAGUES[league].teams.slice();
+  if(filter==="today" && todaySet.size>0) teams = teams.filter(t=>todaySet.has(t));
+
+  if(isMobileLayout()){
+    // Mobile: one stacked card per team
+    body.innerHTML = "";
+    if(!teams.length){
+      body.innerHTML = `<div style="color:var(--ink-dim);padding:20px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</div>`;
+      return;
+    }
+    teams.forEach(team=>{
+      const card = document.createElement("div"); card.className="stats-team";
+      const lgColor = LEAGUES[league].color;
+      card.innerHTML = `<div class="tname"><span class="swatch" style="background:${lgColor}"></span>${esc(team)}</div>`;
+      const markets = [["ml","獨贏"],["hd","讓分"],["recv","受讓"],["tot","大分"]];
+      markets.forEach(([m,label])=>{
+        const mkt = document.createElement("div"); mkt.className="mkt";
+        mkt.innerHTML = `<div class="label">${label}</div>`;
+        const cells = document.createElement("div"); cells.className="cells";
+        ["home","away","all"].forEach(v=>{
+          const venueLabel = v==="home"?"主":(v==="away"?"客":"全");
+          const venueArg = v==="all" ? null : v;
+          const rec = statRead(season, team, m, venueArg);
+          const pct = pctStr(rec);
+          const empty = (rec.w===0 && rec.l===0 && (rec.t||0)===0);
+          const cell = document.createElement("div");
+          cell.className = "statcell"+(empty?" empty":"");
+          const pn = pctNum(rec);
+          const pctClass = pn==null?"":(pn>=0.55?"pcthi":(pn<0.40?"pctlo":""));
+          const tieSfx = (m==="ml" && (rec.t||0)>0) ? `-${rec.t}` : "";
+          cell.innerHTML = `<span class="colhd">${venueLabel}</span>`+
+                           `<span class="wl">${rec.w}-${rec.l}${tieSfx}</span>`+
+                           `<span class="pct ${pctClass}">${pct||"—"}</span>`;
+          if(v!=="all"){
+            cell.onclick = ()=> openEditStat(season, team, m, v, label, venueLabel);
+            cell.style.cursor = "pointer";
+          } else {
+            cell.style.cursor = "default";
+          }
+          cells.appendChild(cell);
+        });
+        mkt.appendChild(cells);
+        card.appendChild(mkt);
+      });
+      body.appendChild(card);
+    });
+  } else {
+    // Desktop: wide table
+    const markets = [["ml","獨贏"],["hd","讓分"],["recv","受讓"],["tot","大分"]];
+    let html = `<table class="stats-table"><thead><tr><th rowspan="2" style="text-align:left">隊伍</th>`;
+    markets.forEach(([_,label])=>{ html += `<th colspan="3" class="group">${label}</th>`; });
+    html += `</tr><tr>`;
+    markets.forEach(()=>{ html += `<th class="group">主</th><th>客</th><th>全</th>`; });
+    html += `</tr></thead><tbody>`;
+    if(!teams.length){
+      html += `<tr><td colspan="13" style="color:var(--ink-dim);padding:30px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</td></tr>`;
+    }
+    teams.forEach(team=>{
+      html += `<tr><td class="team">${esc(team)}</td>`;
+      markets.forEach(([m,_])=>{
+        ["home","away",null].forEach((v,idx)=>{
+          const rec = statRead(season, team, m, v);
+          const pct = pctStr(rec);
+          const empty = (rec.w===0 && rec.l===0 && (rec.t||0)===0);
+          const pn = pctNum(rec);
+          const pctClass = pn==null?"":(pn>=0.55?"pcthi":(pn<0.40?"pctlo":""));
+          const tieSfx = (m==="ml" && (rec.t||0)>0) ? `-${rec.t}` : "";
+          const groupCls = idx===0 ? " class=\"group\"" : "";
+          const clickable = v!==null;
+          html += `<td${groupCls}>`+
+                  `<span class="statcell${empty?' empty':''}" ${clickable?`data-edit="${team}|${m}|${v}|${esc(LEAGUES[league].teams.includes(team)?LEAGUES[league].name:'')}"`:''}>`+
+                  `<span class="wl">${rec.w}-${rec.l}${tieSfx}</span>`+
+                  `<span class="pct ${pctClass}">${pct||"—"}</span>`+
+                  `</span></td>`;
+        });
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+    body.innerHTML = html;
+    body.querySelectorAll(".statcell[data-edit]").forEach(el=>{
+      el.style.cursor="pointer";
+      el.onclick = ()=>{
+        const [team, m, v] = el.dataset.edit.split("|");
+        const mlabel = {ml:"獨贏",hd:"讓分",recv:"受讓",tot:"大分"}[m];
+        const vlabel = v==="home"?"主":"客";
+        openEditStat(season, team, m, v, mlabel, vlabel);
+      };
+    });
+  }
+}
+["statsLeague","statsSeason","statsFilter"].forEach(id=>{
+  const el = $("#"+id); if(el) el.onchange = renderStatsPage;
+});
+
+/* ---------------- Edit one stat cell ---------------- */
+let editTarget = null;
+function openEditStat(season, team, market, venue, mLabel, vLabel){
+  editTarget = { season, team, market, venue };
+  const rec = statRead(season, team, market, venue);
+  $("#editTitle").textContent = `${team} · ${mLabel} · ${vLabel}場`;
+  $("#editSub").textContent = `${season} 賽季　·　目前 ${rec.w}-${rec.l}${market==="ml"?"-"+(rec.t||0):""}`;
+  $("#editW").value = rec.w || 0;
+  $("#editL").value = rec.l || 0;
+  $("#editTRow").style.display = market==="ml" ? "" : "none";
+  $("#editT").value = (rec.t || 0);
+  $("#editStat").classList.add("show");
+  setTimeout(()=>$("#editW").focus(), 50);
+}
+$("#editCancel") && ($("#editCancel").onclick = ()=> $("#editStat").classList.remove("show"));
+$("#editSave") && ($("#editSave").onclick = ()=>{
+  if(!editTarget) return;
+  snapshot();
+  const {season, team, market, venue} = editTarget;
+  const row = ensureTeamRow(season, team)[market][venue];
+  row.w = Math.max(0, parseInt($("#editW").value,10) || 0);
+  row.l = Math.max(0, parseInt($("#editL").value,10) || 0);
+  if(market==="ml") row.t = Math.max(0, parseInt($("#editT").value,10) || 0);
+  save();
+  $("#editStat").classList.remove("show");
+  renderStatsPage();
+  render(); // refresh cards to pick up new pct
+});
+// close edit modal on outside click
+$("#editStat") && ($("#editStat").addEventListener("click", e=>{ if(e.target.id==="editStat") $("#editStat").classList.remove("show"); }));
+
+/* ============================================================
+   SETTLEMENT — long-press card → modal → write stats; small ✓ mark to revise
+   ============================================================ */
+let settleTarget = null;
+function openSettleModal(it){
+  if(it.type!=="match") return;
+  settleTarget = it;
+  const m = $("#settleModal");
+  const isRevise = !!it.settled;
+  $("#settleTitle").textContent = isRevise ? "修改結算" : "結算比賽";
+  $("#settleSub").textContent = `${it.away}（客） vs ${it.home}（主）　·　${fmtDate(doc.activeDate)}`;
+  const body = $("#settleBody");
+  body.innerHTML = "";
+
+  const prior = it.settled || {};
+  function q(label, key, options){
+    const wrap = document.createElement("div"); wrap.className="settle-q";
+    wrap.innerHTML = `<div class="qlabel">${label}</div>`;
+    const opts = document.createElement("div"); opts.className="opts";
+    options.forEach(o=>{
+      const b = document.createElement("button");
+      b.className = "opt"+(o.tie?" tie":"")+(prior[key]===o.value?" on":"");
+      b.textContent = o.label;
+      b.dataset.key = key; b.dataset.value = o.value;
+      b.onclick = ()=>{
+        wrap.querySelectorAll(".opt").forEach(x=>x.classList.remove("on"));
+        b.classList.add("on");
+      };
+      opts.appendChild(b);
+    });
+    wrap.appendChild(opts);
+    body.appendChild(wrap);
+  }
+  // 獨贏: away win / home win / tie
+  q("獨贏：哪隊贏了？", "ml", [
+    { label:`${it.away}（客）`, value:"away" },
+    { label:`${it.home}（主）`, value:"home" },
+    { label:"和（不列入）", value:"tie", tie:true }
+  ]);
+  // 讓分: favorite cover vs not cover (no tie option per user request)
+  const favName = it.hdFav==="away" ? it.away : it.home;
+  const undName = it.hdFav==="away" ? it.home : it.away;
+  q(`讓分：${favName} 過盤了嗎？`, "hd", [
+    { label:`${favName} 過盤`, value:"cover" },
+    { label:`${favName} 沒過`, value:"nocover" }
+  ]);
+  // 大分
+  q("大小分：兩隊總分大於基準？", "tot", [
+    { label:"大", value:"over" },
+    { label:"小", value:"under" }
+  ]);
+
+  $("#settleRemove").style.display = isRevise ? "" : "none";
+  m.classList.add("show");
+}
+$("#settleCancel") && ($("#settleCancel").onclick = ()=>{ $("#settleModal").classList.remove("show"); settleTarget=null; });
+$("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
+  if(!settleTarget) return;
+  const it = settleTarget;
+  const m = $("#settleModal");
+  // collect picks
+  const picks = {};
+  m.querySelectorAll(".settle-q").forEach(q=>{
+    const on = q.querySelector(".opt.on");
+    if(on){ picks[on.dataset.key] = on.dataset.value; }
+  });
+  if(!picks.ml){ alert("請選擇獨贏結果（含「和」）。"); return; }
+  if(!picks.hd){ alert("請選擇讓分結果。"); return; }
+  if(!picks.tot){ alert("請選擇大小分結果。"); return; }
+  snapshot();
+  // if revising, undo the old settlement first
+  if(it.settled) applySettlement(it, it.settled, -1);
+  applySettlement(it, picks, +1);
+  it.settled = picks;
+  save();
+  $("#settleModal").classList.remove("show");
+  settleTarget=null;
+  render();
+});
+$("#settleRemove") && ($("#settleRemove").onclick = ()=>{
+  if(!settleTarget || !settleTarget.settled) return;
+  if(!confirm("確定取消這場結算？相關統計會回滾。")) return;
+  snapshot();
+  applySettlement(settleTarget, settleTarget.settled, -1);
+  delete settleTarget.settled;
+  save();
+  $("#settleModal").classList.remove("show");
+  settleTarget=null;
+  render();
+});
+
+// add or subtract the effect of a settlement on stats (delta = +1 or -1)
+function applySettlement(it, picks, delta){
+  const season = seasonOf(doc.activeDate);
+  // venues: away team is "away", home team is "home"
+  const awayV = "away", homeV = "home";
+  // 獨贏
+  if(picks.ml==="away"){ statAdd(season, it.away, "ml", awayV, "w", delta); statAdd(season, it.home, "ml", homeV, "l", delta); }
+  else if(picks.ml==="home"){ statAdd(season, it.home, "ml", homeV, "w", delta); statAdd(season, it.away, "ml", awayV, "l", delta); }
+  else if(picks.ml==="tie"){ statAdd(season, it.away, "ml", awayV, "t", delta); statAdd(season, it.home, "ml", homeV, "t", delta); }
+  // 讓分／受讓
+  const fav = it.hdFav==="away" ? it.away : it.home;
+  const und = it.hdFav==="away" ? it.home : it.away;
+  const favV = it.hdFav==="away" ? awayV : homeV;
+  const undV = it.hdFav==="away" ? homeV : awayV;
+  if(picks.hd==="cover"){    // favorite covered: fav -> 讓分 W; und -> 受讓 L
+    statAdd(season, fav, "hd",   favV, "w", delta);
+    statAdd(season, und, "recv", undV, "l", delta);
+  } else if(picks.hd==="nocover"){
+    statAdd(season, fav, "hd",   favV, "l", delta);
+    statAdd(season, und, "recv", undV, "w", delta);
+  }
+  // 大小分: both teams get the same result on their venue
+  if(picks.tot==="over"){
+    statAdd(season, it.away, "tot", awayV, "w", delta);
+    statAdd(season, it.home, "tot", homeV, "w", delta);
+  } else if(picks.tot==="under"){
+    statAdd(season, it.away, "tot", awayV, "l", delta);
+    statAdd(season, it.home, "tot", homeV, "l", delta);
+  }
+  // Also record into the "recent" list (only for forward adds; reverse will pop)
+  if(delta>0){
+    const stamp = doc.activeDate + "T" + Date.now();
+    if(picks.ml==="away"){ recentAdd({team:it.away, market:"ml", venue:awayV, result:"w", date:doc.activeDate, id:stamp+"-a-ml"}); recentAdd({team:it.home, market:"ml", venue:homeV, result:"l", date:doc.activeDate, id:stamp+"-h-ml"}); }
+    else if(picks.ml==="home"){ recentAdd({team:it.home, market:"ml", venue:homeV, result:"w", date:doc.activeDate, id:stamp+"-h-ml"}); recentAdd({team:it.away, market:"ml", venue:awayV, result:"l", date:doc.activeDate, id:stamp+"-a-ml"}); }
+    else if(picks.ml==="tie"){ recentAdd({team:it.away, market:"ml", venue:awayV, result:"t", date:doc.activeDate, id:stamp+"-a-ml-t"}); recentAdd({team:it.home, market:"ml", venue:homeV, result:"t", date:doc.activeDate, id:stamp+"-h-ml-t"}); }
+    if(picks.hd==="cover"){
+      recentAdd({team:fav, market:"hd", venue:favV, result:"w", date:doc.activeDate, id:stamp+"-fav-hd"});
+      recentAdd({team:und, market:"recv", venue:undV, result:"l", date:doc.activeDate, id:stamp+"-und-rv"});
+    } else if(picks.hd==="nocover"){
+      recentAdd({team:fav, market:"hd", venue:favV, result:"l", date:doc.activeDate, id:stamp+"-fav-hd"});
+      recentAdd({team:und, market:"recv", venue:undV, result:"w", date:doc.activeDate, id:stamp+"-und-rv"});
+    }
+    if(picks.tot==="over"){
+      recentAdd({team:it.away, market:"tot", venue:awayV, result:"w", date:doc.activeDate, id:stamp+"-a-tot"});
+      recentAdd({team:it.home, market:"tot", venue:homeV, result:"w", date:doc.activeDate, id:stamp+"-h-tot"});
+    } else if(picks.tot==="under"){
+      recentAdd({team:it.away, market:"tot", venue:awayV, result:"l", date:doc.activeDate, id:stamp+"-a-tot"});
+      recentAdd({team:it.home, market:"tot", venue:homeV, result:"l", date:doc.activeDate, id:stamp+"-h-tot"});
+    }
+  }
+}
+
+/* close settle modal on outside click */
+$("#settleModal") && ($("#settleModal").addEventListener("click", e=>{ if(e.target.id==="settleModal"){ $("#settleModal").classList.remove("show"); settleTarget=null; } }));
+
+/* ============================================================
+   COVERAGE RATE on cards — small text on section header, both teams
+   ============================================================ */
+function pctForCard(team, market, venue){
+  // honors user's pctWindow preference (season / 10 / 30 / 50)
+  if(pctWindow==="season"){
+    const rec = statRead(seasonOf(doc.activeDate), team, market, venue);
+    return rec;
+  } else {
+    const n = parseInt(pctWindow,10)||30;
+    const rec = recentRead(team, market, venue, n);
+    if(rec) return rec;
+    // fallback to season when not enough recent samples
+    return statRead(seasonOf(doc.activeDate), team, market, venue);
+  }
+}
+function fmtPctChunk(team, label, market, venue){
+  const rec = pctForCard(team, market, venue);
+  const pct = pctStr(rec);
+  if(!pct) return null;
+  const pn = pctNum(rec);
+  const cls = pn>=0.55?"hi":(pn<0.40?"lo":"");
+  return `<span class="ck">${esc(team)}${label?label:""} <span class="v ${cls}">${pct}</span></span>`;
+}
+// Build the pctline HTML for a section. `which` = "ml" | "hd" | "recv" | "tot"
+function sectionPctHTML(it, which){
+  const awayV="away", homeV="home";
+  const favSide = it.hdFav, undSide = favSide==="away"?"home":"away";
+  const favName = it[favSide], undName = it[undSide];
+  const favV = favSide==="away"?awayV:homeV;
+  const undV = undSide==="away"?awayV:homeV;
+  const parts = [];
+  if(which==="ml"){
+    [["away", it.away, awayV], ["home", it.home, homeV]].forEach(([_,team,v])=>{
+      const c = fmtPctChunk(team, "", "ml", v);
+      if(c) parts.push(c);
+    });
+  } else if(which==="hd"){
+    const c = fmtPctChunk(favName, " 讓", "hd", favV);
+    if(c) parts.push(c);
+  } else if(which==="recv"){
+    const c = fmtPctChunk(undName, " 受讓", "recv", undV);
+    if(c) parts.push(c);
+  } else if(which==="tot"){
+    // small: only show "大" rate for either team isn't very useful; skip.
+    return "";
+  }
+  return parts.length ? `<span class="pctline">${parts.join(" / ")}</span>` : "";
+}
+
+/* "pct window" selector in menu (existing winbtn / data-win) */
+document.querySelectorAll("#moreMenu .winbtn").forEach(b=>{
+  b.onclick = (e)=>{
+    e.stopPropagation();
+    pctWindow = (b.dataset.win==="season") ? "season" : parseInt(b.dataset.win,10);
+    refreshPctBtns(); save(); render();
+  };
+});
+function refreshPctBtns(){
+  document.querySelectorAll("#moreMenu .winbtn").forEach(b=>{
+    b.classList.toggle("on", String(pctWindow)===b.dataset.win);
+  });
+}
+
 /* ---------------- init ---------------- */
 (async()=>{
   await load();
   // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
   const t = todayStr();
   if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
-  buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns();
+  buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns();
   applyView();
   if(!state.view) fitView();
 })();
