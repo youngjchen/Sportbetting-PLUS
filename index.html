@@ -312,6 +312,8 @@
     position:sticky;top:0;background:var(--panel);z-index:2;
   }
   .stats-table th.group{border-left:1px solid var(--line);background:var(--panel-2);}
+  .stats-table th.sortable{user-select:none;}
+  .stats-table th.sortable:hover{color:var(--ink);background:rgba(255,255,255,.05);}
   .stats-table td.group{border-left:1px solid var(--line);}
   .stats-table td.team{text-align:left;font-weight:700;font-size:14px;}
   .stats-table tr:hover td{background:rgba(255,255,255,.02);}
@@ -400,6 +402,19 @@
   .sec .pctline .v{color:#aeb9c8;font-weight:700;font-family:"Oswald";}
   .sec .pctline .v.hi{color:#28c76f;}
   .sec .pctline .v.lo{color:var(--conflict);}
+  .sec .pctline .v.low-sample{color:#5b6b80;}
+  .sec .pctline .ssize{font-size:9px;color:#5b6b80;margin-left:1px;font-family:"Oswald";}
+  /* trend line at the bottom of a card */
+  .trendline{
+    margin:6px 12px 8px;padding:6px 8px;border-radius:7px;font-size:12px;
+    background:rgba(255,255,255,.03);border:1px solid var(--line);color:var(--ink-dim);
+  }
+  .trendline b{color:var(--ink);font-weight:700;}
+  .trendline .td{margin-left:6px;font-family:"Oswald";color:var(--ink-dim);font-size:11px;}
+  .trendline.strong{background:rgba(40,199,111,.08);border-color:rgba(40,199,111,.4);color:#cfe9d8;}
+  .trendline.strong b{color:#9be3b5;}
+  /* dimmed strong frame: signal exists but cover rate is low → don't fully celebrate */
+  .card.has-strong-dim{border-color:#5b6b80;box-shadow:0 0 0 1px rgba(91,107,128,.5),0 0 12px rgba(91,107,128,.3),0 10px 26px rgba(0,0,0,.45);}
 
   /* ---------- tray ---------- */
   #tray{
@@ -1117,6 +1132,11 @@ function renderCard(it){
     // if user moves while pressed, treat as drag, not long-press
     if(lpSettleTimer && drag) cancelLPSettle();
   });
+  // Desktop: right-click the header to open the settlement modal
+  grip.addEventListener("contextmenu", e=>{
+    e.preventDefault();
+    openSettleModal(it);
+  });
   el.appendChild(grip);
 
   // ---- helpers ----
@@ -1168,7 +1188,8 @@ function renderCard(it){
   );
   if(mlConflict||hdConflict||totConflict) el.classList.add("has-conflict");
   else if(crossConflict) el.classList.add("has-cross");
-  else if(strongSignal) el.classList.add("has-strong");
+  else if(strongSignal && !strongShouldBeDampened(it)) el.classList.add("has-strong");
+  else if(strongSignal && strongShouldBeDampened(it)) el.classList.add("has-strong-dim");
   if(it.collapsed) el.classList.add("collapsed");
 
   const favSide0 = it.hdFav, undSide0 = it.hdFav==="away"?"home":"away";
@@ -1195,18 +1216,15 @@ function renderCard(it){
   const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
   el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
   el.appendChild(optRow("受讓", "recv", it[undSide], teamColor(undSide), it.hdRecv, hdConflict));
-  // tiny受讓 pct on its own line if available
-  const recvPct = sectionPctHTML(it,"recv");
-  if(recvPct){ const r=document.createElement("div"); r.className="sec"; r.style.padding="2px 12px 0"; r.style.borderTop="none";
-    const x=document.createElement("span"); x.innerHTML=recvPct;
-    if(x.firstElementChild) r.appendChild(x.firstElementChild);
-    el.appendChild(r);
-  }
 
   // ---- 大小分 ----
-  el.appendChild(sec("大小分", null, totConflict));
+  el.appendChild(sec("大小分", null, totConflict, null, sectionPctHTML(it,"tot")));
   el.appendChild(optRow("大", "", "大分", null, it.over, totConflict));
   el.appendChild(optRow("小", "", "小分", null, it.under, totConflict));
+
+  // ---- trend line (數據傾向) ----
+  const th = trendHTML(it);
+  if(th){ const w=document.createElement("div"); w.innerHTML=th; if(w.firstElementChild) el.appendChild(w.firstElementChild); }
 
   // ---- collapsed one-line summary ----
   const sl = document.createElement("div"); sl.className="summary-line";
@@ -2175,6 +2193,39 @@ function closeStatsPage(){ const sp=$("#statspage"); if(sp) sp.classList.remove(
 $("#statsBtn") && ($("#statsBtn").onclick = openStatsPage);
 $("#statsClose") && ($("#statsClose").onclick = closeStatsPage);
 
+// stats sort state: which column to sort by, ascending or descending
+let statsSort = { market:null, venue:null, dir:"desc" };  // null = default league order
+function teamPctForSort(season, team, market, venue){
+  const rec = statRead(season, team, market, venue);
+  const d = (rec.w||0)+(rec.l||0);
+  if(d===0) return null;
+  return rec.w/d;
+}
+function sortedTeams(teams, season){
+  if(!statsSort.market) return teams;
+  return [...teams].sort((a,b)=>{
+    const pa = teamPctForSort(season,a,statsSort.market,statsSort.venue);
+    const pb = teamPctForSort(season,b,statsSort.market,statsSort.venue);
+    if(pa==null && pb==null) return 0;
+    if(pa==null) return 1;
+    if(pb==null) return -1;
+    return statsSort.dir==="desc" ? pb-pa : pa-pb;
+  });
+}
+function setSort(market, venue){
+  if(statsSort.market===market && statsSort.venue===venue){
+    if(statsSort.dir==="desc") statsSort.dir="asc";
+    else { statsSort = { market:null, venue:null, dir:"desc" }; }
+  } else {
+    statsSort = { market, venue, dir:"desc" };
+  }
+  renderStatsPage();
+}
+function sortIndicator(market, venue){
+  if(statsSort.market!==market || statsSort.venue!==venue) return "";
+  return statsSort.dir==="desc" ? " ▼" : " ▲";
+}
+
 function renderStatsPage(){
   const body = $("#statsBody"); if(!body) return;
   const league = $("#statsLeague").value;
@@ -2186,6 +2237,7 @@ function renderStatsPage(){
 
   if(isMobileLayout()){
     // Mobile: one stacked card per team
+    teams = sortedTeams(teams, season);
     body.innerHTML = "";
     if(!teams.length){
       body.innerHTML = `<div style="color:var(--ink-dim);padding:20px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</div>`;
@@ -2228,13 +2280,20 @@ function renderStatsPage(){
       body.appendChild(card);
     });
   } else {
-    // Desktop: wide table
+    // Desktop: wide table, headers sortable on the sub-header (主/客/全) row
     const markets = [["ml","獨贏"],["hd","讓分"],["recv","受讓"],["tot","大分"]];
     let html = `<table class="stats-table"><thead><tr><th rowspan="2" style="text-align:left">隊伍</th>`;
     markets.forEach(([_,label])=>{ html += `<th colspan="3" class="group">${label}</th>`; });
     html += `</tr><tr>`;
-    markets.forEach(()=>{ html += `<th class="group">主</th><th>客</th><th>全</th>`; });
+    markets.forEach(([m,_])=>{
+      ["home","away",null].forEach((v,idx)=>{
+        const vlabel = v==="home"?"主":(v==="away"?"客":"全");
+        const groupCls = idx===0 ? "group sortable" : "sortable";
+        html += `<th class="${groupCls}" data-sort-market="${m}" data-sort-venue="${v==null?'':v}">${vlabel}${sortIndicator(m, v)}</th>`;
+      });
+    });
     html += `</tr></thead><tbody>`;
+    teams = sortedTeams(teams, season);
     if(!teams.length){
       html += `<tr><td colspan="13" style="color:var(--ink-dim);padding:30px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</td></tr>`;
     }
@@ -2268,6 +2327,14 @@ function renderStatsPage(){
         const mlabel = {ml:"獨贏",hd:"讓分",recv:"受讓",tot:"大分"}[m];
         const vlabel = v==="home"?"主":"客";
         openEditStat(season, team, m, v, mlabel, vlabel);
+      };
+    });
+    body.querySelectorAll("th.sortable").forEach(th=>{
+      th.style.cursor = "pointer";
+      th.onclick = ()=>{
+        const m = th.dataset.sortMarket;
+        const v = th.dataset.sortVenue || null;
+        setSort(m, v);
       };
     });
   }
@@ -2456,28 +2523,54 @@ $("#settleModal") && ($("#settleModal").addEventListener("click", e=>{ if(e.targ
 /* ============================================================
    COVERAGE RATE on cards — small text on section header, both teams
    ============================================================ */
+const SAMPLE_MIN = 15;       // < 15 samples -> grey/uncertain
+const SAMPLE_TREND = 20;     // < 20 -> excluded from "綜合傾向"
+
+// shorten team name to its first 1-2 distinctive chars for mobile
+function abbrev(team){
+  if(!team) return team;
+  // Common patterns: 2-char prefixes for compound English-ish names (LG雙子→LG, NC恐龍→NC, SSG登陸者→SSG)
+  // For Chinese names just use the first character
+  const m = team.match(/^([A-Za-z]+)/);
+  if(m) return m[1];
+  return team.charAt(0);
+}
+
 function pctForCard(team, market, venue){
   // honors user's pctWindow preference (season / 10 / 30 / 50)
   if(pctWindow==="season"){
-    const rec = statRead(seasonOf(doc.activeDate), team, market, venue);
-    return rec;
+    return statRead(seasonOf(doc.activeDate), team, market, venue);
   } else {
     const n = parseInt(pctWindow,10)||30;
     const rec = recentRead(team, market, venue, n);
     if(rec) return rec;
-    // fallback to season when not enough recent samples
     return statRead(seasonOf(doc.activeDate), team, market, venue);
   }
 }
-function fmtPctChunk(team, label, market, venue){
+// Returns { pct, pn, sample, low, hi } or null if no data at all
+function pctInfo(team, market, venue){
   const rec = pctForCard(team, market, venue);
-  const pct = pctStr(rec);
-  if(!pct) return null;
-  const pn = pctNum(rec);
-  const cls = pn>=0.55?"hi":(pn<0.40?"lo":"");
-  return `<span class="ck">${esc(team)}${label?label:""} <span class="v ${cls}">${pct}</span></span>`;
+  const sample = (rec.w||0)+(rec.l||0);   // ties excluded from denom
+  if(sample===0) return null;
+  const pn = rec.w/sample;
+  return {
+    pct: Math.round(pn*100)+"%",
+    pn, sample,
+    lowSample: sample < SAMPLE_MIN,
+    cls: pn>=0.55 ? "hi" : (pn<0.40 ? "lo" : "")
+  };
+}
+// Render one team's pct chunk; uses short name on mobile
+function fmtPctChunk(team, label, info){
+  if(!info) return null;
+  const mobile = isMobileLayout();
+  const name = mobile ? abbrev(team) : team;
+  const cls = info.lowSample ? "low-sample" : info.cls;
+  const sampleTag = info.lowSample ? `<span class="ssize">(${info.sample})</span>` : "";
+  return `<span class="ck">${esc(name)}${label||""} <span class="v ${cls}">${info.pct}</span>${sampleTag}</span>`;
 }
 // Build the pctline HTML for a section. `which` = "ml" | "hd" | "recv" | "tot"
+// Plan A: show both teams in every section.
 function sectionPctHTML(it, which){
   const awayV="away", homeV="home";
   const favSide = it.hdFav, undSide = favSide==="away"?"home":"away";
@@ -2486,21 +2579,90 @@ function sectionPctHTML(it, which){
   const undV = undSide==="away"?awayV:homeV;
   const parts = [];
   if(which==="ml"){
-    [["away", it.away, awayV], ["home", it.home, homeV]].forEach(([_,team,v])=>{
-      const c = fmtPctChunk(team, "", "ml", v);
-      if(c) parts.push(c);
-    });
+    parts.push(fmtPctChunk(it.away, "", pctInfo(it.away,"ml",awayV)));
+    parts.push(fmtPctChunk(it.home, "", pctInfo(it.home,"ml",homeV)));
   } else if(which==="hd"){
-    const c = fmtPctChunk(favName, " 讓", "hd", favV);
-    if(c) parts.push(c);
-  } else if(which==="recv"){
-    const c = fmtPctChunk(undName, " 受讓", "recv", undV);
-    if(c) parts.push(c);
+    // Plan A: show both — favorite's 讓 rate AND opponent's 受讓 rate, in same line
+    parts.push(fmtPctChunk(favName, " 讓", pctInfo(favName,"hd",favV)));
+    parts.push(fmtPctChunk(undName, " 受讓", pctInfo(undName,"recv",undV)));
   } else if(which==="tot"){
-    // small: only show "大" rate for either team isn't very useful; skip.
-    return "";
+    // both teams' "大分過盤率" on their respective venues
+    parts.push(fmtPctChunk(it.away, " 大", pctInfo(it.away,"tot",awayV)));
+    parts.push(fmtPctChunk(it.home, " 大", pctInfo(it.home,"tot",homeV)));
   }
-  return parts.length ? `<span class="pctline">${parts.join(" / ")}</span>` : "";
+  const filt = parts.filter(Boolean);
+  return filt.length ? `<span class="pctline">${filt.join(" / ")}</span>` : "";
+}
+
+/* ============================================================
+   "綜合傾向" trend line — relative-to-opponent with sample threshold
+   ============================================================ */
+function trendForMatch(it){
+  const awayV="away", homeV="home";
+  const favSide = it.hdFav, undSide = favSide==="away"?"home":"away";
+  const fav = it[favSide], und = it[undSide];
+  const favV = favSide==="away"?awayV:homeV;
+  const undV = undSide==="away"?awayV:homeV;
+
+  // collect each "可下注選項" as: bet team + market + venue, compared against opponent's mirrored market
+  const cases = [
+    // moneylines: each team vs opponent's moneyline
+    { label:`${it.away}獨贏`, a:pctInfo(it.away,"ml",awayV), b:pctInfo(it.home,"ml",homeV) },
+    { label:`${it.home}獨贏`, a:pctInfo(it.home,"ml",homeV), b:pctInfo(it.away,"ml",awayV) },
+    // handicap: betting favorite to cover vs opponent receiving cover
+    { label:`${fav}讓分`,     a:pctInfo(fav,"hd",favV),      b:pctInfo(und,"recv",undV) },
+    // receiving: opponent of favorite to cover-receive vs favorite covering
+    { label:`${und}受讓`,     a:pctInfo(und,"recv",undV),    b:pctInfo(fav,"hd",favV) },
+    // totals: each team's 大分 vs other's 大分
+    { label:`${it.away}大`,   a:pctInfo(it.away,"tot",awayV), b:pctInfo(it.home,"tot",homeV) },
+    { label:`${it.home}大`,   a:pctInfo(it.home,"tot",homeV), b:pctInfo(it.away,"tot",awayV) },
+  ];
+  // filter: both sides need at least SAMPLE_TREND samples
+  const eligible = cases.filter(c=> c.a && c.b && c.a.sample>=SAMPLE_TREND && c.b.sample>=SAMPLE_TREND);
+  if(!eligible.length) return null;
+  // for each, compute differential (a's pct vs b's pct) — for handicap mirror, b's "rate to NOT cover" matters
+  // simplification: just compare a.pn directly; if a 高 → 賭 a 的選項 ok
+  // Find the strongest signal: max (a.pn - average market baseline 0.5)
+  let best=null;
+  eligible.forEach(c=>{
+    // diff: how far above 50% is this option's own rate
+    const diff = c.a.pn - 0.5;
+    if(!best || Math.abs(diff)>Math.abs(best.diff)) best = { ...c, diff };
+  });
+  if(!best || Math.abs(best.diff)<0.10) return null;  // need > 10 pp from neutral to call it
+  const strong = Math.abs(best.diff) >= 0.20;        // 20 pp = "strong"
+  return { label:best.label, diff:best.diff, strong, sample:best.a.sample };
+}
+function trendHTML(it){
+  const t = trendForMatch(it);
+  if(!t) return "";
+  const sign = t.diff>0 ? "偏向" : "不利";
+  const cls = t.strong ? "strong" : "";
+  return `<div class="trendline ${cls}">📊 數據${sign}：<b>${esc(t.label)}</b><span class="td">${Math.round(t.diff*100>0?t.diff*100:-t.diff*100)}pp</span></div>`;
+}
+
+/* Whether this match has a strong-signal indicator that should be SUPPRESSED
+   because the chosen side's cover rate is too low (低於 40%) */
+function strongShouldBeDampened(it){
+  const awayV="away", homeV="home";
+  const favSide = it.hdFav, undSide = favSide==="away"?"home":"away";
+  // Check the side with the heaviest lights in each market against its own cover rate
+  function check(team, market, venue, lights){
+    if(lights < 3) return false;
+    const info = pctInfo(team, market, venue);
+    if(!info || info.lowSample) return false;  // unreliable -> don't dampen, but also don't shout
+    return info.pn < 0.40;
+  }
+  const fav = it[favSide], und = it[undSide];
+  const favV = favSide==="away"?awayV:homeV;
+  const undV = undSide==="away"?awayV:homeV;
+  // Identify the dominant signal direction first
+  if(it.mlAway.lights>=3 && check(it.away,"ml",awayV,it.mlAway.lights)) return true;
+  if(it.mlHome.lights>=3 && check(it.home,"ml",homeV,it.mlHome.lights)) return true;
+  if(it.hdGive.lights>=3 && check(fav,"hd",favV,it.hdGive.lights)) return true;
+  if(it.hdRecv.lights>=3 && check(und,"recv",undV,it.hdRecv.lights)) return true;
+  // 大分: not tied to one team's win rate alone — skip dampening check
+  return false;
 }
 
 /* "pct window" selector in menu (existing winbtn / data-win) */
