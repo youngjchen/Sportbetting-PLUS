@@ -277,6 +277,10 @@
   .sumrow .n.warm{color:var(--lit);}
   #summary .sumempty{padding:14px;color:var(--ink-dim);font-size:12px;line-height:1.6;}
   .sumsec{padding:7px 14px 2px;font-family:"Oswald";font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;}
+  .sumsec.collapsible{display:flex;align-items:center;justify-content:space-between;padding-right:14px;user-select:none;}
+  .sumsec.collapsible:hover{color:var(--ink);}
+  .sumsec .seccaret{font-size:11px;}
+  .sumrow .pk .lowwarn{color:var(--ink-dim);font-size:11px;margin-left:6px;font-weight:500;}
   .sumrow.conflict .pk{color:var(--conflict);}
   .sumrow.conflict .n{color:var(--conflict);}
   .sumrow.conflict.cross .pk{color:var(--cross);}
@@ -406,13 +410,15 @@
   .sec .pctline .ssize{font-size:9px;color:#5b6b80;margin-left:1px;font-family:"Oswald";}
   /* trend line at the bottom of a card */
   .trendline{
-    margin:6px 12px 8px;padding:6px 8px;border-radius:7px;font-size:12px;
+    margin:6px 12px 8px;padding:7px 9px;border-radius:7px;font-size:12px;
     background:rgba(255,255,255,.03);border:1px solid var(--line);color:var(--ink-dim);
   }
-  .trendline b{color:var(--ink);font-weight:700;}
-  .trendline .td{margin-left:6px;font-family:"Oswald";color:var(--ink-dim);font-size:11px;}
-  .trendline.strong{background:rgba(40,199,111,.08);border-color:rgba(40,199,111,.4);color:#cfe9d8;}
-  .trendline.strong b{color:#9be3b5;}
+  .trendline .thd{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:var(--ink-dim);margin-bottom:3px;}
+  .trendline .trow{padding:1px 0;color:var(--ink-dim);}
+  .trendline .trow b{color:var(--ink);font-weight:700;}
+  .trendline .trow.strong b{color:#9be3b5;}
+  .trendline .td{margin-left:6px;font-family:"Oswald";font-size:11px;color:var(--ink-dim);}
+  .trendline .trow.strong .td{color:#9be3b5;}
   /* dimmed strong frame: signal exists but cover rate is low → don't fully celebrate */
   .card.has-strong-dim{border-color:#5b6b80;box-shadow:0 0 0 1px rgba(91,107,128,.5),0 0 12px rgba(91,107,128,.3),0 10px 26px rgba(0,0,0,.45);}
 
@@ -492,6 +498,12 @@
   }
   #moreMenu .winbtn:hover{color:var(--ink);border-color:#46566a;}
   #moreMenu .winbtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
+  #moreMenu .thrbtn{
+    flex:0 0 auto;min-width:44px;padding:6px 8px;border-radius:7px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
+  }
+  #moreMenu .thrbtn:hover{color:var(--ink);border-color:#46566a;}
+  #moreMenu .thrbtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
 
   /* bigger touch targets on coarse pointers (phones/tablets) */
   @media (pointer:coarse){
@@ -642,6 +654,12 @@
           <button class="winbtn" data-win="30">30</button>
           <button class="winbtn" data-win="50">50</button>
         </div>
+        <div class="colrow">
+          <span class="collabel">門檻</span>
+          <button class="thrbtn" data-thr="0.55">55%</button>
+          <button class="thrbtn" data-thr="0.60">60%</button>
+          <button class="thrbtn" data-thr="0.65">65%</button>
+        </div>
         <div class="sep"></div>
         <button id="exportBtn">⎘ 匯出文字</button>
         <button id="pngBtn">⤓ 存成圖片</button>
@@ -749,6 +767,7 @@ let state = { items:[], summaryPos:null };   // working pointer = active board
 let activeTab = "mlb";
 let uid = 1;
 let layoutCols = "auto";  // grid columns per row: "auto" or a fixed number
+let trendThreshold = 0.55; // 數據傾向門檻: 55%/60%/65% (user adjustable)
 const $ = s => document.querySelector(s);
 const canvas = $("#canvas"), ghost = $("#ghost"), emptyMsg = $("#empty");
 const world = $("#world");
@@ -958,6 +977,7 @@ function save(){
   syncStateToDoc();
   doc.layoutCols = layoutCols;
   doc.pctWindow = pctWindow;
+  doc.trendThreshold = trendThreshold;
   const json = JSON.stringify(doc);
   try{ localStorage.setItem(LS_KEY, json); }catch(e){}
   // also write to preview-env storage when available (harmless on GitHub Pages)
@@ -973,6 +993,7 @@ function loadDocFromString(str){
       if(!doc.activeDate) doc.activeDate = Object.keys(doc.boards)[0]||todayStr();
       if(d.layoutCols!==undefined) layoutCols = d.layoutCols;
       if(d.pctWindow!==undefined) pctWindow = d.pctWindow;
+      if(d.trendThreshold!==undefined) trendThreshold = d.trendThreshold;
       if(!doc.stats) doc.stats = {};
       if(!doc.recent) doc.recent = [];
       return true;
@@ -1297,20 +1318,18 @@ function collectSummary(){
     if(hdC)  conflicts.push({matchName, market:"讓分", kind:"same"});
     if(totC) conflicts.push({matchName, market:"大小分", kind:"same"});
     if(crossC) conflicts.push({matchName, market:"讓分↔對手獨贏", kind:"cross"});
-    const add=(cond,lights,pick,mk)=>{ if(cond && lights>=3) strong.push({matchName, pick, mk, n:lights}); };
-    // a market also "fails" if it participates in cross-conflict:
-    // - mlHome side (undSide==home) crosses when crossC and undSide=home
-    // - hdGive (the favorite's spread bet) crosses with the opposing moneyline
+    // strong entries: attach `it` + `market` so renderSummary can do per-entry checks (e.g. "⚠ 過盤率低")
+    const add=(cond,lights,pick,mk,market)=>{ if(cond && lights>=3) strong.push({matchName, pick, mk, n:lights, it, market}); };
     const mlAwayOK  = !mlC && !(crossC && undSide==="away");
     const mlHomeOK  = !mlC && !(crossC && undSide==="home");
     const hdGiveOK  = !hdC && !crossC;
-    const hdRecvOK  = !hdC;                     // receiving side isn't part of the contradiction
-    add(mlAwayOK, it.mlAway.lights, it.away, "獨贏");
-    add(mlHomeOK, it.mlHome.lights, it.home, "獨贏");
-    add(hdGiveOK, it.hdGive.lights, it[favSide], "讓"+(it.hdVal?` ${it.hdVal}`:""));
-    add(hdRecvOK, it.hdRecv.lights, it[undSide], "受讓"+(it.hdVal?` ${it.hdVal}`:""));
-    add(!totC, it.over.lights,  "大分", "大小分"+(it.totVal?` ${it.totVal}`:""));
-    add(!totC, it.under.lights, "小分", "大小分"+(it.totVal?` ${it.totVal}`:""));
+    const hdRecvOK  = !hdC;
+    add(mlAwayOK, it.mlAway.lights, it.away, "獨贏", "ml");
+    add(mlHomeOK, it.mlHome.lights, it.home, "獨贏", "ml");
+    add(hdGiveOK, it.hdGive.lights, it[favSide], "讓"+(it.hdVal?` ${it.hdVal}`:""), "hd");
+    add(hdRecvOK, it.hdRecv.lights, it[undSide], "受讓"+(it.hdVal?` ${it.hdVal}`:""), "recv");
+    add(!totC, it.over.lights,  "大分", "大小分"+(it.totVal?` ${it.totVal}`:""), "tot");
+    add(!totC, it.under.lights, "小分", "大小分"+(it.totVal?` ${it.totVal}`:""), "tot");
   });
   strong.sort((a,b)=>b.n-a.n);
   return {strong, conflicts};
@@ -1350,23 +1369,31 @@ function renderSummary(){
     body.appendChild(t);
     strong.forEach(s=>{
       const r = document.createElement("div"); r.className="sumrow";
+      const low = (s.it && s.market) ? isLitSideLow(s.it, s.market) : false;
+      const lowWarn = low ? `<span class="lowwarn">⚠ 過盤率低</span>` : "";
       r.innerHTML = `<span class="mt">${esc(s.matchName)}</span>`+
-                    `<span class="pk">${esc(s.pick)}<span class="mk">${esc(s.mk)}</span></span>`+
+                    `<span class="pk">${esc(s.pick)}<span class="mk">${esc(s.mk)}</span>${lowWarn}</span>`+
                     `<span class="n${s.n>3?'':' warm'}">●${s.n}</span>`;
       body.appendChild(r);
     });
   }
   if(conflicts.length){
-    const t = document.createElement("div"); t.className="sumsec"; t.textContent="衝突 / 矛盾";
+    const cCar = doc.conflictsCollapsed ? "▸" : "▾";
+    const t = document.createElement("div"); t.className="sumsec collapsible";
+    t.innerHTML = `<span>衝突 / 矛盾</span><span class="seccaret">${cCar}</span>`;
+    t.style.cursor = "pointer";
+    t.onclick = ()=>{ doc.conflictsCollapsed = !doc.conflictsCollapsed; save(); render(); };
     body.appendChild(t);
-    conflicts.forEach(c=>{
-      const r = document.createElement("div"); r.className="sumrow conflict"+(c.kind==="cross"?" cross":"");
-      const desc = c.kind==="cross" ? `${esc(c.market)} 矛盾` : `${esc(c.market)} 兩邊都有燈`;
-      r.innerHTML = `<span class="mt">${esc(c.matchName)}</span>`+
-                    `<span class="pk">${desc}</span>`+
-                    `<span class="n">⚠</span>`;
-      body.appendChild(r);
-    });
+    if(!doc.conflictsCollapsed){
+      conflicts.forEach(c=>{
+        const r = document.createElement("div"); r.className="sumrow conflict"+(c.kind==="cross"?" cross":"");
+        const desc = c.kind==="cross" ? `${esc(c.market)} 矛盾` : `${esc(c.market)} 兩邊都有燈`;
+        r.innerHTML = `<span class="mt">${esc(c.matchName)}</span>`+
+                      `<span class="pk">${desc}</span>`+
+                      `<span class="n">⚠</span>`;
+        body.appendChild(r);
+      });
+    }
   }
   if(!strong.length && conflicts.length){
     // still useful, no empty note needed
@@ -2595,74 +2622,108 @@ function sectionPctHTML(it, which){
 }
 
 /* ============================================================
-   "綜合傾向" trend line — relative-to-opponent with sample threshold
+   "綜合數據傾向" — each bet option judged independently against threshold
    ============================================================ */
+// User-adjustable threshold. UP = lower bound for "favorable" (>= UP).
+// DOWN = upper bound for "unfavorable" (<= DOWN). Symmetric around 50%.
+const SAMPLE_TREND_MIN = 15;      // matches the same threshold used elsewhere
+
+// Collect all bet options that meet the favorable threshold on this match.
 function trendForMatch(it){
   const awayV="away", homeV="home";
   const favSide = it.hdFav, undSide = favSide==="away"?"home":"away";
   const fav = it[favSide], und = it[undSide];
   const favV = favSide==="away"?awayV:homeV;
   const undV = undSide==="away"?awayV:homeV;
+  const UP = trendThreshold;
+  const DOWN = 1 - trendThreshold;   // e.g. 0.55 -> 0.45
 
-  // collect each "可下注選項" as: bet team + market + venue, compared against opponent's mirrored market
-  const cases = [
-    // moneylines: each team vs opponent's moneyline
-    { label:`${it.away}獨贏`, a:pctInfo(it.away,"ml",awayV), b:pctInfo(it.home,"ml",homeV) },
-    { label:`${it.home}獨贏`, a:pctInfo(it.home,"ml",homeV), b:pctInfo(it.away,"ml",awayV) },
-    // handicap: betting favorite to cover vs opponent receiving cover
-    { label:`${fav}讓分`,     a:pctInfo(fav,"hd",favV),      b:pctInfo(und,"recv",undV) },
-    // receiving: opponent of favorite to cover-receive vs favorite covering
-    { label:`${und}受讓`,     a:pctInfo(und,"recv",undV),    b:pctInfo(fav,"hd",favV) },
-    // totals: each team's 大分 vs other's 大分
-    { label:`${it.away}大`,   a:pctInfo(it.away,"tot",awayV), b:pctInfo(it.home,"tot",homeV) },
-    { label:`${it.home}大`,   a:pctInfo(it.home,"tot",homeV), b:pctInfo(it.away,"tot",awayV) },
-  ];
-  // filter: both sides need at least SAMPLE_TREND samples
-  const eligible = cases.filter(c=> c.a && c.b && c.a.sample>=SAMPLE_TREND && c.b.sample>=SAMPLE_TREND);
-  if(!eligible.length) return null;
-  // for each, compute differential (a's pct vs b's pct) — for handicap mirror, b's "rate to NOT cover" matters
-  // simplification: just compare a.pn directly; if a 高 → 賭 a 的選項 ok
-  // Find the strongest signal: max (a.pn - average market baseline 0.5)
-  let best=null;
-  eligible.forEach(c=>{
-    // diff: how far above 50% is this option's own rate
-    const diff = c.a.pn - 0.5;
-    if(!best || Math.abs(diff)>Math.abs(best.diff)) best = { ...c, diff };
-  });
-  if(!best || Math.abs(best.diff)<0.10) return null;  // need > 10 pp from neutral to call it
-  const strong = Math.abs(best.diff) >= 0.20;        // 20 pp = "strong"
-  return { label:best.label, diff:best.diff, strong, sample:best.a.sample };
+  // raw stat lookups (ignore lowSample flag here, we apply sample gate ourselves)
+  function rawPct(team, market, venue){
+    const rec = pctForCard(team, market, venue);
+    const s = (rec.w||0)+(rec.l||0);
+    if(s < SAMPLE_TREND_MIN) return null;
+    return { pn: rec.w/s, sample: s };
+  }
+
+  const out = [];
+  // Each team's moneyline judged independently
+  const aML = rawPct(it.away, "ml", awayV);
+  const hML = rawPct(it.home, "ml", homeV);
+  if(aML && aML.pn >= UP) out.push({ label:`${it.away}獨贏`, pn:aML.pn, sample:aML.sample });
+  if(hML && hML.pn >= UP) out.push({ label:`${it.home}獨贏`, pn:hML.pn, sample:hML.sample });
+
+  // Handicap & receive judged independently from their own track record
+  const favHD  = rawPct(fav, "hd",   favV);
+  const undREC = rawPct(und, "recv", undV);
+  if(favHD  && favHD.pn  >= UP) out.push({ label:`${fav}讓分`, pn:favHD.pn,  sample:favHD.sample  });
+  if(undREC && undREC.pn >= UP) out.push({ label:`${und}受讓`, pn:undREC.pn, sample:undREC.sample });
+
+  // 大／小分: total is shared — judge by AVERAGE of both teams' 大分 rate on their venues
+  const aTOT = rawPct(it.away, "tot", awayV);
+  const hTOT = rawPct(it.home, "tot", homeV);
+  if(aTOT && hTOT){
+    const avg = (aTOT.pn + hTOT.pn)/2;
+    const minSample = Math.min(aTOT.sample, hTOT.sample);
+    if(avg >= UP)        out.push({ label:"大分", pn:avg, sample:minSample });
+    else if(avg <= DOWN) out.push({ label:"小分", pn:1-avg, sample:minSample });
+    // ↑ for 小分 we flip the rate so larger = stronger小分 signal (presented as 1-avg)
+  }
+
+  // sort: most "favorable" first
+  out.sort((a,b)=> b.pn - a.pn);
+  return out;
 }
 function trendHTML(it){
-  const t = trendForMatch(it);
-  if(!t) return "";
-  const sign = t.diff>0 ? "偏向" : "不利";
-  const cls = t.strong ? "strong" : "";
-  return `<div class="trendline ${cls}">📊 數據${sign}：<b>${esc(t.label)}</b><span class="td">${Math.round(t.diff*100>0?t.diff*100:-t.diff*100)}pp</span></div>`;
+  const list = trendForMatch(it);
+  if(!list.length) return "";
+  const rows = list.map(t=>{
+    const pct = Math.round(t.pn*100)+"%";
+    const strong = t.pn >= trendThreshold + 0.10;   // notably above threshold
+    const cls = strong ? "strong" : "";
+    return `<div class="trow ${cls}">· <b>${esc(t.label)}</b> <span class="td">${pct}</span></div>`;
+  }).join("");
+  return `<div class="trendline"><div class="thd">📊 數據偏向</div>${rows}</div>`;
 }
 
-/* Whether this match has a strong-signal indicator that should be SUPPRESSED
-   because the chosen side's cover rate is too low (低於 40%) */
-function strongShouldBeDampened(it){
+/* Per-option dampening: a lit-up market WHOSE chosen side has a low cover rate
+   (and enough samples) should not light up the strong frame on the card.
+   Also reused by the summary panel to flag entries as "⚠ 過盤率低". */
+function isLitSideLow(it, market){
   const awayV="away", homeV="home";
   const favSide = it.hdFav, undSide = favSide==="away"?"home":"away";
-  // Check the side with the heaviest lights in each market against its own cover rate
-  function check(team, market, venue, lights){
-    if(lights < 3) return false;
-    const info = pctInfo(team, market, venue);
-    if(!info || info.lowSample) return false;  // unreliable -> don't dampen, but also don't shout
-    return info.pn < 0.40;
-  }
   const fav = it[favSide], und = it[undSide];
   const favV = favSide==="away"?awayV:homeV;
   const undV = undSide==="away"?awayV:homeV;
-  // Identify the dominant signal direction first
-  if(it.mlAway.lights>=3 && check(it.away,"ml",awayV,it.mlAway.lights)) return true;
-  if(it.mlHome.lights>=3 && check(it.home,"ml",homeV,it.mlHome.lights)) return true;
-  if(it.hdGive.lights>=3 && check(fav,"hd",favV,it.hdGive.lights)) return true;
-  if(it.hdRecv.lights>=3 && check(und,"recv",undV,it.hdRecv.lights)) return true;
-  // 大分: not tied to one team's win rate alone — skip dampening check
+  const DOWN = 1 - trendThreshold;
+  function low(team, mkt, venue, lights){
+    if(lights<3) return false;
+    const info = pctInfo(team, mkt, venue);
+    if(!info || info.lowSample) return false;
+    return info.pn < DOWN;
+  }
+  if(market==="ml"){
+    return low(it.away,"ml",awayV,it.mlAway.lights) || low(it.home,"ml",homeV,it.mlHome.lights);
+  } else if(market==="hd"){
+    return low(fav,"hd",favV,it.hdGive.lights);
+  } else if(market==="recv"){
+    return low(und,"recv",undV,it.hdRecv.lights);
+  } else if(market==="tot"){
+    // for totals: average both teams' 大分 rate against the chosen side
+    const aT = pctInfo(it.away,"tot",awayV);
+    const hT = pctInfo(it.home,"tot",homeV);
+    if(!aT || !hT || aT.lowSample || hT.lowSample) return false;
+    const avg = (aT.pn + hT.pn)/2;
+    if(it.over.lights>=3  && avg < DOWN) return true;
+    if(it.under.lights>=3 && avg > trendThreshold) return true;
+    return false;
+  }
   return false;
+}
+
+function strongShouldBeDampened(it){
+  // a card with 3+ lights and ANY lit market whose chosen side has a low cover rate
+  return isLitSideLow(it,"ml") || isLitSideLow(it,"hd") || isLitSideLow(it,"recv") || isLitSideLow(it,"tot");
 }
 
 /* "pct window" selector in menu (existing winbtn / data-win) */
@@ -2679,13 +2740,27 @@ function refreshPctBtns(){
   });
 }
 
+/* "threshold" selector for trend & dampening (55/60/65) */
+document.querySelectorAll("#moreMenu .thrbtn").forEach(b=>{
+  b.onclick = (e)=>{
+    e.stopPropagation();
+    trendThreshold = parseFloat(b.dataset.thr);
+    refreshThrBtns(); save(); render();
+  };
+});
+function refreshThrBtns(){
+  document.querySelectorAll("#moreMenu .thrbtn").forEach(b=>{
+    b.classList.toggle("on", Math.abs(parseFloat(b.dataset.thr)-trendThreshold)<0.005);
+  });
+}
+
 /* ---------------- init ---------------- */
 (async()=>{
   await load();
   // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
   const t = todayStr();
   if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
-  buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns();
+  buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns(); refreshThrBtns();
   applyView();
   if(!state.view) fitView();
 })();
