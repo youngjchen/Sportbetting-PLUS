@@ -660,6 +660,7 @@
           <button class="thrbtn" data-thr="0.60">60%</button>
           <button class="thrbtn" data-thr="0.65">65%</button>
         </div>
+        <button id="clearRecent">↺ 重置最近 N 場紀錄</button>
         <div class="sep"></div>
         <button id="exportBtn">⎘ 匯出文字</button>
         <button id="pngBtn">⤓ 存成圖片</button>
@@ -2157,6 +2158,22 @@ $("#clearLights").onclick = ()=>{
   });
   save(); render();
 };
+
+$("#clearRecent") && ($("#clearRecent").onclick = ()=>{
+  closeMore();
+  const count = (doc.recent && doc.recent.length) || 0;
+  if(!count){ alert("「最近 N 場」紀錄本來就是空的，沒東西可清。"); return; }
+  const msg = `這個動作只清除「最近 N 場」的逐場明細紀錄（目前有 ${count} 筆）。\n\n` +
+              `✓ 本季累積的 W-L 數字完全不會動。\n` +
+              `✓ 你補登進去的歷史數據完全保留。\n` +
+              `✕ 過盤率切到「10／30／50 場」時，會暫時顯示樣本不足或退回本季數字，等之後結算累積就會回來。\n\n` +
+              `確定要清除嗎？`;
+  if(!confirm(msg)) return;
+  snapshot();
+  doc.recent = [];
+  save(); render();
+  alert("已清除最近紀錄。本季累積數字不受影響。");
+});
 $("#exportBtn").onclick = ()=>{ closeMore(); openExport(); };
 
 /* zoom controls */
@@ -2471,10 +2488,13 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   if(!picks.hd){ alert("請選擇讓分結果。"); return; }
   if(!picks.tot){ alert("請選擇大小分結果。"); return; }
   snapshot();
-  // if revising, undo the old settlement first
+  // if revising, undo the old settlement first (uses old picks' own _sid to strip recent entries)
   if(it.settled) applySettlement(it, it.settled, -1);
+  // assign a fresh settlement-id to this commit so future revisions can target it exactly
+  picks._sid = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
   applySettlement(it, picks, +1);
   it.settled = picks;
+  it.collapsed = true;   // auto-collapse the card after a successful settlement
   save();
   $("#settleModal").classList.remove("show");
   settleTarget=null;
@@ -2493,6 +2513,7 @@ $("#settleRemove") && ($("#settleRemove").onclick = ()=>{
 });
 
 // add or subtract the effect of a settlement on stats (delta = +1 or -1)
+// picks._sid is a stable settlement-id used to tag/untag recent entries
 function applySettlement(it, picks, delta){
   const season = seasonOf(doc.activeDate);
   // venues: away team is "away", home team is "home"
@@ -2506,7 +2527,7 @@ function applySettlement(it, picks, delta){
   const und = it.hdFav==="away" ? it.home : it.away;
   const favV = it.hdFav==="away" ? awayV : homeV;
   const undV = it.hdFav==="away" ? homeV : awayV;
-  if(picks.hd==="cover"){    // favorite covered: fav -> 讓分 W; und -> 受讓 L
+  if(picks.hd==="cover"){
     statAdd(season, fav, "hd",   favV, "w", delta);
     statAdd(season, und, "recv", undV, "l", delta);
   } else if(picks.hd==="nocover"){
@@ -2521,25 +2542,31 @@ function applySettlement(it, picks, delta){
     statAdd(season, it.away, "tot", awayV, "l", delta);
     statAdd(season, it.home, "tot", homeV, "l", delta);
   }
-  // Also record into the "recent" list (only for forward adds; reverse will pop)
-  if(delta>0){
-    const stamp = doc.activeDate + "T" + Date.now();
-    if(picks.ml==="away"){ recentAdd({team:it.away, market:"ml", venue:awayV, result:"w", date:doc.activeDate, id:stamp+"-a-ml"}); recentAdd({team:it.home, market:"ml", venue:homeV, result:"l", date:doc.activeDate, id:stamp+"-h-ml"}); }
-    else if(picks.ml==="home"){ recentAdd({team:it.home, market:"ml", venue:homeV, result:"w", date:doc.activeDate, id:stamp+"-h-ml"}); recentAdd({team:it.away, market:"ml", venue:awayV, result:"l", date:doc.activeDate, id:stamp+"-a-ml"}); }
-    else if(picks.ml==="tie"){ recentAdd({team:it.away, market:"ml", venue:awayV, result:"t", date:doc.activeDate, id:stamp+"-a-ml-t"}); recentAdd({team:it.home, market:"ml", venue:homeV, result:"t", date:doc.activeDate, id:stamp+"-h-ml-t"}); }
+  // "recent" list: each settlement carries a unique sid; +1 adds tagged entries, -1 removes them.
+  const sid = picks._sid;
+  if(delta>0 && sid){
+    // forward: append tagged entries
+    if(picks.ml==="away"){ recentAdd({sid, team:it.away, market:"ml", venue:awayV, result:"w", date:doc.activeDate}); recentAdd({sid, team:it.home, market:"ml", venue:homeV, result:"l", date:doc.activeDate}); }
+    else if(picks.ml==="home"){ recentAdd({sid, team:it.home, market:"ml", venue:homeV, result:"w", date:doc.activeDate}); recentAdd({sid, team:it.away, market:"ml", venue:awayV, result:"l", date:doc.activeDate}); }
+    else if(picks.ml==="tie"){ recentAdd({sid, team:it.away, market:"ml", venue:awayV, result:"t", date:doc.activeDate}); recentAdd({sid, team:it.home, market:"ml", venue:homeV, result:"t", date:doc.activeDate}); }
     if(picks.hd==="cover"){
-      recentAdd({team:fav, market:"hd", venue:favV, result:"w", date:doc.activeDate, id:stamp+"-fav-hd"});
-      recentAdd({team:und, market:"recv", venue:undV, result:"l", date:doc.activeDate, id:stamp+"-und-rv"});
+      recentAdd({sid, team:fav, market:"hd", venue:favV, result:"w", date:doc.activeDate});
+      recentAdd({sid, team:und, market:"recv", venue:undV, result:"l", date:doc.activeDate});
     } else if(picks.hd==="nocover"){
-      recentAdd({team:fav, market:"hd", venue:favV, result:"l", date:doc.activeDate, id:stamp+"-fav-hd"});
-      recentAdd({team:und, market:"recv", venue:undV, result:"w", date:doc.activeDate, id:stamp+"-und-rv"});
+      recentAdd({sid, team:fav, market:"hd", venue:favV, result:"l", date:doc.activeDate});
+      recentAdd({sid, team:und, market:"recv", venue:undV, result:"w", date:doc.activeDate});
     }
     if(picks.tot==="over"){
-      recentAdd({team:it.away, market:"tot", venue:awayV, result:"w", date:doc.activeDate, id:stamp+"-a-tot"});
-      recentAdd({team:it.home, market:"tot", venue:homeV, result:"w", date:doc.activeDate, id:stamp+"-h-tot"});
+      recentAdd({sid, team:it.away, market:"tot", venue:awayV, result:"w", date:doc.activeDate});
+      recentAdd({sid, team:it.home, market:"tot", venue:homeV, result:"w", date:doc.activeDate});
     } else if(picks.tot==="under"){
-      recentAdd({team:it.away, market:"tot", venue:awayV, result:"l", date:doc.activeDate, id:stamp+"-a-tot"});
-      recentAdd({team:it.home, market:"tot", venue:homeV, result:"l", date:doc.activeDate, id:stamp+"-h-tot"});
+      recentAdd({sid, team:it.away, market:"tot", venue:awayV, result:"l", date:doc.activeDate});
+      recentAdd({sid, team:it.home, market:"tot", venue:homeV, result:"l", date:doc.activeDate});
+    }
+  } else if(delta<0 && sid){
+    // reverse: drop every recent entry tagged with this sid
+    if(doc.recent && doc.recent.length){
+      doc.recent = doc.recent.filter(r=> r.sid !== sid);
     }
   }
 }
