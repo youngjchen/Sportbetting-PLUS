@@ -247,6 +247,15 @@
     color:var(--conflict);font-family:"Noto Sans TC";font-weight:700;font-size:11px;
     letter-spacing:0;display:flex;align-items:center;gap:3px;
   }
+  /* compact icon-style conflict / cross-warn markers in section header */
+  .sec .warn-ico{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:14px;height:14px;line-height:1;cursor:help;font-size:12px;
+    font-family:"Noto Sans TC";font-weight:700;letter-spacing:0;
+    margin-left:1px;flex:0 0 auto;
+  }
+  .sec .warn-ico.conflict{color:var(--conflict);}
+  .sec .warn-ico.cross{color:var(--cross);}
   .opt.conflict{background:rgba(255,59,92,.08);box-shadow:inset 3px 0 0 var(--conflict);}
   .opt.conflict .side{background:var(--conflict);color:#fff;}
 
@@ -681,7 +690,6 @@
           <button class="thrbtn" data-thr="0.60">60%</button>
           <button class="thrbtn" data-thr="0.65">65%</button>
         </div>
-        <button id="clearRecent">⚠ 清除所有比賽紀錄</button>
         <button id="importGamesBtn">📥 匯入比賽資料（純文字）</button>
         <div class="sep"></div>
         <button id="exportBtn">⎘ 匯出文字</button>
@@ -691,6 +699,7 @@
         <button id="importDataBtn">📂 匯入備份檔</button>
         <div class="sep"></div>
         <button id="clearAll" class="danger">✕ 清空這天</button>
+        <button id="clearRecent" class="danger">⚠ 清除所有比賽紀錄</button>
       </div>
     </div>
   </header>
@@ -1180,6 +1189,61 @@ function gameFindBySid(sid){
   return (doc.games||[]).find(g => g.sid === sid) || null;
 }
 
+/* Runs scored / conceded for a team in a given season.
+   venue: "home" | "away" | null (null = both). Returns {scored, conceded, games}.
+   "games" is the number of games counted (used for "avg per game"). */
+function runsRead(season, team, venue){
+  let scored=0, conceded=0, games=0;
+  const list = doc.games || [];
+  for(let i=0;i<list.length;i++){
+    const g = list[i];
+    if(g.awayTeam!==team && g.homeTeam!==team) continue;
+    if(seasonOf(g.date) !== season) continue;
+    if(g.awayScore==null || g.homeScore==null) continue;
+    const isAway = g.awayTeam===team;
+    if(venue==="home" && isAway) continue;
+    if(venue==="away" && !isAway) continue;
+    const myScore  = isAway ? g.awayScore : g.homeScore;
+    const oppScore = isAway ? g.homeScore : g.awayScore;
+    scored += myScore;
+    conceded += oppScore;
+    games++;
+  }
+  return { scored, conceded, games };
+}
+/* Current streak (most recent run of same result, looking back from today).
+   venue: "home"|"away"|null. Returns {n, kind} where kind is "W" | "L" | "" (no streak / opening).
+   Ties break the streak but do NOT count toward W or L.  */
+function streakRead(season, team, venue){
+  // gather this team's games this season, sorted by date desc
+  const list = (doc.games || []).filter(g=>{
+    if(g.awayTeam!==team && g.homeTeam!==team) return false;
+    if(seasonOf(g.date) !== season) return false;
+    if(venue){
+      const isAway = g.awayTeam===team;
+      if(venue==="home" && isAway) return false;
+      if(venue==="away" && !isAway) return false;
+    }
+    return true;
+  }).sort((a,b)=> a.date < b.date ? 1 : -1);
+  if(!list.length) return { n:0, kind:"" };
+  let kind = "", n = 0;
+  for(let i=0;i<list.length;i++){
+    const g = list[i];
+    const r = _gameResultFor(team, g);
+    if(!r || !r.ml) break;
+    if(r.ml === "t") break;   // tie breaks the streak
+    if(i===0){ kind = (r.ml==="w"?"W":"L"); n = 1; continue; }
+    if((r.ml==="w" && kind==="W") || (r.ml==="l" && kind==="L")){ n++; }
+    else break;
+  }
+  return { n, kind };
+}
+function streakStr(s){
+  if(!s || s.n===0) return "—";
+  return s.kind==="W" ? String(s.n) : `${s.n}L`;
+}
+
 /* user preference: which window to show on cards. "season" or 10/30/50 */
 let pctWindow = "season";
 
@@ -1389,15 +1453,17 @@ function renderCard(it){
     const ln = document.createElement("span"); ln.className="ln";
     s.append(t, ln);
     if(conflict){
-      const w = document.createElement("span"); w.className="warn"; w.textContent="⚠ 衝突";
+      const w = document.createElement("span"); w.className="warn-ico conflict";
+      w.textContent="⚠"; w.title="同區衝突：兩邊選項都亮燈、互相抵消";
       s.appendChild(w);
-    }else if(crossWarn){
-      const w = document.createElement("span"); w.className="warn cross"; w.textContent=crossWarn;
+    }
+    if(crossWarn){
+      const w = document.createElement("span"); w.className="warn-ico cross";
+      w.textContent="◆"; w.title = crossWarn;  // crossWarn already carries the full text
       s.appendChild(w);
     }
     if(pctHTML){
-      const p = document.createElement("span"); p.innerHTML = pctHTML; // already wrapped in .pctline
-      // unwrap (pctHTML returns <span class="pctline">...</span>): append the inner span directly
+      const p = document.createElement("span"); p.innerHTML = pctHTML;
       if(p.firstElementChild) s.appendChild(p.firstElementChild);
     }
     if(extraIco) s.appendChild(extraIco);
@@ -2151,11 +2217,19 @@ function blockValue(it, which){
   if(which==="hd")  return (it.hdGive.lights>0 && it.hdRecv.lights>0) ? 0 : Math.max(it.hdGive.lights, it.hdRecv.lights);
   return (it.over.lights>0 && it.under.lights>0) ? 0 : Math.max(it.over.lights, it.under.lights);
 }
-function hasAnyConflict(it){
-  const ml=it.mlAway.lights>0&&it.mlHome.lights>0, hd=it.hdGive.lights>0&&it.hdRecv.lights>0, tot=it.over.lights>0&&it.under.lights>0;
-  const undS=it.hdFav==="away"?"home":"away"; const oppML=(undS==="away")?it.mlAway.lights:it.mlHome.lights;
-  const cross=it.hdGive.lights>0&&oppML>0;
-  return ml||hd||tot||cross;
+// Per-block conflict check: only the chosen market's same-side conflict (or, for ml/hd, the
+// cross-market 讓+對手獨贏 matrix that directly contradicts THIS market) sinks the card.
+// A conflict in another block (e.g. tot conflict when sorting by ml) does NOT sink.
+function blockHasConflict(it, which){
+  const ml  = it.mlAway.lights>0 && it.mlHome.lights>0;
+  const hd  = it.hdGive.lights>0 && it.hdRecv.lights>0;
+  const tot = it.over.lights>0   && it.under.lights>0;
+  const undS = it.hdFav==="away" ? "home" : "away";
+  const oppML = (undS==="away") ? it.mlAway.lights : it.mlHome.lights;
+  const cross = it.hdGive.lights>0 && oppML>0;
+  if(which==="ml")  return ml  || cross;   // ml sort: its same-side conflict + cross-matrix (ml side of it)
+  if(which==="hd")  return hd  || cross;   // hd sort: its same-side conflict + cross-matrix (hd side of it)
+  return tot;                              // tot sort: only tot same-side conflict
 }
 function sortByBlock(which){
   closeMore();
@@ -2166,12 +2240,12 @@ function sortByBlock(which){
   snapshot();
   state.items.forEach(it=>{ if(it.type==="match"){ it.collapsed=false; } it.scale=1; });
   render();
-  // within each league: sort by chosen block value desc; conflicts (and 0s) sink to the end
+  // within each league: only the chosen block's conflicts sink
   order.forEach(k=>{
     groups[k].sort((a,b)=>{
-      const ca=hasAnyConflict(a)?1:0, cb=hasAnyConflict(b)?1:0;
-      if(ca!==cb) return ca-cb;            // non-conflict first
-      return blockValue(b,which)-blockValue(a,which); // higher lights first
+      const ca=blockHasConflict(a,which)?1:0, cb=blockHasConflict(b,which)?1:0;
+      if(ca!==cb) return ca-cb;
+      return blockValue(b,which)-blockValue(a,which);
     });
   });
   let cursorY = LAY.TOP;
@@ -2535,13 +2609,62 @@ function renderStatsPage(){
         mkt.appendChild(cells);
         card.appendChild(mkt);
       });
+      // 得失分 row
+      {
+        const mkt = document.createElement("div"); mkt.className="mkt";
+        mkt.innerHTML = `<div class="label">得失分</div>`;
+        const cells = document.createElement("div"); cells.className="cells";
+        ["home","away","all"].forEach(v=>{
+          const venueLabel = v==="home"?"主":(v==="away"?"客":"全");
+          const venueArg = v==="all" ? null : v;
+          const r = runsRead(season, team, venueArg);
+          const cell = document.createElement("div");
+          if(r.games===0){
+            cell.className = "statcell empty";
+            cell.innerHTML = `<span class="colhd">${venueLabel}</span><span class="wl">—</span><span class="pct">—</span>`;
+          } else {
+            const avgFor = (r.scored/r.games).toFixed(2);
+            const avgAg  = (r.conceded/r.games).toFixed(2);
+            cell.className = "statcell";
+            cell.innerHTML = `<span class="colhd">${venueLabel}</span>`+
+                             `<span class="wl">${r.scored}-${r.conceded}</span>`+
+                             `<span class="pct">${avgFor}/${avgAg}</span>`;
+          }
+          cell.style.cursor="default";
+          cells.appendChild(cell);
+        });
+        mkt.appendChild(cells);
+        card.appendChild(mkt);
+      }
+      // 連勝 row
+      {
+        const mkt = document.createElement("div"); mkt.className="mkt";
+        mkt.innerHTML = `<div class="label">連勝</div>`;
+        const cells = document.createElement("div"); cells.className="cells";
+        ["home","away","all"].forEach(v=>{
+          const venueLabel = v==="home"?"主":(v==="away"?"客":"全");
+          const venueArg = v==="all" ? null : v;
+          const s = streakRead(season, team, venueArg);
+          const txt = streakStr(s);
+          const cls = s.kind==="W" && s.n>0 ? "pcthi" : (s.kind==="L" && s.n>0 ? "pctlo" : "");
+          const cell = document.createElement("div");
+          cell.className = "statcell"+(s.n===0?" empty":"");
+          cell.innerHTML = `<span class="colhd">${venueLabel}</span><span class="wl ${cls}">${txt}</span>`;
+          cell.style.cursor="default";
+          cells.appendChild(cell);
+        });
+        mkt.appendChild(cells);
+        card.appendChild(mkt);
+      }
       body.appendChild(card);
     });
   } else {
     // Desktop: wide table, headers sortable on the sub-header (主/客/全) row
     const markets = [["ml","獨贏"],["hd","讓分"],["recv","受讓"],["tot","大分"]];
+    const extras  = [["runs","得失分"],["streak","連勝"]];
     let html = `<table class="stats-table"><thead><tr><th rowspan="2" style="text-align:left">隊伍</th>`;
     markets.forEach(([_,label])=>{ html += `<th colspan="3" class="group">${label}</th>`; });
+    extras.forEach(([_,label])=>{ html += `<th colspan="3" class="group">${label}</th>`; });
     html += `</tr><tr>`;
     markets.forEach(([m,_])=>{
       ["home","away",null].forEach((v,idx)=>{
@@ -2550,10 +2673,18 @@ function renderStatsPage(){
         html += `<th class="${groupCls}" data-sort-market="${m}" data-sort-venue="${v==null?'':v}">${vlabel}${sortIndicator(m, v)}</th>`;
       });
     });
+    extras.forEach(([m,_])=>{
+      ["home","away",null].forEach((v,idx)=>{
+        const vlabel = v==="home"?"主":(v==="away"?"客":"全");
+        const groupCls = idx===0 ? "group" : "";
+        html += `<th class="${groupCls}">${vlabel}</th>`;
+      });
+    });
     html += `</tr></thead><tbody>`;
+    const colSpan = 1 + (markets.length+extras.length)*3;
     teams = sortedTeams(teams, season);
     if(!teams.length){
-      html += `<tr><td colspan="13" style="color:var(--ink-dim);padding:30px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</td></tr>`;
+      html += `<tr><td colspan="${colSpan}" style="color:var(--ink-dim);padding:30px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</td></tr>`;
     }
     teams.forEach(team=>{
       html += `<tr><td class="team">${esc(team)}</td>`;
@@ -2573,6 +2704,33 @@ function renderStatsPage(){
                   `<span class="pct ${pctClass}">${pct||"—"}</span>`+
                   `</span></td>`;
         });
+      });
+      // 得失分
+      ["home","away",null].forEach((v,idx)=>{
+        const r = runsRead(season, team, v);
+        const groupCls = idx===0 ? " class=\"group\"" : "";
+        if(r.games===0){
+          html += `<td${groupCls}><span class="statcell empty"><span class="wl">—</span><span class="pct">—</span></span></td>`;
+        } else {
+          const avgFor = (r.scored/r.games).toFixed(2);
+          const avgAg  = (r.conceded/r.games).toFixed(2);
+          html += `<td${groupCls}>`+
+                  `<span class="statcell">`+
+                  `<span class="wl">${r.scored}-${r.conceded}</span>`+
+                  `<span class="pct">${avgFor}/${avgAg}</span>`+
+                  `</span></td>`;
+        }
+      });
+      // 連勝（總／主／客 → 但這裡用 主/客/全 跟其他欄一致）
+      ["home","away",null].forEach((v,idx)=>{
+        const s = streakRead(season, team, v);
+        const groupCls = idx===0 ? " class=\"group\"" : "";
+        const txt = streakStr(s);
+        const cls = s.kind==="W" && s.n>0 ? "pcthi" : (s.kind==="L" && s.n>0 ? "pctlo" : "");
+        html += `<td${groupCls}>`+
+                `<span class="statcell${s.n===0?' empty':''}">`+
+                `<span class="wl ${cls}">${txt}</span>`+
+                `</span></td>`;
       });
       html += `</tr>`;
     });
