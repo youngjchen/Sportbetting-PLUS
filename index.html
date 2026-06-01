@@ -2935,8 +2935,9 @@ function parseGamesText(txt, seasonYear){
   const DATE_RE = /^\d{1,2}\/\d{1,2}$/;
   const SCORE_RE = /^\d+$/;
   const lines = txt.split(/\r?\n/).map(l => l.trim());
-  const matches = [];
-  const errors = [];
+  const matches = [];       // fully-parsed matches (have both 讓分 + 大小)
+  const incomplete = [];    // partial matches (missing 讓分 or 大小, will be presented for manual補)
+  const errors = [];        // unrecoverable parse errors
   let allTeams = new Set();
   ["mlb","npb","kbo","cpbl"].forEach(k => LEAGUES[k].teams.forEach(t => allTeams.add(t)));
   let i = 0;
@@ -2948,7 +2949,6 @@ function parseGamesText(txt, seasonYear){
     const block = lines.slice(i+1, j).filter(s=>s.length>0);
     i = j;
     if(block.length < 6){ continue; }
-    // expect: time, awayScore, V.S., homeScore, awayTeam, ...
     if(!(SCORE_RE.test(block[1]) && block[2]==='V.S.' && SCORE_RE.test(block[3]))) continue;
     const awayScore = parseInt(block[1],10), homeScore = parseInt(block[3],10);
     const awayTeam = block[4];
@@ -2958,48 +2958,77 @@ function parseGamesText(txt, seasonYear){
       if(allTeams.has(block[k]) && block[k]!==awayTeam){ homeTeam = block[k]; break; }
     }
     if(!homeTeam){ errors.push(`${date}: 找不到主隊`); continue; }
-    // find 運彩 handicap and total lines (those with decimals)
+
+    // Extract 運彩 讓分 (signed decimal "分")
     let handicapTeam=null, handicapSign=null, handicapVal=null;
-    let totTeam=null, totSide=null, totBasis=null;
+    // Extract 運彩 大小 (decimal basis, no 贏/輸 suffix)
+    let totBasis=null;
+    // Also extract 國際讓分 hint to predict default hdFav when 運彩讓分 missing.
+    // Format: "<team>\n2分贏 50%" or "<team>\n受讓2分輸 50%"
+    let intlFav = null;  // which team is the favorite per the 國際 line
     for(let k=1; k<block.length; k++){
+      // 運彩讓分 line: "- 2.5分" / "+ 1.5分"
       const m1 = block[k].match(/^([-+])\s*(\d+(?:\.\d+)?)\s*分$/);
       if(m1 && allTeams.has(block[k-1])){
         handicapTeam = block[k-1]; handicapSign = m1[1]; handicapVal = parseFloat(m1[2]);
         continue;
       }
+      // 運彩大小 line: "大 7.5" / "小 8.5" (no 贏/輸)
       const m2 = block[k].match(/^(大|小)\s*(\d+(?:\.\d+)?)$/);
       if(m2 && allTeams.has(block[k-1])){
-        totTeam = block[k-1]; totSide = m2[1]; totBasis = parseFloat(m2[2]);
+        totBasis = parseFloat(m2[2]);
+        continue;
+      }
+      // 國際讓分 line: "2分贏 50%" / "受讓2分輸 50%" — used only for hdFav hint
+      const m3 = block[k].match(/^(受讓)?\d+分(贏|輸)\s*\d+%$/);
+      if(m3 && allTeams.has(block[k-1]) && intlFav===null){
+        const team = block[k-1];
+        const isUnderdog = !!m3[1];   // "受讓" prefix = that team is the underdog
+        intlFav = isUnderdog ? (team===awayTeam ? homeTeam : awayTeam) : team;
         continue;
       }
     }
-    // require handicap & total for a valid match record
-    if(handicapTeam==null || totBasis==null){
-      errors.push(`${date} ${awayTeam} vs ${homeTeam}: 缺少運彩讓分或大小分資料（可能是熱身賽？跳過）`);
-      continue;
+
+    // Compute hdFav default if 運彩讓分 missing
+    let hdFav = null;
+    if(handicapTeam!==null){
+      hdFav = (handicapSign==="-")
+        ? ((handicapTeam===awayTeam) ? "away" : "home")
+        : ((handicapTeam===awayTeam) ? "home" : "away");
+    } else if(intlFav!==null){
+      hdFav = (intlFav===awayTeam) ? "away" : "home";
     }
-    // hdFav: the team that gave the spread (sign == "-")
-    let hdFav;
-    if(handicapSign==="-"){
-      hdFav = (handicapTeam===awayTeam) ? "away" : "home";
-    } else {
-      // "+ X.X分": that team received; favorite is the other team
-      hdFav = (handicapTeam===awayTeam) ? "home" : "away";
-    }
+
     // Convert MM/DD to YYYY-MM-DD
     const [mm,dd] = date.split("/");
     const isoDate = `${seasonYear}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
-    matches.push({
+    const record = {
       sid: `import_${isoDate}_${awayTeam}_${homeTeam}`,
       date: isoDate,
       league: leagueOfTeam(awayTeam),
       awayTeam, homeTeam,
       awayScore, homeScore,
-      hdFav, hdVal: handicapVal,
+      hdFav: hdFav || "home",       // fallback default if neither was found
+      hdVal: handicapVal,
       totBasis
-    });
+    };
+    // Track which fields are auto-supplied (so manual-补 UI can flag them)
+    const missing = [];
+    if(handicapTeam===null) missing.push("hd");   // 運彩讓分 missing
+    if(totBasis===null)     missing.push("tot");  // 運彩大小 missing
+    if(missing.length===0){
+      matches.push(record);
+    } else {
+      // staged for manual補; provide sensible defaults
+      if(record.hdVal==null) record.hdVal = 1.5;
+      if(record.totBasis==null) record.totBasis = 8.5;
+      record._missing = missing;
+      // hdFavSuggested = whether the parser actually derived hdFav (vs fell back to "home")
+      record._hdFavFromHint = (handicapTeam!==null) || (intlFav!==null);
+      incomplete.push(record);
+    }
   }
-  return { matches, errors };
+  return { matches, incomplete, errors };
 }
 
 function openImportModal(){
@@ -3011,6 +3040,8 @@ function openImportModal(){
   $("#importConfirmBtn").style.opacity = ".5";
   _parsedGames = [];
   _parsedSkipped = [];
+  _parsedIncomplete = [];
+  _parsedErrors = [];
   $("#importGames").classList.add("show");
   setTimeout(()=>$("#importText").focus(), 50);
 }
@@ -3019,68 +3050,145 @@ $("#importCancel") && ($("#importCancel").onclick = ()=>{
   $("#importGames").classList.remove("show");
 });
 
-$("#importParseBtn") && ($("#importParseBtn").onclick = ()=>{
-  const txt = $("#importText").value;
-  if(!txt.trim()){ $("#importStatus").textContent = "請貼入資料。"; return; }
-  // year: use the season-year for the active board's date
-  const year = parseInt(seasonOf(doc.activeDate),10) || new Date().getFullYear();
-  const { matches, errors } = parseGamesText(txt, year);
-  // de-dup against existing doc.games
-  const existing = new Set((doc.games||[]).map(g => `${g.date}|${g.awayTeam}|${g.homeTeam}`));
-  const fresh = [], dup = [];
-  matches.forEach(m=>{
-    const k = `${m.date}|${m.awayTeam}|${m.homeTeam}`;
-    if(existing.has(k)) dup.push(m);
-    else fresh.push(m);
-  });
-  // also de-dup within the parsed set itself (same game appearing twice in the same paste)
-  const seen = new Set();
-  const freshUnique = [];
-  fresh.forEach(m=>{
-    const k = `${m.date}|${m.awayTeam}|${m.homeTeam}`;
-    if(!seen.has(k)){ seen.add(k); freshUnique.push(m); }
-    else dup.push(m);
-  });
-  _parsedGames = freshUnique;
-  _parsedSkipped = dup;
-  // Build preview HTML
+let _parsedIncomplete = [];   // staged incomplete entries awaiting user補
+function renderImportPreview(){
+  const preview = $("#importPreview");
   const lgCount = {};
-  freshUnique.forEach(m => { lgCount[m.league] = (lgCount[m.league]||0)+1; });
-  let html = `<div style="margin-bottom:6px;color:#9be3b5;font-weight:700;">解析出 ${freshUnique.length} 場新比賽`;
-  if(dup.length) html += ` <span style="color:var(--ink-dim);font-weight:500;">（${dup.length} 場已存在，會跳過）</span>`;
+  _parsedGames.forEach(m => { lgCount[m.league] = (lgCount[m.league]||0)+1; });
+  let html = `<div style="margin-bottom:6px;color:#9be3b5;font-weight:700;">已解析 ${_parsedGames.length} 場（可匯入）`;
+  if(_parsedSkipped.length) html += ` <span style="color:var(--ink-dim);font-weight:500;">　${_parsedSkipped.length} 場已存在會跳過</span>`;
   html += `</div>`;
   if(Object.keys(lgCount).length){
     const lgs = Object.entries(lgCount).map(([k,v])=>`${LEAGUES[k]?.name||k} ${v} 場`).join("、");
     html += `<div style="margin-bottom:8px;color:var(--ink-dim);">分聯盟：${lgs}</div>`;
   }
-  if(freshUnique.length){
+  if(_parsedGames.length){
     html += `<div style="margin-bottom:4px;color:var(--ink-dim);">前 5 場：</div>`;
-    freshUnique.slice(0,5).forEach(m=>{
+    _parsedGames.slice(0,5).forEach(m=>{
       html += `<div>· ${m.date} ${esc(m.awayTeam)} ${m.awayScore}-${m.homeScore} ${esc(m.homeTeam)} 　讓:${m.hdFav==="away"?esc(m.awayTeam):esc(m.homeTeam)} -${m.hdVal} 　基準:${m.totBasis}</div>`;
     });
-    if(freshUnique.length>5){
+    if(_parsedGames.length>5){
       html += `<div style="margin:4px 0;color:var(--ink-dim);">… 中略 …</div>`;
       html += `<div style="margin-bottom:4px;color:var(--ink-dim);">最後 3 場：</div>`;
-      freshUnique.slice(-3).forEach(m=>{
+      _parsedGames.slice(-3).forEach(m=>{
         html += `<div>· ${m.date} ${esc(m.awayTeam)} ${m.awayScore}-${m.homeScore} ${esc(m.homeTeam)} 　讓:${m.hdFav==="away"?esc(m.awayTeam):esc(m.homeTeam)} -${m.hdVal} 　基準:${m.totBasis}</div>`;
       });
     }
   }
-  if(errors.length){
-    html += `<div style="margin-top:10px;color:#ff9c2e;font-weight:700;">${errors.length} 筆無法解析：</div>`;
-    errors.slice(0,8).forEach(e=>{ html += `<div style="color:#ff9c2e;">· ${esc(e)}</div>`; });
-    if(errors.length>8) html += `<div style="color:#ff9c2e;">… 共 ${errors.length} 筆 …</div>`;
+  // Incomplete entries — each row has inline editable controls
+  if(_parsedIncomplete.length){
+    html += `<div style="margin-top:14px;padding-top:10px;border-top:1px solid var(--line);color:#ffb74d;font-weight:700;">${_parsedIncomplete.length} 場資料不完整（需手動補）：</div>`;
+    html += `<div style="color:var(--ink-dim);font-size:11px;margin-bottom:8px;">把缺的欄位填上後按右邊「補上」，會搬到上方的可匯入清單。讓分基準預設 1.5、大小基準預設 8.5，可調整。</div>`;
+    _parsedIncomplete.forEach((m, idx)=>{
+      const needHd  = m._missing.includes("hd");
+      const needTot = m._missing.includes("tot");
+      html += `<div class="imp-incomplete" data-idx="${idx}" style="background:rgba(255,183,77,.07);border:1px solid rgba(255,183,77,.2);border-radius:8px;padding:8px 10px;margin-bottom:8px;">`;
+      html += `<div style="font-weight:700;margin-bottom:6px;">${m.date} ${esc(m.awayTeam)} ${m.awayScore}-${m.homeScore} ${esc(m.homeTeam)}　<span style="color:#ffb74d;font-weight:500;font-size:11px;">缺：${m._missing.map(x=>x==="hd"?"運彩讓分":"運彩大小").join("、")}</span></div>`;
+      html += `<div style="display:flex;flex-wrap:wrap;align-items:center;gap:10px;font-size:12px;">`;
+      if(needHd){
+        const favIsAway = m.hdFav==="away";
+        html += `<label>讓分方：`+
+                `<button class="imp-fav imp-fav-a${favIsAway?' on':''}" data-idx="${idx}" data-fav="away" style="padding:4px 8px;margin-left:4px;border-radius:6px;border:1px solid ${favIsAway?'var(--lit)':'var(--line)'};background:${favIsAway?'var(--lit)':'transparent'};color:${favIsAway?'#1a1205':'var(--ink)'};font-weight:700;cursor:pointer;">${esc(m.awayTeam)}（客）</button>`+
+                `<button class="imp-fav imp-fav-h${!favIsAway?' on':''}" data-idx="${idx}" data-fav="home" style="padding:4px 8px;margin-left:4px;border-radius:6px;border:1px solid ${!favIsAway?'var(--lit)':'var(--line)'};background:${!favIsAway?'var(--lit)':'transparent'};color:${!favIsAway?'#1a1205':'var(--ink)'};font-weight:700;cursor:pointer;">${esc(m.homeTeam)}（主）</button>`+
+                `</label>`;
+        html += `<label>讓分基準：<input type="number" class="imp-hdval" data-idx="${idx}" value="${m.hdVal}" step="0.5" min="0" max="20" style="width:64px;margin-left:4px;background:#1b232e;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px;text-align:center;"></label>`;
+      }
+      if(needTot){
+        html += `<label>大小基準：<input type="number" class="imp-totval" data-idx="${idx}" value="${m.totBasis}" step="0.5" min="0" max="30" style="width:64px;margin-left:4px;background:#1b232e;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px;text-align:center;"></label>`;
+      }
+      html += `<span style="flex:1 1 auto;"></span>`;
+      html += `<button class="imp-fill-btn" data-idx="${idx}" style="padding:4px 12px;border-radius:6px;border:1px solid var(--lit);background:var(--lit);color:#1a1205;font-weight:700;cursor:pointer;">✓ 補上</button>`;
+      html += `</div></div>`;
+    });
   }
-  $("#importPreview").innerHTML = html;
-  $("#importPreview").style.display = "block";
-  $("#importStatus").textContent = freshUnique.length ? "確認預覽沒問題後按右下「確認匯入」。" : "沒有新比賽可匯入。";
-  $("#importConfirmBtn").disabled = freshUnique.length===0;
-  $("#importConfirmBtn").style.opacity = freshUnique.length===0 ? ".5" : "1";
+  // unrecoverable errors (rare now)
+  if(_parsedErrors && _parsedErrors.length){
+    html += `<div style="margin-top:10px;color:#ff5c8a;font-weight:700;">${_parsedErrors.length} 筆無法解析：</div>`;
+    _parsedErrors.slice(0,8).forEach(e=>{ html += `<div style="color:#ff5c8a;font-size:11px;">· ${esc(e)}</div>`; });
+    if(_parsedErrors.length>8) html += `<div style="color:#ff5c8a;font-size:11px;">… 共 ${_parsedErrors.length} 筆 …</div>`;
+  }
+  preview.innerHTML = html;
+  preview.style.display = "block";
+  // wire incomplete-row controls
+  preview.querySelectorAll(".imp-fav").forEach(btn=>{
+    btn.onclick = ()=>{
+      const idx = parseInt(btn.dataset.idx,10);
+      _parsedIncomplete[idx].hdFav = btn.dataset.fav;
+      renderImportPreview();
+    };
+  });
+  preview.querySelectorAll(".imp-hdval").forEach(inp=>{
+    inp.oninput = ()=>{
+      const idx = parseInt(inp.dataset.idx,10);
+      const v = parseFloat(inp.value);
+      if(!isNaN(v)) _parsedIncomplete[idx].hdVal = v;
+    };
+  });
+  preview.querySelectorAll(".imp-totval").forEach(inp=>{
+    inp.oninput = ()=>{
+      const idx = parseInt(inp.dataset.idx,10);
+      const v = parseFloat(inp.value);
+      if(!isNaN(v)) _parsedIncomplete[idx].totBasis = v;
+    };
+  });
+  preview.querySelectorAll(".imp-fill-btn").forEach(btn=>{
+    btn.onclick = ()=>{
+      const idx = parseInt(btn.dataset.idx,10);
+      const m = _parsedIncomplete[idx];
+      if(isNaN(m.hdVal) || isNaN(m.totBasis)){ alert("讓分基準或大小基準不是有效的數字。"); return; }
+      delete m._missing; delete m._hdFavFromHint;
+      _parsedGames.push(m);
+      _parsedIncomplete.splice(idx, 1);
+      renderImportPreview();
+      $("#importStatus").textContent = `已補上 1 場，可匯入：${_parsedGames.length} 場、待補：${_parsedIncomplete.length} 場。`;
+    };
+  });
+  // confirm button
+  $("#importConfirmBtn").disabled = _parsedGames.length===0;
+  $("#importConfirmBtn").style.opacity = _parsedGames.length===0 ? ".5" : "1";
+}
+let _parsedErrors = [];
+
+$("#importParseBtn") && ($("#importParseBtn").onclick = ()=>{
+  const txt = $("#importText").value;
+  if(!txt.trim()){ $("#importStatus").textContent = "請貼入資料。"; return; }
+  const year = parseInt(seasonOf(doc.activeDate),10) || new Date().getFullYear();
+  const { matches, incomplete, errors } = parseGamesText(txt, year);
+
+  // de-dup against existing doc.games + within this paste
+  const existing = new Set((doc.games||[]).map(g => `${g.date}|${g.awayTeam}|${g.homeTeam}`));
+  const seen = new Set();
+  const fresh = [], dup = [];
+  function classify(m){
+    const k = `${m.date}|${m.awayTeam}|${m.homeTeam}`;
+    if(existing.has(k) || seen.has(k)){ dup.push(m); return false; }
+    seen.add(k); return true;
+  }
+  const freshComplete = matches.filter(classify);
+  const freshIncomplete = incomplete.filter(classify);
+
+  _parsedGames = freshComplete;
+  _parsedSkipped = dup;
+  _parsedIncomplete = freshIncomplete;
+  _parsedErrors = errors;
+
+  renderImportPreview();
+  $("#importStatus").textContent =
+    `${_parsedGames.length} 場可直接匯入` +
+    (_parsedIncomplete.length ? `，${_parsedIncomplete.length} 場需手動補` : "") +
+    (dup.length ? `，${dup.length} 場已存在` : "") +
+    (errors.length ? `，${errors.length} 筆錯誤` : "") + "。";
 });
 
 $("#importConfirmBtn") && ($("#importConfirmBtn").onclick = ()=>{
   if(!_parsedGames.length){ return; }
-  if(!confirm(`即將匯入 ${_parsedGames.length} 場比賽。確定要寫入嗎？`)) return;
+  let msg = `即將匯入 ${_parsedGames.length} 場比賽。`;
+  if(_parsedIncomplete.length){
+    msg += `\n\n還有 ${_parsedIncomplete.length} 場沒補（不會匯入）。要繼續嗎？`;
+  } else {
+    msg += `\n\n確定要寫入嗎？`;
+  }
+  if(!confirm(msg)) return;
   snapshot();
   if(!doc.games) doc.games = [];
   _parsedGames.forEach(g => doc.games.push(g));
@@ -3088,7 +3196,7 @@ $("#importConfirmBtn") && ($("#importConfirmBtn").onclick = ()=>{
   save();
   alert(`已匯入 ${_parsedGames.length} 場比賽。\n統計頁面、卡片過盤率會自動更新。`);
   $("#importGames").classList.remove("show");
-  _parsedGames = []; _parsedSkipped = [];
+  _parsedGames = []; _parsedSkipped = []; _parsedIncomplete = []; _parsedErrors = [];
   render();
 });
 
