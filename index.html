@@ -371,6 +371,17 @@
     display:none;align-items:center;justify-content:center;padding:20px;
   }
   #settleModal.show{display:flex;}
+  .modal-overlay{
+    position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.6);
+    display:none;align-items:center;justify-content:center;padding:20px;
+  }
+  .modal-overlay.show{display:flex;}
+  .modal-overlay .box{
+    background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:18px 20px;box-shadow:0 16px 48px rgba(0,0,0,.7);
+  }
+  .modal-overlay .modal-actions{display:flex;gap:8px;align-items:center;}
+  .modal-overlay .modal-actions .grow{flex:1 1 auto;}
   #settleModal .box{
     background:var(--panel);border:1px solid var(--line);border-radius:14px;
     padding:18px 20px;width:380px;max-width:100%;box-shadow:0 16px 48px rgba(0,0,0,.7);
@@ -390,6 +401,16 @@
   .settle-q .opt.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
   .settle-q .opt.tie{background:#2a3340;color:#aeb9c8;}
   .settle-q .opt.tie.on{background:#5b6b80;color:#fff;}
+  .settle-q.score-row .score-inputs{display:flex;align-items:center;gap:12px;justify-content:center;}
+  .settle-q.score-row label{display:flex;flex-direction:column;align-items:center;gap:4px;}
+  .settle-q.score-row label span{font-size:12px;color:var(--ink-dim);}
+  .settle-q.score-row input{
+    width:72px;padding:10px 8px;text-align:center;
+    background:#1b232e;border:1px solid var(--line);border-radius:8px;
+    color:var(--ink);font-size:22px;font-weight:700;font-family:"Oswald";
+  }
+  .settle-q.score-row input:focus{outline:none;border-color:var(--lit);}
+  .settle-q.score-row .vs{color:var(--ink-dim);font-family:"Oswald";font-size:14px;margin-top:18px;}
 
   /* settled-mark on cards */
   .card.settled .grip{position:relative;}
@@ -660,7 +681,8 @@
           <button class="thrbtn" data-thr="0.60">60%</button>
           <button class="thrbtn" data-thr="0.65">65%</button>
         </div>
-        <button id="clearRecent">↺ 重置最近 N 場紀錄</button>
+        <button id="clearRecent">⚠ 清除所有比賽紀錄</button>
+        <button id="importGamesBtn">📥 匯入比賽資料（純文字）</button>
         <div class="sep"></div>
         <button id="exportBtn">⎘ 匯出文字</button>
         <button id="pngBtn">⤓ 存成圖片</button>
@@ -747,6 +769,28 @@
       <div class="modal-actions">
         <span class="grow"></span>
         <button class="btn" id="copyBtn">複製到剪貼簿</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import games modal -->
+  <div id="importGames" class="modal-overlay">
+    <div class="box" style="max-width:700px;width:92%;max-height:88vh;display:flex;flex-direction:column;">
+      <h3 style="margin:0 0 8px;font-size:16px;">📥 匯入比賽資料</h3>
+      <div style="color:var(--ink-dim);font-size:12px;margin-bottom:10px;line-height:1.7;">
+        把網站上的「賽事數據」整段複製貼進下面的方框（不分隊伍，可一次貼多隊），按「解析」會先預覽抓到的內容，再按「確認匯入」才會真的寫入。<br>
+        以「日期 + 兩隊」去重，重複的場次不會重算。
+      </div>
+      <textarea id="importText" placeholder="把整段資料貼進來..." style="width:100%;min-height:140px;flex:0 0 140px;background:#0e131a;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:monospace;font-size:12px;resize:vertical;"></textarea>
+      <div style="margin:10px 0 6px;display:flex;gap:8px;align-items:center;">
+        <button class="btn" id="importParseBtn">🔍 解析預覽</button>
+        <span id="importStatus" style="color:var(--ink-dim);font-size:12px;"></span>
+      </div>
+      <div id="importPreview" style="overflow:auto;flex:1 1 auto;border:1px solid var(--line);border-radius:8px;padding:10px;background:rgba(0,0,0,.2);font-size:12px;display:none;"></div>
+      <div class="modal-actions" style="margin-top:10px;">
+        <button class="btn" id="importCancel">關閉</button>
+        <span class="grow"></span>
+        <button class="btn" id="importConfirmBtn" disabled style="background:var(--lit);color:#1a1205;border-color:var(--lit);opacity:.5;">確認匯入</button>
       </div>
     </div>
   </div>
@@ -903,37 +947,118 @@ function emptyTeamRow(){
     tot:  { home:{w:0,l:0},     away:{w:0,l:0}     }
   };
 }
+
+/* ============================================================
+   GAMES — source of truth, one entry per settled match.
+   doc.games = [ {sid, date, league, awayTeam, homeTeam, awayScore, homeScore,
+                  hdFav: "away"|"home", hdVal: 1.5, totBasis: 9.5} , ... ]
+   All season stats and "recent N" data are DERIVED from doc.games on demand.
+   ============================================================ */
+// Bumped every time doc.games changes; cache uses this to invalidate.
+let _statsCache = { version:-1, byTeam:{} };
+function bumpGamesVersion(){
+  doc.gamesVersion = (doc.gamesVersion||0) + 1;
+  _statsCache = { version:-1, byTeam:{} };
+}
+// Derive {w,l,t} for one team given a single game record.
+// Prefers explicit result fields (hdResult, totResult, mlResult) when present; else computes from scores+basis.
+function _gameResultFor(team, g){
+  if(g.awayTeam!==team && g.homeTeam!==team) return null;
+  const isAway = g.awayTeam===team;
+  const venue = isAway ? "away" : "home";
+  const teamScore = isAway ? g.awayScore : g.homeScore;
+  const oppScore  = isAway ? g.homeScore : g.awayScore;
+  const out = { venue };
+  // ML
+  if(g.mlResult){
+    if(g.mlResult==="tie") out.ml = "t";
+    else if((g.mlResult==="away" && isAway) || (g.mlResult==="home" && !isAway)) out.ml = "w";
+    else out.ml = "l";
+  } else if(teamScore!=null && oppScore!=null){
+    if(teamScore === oppScore) out.ml = "t";
+    else out.ml = (teamScore-oppScore)>0 ? "w" : "l";
+  }
+  // HD / RECV
+  if(g.hdFav){
+    const favTeam = g.hdFav==="away" ? g.awayTeam : g.homeTeam;
+    const isFav = favTeam === team;
+    let favCovered;
+    if(g.hdResult){
+      favCovered = (g.hdResult==="fav_cover");
+    } else if(g.hdVal!=null && teamScore!=null){
+      const favIsThis = isFav;
+      const favScore = favIsThis ? teamScore : oppScore;
+      const undScore = favIsThis ? oppScore : teamScore;
+      favCovered = (favScore - undScore) > g.hdVal;
+    } else { favCovered = null; }
+    if(favCovered!=null){
+      if(isFav) out.hd = favCovered ? "w" : "l";
+      else      out.recv = favCovered ? "l" : "w";
+    }
+  }
+  // TOT
+  if(g.totResult){
+    if(g.totResult==="push") out.tot = null;
+    else if(g.totResult==="over")  out.tot = "w";
+    else if(g.totResult==="under") out.tot = "l";
+  } else if(g.totBasis!=null && teamScore!=null && oppScore!=null){
+    const tot = teamScore + oppScore;
+    if(tot === g.totBasis) out.tot = null;
+    else out.tot = (tot > g.totBasis) ? "w" : "l";
+  }
+  return out;
+}
+// Rebuild stats cache for a given team (covers all games involving that team, all seasons).
+function _rebuildTeamCache(team){
+  const bySeason = {};
+  const games = doc.games || [];
+  for(let i=0;i<games.length;i++){
+    const g = games[i];
+    if(g.awayTeam!==team && g.homeTeam!==team) continue;
+    const season = seasonOf(g.date);
+    if(!bySeason[season]) bySeason[season] = emptyTeamRow();
+    const row = bySeason[season];
+    const r = _gameResultFor(team, g);
+    if(!r) continue;
+    if(r.ml === "w") row.ml[r.venue].w++;
+    else if(r.ml === "l") row.ml[r.venue].l++;
+    else if(r.ml === "t") row.ml[r.venue].t++;
+    if(r.hd === "w") row.hd[r.venue].w++;
+    else if(r.hd === "l") row.hd[r.venue].l++;
+    if(r.recv === "w") row.recv[r.venue].w++;
+    else if(r.recv === "l") row.recv[r.venue].l++;
+    if(r.tot === "w") row.tot[r.venue].w++;
+    else if(r.tot === "l") row.tot[r.venue].l++;
+  }
+  _statsCache.byTeam[team] = bySeason;
+}
+function _ensureCacheFresh(){
+  if(_statsCache.version !== (doc.gamesVersion||0)){
+    _statsCache = { version: (doc.gamesVersion||0), byTeam:{} };
+  }
+}
+function _getTeamSeasonRow(season, team){
+  _ensureCacheFresh();
+  if(!_statsCache.byTeam[team]) _rebuildTeamCache(team);
+  return (_statsCache.byTeam[team] && _statsCache.byTeam[team][season]) || emptyTeamRow();
+}
+
+// Public API (compatible with previous signatures so all callers keep working)
 function ensureTeamRow(season, team){
-  if(!doc.stats) doc.stats={};
-  if(!doc.stats[season]) doc.stats[season]={};
-  if(!doc.stats[season][team]) doc.stats[season][team] = emptyTeamRow();
-  // self-heal any old/incomplete rows
-  const row = doc.stats[season][team];
-  ["ml","hd","recv","tot"].forEach(m=>{
-    if(!row[m]) row[m] = m==="ml" ? {home:{w:0,l:0,t:0},away:{w:0,l:0,t:0}} : {home:{w:0,l:0},away:{w:0,l:0}};
-    ["home","away"].forEach(v=>{
-      if(!row[m][v]) row[m][v] = m==="ml" ? {w:0,l:0,t:0} : {w:0,l:0};
-      if(m==="ml" && row[m][v].t===undefined) row[m][v].t = 0;
-    });
-  });
-  return row;
+  // Returns a fresh derived row. Edits to it DO NOT persist (no longer used to write).
+  // Kept for compatibility with stats-editing UI, which we'll route through a different path.
+  return _getTeamSeasonRow(season, team);
 }
-// add delta to one cell; market is "ml"/"hd"/"recv"/"tot"; result is "w"/"l"/"t"
-function statAdd(season, team, market, venue, result, delta){
-  const cell = ensureTeamRow(season, team)[market][venue];
-  if(result==="w") cell.w = Math.max(0,(cell.w||0)+delta);
-  else if(result==="l") cell.l = Math.max(0,(cell.l||0)+delta);
-  else if(result==="t") cell.t = Math.max(0,(cell.t||0)+delta);
+function statAdd(/* season, team, market, venue, result, delta */){
+  // No-op: writes now happen via doc.games. Kept so legacy call sites don't crash.
+  // (Old in-place statAdd is dead code now.)
 }
-// read totals (sums home+away unless venue specified). Returns {w,l,t} where t may be undefined.
-function statRead(season, team, market, venue/*optional*/){
-  if(!doc.stats || !doc.stats[season] || !doc.stats[season][team]) return {w:0,l:0,t:0};
-  const row = ensureTeamRow(season, team)[market];
+function statRead(season, team, market, venue){
+  const row = _getTeamSeasonRow(season, team)[market];
   if(venue) return {...row[venue], t:row[venue].t||0};
   const h=row.home, a=row.away;
   return { w:(h.w||0)+(a.w||0), l:(h.l||0)+(a.l||0), t:(h.t||0)+(a.t||0) };
 }
-// percent string: w / (w+l), ties excluded from both. Returns null when no samples.
 function pctStr(rec){
   const denom = (rec.w||0)+(rec.l||0);
   if(denom===0) return null;
@@ -944,27 +1069,57 @@ function pctNum(rec){
   if(denom===0) return null;
   return rec.w/denom;
 }
-// add a recent-game entry (post-program settlements only). Keeps list capped.
-function recentAdd(entry){
-  if(!doc.recent) doc.recent = [];
-  doc.recent.push(entry);
-  if(doc.recent.length > RECENT_CAP) doc.recent.splice(0, doc.recent.length-RECENT_CAP);
+// recent N games: filter doc.games by team (+ optional market/venue filter), sort by date desc, take last N
+function recentAdd(/* entry */){
+  // No-op for compatibility — recents are now derived from doc.games on demand.
 }
-// Compute W-L from the last N entries that match (team, market, venue?)
-// Returns null if no recent samples are available for the filter at all.
 function recentRead(team, market, venue, n){
-  if(!doc.recent || !doc.recent.length) return null;
-  let w=0, l=0, t=0, count=0;
-  for(let i=doc.recent.length-1; i>=0; i--){
-    const r = doc.recent[i];
-    if(r.team!==team || r.market!==market) continue;
+  if(!doc.games || !doc.games.length) return null;
+  // Find all games involving this team, sorted by date desc, take up to N for this market/venue
+  const candidates = [];
+  for(let i=doc.games.length-1; i>=0; i--){
+    const g = doc.games[i];
+    if(g.awayTeam!==team && g.homeTeam!==team) continue;
+    const r = _gameResultFor(team, g);
+    if(!r) continue;
+    const out = r[market];
+    if(out==null) continue;
     if(venue && r.venue!==venue) continue;
-    if(r.result==="w") w++; else if(r.result==="l") l++; else if(r.result==="t") t++;
-    count++;
-    if(count>=n) break;
+    candidates.push({ g, r, result:out });
+    if(candidates.length>=n) break;
   }
-  if(count===0) return null;
-  return {w,l,t};
+  if(!candidates.length) return null;
+  let w=0,l=0,t=0;
+  candidates.forEach(c=>{
+    if(c.result==="w") w++; else if(c.result==="l") l++; else if(c.result==="t") t++;
+  });
+  return { w, l, t };
+}
+
+/* Add/update/remove a game in doc.games. Each call invalidates the stats cache. */
+function gameUpsert(g){
+  // Replace by sid if exists, else by (date + away + home), else append.
+  if(!doc.games) doc.games = [];
+  let idx = -1;
+  if(g.sid){
+    idx = doc.games.findIndex(x => x.sid === g.sid);
+  }
+  if(idx<0){
+    idx = doc.games.findIndex(x => x.date===g.date && x.awayTeam===g.awayTeam && x.homeTeam===g.homeTeam);
+  }
+  if(idx<0){ doc.games.push(g); }
+  else { doc.games[idx] = g; }
+  bumpGamesVersion();
+}
+function gameRemoveBySid(sid){
+  if(!doc.games) return false;
+  const before = doc.games.length;
+  doc.games = doc.games.filter(g => g.sid !== sid);
+  if(doc.games.length !== before){ bumpGamesVersion(); return true; }
+  return false;
+}
+function gameFindBySid(sid){
+  return (doc.games||[]).find(g => g.sid === sid) || null;
 }
 
 /* user preference: which window to show on cards. "season" or 10/30/50 */
@@ -2161,18 +2316,19 @@ $("#clearLights").onclick = ()=>{
 
 $("#clearRecent") && ($("#clearRecent").onclick = ()=>{
   closeMore();
-  const count = (doc.recent && doc.recent.length) || 0;
-  if(!count){ alert("「最近 N 場」紀錄本來就是空的，沒東西可清。"); return; }
-  const msg = `這個動作只清除「最近 N 場」的逐場明細紀錄（目前有 ${count} 筆）。\n\n` +
-              `✓ 本季累積的 W-L 數字完全不會動。\n` +
-              `✓ 你補登進去的歷史數據完全保留。\n` +
-              `✕ 過盤率切到「10／30／50 場」時，會暫時顯示樣本不足或退回本季數字，等之後結算累積就會回來。\n\n` +
-              `確定要清除嗎？`;
+  const count = (doc.games && doc.games.length) || 0;
+  if(!count){ alert("目前沒有比賽紀錄。"); return; }
+  const msg = `這個動作會清除所有 ${count} 筆比賽明細紀錄。\n\n` +
+              `✕ 所有統計數字會歸零（因為都是從這些紀錄推算的）\n` +
+              `✕ 排盤板上「已結算」標記會留著，但相關數據會消失\n\n` +
+              `通常只在「想重新匯入歷史資料」或「想全部從零開始」時用。\n\n` +
+              `動工前建議先「💾 匯出備份檔」存一份。確定要清除嗎？`;
   if(!confirm(msg)) return;
   snapshot();
-  doc.recent = [];
+  doc.games = [];
+  bumpGamesVersion();
   save(); render();
-  alert("已清除最近紀錄。本季累積數字不受影響。");
+  alert("已清除全部比賽紀錄。可以匯入新資料了。");
 });
 $("#exportBtn").onclick = ()=>{ closeMore(); openExport(); };
 
@@ -2389,34 +2545,9 @@ function renderStatsPage(){
 
 /* ---------------- Edit one stat cell ---------------- */
 let editTarget = null;
-function openEditStat(season, team, market, venue, mLabel, vLabel){
-  editTarget = { season, team, market, venue };
-  const rec = statRead(season, team, market, venue);
-  $("#editTitle").textContent = `${team} · ${mLabel} · ${vLabel}場`;
-  $("#editSub").textContent = `${season} 賽季　·　目前 ${rec.w}-${rec.l}${market==="ml"?"-"+(rec.t||0):""}`;
-  $("#editW").value = rec.w || 0;
-  $("#editL").value = rec.l || 0;
-  $("#editTRow").style.display = market==="ml" ? "" : "none";
-  $("#editT").value = (rec.t || 0);
-  $("#editStat").classList.add("show");
-  setTimeout(()=>$("#editW").focus(), 50);
+function openEditStat(){
+  alert("這個版本的統計數字是從「比賽明細」推算出來的，不能直接編輯一格。\n\n要修改，請去結算該場比賽（在排盤板上長按該場卡片→重新結算），或從「⋯ → 📥 匯入比賽資料」更新該場的記錄。");
 }
-$("#editCancel") && ($("#editCancel").onclick = ()=> $("#editStat").classList.remove("show"));
-$("#editSave") && ($("#editSave").onclick = ()=>{
-  if(!editTarget) return;
-  snapshot();
-  const {season, team, market, venue} = editTarget;
-  const row = ensureTeamRow(season, team)[market][venue];
-  row.w = Math.max(0, parseInt($("#editW").value,10) || 0);
-  row.l = Math.max(0, parseInt($("#editL").value,10) || 0);
-  if(market==="ml") row.t = Math.max(0, parseInt($("#editT").value,10) || 0);
-  save();
-  $("#editStat").classList.remove("show");
-  renderStatsPage();
-  render(); // refresh cards to pick up new pct
-});
-// close edit modal on outside click
-$("#editStat") && ($("#editStat").addEventListener("click", e=>{ if(e.target.id==="editStat") $("#editStat").classList.remove("show"); }));
 
 /* ============================================================
    SETTLEMENT — long-press card → modal → write stats; small ✓ mark to revise
@@ -2433,8 +2564,21 @@ function openSettleModal(it){
   body.innerHTML = "";
 
   const prior = it.settled || {};
+
+  // ---- score input row (top) ----
+  const scoreRow = document.createElement("div"); scoreRow.className="settle-q score-row";
+  scoreRow.innerHTML = `
+    <div class="qlabel">比分（輸入後會自動點選下方選項，預設讓分 1.5）</div>
+    <div class="score-inputs">
+      <label><span>${esc(it.away)}（客）</span><input id="settleAwayScore" type="number" inputmode="numeric" min="0" max="99" value="${prior.awayScore!==undefined?prior.awayScore:""}"></label>
+      <span class="vs">:</span>
+      <label><span>${esc(it.home)}（主）</span><input id="settleHomeScore" type="number" inputmode="numeric" min="0" max="99" value="${prior.homeScore!==undefined?prior.homeScore:""}"></label>
+    </div>
+  `;
+  body.appendChild(scoreRow);
+
   function q(label, key, options){
-    const wrap = document.createElement("div"); wrap.className="settle-q";
+    const wrap = document.createElement("div"); wrap.className="settle-q"; wrap.dataset.key=key;
     wrap.innerHTML = `<div class="qlabel">${label}</div>`;
     const opts = document.createElement("div"); opts.className="opts";
     options.forEach(o=>{
@@ -2451,27 +2595,50 @@ function openSettleModal(it){
     wrap.appendChild(opts);
     body.appendChild(wrap);
   }
-  // 獨贏: away win / home win / tie
   q("獨贏：哪隊贏了？", "ml", [
     { label:`${it.away}（客）`, value:"away" },
     { label:`${it.home}（主）`, value:"home" },
     { label:"和（不列入）", value:"tie", tie:true }
   ]);
-  // 讓分: favorite cover vs not cover (no tie option per user request)
   const favName = it.hdFav==="away" ? it.away : it.home;
-  const undName = it.hdFav==="away" ? it.home : it.away;
   q(`讓分：${favName} 過盤了嗎？`, "hd", [
     { label:`${favName} 過盤`, value:"cover" },
     { label:`${favName} 沒過`, value:"nocover" }
   ]);
-  // 大分
   q("大小分：兩隊總分大於基準？", "tot", [
     { label:"大", value:"over" },
     { label:"小", value:"under" }
   ]);
 
+  // ---- auto-fill from score (default handicap = 1.5) ----
+  function autoFillFromScore(){
+    const a = parseInt($("#settleAwayScore").value,10);
+    const h = parseInt($("#settleHomeScore").value,10);
+    if(isNaN(a) || isNaN(h)) return;
+    // 獨贏
+    let mlPick = null;
+    if(a>h) mlPick = "away";
+    else if(h>a) mlPick = "home";
+    else mlPick = "tie";
+    body.querySelector('.settle-q[data-key="ml"] .opt[data-value="'+mlPick+'"]')?.click();
+    // 讓分: 默認讓分基準 1.5 分；讓分方 = it.hdFav
+    // 讓分方贏對方多少分？算 margin
+    const favIsAway = it.hdFav==="away";
+    const favScore = favIsAway ? a : h;
+    const undScore = favIsAway ? h : a;
+    const margin = favScore - undScore;   // positive = fav won by N
+    const cover = margin > 1.5;            // fav covers if won by 2+
+    const hdPick = cover ? "cover" : "nocover";
+    body.querySelector('.settle-q[data-key="hd"] .opt[data-value="'+hdPick+'"]')?.click();
+    // 大小分: 不自動點，因為基準變動
+  }
+  $("#settleAwayScore").oninput = autoFillFromScore;
+  $("#settleHomeScore").oninput = autoFillFromScore;
+
   $("#settleRemove").style.display = isRevise ? "" : "none";
   m.classList.add("show");
+  // focus the away-score for fast keyboard entry
+  setTimeout(()=>{ const el = $("#settleAwayScore"); if(el && !prior.awayScore) el.focus(); }, 50);
 }
 $("#settleCancel") && ($("#settleCancel").onclick = ()=>{ $("#settleModal").classList.remove("show"); settleTarget=null; });
 $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
@@ -2484,17 +2651,25 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     const on = q.querySelector(".opt.on");
     if(on){ picks[on.dataset.key] = on.dataset.value; }
   });
+  // capture scores (now required so the game record is complete)
+  const aRaw = $("#settleAwayScore")?.value;
+  const hRaw = $("#settleHomeScore")?.value;
+  if(aRaw==="" || aRaw==null || hRaw==="" || hRaw==null || isNaN(parseInt(aRaw,10)) || isNaN(parseInt(hRaw,10))){
+    alert("請輸入兩隊的得分。"); return;
+  }
+  picks.awayScore = parseInt(aRaw,10);
+  picks.homeScore = parseInt(hRaw,10);
   if(!picks.ml){ alert("請選擇獨贏結果（含「和」）。"); return; }
   if(!picks.hd){ alert("請選擇讓分結果。"); return; }
   if(!picks.tot){ alert("請選擇大小分結果。"); return; }
   snapshot();
-  // if revising, undo the old settlement first (uses old picks' own _sid to strip recent entries)
-  if(it.settled) applySettlement(it, it.settled, -1);
-  // assign a fresh settlement-id to this commit so future revisions can target it exactly
+  // if revising, remove the old game record first
+  if(it.settled && it.settled._sid){ gameRemoveBySid(it.settled._sid); }
+  // assign a fresh settlement-id so future revisions can target it exactly
   picks._sid = "s" + Date.now().toString(36) + Math.random().toString(36).slice(2,7);
   applySettlement(it, picks, +1);
   it.settled = picks;
-  it.collapsed = true;   // auto-collapse the card after a successful settlement
+  it.collapsed = true;
   save();
   $("#settleModal").classList.remove("show");
   settleTarget=null;
@@ -2504,7 +2679,7 @@ $("#settleRemove") && ($("#settleRemove").onclick = ()=>{
   if(!settleTarget || !settleTarget.settled) return;
   if(!confirm("確定取消這場結算？相關統計會回滾。")) return;
   snapshot();
-  applySettlement(settleTarget, settleTarget.settled, -1);
+  if(settleTarget.settled._sid) gameRemoveBySid(settleTarget.settled._sid);
   delete settleTarget.settled;
   save();
   $("#settleModal").classList.remove("show");
@@ -2512,63 +2687,27 @@ $("#settleRemove") && ($("#settleRemove").onclick = ()=>{
   render();
 });
 
-// add or subtract the effect of a settlement on stats (delta = +1 or -1)
-// picks._sid is a stable settlement-id used to tag/untag recent entries
+// Build a game record from the settle modal picks and persist it.
 function applySettlement(it, picks, delta){
-  const season = seasonOf(doc.activeDate);
-  // venues: away team is "away", home team is "home"
-  const awayV = "away", homeV = "home";
-  // 獨贏
-  if(picks.ml==="away"){ statAdd(season, it.away, "ml", awayV, "w", delta); statAdd(season, it.home, "ml", homeV, "l", delta); }
-  else if(picks.ml==="home"){ statAdd(season, it.home, "ml", homeV, "w", delta); statAdd(season, it.away, "ml", awayV, "l", delta); }
-  else if(picks.ml==="tie"){ statAdd(season, it.away, "ml", awayV, "t", delta); statAdd(season, it.home, "ml", homeV, "t", delta); }
-  // 讓分／受讓
-  const fav = it.hdFav==="away" ? it.away : it.home;
-  const und = it.hdFav==="away" ? it.home : it.away;
-  const favV = it.hdFav==="away" ? awayV : homeV;
-  const undV = it.hdFav==="away" ? homeV : awayV;
-  if(picks.hd==="cover"){
-    statAdd(season, fav, "hd",   favV, "w", delta);
-    statAdd(season, und, "recv", undV, "l", delta);
-  } else if(picks.hd==="nocover"){
-    statAdd(season, fav, "hd",   favV, "l", delta);
-    statAdd(season, und, "recv", undV, "w", delta);
+  if(delta<0){
+    if(picks && picks._sid) gameRemoveBySid(picks._sid);
+    return;
   }
-  // 大小分: both teams get the same result on their venue
-  if(picks.tot==="over"){
-    statAdd(season, it.away, "tot", awayV, "w", delta);
-    statAdd(season, it.home, "tot", homeV, "w", delta);
-  } else if(picks.tot==="under"){
-    statAdd(season, it.away, "tot", awayV, "l", delta);
-    statAdd(season, it.home, "tot", homeV, "l", delta);
-  }
-  // "recent" list: each settlement carries a unique sid; +1 adds tagged entries, -1 removes them.
-  const sid = picks._sid;
-  if(delta>0 && sid){
-    // forward: append tagged entries
-    if(picks.ml==="away"){ recentAdd({sid, team:it.away, market:"ml", venue:awayV, result:"w", date:doc.activeDate}); recentAdd({sid, team:it.home, market:"ml", venue:homeV, result:"l", date:doc.activeDate}); }
-    else if(picks.ml==="home"){ recentAdd({sid, team:it.home, market:"ml", venue:homeV, result:"w", date:doc.activeDate}); recentAdd({sid, team:it.away, market:"ml", venue:awayV, result:"l", date:doc.activeDate}); }
-    else if(picks.ml==="tie"){ recentAdd({sid, team:it.away, market:"ml", venue:awayV, result:"t", date:doc.activeDate}); recentAdd({sid, team:it.home, market:"ml", venue:homeV, result:"t", date:doc.activeDate}); }
-    if(picks.hd==="cover"){
-      recentAdd({sid, team:fav, market:"hd", venue:favV, result:"w", date:doc.activeDate});
-      recentAdd({sid, team:und, market:"recv", venue:undV, result:"l", date:doc.activeDate});
-    } else if(picks.hd==="nocover"){
-      recentAdd({sid, team:fav, market:"hd", venue:favV, result:"l", date:doc.activeDate});
-      recentAdd({sid, team:und, market:"recv", venue:undV, result:"w", date:doc.activeDate});
-    }
-    if(picks.tot==="over"){
-      recentAdd({sid, team:it.away, market:"tot", venue:awayV, result:"w", date:doc.activeDate});
-      recentAdd({sid, team:it.home, market:"tot", venue:homeV, result:"w", date:doc.activeDate});
-    } else if(picks.tot==="under"){
-      recentAdd({sid, team:it.away, market:"tot", venue:awayV, result:"l", date:doc.activeDate});
-      recentAdd({sid, team:it.home, market:"tot", venue:homeV, result:"l", date:doc.activeDate});
-    }
-  } else if(delta<0 && sid){
-    // reverse: drop every recent entry tagged with this sid
-    if(doc.recent && doc.recent.length){
-      doc.recent = doc.recent.filter(r=> r.sid !== sid);
-    }
-  }
+  // delta>0: upsert game record
+  const mlResult = picks.ml;  // "away"|"home"|"tie"
+  const hdResult = picks.hd==="cover" ? "fav_cover" : "fav_nocover";
+  const totResult = picks.tot;  // "over"|"under"
+  const game = {
+    sid: picks._sid,
+    date: doc.activeDate,
+    league: leagueOf(it),
+    awayTeam: it.away, homeTeam: it.home,
+    awayScore: picks.awayScore, homeScore: picks.homeScore,
+    hdFav: it.hdFav,
+    hdResult,
+    totResult
+  };
+  gameUpsert(game);
 }
 
 /* close settle modal on outside click */
@@ -2780,6 +2919,183 @@ function refreshThrBtns(){
     b.classList.toggle("on", Math.abs(parseFloat(b.dataset.thr)-trendThreshold)<0.005);
   });
 }
+
+/* ============================================================
+   IMPORT GAMES — parse pasted text into doc.games entries
+   ============================================================ */
+let _parsedGames = [];   // staged results from "解析預覽" awaiting confirm
+let _parsedSkipped = []; // entries already in doc.games (de-duped, will skip)
+function leagueOfTeam(team){
+  for(const key of ["mlb","npb","kbo","cpbl"]){
+    if(LEAGUES[key].teams.includes(team)) return key;
+  }
+  return null;
+}
+function parseGamesText(txt, seasonYear){
+  const DATE_RE = /^\d{1,2}\/\d{1,2}$/;
+  const SCORE_RE = /^\d+$/;
+  const lines = txt.split(/\r?\n/).map(l => l.trim());
+  const matches = [];
+  const errors = [];
+  let allTeams = new Set();
+  ["mlb","npb","kbo","cpbl"].forEach(k => LEAGUES[k].teams.forEach(t => allTeams.add(t)));
+  let i = 0;
+  while(i < lines.length){
+    if(!DATE_RE.test(lines[i])){ i++; continue; }
+    const date = lines[i];
+    let j = i + 1;
+    while(j < lines.length && !DATE_RE.test(lines[j])) j++;
+    const block = lines.slice(i+1, j).filter(s=>s.length>0);
+    i = j;
+    if(block.length < 6){ continue; }
+    // expect: time, awayScore, V.S., homeScore, awayTeam, ...
+    if(!(SCORE_RE.test(block[1]) && block[2]==='V.S.' && SCORE_RE.test(block[3]))) continue;
+    const awayScore = parseInt(block[1],10), homeScore = parseInt(block[3],10);
+    const awayTeam = block[4];
+    if(!allTeams.has(awayTeam)){ errors.push(`${date}: 找不到客隊「${awayTeam}」`); continue; }
+    let homeTeam = null;
+    for(let k=5; k<block.length; k++){
+      if(allTeams.has(block[k]) && block[k]!==awayTeam){ homeTeam = block[k]; break; }
+    }
+    if(!homeTeam){ errors.push(`${date}: 找不到主隊`); continue; }
+    // find 運彩 handicap and total lines (those with decimals)
+    let handicapTeam=null, handicapSign=null, handicapVal=null;
+    let totTeam=null, totSide=null, totBasis=null;
+    for(let k=1; k<block.length; k++){
+      const m1 = block[k].match(/^([-+])\s*(\d+(?:\.\d+)?)\s*分$/);
+      if(m1 && allTeams.has(block[k-1])){
+        handicapTeam = block[k-1]; handicapSign = m1[1]; handicapVal = parseFloat(m1[2]);
+        continue;
+      }
+      const m2 = block[k].match(/^(大|小)\s*(\d+(?:\.\d+)?)$/);
+      if(m2 && allTeams.has(block[k-1])){
+        totTeam = block[k-1]; totSide = m2[1]; totBasis = parseFloat(m2[2]);
+        continue;
+      }
+    }
+    // require handicap & total for a valid match record
+    if(handicapTeam==null || totBasis==null){
+      errors.push(`${date} ${awayTeam} vs ${homeTeam}: 缺少運彩讓分或大小分資料（可能是熱身賽？跳過）`);
+      continue;
+    }
+    // hdFav: the team that gave the spread (sign == "-")
+    let hdFav;
+    if(handicapSign==="-"){
+      hdFav = (handicapTeam===awayTeam) ? "away" : "home";
+    } else {
+      // "+ X.X分": that team received; favorite is the other team
+      hdFav = (handicapTeam===awayTeam) ? "home" : "away";
+    }
+    // Convert MM/DD to YYYY-MM-DD
+    const [mm,dd] = date.split("/");
+    const isoDate = `${seasonYear}-${mm.padStart(2,"0")}-${dd.padStart(2,"0")}`;
+    matches.push({
+      sid: `import_${isoDate}_${awayTeam}_${homeTeam}`,
+      date: isoDate,
+      league: leagueOfTeam(awayTeam),
+      awayTeam, homeTeam,
+      awayScore, homeScore,
+      hdFav, hdVal: handicapVal,
+      totBasis
+    });
+  }
+  return { matches, errors };
+}
+
+function openImportModal(){
+  closeMore();
+  $("#importText").value = "";
+  $("#importPreview").style.display = "none";
+  $("#importStatus").textContent = "";
+  $("#importConfirmBtn").disabled = true;
+  $("#importConfirmBtn").style.opacity = ".5";
+  _parsedGames = [];
+  _parsedSkipped = [];
+  $("#importGames").classList.add("show");
+  setTimeout(()=>$("#importText").focus(), 50);
+}
+$("#importGamesBtn") && ($("#importGamesBtn").onclick = openImportModal);
+$("#importCancel") && ($("#importCancel").onclick = ()=>{
+  $("#importGames").classList.remove("show");
+});
+
+$("#importParseBtn") && ($("#importParseBtn").onclick = ()=>{
+  const txt = $("#importText").value;
+  if(!txt.trim()){ $("#importStatus").textContent = "請貼入資料。"; return; }
+  // year: use the season-year for the active board's date
+  const year = parseInt(seasonOf(doc.activeDate),10) || new Date().getFullYear();
+  const { matches, errors } = parseGamesText(txt, year);
+  // de-dup against existing doc.games
+  const existing = new Set((doc.games||[]).map(g => `${g.date}|${g.awayTeam}|${g.homeTeam}`));
+  const fresh = [], dup = [];
+  matches.forEach(m=>{
+    const k = `${m.date}|${m.awayTeam}|${m.homeTeam}`;
+    if(existing.has(k)) dup.push(m);
+    else fresh.push(m);
+  });
+  // also de-dup within the parsed set itself (same game appearing twice in the same paste)
+  const seen = new Set();
+  const freshUnique = [];
+  fresh.forEach(m=>{
+    const k = `${m.date}|${m.awayTeam}|${m.homeTeam}`;
+    if(!seen.has(k)){ seen.add(k); freshUnique.push(m); }
+    else dup.push(m);
+  });
+  _parsedGames = freshUnique;
+  _parsedSkipped = dup;
+  // Build preview HTML
+  const lgCount = {};
+  freshUnique.forEach(m => { lgCount[m.league] = (lgCount[m.league]||0)+1; });
+  let html = `<div style="margin-bottom:6px;color:#9be3b5;font-weight:700;">解析出 ${freshUnique.length} 場新比賽`;
+  if(dup.length) html += ` <span style="color:var(--ink-dim);font-weight:500;">（${dup.length} 場已存在，會跳過）</span>`;
+  html += `</div>`;
+  if(Object.keys(lgCount).length){
+    const lgs = Object.entries(lgCount).map(([k,v])=>`${LEAGUES[k]?.name||k} ${v} 場`).join("、");
+    html += `<div style="margin-bottom:8px;color:var(--ink-dim);">分聯盟：${lgs}</div>`;
+  }
+  if(freshUnique.length){
+    html += `<div style="margin-bottom:4px;color:var(--ink-dim);">前 5 場：</div>`;
+    freshUnique.slice(0,5).forEach(m=>{
+      html += `<div>· ${m.date} ${esc(m.awayTeam)} ${m.awayScore}-${m.homeScore} ${esc(m.homeTeam)} 　讓:${m.hdFav==="away"?esc(m.awayTeam):esc(m.homeTeam)} -${m.hdVal} 　基準:${m.totBasis}</div>`;
+    });
+    if(freshUnique.length>5){
+      html += `<div style="margin:4px 0;color:var(--ink-dim);">… 中略 …</div>`;
+      html += `<div style="margin-bottom:4px;color:var(--ink-dim);">最後 3 場：</div>`;
+      freshUnique.slice(-3).forEach(m=>{
+        html += `<div>· ${m.date} ${esc(m.awayTeam)} ${m.awayScore}-${m.homeScore} ${esc(m.homeTeam)} 　讓:${m.hdFav==="away"?esc(m.awayTeam):esc(m.homeTeam)} -${m.hdVal} 　基準:${m.totBasis}</div>`;
+      });
+    }
+  }
+  if(errors.length){
+    html += `<div style="margin-top:10px;color:#ff9c2e;font-weight:700;">${errors.length} 筆無法解析：</div>`;
+    errors.slice(0,8).forEach(e=>{ html += `<div style="color:#ff9c2e;">· ${esc(e)}</div>`; });
+    if(errors.length>8) html += `<div style="color:#ff9c2e;">… 共 ${errors.length} 筆 …</div>`;
+  }
+  $("#importPreview").innerHTML = html;
+  $("#importPreview").style.display = "block";
+  $("#importStatus").textContent = freshUnique.length ? "確認預覽沒問題後按右下「確認匯入」。" : "沒有新比賽可匯入。";
+  $("#importConfirmBtn").disabled = freshUnique.length===0;
+  $("#importConfirmBtn").style.opacity = freshUnique.length===0 ? ".5" : "1";
+});
+
+$("#importConfirmBtn") && ($("#importConfirmBtn").onclick = ()=>{
+  if(!_parsedGames.length){ return; }
+  if(!confirm(`即將匯入 ${_parsedGames.length} 場比賽。確定要寫入嗎？`)) return;
+  snapshot();
+  if(!doc.games) doc.games = [];
+  _parsedGames.forEach(g => doc.games.push(g));
+  bumpGamesVersion();
+  save();
+  alert(`已匯入 ${_parsedGames.length} 場比賽。\n統計頁面、卡片過盤率會自動更新。`);
+  $("#importGames").classList.remove("show");
+  _parsedGames = []; _parsedSkipped = [];
+  render();
+});
+
+/* close import modal on outside click */
+$("#importGames") && ($("#importGames").addEventListener("click", e=>{
+  if(e.target.id==="importGames") $("#importGames").classList.remove("show");
+}));
 
 /* ---------------- init ---------------- */
 (async()=>{
