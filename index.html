@@ -778,8 +778,17 @@
     <div class="box" style="max-width:700px;width:92%;max-height:88vh;display:flex;flex-direction:column;">
       <h3 style="margin:0 0 8px;font-size:16px;">📥 匯入比賽資料</h3>
       <div style="color:var(--ink-dim);font-size:12px;margin-bottom:10px;line-height:1.7;">
-        把網站上的「賽事數據」整段複製貼進下面的方框（不分隊伍，可一次貼多隊），按「解析」會先預覽抓到的內容，再按「確認匯入」才會真的寫入。<br>
+        把網站上的「賽事數據」整段複製貼進下面的方框（一次貼一個聯盟的資料），按「解析」會先預覽抓到的內容，再按「確認匯入」才會真的寫入。<br>
         以「日期 + 兩隊」去重，重複的場次不會重算。
+      </div>
+      <div style="margin-bottom:8px;display:flex;align-items:center;gap:8px;font-size:13px;">
+        <span style="color:var(--ink-dim);">這段資料是哪個聯盟？</span>
+        <select id="importLeague" style="background:#0e131a;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:5px 8px;font-size:13px;">
+          <option value="mlb">MLB</option>
+          <option value="npb">日職</option>
+          <option value="kbo">韓職</option>
+          <option value="cpbl">中職</option>
+        </select>
       </div>
       <textarea id="importText" placeholder="把整段資料貼進來..." style="width:100%;min-height:140px;flex:0 0 140px;background:#0e131a;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:monospace;font-size:12px;resize:vertical;"></textarea>
       <div style="margin:10px 0 6px;display:flex;gap:8px;align-items:center;">
@@ -802,6 +811,55 @@ const LEAGUES = {
   kbo:  { name:"韓職", color:"var(--kbo)", teams:["LG雙子","KT巫師","SSG登陸者","NC恐龍","斗山熊","起亞虎","樂天巨人","三星獅","韓華鷹","培證英雄"] },
   cpbl: { name:"中職", color:"var(--cpbl)", teams:["中信兄弟","統一獅","樂天桃猿","富邦悍將","味全龍","台鋼雄鷹"] },
 };
+/* Short-name → long-name translation tables per league.
+   Used by the import parser when the source website uses shortened names. */
+const TEAM_ALIASES = {
+  // MLB website typically uses the same names we use (洋基, 運動家, etc.) — identity-map only what differs
+  mlb: {
+    // (currently no MLB aliases needed; included for symmetry / future use)
+  },
+  npb: {
+    "巨人": "讀賣巨人",
+    "阪神": "阪神虎",
+    "橫濱": "橫濱DeNA",
+    "廣島": "廣島鯉魚",
+    "養樂多": "養樂多燕子",
+    "中日": "中日龍",
+    "軟銀": "軟銀鷹",
+    "火腿": "日本火腿",
+    "羅德": "羅德",
+    "樂天": "樂天金鷲",
+    "西武": "西武獅",
+    "歐力士": "歐力士"
+  },
+  kbo: {
+    "雙子": "LG雙子",
+    "巫師": "KT巫師",
+    "登陸者": "SSG登陸者",
+    "恐龍": "NC恐龍",
+    "斗山熊": "斗山熊",
+    "起亞虎": "起亞虎",
+    "樂天": "樂天巨人",
+    "三星獅": "三星獅",
+    "華老鷹": "韓華鷹",
+    "培證": "培證英雄"
+  },
+  cpbl: {
+    "兄弟": "中信兄弟",
+    "統一": "統一獅",
+    "樂天": "樂天桃猿",
+    "富邦": "富邦悍將",
+    "味全": "味全龍",
+    "台鋼": "台鋼雄鷹"
+  }
+};
+// Translate a possibly-short team name to its canonical long name within a given league.
+// Returns the long name if found, otherwise returns the input unchanged (the caller decides if it's valid).
+function canonicalTeamName(league, name){
+  if(!name) return name;
+  if(LEAGUES[league] && LEAGUES[league].teams.includes(name)) return name;  // already canonical
+  return (TEAM_ALIASES[league] && TEAM_ALIASES[league][name]) || name;
+}
 const GRID = 20, SNAP = 11, MERGE_DIST = 64;
 
 const todayStr = ()=>{ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
@@ -2931,15 +2989,27 @@ function leagueOfTeam(team){
   }
   return null;
 }
-function parseGamesText(txt, seasonYear){
+function parseGamesText(txt, seasonYear, league){
   const DATE_RE = /^\d{1,2}\/\d{1,2}$/;
   const SCORE_RE = /^\d+$/;
   const lines = txt.split(/\r?\n/).map(l => l.trim());
-  const matches = [];       // fully-parsed matches (have both 讓分 + 大小)
-  const incomplete = [];    // partial matches (missing 讓分 or 大小, will be presented for manual補)
+  const matches = [];       // fully-parsed matches
+  const incomplete = [];    // partial matches (missing 讓分 or 大小)
   const errors = [];        // unrecoverable parse errors
-  let allTeams = new Set();
-  ["mlb","npb","kbo","cpbl"].forEach(k => LEAGUES[k].teams.forEach(t => allTeams.add(t)));
+
+  // Build the set of "valid team strings for this league" = canonical long names + any aliases
+  const leagueTeams = (LEAGUES[league] && LEAGUES[league].teams) || [];
+  const aliases = TEAM_ALIASES[league] || {};
+  const validNames = new Set(leagueTeams);
+  Object.keys(aliases).forEach(short => validNames.add(short));
+  // Resolver: any valid string (long or short) → canonical long name. Unknown → null.
+  function resolveName(s){
+    if(!s) return null;
+    if(leagueTeams.includes(s)) return s;
+    if(aliases[s]) return aliases[s];
+    return null;
+  }
+
   let i = 0;
   while(i < lines.length){
     if(!DATE_RE.test(lines[i])){ i++; continue; }
@@ -2951,45 +3021,45 @@ function parseGamesText(txt, seasonYear){
     if(block.length < 6){ continue; }
     if(!(SCORE_RE.test(block[1]) && block[2]==='V.S.' && SCORE_RE.test(block[3]))) continue;
     const awayScore = parseInt(block[1],10), homeScore = parseInt(block[3],10);
-    const awayTeam = block[4];
-    if(!allTeams.has(awayTeam)){ errors.push(`${date}: 找不到客隊「${awayTeam}」`); continue; }
+    const awayRaw = block[4];
+    const awayTeam = resolveName(awayRaw);
+    if(!awayTeam){ errors.push(`${date}: 找不到客隊「${awayRaw}」`); continue; }
     let homeTeam = null;
     for(let k=5; k<block.length; k++){
-      if(allTeams.has(block[k]) && block[k]!==awayTeam){ homeTeam = block[k]; break; }
+      const candidate = resolveName(block[k]);
+      if(candidate && candidate!==awayTeam){ homeTeam = candidate; break; }
     }
     if(!homeTeam){ errors.push(`${date}: 找不到主隊`); continue; }
 
-    // Extract 運彩 讓分 (signed decimal "分")
+    // Extract 運彩 讓分 (signed decimal "分") and 運彩 大小 (decimal basis).
+    // Lines look like:
+    //   "<team>\n- 2.5分"           ← 運彩讓分
+    //   "<team>\n大9.5"              ← 運彩大小
+    //   "<team>\n2分贏 50%"          ← 國際讓分（used only as hdFav hint）
     let handicapTeam=null, handicapSign=null, handicapVal=null;
-    // Extract 運彩 大小 (decimal basis, no 贏/輸 suffix)
     let totBasis=null;
-    // Also extract 國際讓分 hint to predict default hdFav when 運彩讓分 missing.
-    // Format: "<team>\n2分贏 50%" or "<team>\n受讓2分輸 50%"
-    let intlFav = null;  // which team is the favorite per the 國際 line
+    let intlFav = null;
     for(let k=1; k<block.length; k++){
-      // 運彩讓分 line: "- 2.5分" / "+ 1.5分"
+      const prev = resolveName(block[k-1]);
       const m1 = block[k].match(/^([-+])\s*(\d+(?:\.\d+)?)\s*分$/);
-      if(m1 && allTeams.has(block[k-1])){
-        handicapTeam = block[k-1]; handicapSign = m1[1]; handicapVal = parseFloat(m1[2]);
+      if(m1 && prev){
+        handicapTeam = prev; handicapSign = m1[1]; handicapVal = parseFloat(m1[2]);
         continue;
       }
-      // 運彩大小 line: "大 7.5" / "小 8.5" (no 贏/輸)
       const m2 = block[k].match(/^(大|小)\s*(\d+(?:\.\d+)?)$/);
-      if(m2 && allTeams.has(block[k-1])){
+      if(m2 && prev){
         totBasis = parseFloat(m2[2]);
         continue;
       }
-      // 國際讓分 line: "2分贏 50%" / "受讓2分輸 50%" — used only for hdFav hint
       const m3 = block[k].match(/^(受讓)?\d+分(贏|輸)\s*\d+%$/);
-      if(m3 && allTeams.has(block[k-1]) && intlFav===null){
-        const team = block[k-1];
-        const isUnderdog = !!m3[1];   // "受讓" prefix = that team is the underdog
-        intlFav = isUnderdog ? (team===awayTeam ? homeTeam : awayTeam) : team;
+      if(m3 && prev && intlFav===null){
+        const isUnderdog = !!m3[1];
+        intlFav = isUnderdog ? (prev===awayTeam ? homeTeam : awayTeam) : prev;
         continue;
       }
     }
 
-    // Compute hdFav default if 運彩讓分 missing
+    // Compute hdFav default
     let hdFav = null;
     if(handicapTeam!==null){
       hdFav = (handicapSign==="-")
@@ -3005,25 +3075,22 @@ function parseGamesText(txt, seasonYear){
     const record = {
       sid: `import_${isoDate}_${awayTeam}_${homeTeam}`,
       date: isoDate,
-      league: leagueOfTeam(awayTeam),
+      league,
       awayTeam, homeTeam,
       awayScore, homeScore,
-      hdFav: hdFav || "home",       // fallback default if neither was found
+      hdFav: hdFav || "home",
       hdVal: handicapVal,
       totBasis
     };
-    // Track which fields are auto-supplied (so manual-补 UI can flag them)
     const missing = [];
-    if(handicapTeam===null) missing.push("hd");   // 運彩讓分 missing
-    if(totBasis===null)     missing.push("tot");  // 運彩大小 missing
+    if(handicapTeam===null) missing.push("hd");
+    if(totBasis===null)     missing.push("tot");
     if(missing.length===0){
       matches.push(record);
     } else {
-      // staged for manual補; provide sensible defaults
       if(record.hdVal==null) record.hdVal = 1.5;
       if(record.totBasis==null) record.totBasis = 8.5;
       record._missing = missing;
-      // hdFavSuggested = whether the parser actually derived hdFav (vs fell back to "home")
       record._hdFavFromHint = (handicapTeam!==null) || (intlFav!==null);
       incomplete.push(record);
     }
@@ -3152,8 +3219,9 @@ let _parsedErrors = [];
 $("#importParseBtn") && ($("#importParseBtn").onclick = ()=>{
   const txt = $("#importText").value;
   if(!txt.trim()){ $("#importStatus").textContent = "請貼入資料。"; return; }
+  const league = $("#importLeague")?.value || "mlb";
   const year = parseInt(seasonOf(doc.activeDate),10) || new Date().getFullYear();
-  const { matches, incomplete, errors } = parseGamesText(txt, year);
+  const { matches, incomplete, errors } = parseGamesText(txt, year, league);
 
   // de-dup against existing doc.games + within this paste
   const existing = new Set((doc.games||[]).map(g => `${g.date}|${g.awayTeam}|${g.homeTeam}`));
