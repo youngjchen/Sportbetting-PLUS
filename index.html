@@ -256,7 +256,6 @@
   }
   .sec .warn-ico.conflict{color:var(--conflict);}
   .sec .warn-ico.cross{color:var(--cross);}
-  .opt.conflict{background:rgba(255,59,92,.08);box-shadow:inset 3px 0 0 var(--conflict);}
   .opt.conflict .side{background:var(--conflict);color:#fff;}
 
   /* summary panel on canvas */
@@ -438,6 +437,34 @@
   .sec .pctline .v.lo{color:var(--conflict);}
   .sec .pctline .v.low-sample{color:#5b6b80;}
   .sec .pctline .ssize{font-size:9px;color:#5b6b80;margin-left:1px;font-family:"Oswald";}
+  /* Standalone pct line — sits as its own row below a .sec header, used when the
+     section row is too cramped to hold both the title/icons AND the pct text. */
+  .pctline-row{
+    margin:1px 12px 4px;padding:0 6px;
+    font-size:11px;color:var(--ink-dim);font-family:"Noto Sans TC";
+    font-weight:500;letter-spacing:0;text-transform:none;
+    text-align:right;
+  }
+  .pctline-row .v{color:#aeb9c8;font-weight:700;font-family:"Oswald";}
+  .pctline-row .v.hi{color:#28c76f;}
+  .pctline-row .v.lo{color:var(--conflict);}
+  .pctline-row .v.low-sample{color:#5b6b80;}
+  .pctline-row .ssize{font-size:9px;color:#5b6b80;margin-left:1px;font-family:"Oswald";}
+  /* 隊伍近況 (form line) — runs avg + current streak, two teams side by side */
+  .formline{
+    margin:4px 12px 2px;padding:5px 8px;border-radius:6px;font-size:11px;
+    background:rgba(255,255,255,.025);border:1px solid var(--line);color:var(--ink-dim);
+    display:flex;align-items:center;gap:6px;line-height:1.4;
+    font-family:"Noto Sans TC";letter-spacing:0;
+  }
+  .formline .lbl{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:var(--ink-dim);flex:0 0 auto;}
+  .formline .side{flex:1 1 0;min-width:0;}
+  .formline .side .nm{font-weight:700;color:var(--ink);}
+  .formline .side .runs{font-family:"Oswald";font-weight:700;color:#aeb9c8;margin-left:4px;}
+  .formline .side .stk{font-family:"Oswald";font-weight:700;margin-left:4px;}
+  .formline .side .stk.win{color:#28c76f;}
+  .formline .side .stk.lose{color:var(--conflict);}
+  .formline .sep{flex:0 0 auto;color:#3a4a5e;}
   /* trend line at the bottom of a card */
   .trendline{
     margin:6px 12px 8px;padding:7px 9px;border-radius:7px;font-size:12px;
@@ -1241,7 +1268,7 @@ function streakRead(season, team, venue){
 }
 function streakStr(s){
   if(!s || s.n===0) return "—";
-  return s.kind==="W" ? String(s.n) : `${s.n}L`;
+  return `${s.n}${s.kind}`;   // "5W" or "5L"
 }
 
 /* user preference: which window to show on cards. "season" or 10/30/50 */
@@ -1447,7 +1474,7 @@ function renderCard(it){
     row.append(b, nm, mkLights(obj));
     return row;
   }
-  function sec(label, extraIco, conflict, crossWarn, pctHTML){
+  function sec(label, extraIco, conflict, crossWarn){
     const s = document.createElement("div"); s.className="sec"+(conflict?" conflict":"")+(crossWarn?" cross":"");
     const t = document.createElement("span"); t.textContent=label;
     const ln = document.createElement("span"); ln.className="ln";
@@ -1459,15 +1486,24 @@ function renderCard(it){
     }
     if(crossWarn){
       const w = document.createElement("span"); w.className="warn-ico cross";
-      w.textContent="◆"; w.title = crossWarn;  // crossWarn already carries the full text
+      w.textContent="◆"; w.title = crossWarn;
       s.appendChild(w);
-    }
-    if(pctHTML){
-      const p = document.createElement("span"); p.innerHTML = pctHTML;
-      if(p.firstElementChild) s.appendChild(p.firstElementChild);
     }
     if(extraIco) s.appendChild(extraIco);
     return s;
+  }
+  // Standalone pct row that sits below a sec() header. pctHTML is the same
+  // string sectionPctHTML(...) returns (wrapped in <span class="pctline">…</span>).
+  // We unwrap it and host the inner content in a row of its own.
+  function pctRow(pctHTML){
+    if(!pctHTML) return null;
+    const r = document.createElement("div"); r.className="pctline-row";
+    const tmp = document.createElement("span"); tmp.innerHTML = pctHTML;
+    const inner = tmp.firstElementChild;
+    if(!inner) return null;
+    // copy children, not the wrapper class
+    while(inner.firstChild) r.appendChild(inner.firstChild);
+    return r;
   }
 
   // conflict = both sides of the same market are lit
@@ -1506,22 +1542,50 @@ function renderCard(it){
   const totLean = totConflict?null: lean(it.over.lights, "大分", it.under.lights, "小分");
 
   // ---- 獨贏 ----
-  el.appendChild(sec("獨贏", null, mlConflict, crossConflict?"⚠ 與讓分矛盾":null, sectionPctHTML(it,"ml")));
+  el.appendChild(sec("獨贏", null, mlConflict, crossConflict?"⚠ 與讓分矛盾":null));
+  { const r = pctRow(sectionPctHTML(it,"ml")); if(r) el.appendChild(r); }
   el.appendChild(optRow("客", "", it.away, teamColor("away"), it.mlAway, mlConflict));
   el.appendChild(optRow("主", "", it.home, teamColor("home"), it.mlHome, mlConflict));
 
   // ---- 讓分 / 受讓 ----
   const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
   favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
-  el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null, sectionPctHTML(it,"hd")));
+  el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null));
+  { const r = pctRow(sectionPctHTML(it,"hd")); if(r) el.appendChild(r); }
   const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
   el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
   el.appendChild(optRow("受讓", "recv", it[undSide], teamColor(undSide), it.hdRecv, hdConflict));
 
   // ---- 大小分 ----
-  el.appendChild(sec("大小分", null, totConflict, null, sectionPctHTML(it,"tot")));
+  el.appendChild(sec("大小分", null, totConflict, null));
+  { const r = pctRow(sectionPctHTML(it,"tot")); if(r) el.appendChild(r); }
   el.appendChild(optRow("大", "", "大分", null, it.over, totConflict));
   el.appendChild(optRow("小", "", "小分", null, it.under, totConflict));
+
+  // ---- 近況 (隊伍場均得失分 + 目前連勝) ----
+  {
+    const season = seasonOf(doc.activeDate);
+    const sideHTML = (team)=>{
+      const runs = runsRead(season, team, null);
+      const stk = streakRead(season, team, null);
+      let runsStr = "—";
+      if(runs.games>0){
+        const af = (runs.scored/runs.games).toFixed(2);
+        const ag = (runs.conceded/runs.games).toFixed(2);
+        runsStr = `${af}/${ag}`;
+      }
+      const stkCls = stk.n===0 ? "" : (stk.kind==="W" ? "win" : "lose");
+      const stkStr = stk.n===0 ? "—" : `${stk.n}${stk.kind}`;
+      return `<span class="side"><span class="nm">${esc(team)}</span><span class="runs">${runsStr}</span><span class="stk ${stkCls}">${stkStr}</span></span>`;
+    };
+    // only show if at least one team has any data
+    const hasData = runsRead(season, it.away, null).games>0 || runsRead(season, it.home, null).games>0;
+    if(hasData){
+      const fl = document.createElement("div"); fl.className="formline";
+      fl.innerHTML = `<span class="lbl">近況</span>${sideHTML(it.away)}<span class="sep">·</span>${sideHTML(it.home)}`;
+      el.appendChild(fl);
+    }
+  }
 
   // ---- trend line (數據傾向) ----
   const th = trendHTML(it);
@@ -2533,11 +2597,31 @@ function teamPctForSort(season, team, market, venue){
   if(d===0) return null;
   return rec.w/d;
 }
+// Sort-key for the "runs" pseudo-market: returns (得分 - 失分) for this team @ venue.
+// Higher = stronger; null when no games played.
+function teamRunsDiffForSort(season, team, venue){
+  const r = runsRead(season, team, venue);
+  if(r.games===0) return null;
+  return r.scored - r.conceded;
+}
+// Sort-key for the "streak" pseudo-market: positive n for W streak, negative for L.
+// "W in front, n large→small; then L sorted by n large→small" achieved by descending sort
+// of: W → +n;  L → -n;  no streak → null (sorts last).
+function teamStreakForSort(season, team, venue){
+  const s = streakRead(season, team, venue);
+  if(!s || s.n===0) return null;
+  return s.kind==="W" ? s.n : -s.n;
+}
 function sortedTeams(teams, season){
   if(!statsSort.market) return teams;
+  const getKey = (team)=>{
+    if(statsSort.market==="runs")   return teamRunsDiffForSort(season, team, statsSort.venue);
+    if(statsSort.market==="streak") return teamStreakForSort(season, team, statsSort.venue);
+    return teamPctForSort(season, team, statsSort.market, statsSort.venue);
+  };
   return [...teams].sort((a,b)=>{
-    const pa = teamPctForSort(season,a,statsSort.market,statsSort.venue);
-    const pb = teamPctForSort(season,b,statsSort.market,statsSort.venue);
+    const pa = getKey(a);
+    const pb = getKey(b);
     if(pa==null && pb==null) return 0;
     if(pa==null) return 1;
     if(pb==null) return -1;
@@ -2676,8 +2760,8 @@ function renderStatsPage(){
     extras.forEach(([m,_])=>{
       ["home","away",null].forEach((v,idx)=>{
         const vlabel = v==="home"?"主":(v==="away"?"客":"全");
-        const groupCls = idx===0 ? "group" : "";
-        html += `<th class="${groupCls}">${vlabel}</th>`;
+        const groupCls = idx===0 ? "group sortable" : "sortable";
+        html += `<th class="${groupCls}" data-sort-market="${m}" data-sort-venue="${v==null?'':v}">${vlabel}${sortIndicator(m, v)}</th>`;
       });
     });
     html += `</tr></thead><tbody>`;
