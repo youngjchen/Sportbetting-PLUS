@@ -300,6 +300,49 @@
     display:none;flex-direction:column;overflow:hidden;
   }
   #statspage.show{display:flex;}
+  /* ---------- review page (shares stats-toolbar/body styles) ---------- */
+  #reviewpage{
+    position:absolute;inset:0;z-index:121;background:var(--bg);
+    display:none;flex-direction:column;overflow:hidden;
+  }
+  #reviewpage.show{display:flex;}
+  .rv-section{margin:0 0 22px;}
+  .rv-section .rv-head{
+    font-weight:700;font-size:15px;margin:0 0 4px;display:flex;align-items:baseline;gap:8px;
+  }
+  .rv-section .rv-head .rv-sub{font-weight:500;font-size:12px;color:var(--ink-dim);}
+  .rv-note{color:var(--ink-dim);font-size:12px;line-height:1.6;margin:0 0 10px;}
+  .rv-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;color:var(--ink);max-width:640px;}
+  .rv-table th,.rv-table td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}
+  .rv-table th{color:var(--ink-dim);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;}
+  .rv-table td.lbl,.rv-table th.lbl{text-align:left;font-weight:700;}
+  .rv-bar-wrap{display:flex;align-items:center;gap:8px;justify-content:flex-end;}
+  .rv-bar{width:90px;height:8px;border-radius:5px;background:#1b232e;overflow:hidden;flex:0 0 auto;}
+  .rv-bar > span{display:block;height:100%;border-radius:5px;}
+  .rv-pct{font-family:"Oswald";font-weight:700;font-size:14px;min-width:42px;display:inline-block;text-align:right;}
+  .rv-pct.hi{color:#28c76f;}
+  .rv-pct.lo{color:var(--conflict);}
+  .rv-pct.mid{color:#aeb9c8;}
+  .rv-pct.low-sample{color:#5b6b80;}
+  .rv-samp{font-family:"Oswald";font-size:11px;color:var(--ink-dim);}
+  .rv-row.low-sample td{opacity:.7;}
+  .rv-row.flag td.lbl{color:var(--lit);}
+  .rv-empty{color:var(--ink-dim);font-size:13px;padding:18px 4px;}
+  .rv-headline{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);
+    border-radius:12px;padding:14px 16px;margin:0 0 20px;max-width:640px;
+  }
+  .rv-headline .big{font-family:"Oswald";font-weight:700;font-size:30px;line-height:1;}
+  .rv-headline .big .unit{font-size:16px;color:var(--ink-dim);margin-left:3px;}
+  .rv-headline .cap{color:var(--ink-dim);font-size:12px;margin-top:4px;}
+  .rv-headline .row2{display:flex;gap:24px;flex-wrap:wrap;margin-top:10px;}
+  .rv-headline .row2 .blk .v{font-family:"Oswald";font-weight:700;font-size:18px;}
+  .rv-headline .row2 .blk .k{color:var(--ink-dim);font-size:11px;}
+  .rv-insight{
+    border-left:3px solid var(--lit);background:rgba(255,176,46,.06);
+    padding:8px 12px;border-radius:0 8px 8px 0;margin:6px 0 0;font-size:12.5px;line-height:1.6;color:#e9d8b0;max-width:640px;
+  }
+  .rv-insight.warn{border-left-color:var(--conflict);background:rgba(255,59,92,.06);color:#f0c0c8;}
   .stats-toolbar{
     display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);
     background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);flex-wrap:wrap;
@@ -623,6 +666,21 @@
   .summary-line .pill .pin{width:8px;height:8px;border-radius:50%;background:var(--lit);box-shadow:0 0 7px var(--lit-glow);}
   .summary-line .pill.hot .pin{background:var(--hot);box-shadow:0 0 7px var(--hot-glow);}
   .summary-line .none{color:var(--ink-dim);font-size:12px;}
+  /* final score pill (settled cards) — client left, home right, matches card title order */
+  .summary-line .pill.score-pill{
+    background:#0c0f14;border-color:#3a4a5e;gap:5px;font-family:"Oswald";
+  }
+  .summary-line .pill.score-pill .sc-nm{color:var(--ink-dim);font-weight:600;font-size:11px;}
+  .summary-line .pill.score-pill .sc-v{color:var(--ink);font-weight:700;font-size:15px;}
+  .summary-line .pill.score-pill .sc-dash{color:var(--ink-dim);font-weight:400;margin:0 1px;}
+  /* hit/miss result pills (settled cards) */
+  .summary-line .pill.res-pill .rmk{font-weight:900;font-size:13px;margin-right:2px;}
+  .summary-line .pill.res-pill.hit{border-color:#2a4a36;background:rgba(40,199,111,.10);color:#9be3b5;}
+  .summary-line .pill.res-pill.hit .rmk{color:#28c76f;}
+  .summary-line .pill.res-pill.miss{border-color:#5a2a36;background:rgba(255,59,92,.10);color:#ffb0bf;}
+  .summary-line .pill.res-pill.miss .rmk{color:var(--conflict);}
+  .summary-line .pill.res-pill.void{border-color:var(--line);color:var(--ink-dim);}
+  .summary-line .pill.res-pill.void .rmk{color:var(--ink-dim);}
 
   /* ---------- conflict glow on whole card ---------- */
   .card.has-conflict{border-color:var(--conflict);box-shadow:0 0 0 1px var(--conflict-glow),0 0 22px var(--conflict-glow),0 10px 26px rgba(0,0,0,.45);}
@@ -704,6 +762,7 @@
         <button id="clearLights">○ 清空所有圓圈</button>
         <div class="sep"></div>
         <button id="statsBtn">📊 隊伍統計</button>
+        <button id="reviewBtn">🔍 燈號回顧</button>
         <div class="colrow">
           <span class="collabel">過盤率</span>
           <button class="winbtn" data-win="season">本季</button>
@@ -771,6 +830,32 @@
       <button class="btn closebtn" id="statsClose">關閉</button>
     </div>
     <div class="stats-body" id="statsBody"></div>
+  </div>
+
+  <!-- Review page (overlay): light-signal hit-rate retrospectives -->
+  <div id="reviewpage">
+    <div class="stats-toolbar">
+      <span class="title">🔍 燈號回顧</span>
+      <select id="reviewLeague">
+        <option value="all">全部聯盟</option>
+        <option value="mlb">MLB</option>
+        <option value="npb">日職</option>
+        <option value="kbo">韓職</option>
+        <option value="cpbl">中職</option>
+      </select>
+      <select id="reviewScope">
+        <option value="3">≥3 燈（強訊號）</option>
+        <option value="1">全部帶燈</option>
+      </select>
+      <select id="reviewMarket">
+        <option value="all">全部盤口</option>
+        <option value="ml">獨贏</option>
+        <option value="hd">讓分／受讓</option>
+        <option value="tot">大小分</option>
+      </select>
+      <button class="btn closebtn" id="reviewClose">關閉</button>
+    </div>
+    <div class="stats-body" id="reviewBody"></div>
   </div>
 
   <!-- Edit one stat cell -->
@@ -1594,11 +1679,61 @@ function renderCard(it){
   // ---- collapsed one-line summary ----
   const sl = document.createElement("div"); sl.className="summary-line";
   const pills = [];
+
+  // settled final score, shown first so it can be cross-checked against the data
+  if(it.settled && it.settled.awayScore!=null && it.settled.homeScore!=null){
+    const sp = document.createElement("span"); sp.className="pill score-pill";
+    sp.innerHTML = `<span class="sc-nm">${esc(it.away)}</span> <span class="sc-v">${it.settled.awayScore}</span>`+
+                   `<span class="sc-dash">:</span>`+
+                   `<span class="sc-v">${it.settled.homeScore}</span> <span class="sc-nm">${esc(it.home)}</span>`;
+    pills.push(sp);
+  }
+
+  // For a settled card, judge each lit option against the actual result and show ✓/✗.
+  // outcomeFor returns "hit" | "miss" | "void" (和局/push excluded). lights read from the card.
+  function outcomeFor(market, side){
+    const s = it.settled; if(!s) return null;
+    if(market==="ml"){
+      if(s.ml==="tie") return "void";
+      return (s.ml===side) ? "hit" : "miss";
+    }
+    if(market==="hd"){   // side: "give"(讓方過盤) or "recv"(受讓方)
+      const favCovered = (s.hd==="cover");
+      if(side==="give") return favCovered ? "hit" : "miss";
+      if(side==="recv") return favCovered ? "miss" : "hit";
+    }
+    if(market==="tot"){  // side: "over" | "under"
+      if(s.tot==="push") return "void";
+      return (s.tot===side) ? "hit" : "miss";
+    }
+    return null;
+  }
+  // settled pill: shows the lit pick + ✓/✗ outcome
+  const resPill = (txt, n, outcome)=>{
+    const p=document.createElement("span");
+    p.className="pill res-pill "+(outcome==="hit"?"hit":(outcome==="miss"?"miss":"void"));
+    const mark = outcome==="hit" ? "✓" : (outcome==="miss" ? "✗" : "－");
+    p.innerHTML=`<span class="rmk">${mark}</span>${esc(txt)} ●${n}`;
+    pills.push(p);
+  };
+  // pre-settlement pill (unchanged behaviour): just shows lean + light count
   const pill = (txt,n)=>{ const p=document.createElement("span"); p.className="pill"+(n>=4?" hot":""); p.innerHTML=`<span class="pin"></span>${esc(txt)} ●${n}`; pills.push(p); };
-  if(mlLean  && mlLean.n>=3)  pill(mlLean.winLabel, mlLean.n);
-  if(hdLean  && hdLean.n>=3)  pill(`${hdLean.winLabel}${it.hdVal?` ${it.hdVal}`:""}`, hdLean.n);
-  if(totLean && totLean.n>=3) pill(`${totLean.winLabel}${it.totVal?` ${it.totVal}`:""}`, totLean.n);
-  if(mlConflict||hdConflict||totConflict){ const w=document.createElement("span"); w.className="pill"; w.style.color="var(--conflict)"; w.style.borderColor="var(--conflict)"; w.textContent="⚠ 有衝突"; pills.push(w); }
+
+  if(it.settled){
+    // settled: show each lit side (>=3) with its hit/miss mark, per market, no conflict-suppression
+    const favSideS = it.hdFav, undSideS = it.hdFav==="away"?"home":"away";
+    if(it.mlAway.lights>=3) resPill(it.away, it.mlAway.lights, outcomeFor("ml","away"));
+    if(it.mlHome.lights>=3) resPill(it.home, it.mlHome.lights, outcomeFor("ml","home"));
+    if(it.hdGive.lights>=3) resPill(`${it[favSideS]}讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdGive.lights, outcomeFor("hd","give"));
+    if(it.hdRecv.lights>=3) resPill(`${it[undSideS]}受讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdRecv.lights, outcomeFor("hd","recv"));
+    if(it.over.lights>=3)   resPill(`大分${it.totVal?` ${it.totVal}`:""}`, it.over.lights, outcomeFor("tot","over"));
+    if(it.under.lights>=3)  resPill(`小分${it.totVal?` ${it.totVal}`:""}`, it.under.lights, outcomeFor("tot","under"));
+  } else {
+    if(mlLean  && mlLean.n>=3)  pill(mlLean.winLabel, mlLean.n);
+    if(hdLean  && hdLean.n>=3)  pill(`${hdLean.winLabel}${it.hdVal?` ${it.hdVal}`:""}`, hdLean.n);
+    if(totLean && totLean.n>=3) pill(`${totLean.winLabel}${it.totVal?` ${it.totVal}`:""}`, totLean.n);
+    if(mlConflict||hdConflict||totConflict){ const w=document.createElement("span"); w.className="pill"; w.style.color="var(--conflict)"; w.style.borderColor="var(--conflict)"; w.textContent="⚠ 有衝突"; pills.push(w); }
+  }
   if(pills.length){ pills.forEach(p=>sl.appendChild(p)); }
   else { const n=document.createElement("span"); n.className="none"; n.textContent="尚無 3 燈以上的選擇"; sl.appendChild(n); }
   el.appendChild(sl);
@@ -2589,6 +2724,293 @@ function closeStatsPage(){ const sp=$("#statspage"); if(sp) sp.classList.remove(
 $("#statsBtn") && ($("#statsBtn").onclick = openStatsPage);
 $("#statsClose") && ($("#statsClose").onclick = closeStatsPage);
 
+/* ============================================================
+   REVIEW PAGE — 燈號回顧
+   Every settled game carries a lightsSnapshot. We expand it into "picks":
+   one record per lit option, scored hit/miss/void against the settlement.
+   Three retrospectives are three group-bys of the same pick list.
+   ============================================================ */
+const RV_SAMPLE_MIN = 10;   // below this, a bucket is "樣本不足" (greyed, no judgement colour)
+
+// Expand all settled games into individual lit-option picks.
+// scope: minimum lights to include (3 = strong only, 1 = all lit).
+// leagueFilter: "all" | league key. marketFilter: "all" | "ml" | "hd" | "tot".
+function collectPicks(scope, leagueFilter, marketFilter){
+  const picks = [];
+  const games = doc.games || [];
+  for(let gi=0; gi<games.length; gi++){
+    const g = games[gi];
+    if(!g.lightsSnapshot) continue;                 // pre-feature games have no snapshot
+    if(leagueFilter!=="all" && g.league!==leagueFilter) continue;
+    const ls = g.lightsSnapshot;
+    const d = g.date;
+    const wd = weekdayOf(d);                         // 0=Sun..6=Sat
+    const mo = monthOf(d);                           // 1..12
+    // result helpers from the stored game record
+    const mlRes  = (g.mlResult!=null) ? g.mlResult
+                  : (g.awayScore!=null && g.homeScore!=null
+                      ? (g.awayScore>g.homeScore?"away":(g.homeScore>g.awayScore?"home":"tie"))
+                      : null);
+    const favCovered = (g.hdResult==="fav_cover");
+    const totRes = g.totResult; // "over"|"under"|"push"
+
+    function addPick(market, side, lights, outcome){
+      if(lights < scope) return;
+      if(marketFilter!=="all" && marketFilter!==market) return;
+      if(outcome==="void") return;                  // 和局/push excluded from denom entirely
+      picks.push({ date:d, league:g.league, market, side, lights, hit:(outcome==="hit"), weekday:wd, month:mo });
+    }
+    // ml
+    if(mlRes!=null){
+      const aOut = mlRes==="tie" ? "void" : (mlRes==="away"?"hit":"miss");
+      const hOut = mlRes==="tie" ? "void" : (mlRes==="home"?"hit":"miss");
+      addPick("ml","away", ls.mlAway||0, aOut);
+      addPick("ml","home", ls.mlHome||0, hOut);
+    }
+    // hd / recv
+    if(g.hdResult!=null){
+      addPick("hd","give", ls.hdGive||0, favCovered?"hit":"miss");
+      addPick("hd","recv", ls.hdRecv||0, favCovered?"miss":"hit");
+    }
+    // tot
+    if(totRes!=null){
+      const oOut = totRes==="push" ? "void" : (totRes==="over"?"hit":"miss");
+      const uOut = totRes==="push" ? "void" : (totRes==="under"?"hit":"miss");
+      addPick("tot","over",  ls.over||0,  oOut);
+      addPick("tot","under", ls.under||0, uOut);
+    }
+  }
+  return picks;
+}
+function weekdayOf(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d).getDay(); }
+function monthOf(dateStr){ return parseInt(dateStr.split("-")[1],10); }
+const WD_NAMES = ["週日","週一","週二","週三","週四","週五","週六"];
+
+// aggregate {hit, total, pct|null} for an array of picks
+function aggPicks(arr){
+  let hit=0;
+  arr.forEach(p=>{ if(p.hit) hit++; });
+  const total = arr.length;
+  return { hit, total, pct: total>0 ? hit/total : null };
+}
+function pctClassFor(pct, sample){
+  if(pct==null) return "low-sample";
+  if(sample < RV_SAMPLE_MIN) return "low-sample";
+  if(pct>=0.55) return "hi";
+  if(pct<0.45) return "lo";
+  return "mid";
+}
+// a horizontal bar coloured by pct (greyed when low-sample)
+function rvBar(pct, sample){
+  if(pct==null) return `<div class="rv-bar"><span style="width:0"></span></div>`;
+  const w = Math.round(pct*100);
+  let col = "#5b6b80";
+  if(sample>=RV_SAMPLE_MIN){
+    col = pct>=0.55 ? "#28c76f" : (pct<0.45 ? "#ff3b5c" : "#8a96a6");
+  }
+  return `<div class="rv-bar"><span style="width:${w}%;background:${col}"></span></div>`;
+}
+function rvPctCell(agg){
+  if(agg.pct==null) return `<span class="rv-pct low-sample">—</span>`;
+  const cls = pctClassFor(agg.pct, agg.total);
+  return `<span class="rv-pct ${cls}">${Math.round(agg.pct*100)}%</span>`;
+}
+
+let _reviewFilledOnce = false;
+function openReviewPage(){
+  closeMore();
+  const rp = $("#reviewpage"); if(!rp) return;
+  rp.classList.add("show");
+  renderReviewPage();
+}
+function closeReviewPage(){ const rp=$("#reviewpage"); if(rp) rp.classList.remove("show"); }
+$("#reviewBtn") && ($("#reviewBtn").onclick = openReviewPage);
+$("#reviewClose") && ($("#reviewClose").onclick = closeReviewPage);
+["reviewLeague","reviewScope","reviewMarket"].forEach(id=>{
+  const el = $("#"+id); if(el) el.onchange = renderReviewPage;
+});
+
+function renderReviewPage(){
+  const body = $("#reviewBody"); if(!body) return;
+  const scope = parseInt($("#reviewScope").value,10) || 3;
+  const leagueF = $("#reviewLeague").value || "all";
+  const marketF = $("#reviewMarket").value || "all";
+  const picks = collectPicks(scope, leagueF, marketF);
+
+  if(!picks.length){
+    body.innerHTML = `<div class="rv-empty">目前還沒有可回顧的資料。<br><br>`+
+      `回顧的資料來自「結算後的對戰卡」——只有結算時記錄了燈號的比賽才會進來。`+
+      `從現在起每結算一場（且該盤口有點燈）就會累積。<br><br>`+
+      `提醒：之前匯入的歷史比賽沒有燈號紀錄，不會出現在這裡。</div>`;
+    return;
+  }
+
+  let html = "";
+
+  // ---- headline: overall hit rate (回顧三) ----
+  const overall = aggPicks(picks);
+  html += `<div class="rv-headline">`;
+  html += `<div class="big">${overall.pct!=null?Math.round(overall.pct*100):"—"}<span class="unit">%</span></div>`;
+  html += `<div class="cap">整體命中率　·　共 ${overall.total} 個帶燈選擇（命中 ${overall.hit}）`+
+          `${overall.total<RV_SAMPLE_MIN?"　⚠ 樣本仍少，先別下定論":""}</div>`;
+  // trend-direction validation, if any games carry trendTop
+  const trendAgg = collectTrendValidation(leagueF);
+  html += `<div class="row2">`;
+  html += `<div class="blk"><div class="v">${overall.hit}/${overall.total}</div><div class="k">命中 / 總帶燈選擇</div></div>`;
+  if(trendAgg.total>0){
+    html += `<div class="blk"><div class="v">${trendAgg.pct!=null?Math.round(trendAgg.pct*100):"—"}%</div>`+
+            `<div class="k">數據偏向方向命中（${trendAgg.hit}/${trendAgg.total}）</div></div>`;
+  }
+  html += `</div></div>`;
+  if(trendAgg.total>=RV_SAMPLE_MIN){
+    if(trendAgg.pct!=null && trendAgg.pct < 0.50){
+      html += `<div class="rv-insight warn">📉 卡片上的「數據偏向」目前命中率只有 ${Math.round(trendAgg.pct*100)}%，低於擲硬幣。`+
+              `這代表這版過盤率的預測力存疑，看數據偏向下注前要保守。</div>`;
+    } else if(trendAgg.pct!=null && trendAgg.pct >= 0.55){
+      html += `<div class="rv-insight">📈 「數據偏向」方向命中率 ${Math.round(trendAgg.pct*100)}%，看起來有一點預測力，可以繼續觀察累積。</div>`;
+    }
+  }
+
+  // ---- 回顧一: by light count bucket ----
+  html += `<div class="rv-section">`;
+  html += `<div class="rv-head">① 燈號數 × 命中率 <span class="rv-sub">驗證「燈越多越容易爆冷」</span></div>`;
+  html += `<div class="rv-note">每個「帶燈選項」依當時燈數分桶。如果 6、7+ 桶的命中率明顯比 3-5 低，就支持「明牌大量一致看好時反而易冷（誘盤）」的直覺。</div>`;
+  const buckets = [
+    {key:"3", label:"3 燈", test:n=>n===3},
+    {key:"4", label:"4 燈", test:n=>n===4},
+    {key:"5", label:"5 燈", test:n=>n===5},
+    {key:"6", label:"6 燈", test:n=>n===6},
+    {key:"7", label:"7+ 燈", test:n=>n>=7}
+  ];
+  // when scope=≥3, bucket "3" naturally starts at 3; when scope=全部帶燈, add a 1-2 bucket
+  const allBuckets = (scope<=1)
+    ? [{key:"12", label:"1-2 燈", test:n=>n>=1&&n<=2}, ...buckets]
+    : buckets;
+  html += `<table class="rv-table"><thead><tr><th class="lbl">燈號數</th><th>命中率</th><th>命中 / 樣本</th></tr></thead><tbody>`;
+  // find worst qualifying bucket to flag
+  const bucketAggs = allBuckets.map(b=>{
+    const arr = picks.filter(p=>b.test(p.lights));
+    return { b, agg: aggPicks(arr) };
+  });
+  let worst = null;
+  bucketAggs.forEach(x=>{ if(x.agg.total>=RV_SAMPLE_MIN && x.agg.pct!=null){ if(!worst || x.agg.pct<worst.agg.pct) worst=x; } });
+  bucketAggs.forEach(x=>{
+    const {b, agg} = x;
+    const low = agg.total < RV_SAMPLE_MIN;
+    const isFlag = worst && b.key===worst.b.key && worst.agg.pct<0.50;
+    html += `<tr class="rv-row${low?" low-sample":""}${isFlag?" flag":""}">`+
+            `<td class="lbl">${b.label}${isFlag?" ⚠":""}</td>`+
+            `<td><div class="rv-bar-wrap">${rvBar(agg.pct,agg.total)}${rvPctCell(agg)}</div></td>`+
+            `<td><span class="rv-samp">${agg.hit} / ${agg.total}${low&&agg.total>0?"（樣本不足）":""}</span></td>`+
+            `</tr>`;
+  });
+  html += `</tbody></table>`;
+  // insight for light-count
+  if(worst && worst.agg.pct<0.50 && worst.b.key>="6"){
+    html += `<div class="rv-insight warn">🎯 你的直覺有跡象：<b>${worst.b.label}</b>這桶命中率只有 ${Math.round(worst.agg.pct*100)}%（${worst.agg.hit}/${worst.agg.total}），`+
+            `是所有燈數中最低。明牌大量一致看好時要特別警覺。樣本再多一點會更可靠。</div>`;
+  }
+  html += `</div>`;
+
+  // ---- 回顧二: by weekday + by month ----
+  html += `<div class="rv-section">`;
+  html += `<div class="rv-head">② 星期幾 × 命中率 <span class="rv-sub">驗證「週一最不準」</span></div>`;
+  html += `<div class="rv-note">依比賽日期的星期幾分組。樣本 <${RV_SAMPLE_MIN} 的格子以灰色標示，先別當真。</div>`;
+  html += `<table class="rv-table"><thead><tr><th class="lbl">星期</th><th>命中率</th><th>命中 / 樣本</th></tr></thead><tbody>`;
+  const wdAggs = [];
+  for(let wd=0; wd<7; wd++){
+    const arr = picks.filter(p=>p.weekday===wd);
+    wdAggs.push({ wd, agg: aggPicks(arr) });
+  }
+  // reorder Mon..Sun for readability
+  const wdOrder = [1,2,3,4,5,6,0];
+  let wdWorst = null;
+  wdOrder.forEach(wd=>{ const x=wdAggs[wd]; if(x.agg.total>=RV_SAMPLE_MIN && x.agg.pct!=null){ if(!wdWorst||x.agg.pct<wdWorst.agg.pct) wdWorst=x; } });
+  wdOrder.forEach(wd=>{
+    const {agg} = wdAggs[wd];
+    const low = agg.total < RV_SAMPLE_MIN;
+    const isFlag = wdWorst && wd===wdWorst.wd && wdWorst.agg.pct<0.50;
+    html += `<tr class="rv-row${low?" low-sample":""}${isFlag?" flag":""}">`+
+            `<td class="lbl">${WD_NAMES[wd]}${isFlag?" ⚠":""}</td>`+
+            `<td><div class="rv-bar-wrap">${rvBar(agg.pct,agg.total)}${rvPctCell(agg)}</div></td>`+
+            `<td><span class="rv-samp">${agg.hit} / ${agg.total}${low&&agg.total>0?"（樣本不足）":""}</span></td>`+
+            `</tr>`;
+  });
+  html += `</tbody></table>`;
+  if(wdWorst && wdWorst.agg.pct<0.50){
+    html += `<div class="rv-insight">📅 目前最不準的是<b>${WD_NAMES[wdWorst.wd]}</b>（${Math.round(wdWorst.agg.pct*100)}%，${wdWorst.agg.hit}/${wdWorst.agg.total}）。`+
+            `${wdWorst.wd===1?"跟你「週一最不準」的感覺一致。":"跟「週一最不準」的直覺不完全一樣，可再觀察。"}</div>`;
+  }
+
+  // month sub-table
+  html += `<div class="rv-head" style="margin-top:18px">月份 × 命中率 <span class="rv-sub">賽季階段差異</span></div>`;
+  const monthsPresent = [...new Set(picks.map(p=>p.month))].sort((a,b)=>a-b);
+  if(monthsPresent.length){
+    html += `<table class="rv-table"><thead><tr><th class="lbl">月份</th><th>命中率</th><th>命中 / 樣本</th></tr></thead><tbody>`;
+    monthsPresent.forEach(mo=>{
+      const arr = picks.filter(p=>p.month===mo);
+      const agg = aggPicks(arr);
+      const low = agg.total < RV_SAMPLE_MIN;
+      html += `<tr class="rv-row${low?" low-sample":""}">`+
+              `<td class="lbl">${mo} 月</td>`+
+              `<td><div class="rv-bar-wrap">${rvBar(agg.pct,agg.total)}${rvPctCell(agg)}</div></td>`+
+              `<td><span class="rv-samp">${agg.hit} / ${agg.total}${low&&agg.total>0?"（樣本不足）":""}</span></td>`+
+              `</tr>`;
+    });
+    html += `</tbody></table>`;
+  } else {
+    html += `<div class="rv-empty">尚無月份資料。</div>`;
+  }
+  html += `</div>`;
+
+  // ---- per-market breakdown (always useful) ----
+  html += `<div class="rv-section">`;
+  html += `<div class="rv-head">③ 各盤口命中率</div>`;
+  html += `<table class="rv-table"><thead><tr><th class="lbl">盤口</th><th>命中率</th><th>命中 / 樣本</th></tr></thead><tbody>`;
+  [["ml","獨贏"],["hd","讓分／受讓"],["tot","大小分"]].forEach(([mk,label])=>{
+    const arr = picks.filter(p=>p.market===mk);
+    const agg = aggPicks(arr);
+    const low = agg.total < RV_SAMPLE_MIN;
+    html += `<tr class="rv-row${low?" low-sample":""}">`+
+            `<td class="lbl">${label}</td>`+
+            `<td><div class="rv-bar-wrap">${rvBar(agg.pct,agg.total)}${rvPctCell(agg)}</div></td>`+
+            `<td><span class="rv-samp">${agg.hit} / ${agg.total}${low&&agg.total>0?"（樣本不足）":""}</span></td>`+
+            `</tr>`;
+  });
+  html += `</tbody></table></div>`;
+
+  body.innerHTML = html;
+}
+
+// Validate the stored "數據偏向" leading direction against actual ml result.
+// Only games whose trendTop label is a moneyline ("X獨贏") can be cleanly validated here.
+function collectTrendValidation(leagueFilter){
+  let hit=0, total=0;
+  const games = doc.games || [];
+  games.forEach(g=>{
+    if(!g.trendTop || !g.trendTop.label) return;
+    if(leagueFilter!=="all" && g.league!==leagueFilter) return;
+    const lbl = g.trendTop.label;
+    // only score moneyline-type trend tops (clean win/lose); skip 讓分/受讓/大小 here
+    let predicted = null;
+    if(lbl.endsWith("獨贏")){
+      const team = lbl.slice(0, -2);
+      if(team===g.awayTeam) predicted="away";
+      else if(team===g.homeTeam) predicted="home";
+    }
+    if(!predicted) return;
+    const mlRes = (g.mlResult!=null) ? g.mlResult
+                 : (g.awayScore!=null && g.homeScore!=null
+                     ? (g.awayScore>g.homeScore?"away":(g.homeScore>g.awayScore?"home":"tie"))
+                     : null);
+    if(mlRes==null || mlRes==="tie") return; // tie excluded
+    total++;
+    if(mlRes===predicted) hit++;
+  });
+  return { hit, total, pct: total>0?hit/total:null };
+}
+
+
 // stats sort state: which column to sort by, ascending or descending
 let statsSort = { market:null, venue:null, dir:"desc" };  // null = default league order
 function teamPctForSort(season, team, market, venue){
@@ -2997,6 +3419,23 @@ function applySettlement(it, picks, delta){
   const mlResult = picks.ml;  // "away"|"home"|"tie"
   const hdResult = picks.hd==="cover" ? "fav_cover" : "fav_nocover";
   const totResult = picks.tot;  // "over"|"under"
+  // capture the lights as-they-were at settlement time, so the review system
+  // can later score whether the lit options hit. Snapshot is by side, plus the
+  // favorite side (since 讓/受讓 depend on which side was the favorite).
+  const lightsSnapshot = {
+    mlAway: it.mlAway?.lights||0,
+    mlHome: it.mlHome?.lights||0,
+    hdGive: it.hdGive?.lights||0,   // favorite-covers side
+    hdRecv: it.hdRecv?.lights||0,   // underdog-receives side
+    over:   it.over?.lights||0,
+    under:  it.under?.lights||0
+  };
+  // capture the data-trend's leading direction (if any) for retro-validation (回顧三)
+  let trendTop = null;
+  try{
+    const tlist = trendForMatch(it);
+    if(tlist && tlist.length){ trendTop = { label: tlist[0].label, pn: tlist[0].pn }; }
+  }catch(_){}
   const game = {
     sid: picks._sid,
     date: doc.activeDate,
@@ -3005,7 +3444,9 @@ function applySettlement(it, picks, delta){
     awayScore: picks.awayScore, homeScore: picks.homeScore,
     hdFav: it.hdFav,
     hdResult,
-    totResult
+    totResult,
+    lightsSnapshot,
+    trendTop
   };
   gameUpsert(game);
 }
