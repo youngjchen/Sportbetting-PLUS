@@ -53,7 +53,7 @@
 
   /* ---------- top bar ---------- */
   header{
-    display:flex;align-items:center;gap:14px;
+    display:flex;align-items:center;gap:14px;flex-wrap:wrap;
     padding:12px 18px;
     /* clear the iPhone notch / Dynamic Island in standalone (home-screen) mode */
     padding-top:calc(12px + env(safe-area-inset-top, 0px));
@@ -306,41 +306,41 @@
     display:none;flex-direction:column;overflow:hidden;
   }
   #reviewpage.show{display:flex;}
-  .rv-section{margin:0 0 22px;}
+  .rv-section{margin:0 0 30px;}
   .rv-section .rv-head{
-    font-weight:700;font-size:15px;margin:0 0 4px;display:flex;align-items:baseline;gap:8px;
+    font-weight:700;font-size:18px;margin:0 0 6px;display:flex;align-items:baseline;gap:10px;
   }
-  .rv-section .rv-head .rv-sub{font-weight:500;font-size:12px;color:var(--ink-dim);}
-  .rv-note{color:var(--ink-dim);font-size:12px;line-height:1.6;margin:0 0 10px;}
-  .rv-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;color:var(--ink);max-width:640px;}
-  .rv-table th,.rv-table td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}
-  .rv-table th{color:var(--ink-dim);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;}
-  .rv-table td.lbl,.rv-table th.lbl{text-align:left;font-weight:700;}
-  .rv-bar-wrap{display:flex;align-items:center;gap:8px;justify-content:flex-end;}
-  .rv-bar{width:90px;height:8px;border-radius:5px;background:#1b232e;overflow:hidden;flex:0 0 auto;}
-  .rv-bar > span{display:block;height:100%;border-radius:5px;}
-  .rv-pct{font-family:"Oswald";font-weight:700;font-size:14px;min-width:42px;display:inline-block;text-align:right;}
+  .rv-section .rv-head .rv-sub{font-weight:500;font-size:13px;color:var(--ink-dim);}
+  .rv-note{color:var(--ink-dim);font-size:13px;line-height:1.7;margin:0 0 14px;}
+  .rv-table{width:100%;border-collapse:separate;border-spacing:0;font-size:15px;color:var(--ink);max-width:760px;}
+  .rv-table th,.rv-table td{padding:11px 16px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}
+  .rv-table th{color:var(--ink-dim);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;}
+  .rv-table td.lbl,.rv-table th.lbl{text-align:left;font-weight:700;font-size:16px;}
+  .rv-bar-wrap{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
+  .rv-bar{width:120px;height:10px;border-radius:6px;background:#1b232e;overflow:hidden;flex:0 0 auto;}
+  .rv-bar > span{display:block;height:100%;border-radius:6px;}
+  .rv-pct{font-family:"Oswald";font-weight:700;font-size:17px;min-width:50px;display:inline-block;text-align:right;}
   .rv-pct.hi{color:#28c76f;}
   .rv-pct.lo{color:var(--conflict);}
   .rv-pct.mid{color:#aeb9c8;}
   .rv-pct.low-sample{color:#5b6b80;}
-  .rv-samp{font-family:"Oswald";font-size:11px;color:var(--ink-dim);}
+  .rv-samp{font-family:"Oswald";font-size:13px;color:var(--ink-dim);}
   .rv-row.low-sample td{opacity:.7;}
   .rv-row.flag td.lbl{color:var(--lit);}
-  .rv-empty{color:var(--ink-dim);font-size:13px;padding:18px 4px;}
+  .rv-empty{color:var(--ink-dim);font-size:14px;padding:22px 4px;line-height:1.7;}
   .rv-headline{
     background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);
-    border-radius:12px;padding:14px 16px;margin:0 0 20px;max-width:640px;
+    border-radius:14px;padding:18px 22px;margin:0 0 26px;max-width:760px;
   }
-  .rv-headline .big{font-family:"Oswald";font-weight:700;font-size:30px;line-height:1;}
-  .rv-headline .big .unit{font-size:16px;color:var(--ink-dim);margin-left:3px;}
-  .rv-headline .cap{color:var(--ink-dim);font-size:12px;margin-top:4px;}
-  .rv-headline .row2{display:flex;gap:24px;flex-wrap:wrap;margin-top:10px;}
-  .rv-headline .row2 .blk .v{font-family:"Oswald";font-weight:700;font-size:18px;}
-  .rv-headline .row2 .blk .k{color:var(--ink-dim);font-size:11px;}
+  .rv-headline .big{font-family:"Oswald";font-weight:700;font-size:40px;line-height:1;}
+  .rv-headline .big .unit{font-size:20px;color:var(--ink-dim);margin-left:4px;}
+  .rv-headline .cap{color:var(--ink-dim);font-size:14px;margin-top:6px;}
+  .rv-headline .row2{display:flex;gap:32px;flex-wrap:wrap;margin-top:14px;}
+  .rv-headline .row2 .blk .v{font-family:"Oswald";font-weight:700;font-size:22px;}
+  .rv-headline .row2 .blk .k{color:var(--ink-dim);font-size:12px;}
   .rv-insight{
     border-left:3px solid var(--lit);background:rgba(255,176,46,.06);
-    padding:8px 12px;border-radius:0 8px 8px 0;margin:6px 0 0;font-size:12.5px;line-height:1.6;color:#e9d8b0;max-width:640px;
+    padding:11px 15px;border-radius:0 8px 8px 0;margin:8px 0 0;font-size:14px;line-height:1.7;color:#e9d8b0;max-width:760px;
   }
   .rv-insight.warn{border-left-color:var(--conflict);background:rgba(255,59,92,.06);color:#f0c0c8;}
   .stats-toolbar{
@@ -570,6 +570,7 @@
     position:absolute;right:0;top:calc(100% + 6px);z-index:300;display:none;flex-direction:column;gap:2px;
     background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;
     box-shadow:0 16px 40px rgba(0,0,0,.55);min-width:150px;
+    max-height:80vh;overflow-y:auto;overscroll-behavior:contain;
   }
   #moreMenu.show{display:flex;}
   #moreMenu button{
@@ -587,6 +588,17 @@
   }
   #moreMenu .colbtn:hover{color:var(--ink);border-color:#46566a;background:transparent;}
   #moreMenu .colbtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
+  #moreMenu .leaguecolbtn{
+    flex:0 0 auto;min-width:34px;padding:6px 9px;border-radius:7px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-dim);font-size:12px;font-weight:700;cursor:pointer;
+  }
+  #moreMenu .leaguecolbtn:hover{color:var(--ink);border-color:#46566a;}
+  #moreMenu .uibtn{
+    flex:0 0 auto;min-width:34px;padding:6px 9px;border-radius:7px;border:1px solid var(--line);
+    background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
+  }
+  #moreMenu .uibtn:hover{color:var(--ink);border-color:#46566a;}
+  #moreMenu .uibtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
   #moreMenu .sortbtn{
     flex:0 0 auto;padding:6px 10px;border-radius:7px;border:1px solid var(--line);
     background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
@@ -759,7 +771,13 @@
           <button class="sortbtn" data-sort="tot">大小分</button>
         </div>
         <button id="collapseAllBtn">⊟ 收合／展開全部</button>
-        <button id="clearLights">○ 清空所有圓圈</button>
+        <div class="colrow">
+          <span class="collabel">收合聯盟</span>
+          <button class="leaguecolbtn" data-lg="mlb">MLB</button>
+          <button class="leaguecolbtn" data-lg="npb">日職</button>
+          <button class="leaguecolbtn" data-lg="kbo">韓職</button>
+          <button class="leaguecolbtn" data-lg="cpbl">中職</button>
+        </div>
         <div class="sep"></div>
         <button id="statsBtn">📊 隊伍統計</button>
         <button id="reviewBtn">🔍 燈號回顧</button>
@@ -775,6 +793,13 @@
           <button class="thrbtn" data-thr="0.55">55%</button>
           <button class="thrbtn" data-thr="0.60">60%</button>
           <button class="thrbtn" data-thr="0.65">65%</button>
+        </div>
+        <div class="colrow">
+          <span class="collabel">介面大小</span>
+          <button class="uibtn" data-ui="0.85">小</button>
+          <button class="uibtn" data-ui="1">中</button>
+          <button class="uibtn" data-ui="1.15">大</button>
+          <button class="uibtn" data-ui="1.3">特大</button>
         </div>
         <button id="importGamesBtn">📥 匯入比賽資料（純文字）</button>
         <div class="sep"></div>
@@ -1368,6 +1393,7 @@ function save(){
   doc.layoutCols = layoutCols;
   doc.pctWindow = pctWindow;
   doc.trendThreshold = trendThreshold;
+  doc.uiScale = uiScale;
   const json = JSON.stringify(doc);
   try{ localStorage.setItem(LS_KEY, json); }catch(e){}
   // also write to preview-env storage when available (harmless on GitHub Pages)
@@ -1384,6 +1410,7 @@ function loadDocFromString(str){
       if(d.layoutCols!==undefined) layoutCols = d.layoutCols;
       if(d.pctWindow!==undefined) pctWindow = d.pctWindow;
       if(d.trendThreshold!==undefined) trendThreshold = d.trendThreshold;
+      if(d.uiScale!==undefined) uiScale = d.uiScale;
       if(!doc.stats) doc.stats = {};
       if(!doc.recent) doc.recent = [];
       return true;
@@ -1821,7 +1848,14 @@ function renderSummary(){
   if(strong.length===0 && conflicts.length===0) return;
 
   const r = canvas.getBoundingClientRect();
-  const pos = state.summaryPos || {x: Math.max(12, r.width-312), y: 12};
+  let pos = state.summaryPos || {x: Math.max(12, r.width-312), y: 12};
+  // clamp into the visible canvas — after a browser zoom or window resize a stored
+  // position can fall offscreen, making the panel unreachable. Keep a margin visible.
+  const MARGIN = 60;
+  pos = {
+    x: Math.max(0, Math.min(pos.x, Math.max(0, r.width  - MARGIN))),
+    y: Math.max(0, Math.min(pos.y, Math.max(0, r.height - MARGIN)))
+  };
   const box = document.createElement("div"); box.id="summary";
   if(doc.summaryCollapsed) box.classList.add("mini");
   box.style.left = pos.x+"px"; box.style.top = pos.y+"px";
@@ -2468,9 +2502,25 @@ function toggleCollapseAll(){
   snapshot();
   matches.forEach(m=> m.collapsed = anyExpanded); // if any open -> collapse all; else expand all
   save(); render();
-  repackColumns(false); // tidy spacing after height change
+  compactColumns(); // re-pack tightly after height change
 }
 $("#collapseAllBtn").onclick = toggleCollapseAll;
+
+/* Collapse / expand all matches of ONE league. Toggles: if any of that league
+   is expanded -> collapse them all; else expand them all. Other leagues untouched. */
+function collapseLeague(lg){
+  closeMore();
+  const inLg = state.items.filter(i=>i.type==="match" && leagueOf(i)===lg);
+  if(!inLg.length){ alert(`今天沒有${LEAGUES[lg]?.name||lg}的對戰。`); return; }
+  const anyExpanded = inLg.some(m=>!m.collapsed);
+  snapshot();
+  inLg.forEach(m=> m.collapsed = anyExpanded);
+  save(); render();
+  compactColumns();
+}
+document.querySelectorAll("#moreMenu .leaguecolbtn").forEach(b=>{
+  b.onclick = (e)=>{ e.stopPropagation(); collapseLeague(b.dataset.lg); };
+});
 
 /* ---- repack: after a card changes height, push same-column cards down so none overlap ---- */
 function repackColumns(doSave){
@@ -2488,6 +2538,26 @@ function repackColumns(doSave){
     }
   });
   if(moved){ render(); if(doSave!==false){ save(); } }
+}
+
+/* ---- compact: re-stack each column from the top with a fixed gap, removing
+   the empty space left behind when cards collapse. Unlike repackColumns (which
+   only pushes down to avoid overlap), this also pulls cards UP to fill gaps. ---- */
+function compactColumns(doSave){
+  const MIN_GAP = 18;
+  const cols = {};
+  state.items.forEach(it=>{ if(it.type!=="match") return; const key=Math.round(it.x); (cols[key]=cols[key]||[]).push(it); });
+  Object.values(cols).forEach(list=>{
+    list.sort((a,b)=>a.y-b.y);
+    if(!list.length) return;
+    let cursorY = list[0].y;   // keep the column's current top anchor
+    list.forEach(it=>{
+      it.y = cursorY;
+      cursorY += itemBox(it).h + MIN_GAP;
+    });
+  });
+  render();
+  if(doSave!==false) save();
 }
 
 /* per-row column selector (auto / 2 / 3 / 4 / 5) */
@@ -2630,21 +2700,6 @@ $("#addBlank").onclick = ()=>{
   save(); render();
 };
 $("#clearAll").onclick = ()=>{ closeMore(); if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } };
-$("#clearLights").onclick = ()=>{
-  closeMore();
-  const n = state.items.filter(i=>i.type==="match").length;
-  if(!n){ alert("目前沒有對戰可以清。"); return; }
-  if(!confirm("清空所有圓圈？對戰組合、隊伍、讓分方向都會保留，只把圈圈歸零。")) return;
-  snapshot();
-  state.items.forEach(it=>{
-    if(it.type!=="match") return;
-    it.mlAway.lights=0; it.mlHome.lights=0;
-    it.hdGive.lights=0; it.hdRecv.lights=0;
-    it.over.lights=0; it.under.lights=0;
-  });
-  save(); render();
-};
-
 $("#clearRecent") && ($("#clearRecent").onclick = ()=>{
   closeMore();
   const count = (doc.games && doc.games.length) || 0;
@@ -3676,6 +3731,32 @@ function refreshThrBtns(){
   });
 }
 
+/* ---- UI size: zoom the chrome (header, review page, stats page) without
+   touching the canvas world coordinates. Safe because these containers don't
+   participate in pan/zoom math. Persisted in doc.uiScale. ---- */
+let uiScale = 1;
+function applyUiScale(){
+  const s = uiScale || 1;
+  const hdr = document.querySelector("header");
+  if(hdr) hdr.style.zoom = s;
+  ["reviewpage","statspage","datebar"].forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) el.style.zoom = s;
+  });
+}
+document.querySelectorAll("#moreMenu .uibtn").forEach(b=>{
+  b.onclick = (e)=>{
+    e.stopPropagation();
+    uiScale = parseFloat(b.dataset.ui) || 1;
+    applyUiScale(); refreshUiBtns(); save();
+  };
+});
+function refreshUiBtns(){
+  document.querySelectorAll("#moreMenu .uibtn").forEach(b=>{
+    b.classList.toggle("on", Math.abs(parseFloat(b.dataset.ui)-uiScale)<0.005);
+  });
+}
+
 /* ============================================================
    IMPORT GAMES — parse pasted text into doc.games entries
    ============================================================ */
@@ -3977,7 +4058,7 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
   const t = todayStr();
   if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
-  buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns(); refreshThrBtns();
+  buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns(); refreshThrBtns(); refreshUiBtns(); applyUiScale();
   applyView();
   if(!state.view) fitView();
 })();
