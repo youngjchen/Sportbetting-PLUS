@@ -2754,26 +2754,39 @@ function collectPicks(scope, leagueFilter, marketFilter){
     const favCovered = (g.hdResult==="fav_cover");
     const totRes = g.totResult; // "over"|"under"|"push"
 
+    // ---- conflict detection (mirror the card's logic) ----
+    // same-zone conflict: both sides of one market were lit -> no clear judgement, exclude that market.
+    const mlConflict  = (ls.mlAway||0)>0 && (ls.mlHome||0)>0;
+    const hdConflict  = (ls.hdGive||0)>0 && (ls.hdRecv||0)>0;
+    const totConflict = (ls.over||0)>0  && (ls.under||0)>0;
+    // cross-market contradiction: betting the favorite to COVER while also backing the
+    // OPPONENT's moneyline. The opponent is the underdog (receiving) side.
+    const undSide = g.hdFav==="away" ? "home" : "away";
+    const oppML = (undSide==="away") ? (ls.mlAway||0) : (ls.mlHome||0);
+    const crossConflict = (ls.hdGive||0)>0 && oppML>0;
+
     function addPick(market, side, lights, outcome){
       if(lights < scope) return;
       if(marketFilter!=="all" && marketFilter!==market) return;
       if(outcome==="void") return;                  // 和局/push excluded from denom entirely
       picks.push({ date:d, league:g.league, market, side, lights, hit:(outcome==="hit"), weekday:wd, month:mo });
     }
-    // ml
-    if(mlRes!=null){
+    // ml — skip entirely if same-zone conflict. Cross-conflict only invalidates the
+    // opponent-ML leg (the one that contradicts the 讓 bet), so we drop just that side.
+    if(mlRes!=null && !mlConflict){
       const aOut = mlRes==="tie" ? "void" : (mlRes==="away"?"hit":"miss");
       const hOut = mlRes==="tie" ? "void" : (mlRes==="home"?"hit":"miss");
-      addPick("ml","away", ls.mlAway||0, aOut);
-      addPick("ml","home", ls.mlHome||0, hOut);
+      // when cross-conflict, the opponent's ML is the contradictory leg → exclude it
+      if(!(crossConflict && undSide==="away")) addPick("ml","away", ls.mlAway||0, aOut);
+      if(!(crossConflict && undSide==="home")) addPick("ml","home", ls.mlHome||0, hOut);
     }
-    // hd / recv
-    if(g.hdResult!=null){
-      addPick("hd","give", ls.hdGive||0, favCovered?"hit":"miss");
+    // hd / recv — skip if same-zone conflict; the 讓 leg is also dropped under cross-conflict
+    if(g.hdResult!=null && !hdConflict){
+      if(!crossConflict) addPick("hd","give", ls.hdGive||0, favCovered?"hit":"miss");
       addPick("hd","recv", ls.hdRecv||0, favCovered?"miss":"hit");
     }
-    // tot
-    if(totRes!=null){
+    // tot — skip if same-zone conflict
+    if(totRes!=null && !totConflict){
       const oOut = totRes==="push" ? "void" : (totRes==="over"?"hit":"miss");
       const uOut = totRes==="push" ? "void" : (totRes==="under"?"hit":"miss");
       addPick("tot","over",  ls.over||0,  oOut);
@@ -2859,7 +2872,7 @@ function renderReviewPage(){
   html += `<div class="blk"><div class="v">${overall.hit}/${overall.total}</div><div class="k">命中 / 總帶燈選擇</div></div>`;
   if(trendAgg.total>0){
     html += `<div class="blk"><div class="v">${trendAgg.pct!=null?Math.round(trendAgg.pct*100):"—"}%</div>`+
-            `<div class="k">數據偏向方向命中（${trendAgg.hit}/${trendAgg.total}）</div></div>`;
+            `<div class="k">數據偏向方向命中（≥${Math.round(trendThreshold*100)}%）（${trendAgg.hit}/${trendAgg.total}）</div></div>`;
   }
   html += `</div></div>`;
   if(trendAgg.total>=RV_SAMPLE_MIN){
@@ -2990,6 +3003,8 @@ function collectTrendValidation(leagueFilter){
   games.forEach(g=>{
     if(!g.trendTop || !g.trendTop.label) return;
     if(leagueFilter!=="all" && g.league!==leagueFilter) return;
+    // only validate trends strong enough to meet the user's current threshold (預設跟隨 trendThreshold)
+    if(g.trendTop.pn==null || g.trendTop.pn < trendThreshold) return;
     const lbl = g.trendTop.label;
     // only score moneyline-type trend tops (clean win/lose); skip 讓分/受讓/大小 here
     let predicted = null;
