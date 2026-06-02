@@ -2850,8 +2850,79 @@ function collectPicks(scope, leagueFilter, marketFilter){
   }
   return picks;
 }
-function weekdayOf(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d).getDay(); }
+
+/* Collect conflict games for the review page's "衝突場次" section.
+   For each settled game with a snapshot, detect same-zone conflicts (per market)
+   and the cross-market contradiction. For each conflicted market we record whether
+   the side that had MORE lights ended up winning that market — this directly answers
+   "when both sides are lit, does the heavier-lit side tend to be right?".
+   diff = |lightsA - lightsB| lets us later see if a bigger lead matters.
+   Returns { games:[{date,league,markets:[{market, diff, heavierWon|null, tied}]}],
+             totalConflictGames, heavierWon, heavierLost, heavierTieLights, crossCount } */
+function collectConflictGames(leagueFilter){
+  const games = doc.games || [];
+  const out = { games:[], totalConflictGames:0, heavierWon:0, heavierLost:0, heavierTieLights:0, crossCount:0, byDiff:{} };
+  for(let gi=0; gi<games.length; gi++){
+    const g = games[gi];
+    if(!g.lightsSnapshot) continue;
+    if(leagueFilter!=="all" && g.league!==leagueFilter) continue;
+    const ls = g.lightsSnapshot;
+    const mlRes  = (g.mlResult!=null) ? g.mlResult
+                  : (g.awayScore!=null && g.homeScore!=null
+                      ? (g.awayScore>g.homeScore?"away":(g.homeScore>g.awayScore?"home":"tie"))
+                      : null);
+    const favCovered = (g.hdResult==="fav_cover");
+    const totRes = g.totResult;
+    const undSide = g.hdFav==="away" ? "home" : "away";
+    const oppML = (undSide==="away") ? (ls.mlAway||0) : (ls.mlHome||0);
+
+    const mlC  = (ls.mlAway||0)>0 && (ls.mlHome||0)>0;
+    const hdC  = (ls.hdGive||0)>0 && (ls.hdRecv||0)>0;
+    const totC = (ls.over||0)>0  && (ls.under||0)>0;
+    const crossC = (ls.hdGive||0)>0 && oppML>0;
+    if(!(mlC||hdC||totC||crossC)) continue;
+
+    const markets = [];
+    // heavierWon: did the more-lit side win that market? null if tie/void/unknown.
+    function judge(market, aLights, aWinsIf, bLights, bWinsIf){
+      // aWinsIf/bWinsIf are booleans (already-evaluated outcomes for each side)
+      const diff = Math.abs(aLights - bLights);
+      let heavierWon = null, tied = false;
+      if(aLights===bLights){ tied = true; }
+      else {
+        const heavierIsA = aLights > bLights;
+        const heavierOutcome = heavierIsA ? aWinsIf : bWinsIf;
+        if(heavierOutcome===null) heavierWon = null;
+        else heavierWon = !!heavierOutcome;
+      }
+      markets.push({ market, diff, heavierWon, tied });
+      if(!tied && heavierWon!==null){
+        out.totalConflictGames; // counted per-game below
+        if(heavierWon) out.heavierWon++; else out.heavierLost++;
+        out.byDiff[diff] = out.byDiff[diff] || {won:0, lost:0};
+        if(heavierWon) out.byDiff[diff].won++; else out.byDiff[diff].lost++;
+      } else if(tied){ out.heavierTieLights++; }
+    }
+    if(mlC && mlRes!=null && mlRes!=="tie"){
+      judge("獨贏", ls.mlAway||0, (mlRes==="away"), ls.mlHome||0, (mlRes==="home"));
+    }
+    if(hdC && g.hdResult!=null){
+      // give side wins if fav covered; recv side wins if not
+      judge("讓分", ls.hdGive||0, favCovered, ls.hdRecv||0, !favCovered);
+    }
+    if(totC && totRes!=null && totRes!=="push"){
+      judge("大小分", ls.over||0, (totRes==="over"), ls.under||0, (totRes==="under"));
+    }
+    if(crossC) out.crossCount++;
+    if(markets.length || crossC){
+      out.totalConflictGames++;
+      out.games.push({ date:g.date, league:g.league, away:g.awayTeam, home:g.homeTeam, markets, cross:crossC });
+    }
+  }
+  return out;
+}
 function monthOf(dateStr){ return parseInt(dateStr.split("-")[1],10); }
+function weekdayOf(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d).getDay(); }
 const WD_NAMES = ["週日","週一","週二","週三","週四","週五","週六"];
 
 // aggregate {hit, total, pct|null} for an array of picks
@@ -3046,6 +3117,55 @@ function renderReviewPage(){
             `</tr>`;
   });
   html += `</tbody></table></div>`;
+
+  // ---- ④ 衝突場次 (not mixed into hit-rate; pure警示 + heavier-side analysis) ----
+  const cf = collectConflictGames(leagueF);
+  html += `<div class="rv-section">`;
+  html += `<div class="rv-head">④ 衝突場次 <span class="rv-sub">同區兩邊都有燈／跨盤口矛盾，不列入上面的命中率</span></div>`;
+  if(cf.totalConflictGames===0){
+    html += `<div class="rv-empty">目前沒有出現過衝突的結算場次。<br>（衝突＝同一盤口兩邊都點燈，或「讓分方＋對手獨贏」同時點。）</div>`;
+  } else {
+    const heavierTotal = cf.heavierWon + cf.heavierLost;
+    const heavierPct = heavierTotal>0 ? cf.heavierWon/heavierTotal : null;
+    html += `<div class="rv-note">出現衝突代表你（或明牌）當時兩邊都壓、沒有明確方向。這裡單看：衝突盤口中「<b>燈數較多的那一邊</b>」結算後是否獲勝。`+
+            `若明顯 >50%，代表衝突時可以偏向跟燈多的一邊；若 ≈50%，代表衝突時燈數多寡沒有參考價值，該避戰。</div>`;
+    html += `<div class="rv-headline" style="margin-bottom:18px">`;
+    html += `<div class="big">${cf.totalConflictGames}<span class="unit">場</span></div>`;
+    html += `<div class="cap">出現衝突的場次${cf.crossCount?`　·　其中 ${cf.crossCount} 場有「讓分↔對手獨贏」跨盤口矛盾`:""}</div>`;
+    html += `<div class="row2">`;
+    html += `<div class="blk"><div class="v">${heavierPct!=null?Math.round(heavierPct*100):"—"}%</div><div class="k">衝突時「燈多邊」獲勝率（${cf.heavierWon}/${heavierTotal}）</div></div>`;
+    if(cf.heavierTieLights>0) html += `<div class="blk"><div class="v">${cf.heavierTieLights}</div><div class="k">兩邊燈數相同（無多寡可分）</div></div>`;
+    html += `</div></div>`;
+    if(heavierTotal>=RV_SAMPLE_MIN){
+      if(heavierPct!=null && heavierPct>=0.55){
+        html += `<div class="rv-insight">⚖️ 衝突時「燈多的一邊」獲勝率 ${Math.round(heavierPct*100)}%，似乎有參考性——衝突時可偏向跟多數燈那邊。仍需更多樣本確認。</div>`;
+      } else if(heavierPct!=null && heavierPct<=0.45){
+        html += `<div class="rv-insight warn">⚠️ 衝突時「燈多的一邊」反而較常輸（${Math.round(heavierPct*100)}%）。這支持「大量明牌一致＝可能誘盤」的疑慮，衝突場更該避戰。</div>`;
+      } else {
+        html += `<div class="rv-insight">⚖️ 衝突時燈多邊獲勝率約 ${Math.round(heavierPct*100)}%，接近擲硬幣——代表衝突時「燈多寡」無預測力，建議直接避開這類場次。</div>`;
+      }
+    } else {
+      html += `<div class="rv-insight">樣本還太少（${heavierTotal} 筆），先別下結論。衝突場累積到 ${RV_SAMPLE_MIN} 筆以上再看「燈多邊獲勝率」才有意義。</div>`;
+    }
+    // by-diff breakdown: does a BIGGER light lead help?
+    const diffs = Object.keys(cf.byDiff).map(Number).sort((a,b)=>a-b).filter(d=>d>0);
+    if(diffs.length){
+      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">燈數差距 × 燈多邊獲勝率 <span class="rv-sub">差距越大是否越可信？</span></div>`;
+      html += `<table class="rv-table"><thead><tr><th class="lbl">燈數差</th><th>燈多邊獲勝率</th><th>勝 / 樣本</th></tr></thead><tbody>`;
+      diffs.forEach(d=>{
+        const rec = cf.byDiff[d]; const tot = rec.won+rec.lost;
+        const pct = tot>0 ? rec.won/tot : null;
+        const low = tot < RV_SAMPLE_MIN;
+        html += `<tr class="rv-row${low?" low-sample":""}">`+
+                `<td class="lbl">差 ${d} 燈</td>`+
+                `<td><div class="rv-bar-wrap">${rvBar(pct,tot)}${rvPctCell({pct,total:tot})}</div></td>`+
+                `<td><span class="rv-samp">${rec.won} / ${tot}${low&&tot>0?"（樣本不足）":""}</span></td>`+
+                `</tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+  }
+  html += `</div>`;
 
   body.innerHTML = html;
 }
