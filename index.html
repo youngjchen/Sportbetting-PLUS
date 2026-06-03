@@ -124,6 +124,14 @@
     opacity:0;transform:translateY(6px);transition:.25s;
   }
   #saveBadge.show{opacity:1;transform:translateY(0);}
+  #backupBadge{
+    position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
+    z-index:5000;font-size:13px;color:#ffe3a0;background:rgba(40,32,12,.96);border:1px solid var(--lit);
+    border-radius:11px;padding:9px 14px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;align-items:center;gap:6px;
+  }
+  #backupBadge .bk-do{color:#1a1205;background:var(--lit);font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer;}
+  #backupBadge .bk-x{color:var(--ink-dim);cursor:pointer;padding:2px 5px;font-weight:700;}
+  #backupBadge .bk-x:hover{color:var(--ink);}
 
   /* single token */
   .token{
@@ -821,6 +829,7 @@
         <div class="sep"></div>
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
+        <button id="restoreAutoBtn">↺ 還原自動備份</button>
         <div class="sep"></div>
         <button id="clearAll" class="danger">✕ 清空這天</button>
         <button id="clearRecent" class="danger">⚠ 清除所有比賽紀錄</button>
@@ -918,6 +927,31 @@
       <button class="btn" id="settleCancel">取消</button>
       <button class="btn" id="settleRemove" style="display:none;color:var(--danger);">取消結算</button>
       <button class="btn" id="settleConfirm" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">確認結算</button>
+    </div>
+  </div></div>
+
+  <!-- Flip odds quick-entry (shown when marking a game as platform-flip pre-game) -->
+  <div id="flipOddsModal" class="modal-overlay"><div class="box" style="width:340px;max-width:100%;">
+    <h3 style="margin:0 0 4px;font-size:16px;">標記平台顛倒</h3>
+    <div class="sub" id="flipOddsSub" style="color:var(--ink-dim);font-size:12px;margin-bottom:12px;line-height:1.6;">
+      可順手填 STAKE 兩隊的<b>獨贏賠率</b>（歐洲盤，押 1 收回的總額）。<br>之後分析「獨贏熱門 vs 讓分方背離」會用到。不填也可以，稍後結算時還能補。
+    </div>
+    <div style="display:flex;align-items:flex-end;gap:12px;justify-content:center;margin-bottom:6px;">
+      <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--ink-dim);">
+        <span id="flipOddsAwayLbl">客隊</span>
+        <input id="flipOddsAwayInput" type="number" inputmode="decimal" step="0.01" min="1" placeholder="如 1.95"
+          style="width:96px;padding:9px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:17px;font-family:'Oswald';">
+      </label>
+      <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--ink-dim);">
+        <span id="flipOddsHomeLbl">主隊</span>
+        <input id="flipOddsHomeInput" type="number" inputmode="decimal" step="0.01" min="1" placeholder="如 1.85"
+          style="width:96px;padding:9px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:17px;font-family:'Oswald';">
+      </label>
+    </div>
+    <div class="modal-actions" style="margin-top:14px;">
+      <button class="btn" id="flipOddsSkip">略過</button>
+      <span class="grow"></span>
+      <button class="btn" id="flipOddsSave" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">儲存</button>
     </div>
   </div></div>
 
@@ -1560,7 +1594,13 @@ function renderCard(it){
   const flip = document.createElement("div");
   flip.className="ico no-drag flipbtn"+(it.platformFlip?" on":"");
   flip.title="標記：兩平台受讓方顛倒（台彩 vs STAKE）"; flip.textContent="⇅";
-  flip.onclick = ()=>{ snapshot(); it.platformFlip=!it.platformFlip; save(); render(); };
+  flip.onclick = ()=>{
+    snapshot();
+    it.platformFlip=!it.platformFlip;
+    save(); render();
+    // when turning flip ON pre-game, offer the odds quick-entry right away
+    if(it.platformFlip){ openFlipOddsModal(it); }
+  };
   grip.append(vs,swap,flip,col,del);
   if(it.settled) el.classList.add("settled");
   grip.addEventListener("pointerdown", e=>{ if(e.target.closest(".no-drag")) return; startItemDrag(e,it,el); });
@@ -2675,6 +2715,61 @@ function exportData(){
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
   a.download=`排盤備份_${todayStr()}.json`; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
+  // remember when the user last took a real (file) backup
+  try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); }catch(_){}
+}
+
+/* ---- backup safety net ----
+   1) auto in-browser snapshot slot: a periodic copy in a SEPARATE localStorage key,
+      so accidental "clear today" / mis-settlement can be rolled back. Does NOT
+      survive clearing browser data (that wipes both copies) — only a file export does.
+   2) open-time reminder: if it's been > BACKUP_REMIND_DAYS since the last FILE
+      backup, gently prompt a one-tap export. */
+const LS_LAST_BACKUP = "sportbetting_plus_lastbackup";
+const LS_AUTO_SLOT   = "sportbetting_plus_autobackup";
+const BACKUP_REMIND_DAYS = 7;
+function autoBackupSnapshot(){
+  try{
+    syncStateToDoc();
+    const payload = JSON.stringify({ at: Date.now(), doc });
+    localStorage.setItem(LS_AUTO_SLOT, payload);
+  }catch(_){}
+}
+function restoreFromAutoSlot(){
+  try{
+    const raw = localStorage.getItem(LS_AUTO_SLOT);
+    if(!raw){ alert("目前沒有自動備份槽的存檔。"); return; }
+    const obj = JSON.parse(raw);
+    if(!obj || !obj.doc){ alert("自動備份槽的內容讀不出來。"); return; }
+    const when = obj.at ? new Date(obj.at).toLocaleString() : "未知時間";
+    if(!confirm(`要還原自動備份嗎？\n\n備份時間：${when}\n\n目前畫面上未備份的變動會被覆蓋。`)) return;
+    snapshot();
+    doc = obj.doc;
+    if(!doc.boards[doc.activeDate]) doc.activeDate = Object.keys(doc.boards)[0] || todayStr();
+    loadActiveBoard(); save(); render(); buildDateBar(); applyView();
+    alert(`已還原到 ${when} 的自動備份。`);
+  }catch(e){ alert("還原失敗：自動備份槽內容毀損。"); }
+}
+function checkBackupReminder(){
+  try{
+    const last = parseInt(localStorage.getItem(LS_LAST_BACKUP)||"0",10);
+    const games = (doc.games||[]).length;
+    // only nag if there's data worth protecting
+    if(games < 5) return;
+    const days = last ? (Date.now()-last)/86400000 : 999;
+    if(days >= BACKUP_REMIND_DAYS){
+      showBackupBadge(last ? Math.floor(days) : null);
+    }
+  }catch(_){}
+}
+function showBackupBadge(daysSince){
+  if(document.getElementById("backupBadge")) return;
+  const b = document.createElement("div");
+  b.id = "backupBadge";
+  b.innerHTML = `💾 ${daysSince!=null?`已 ${daysSince} 天沒備份`:"建議備份一下"}　<span class="bk-do">立即備份</span> <span class="bk-x">✕</span>`;
+  document.body.appendChild(b);
+  b.querySelector(".bk-do").onclick = ()=>{ exportData(); b.remove(); };
+  b.querySelector(".bk-x").onclick = ()=>{ b.remove(); };
 }
 function importData(){
   closeMore();
@@ -2760,6 +2855,34 @@ $("#trayHandle").onclick = ()=>{ const t=$("#tray"); collapseTray(!t.classList.c
 /* data backup buttons */
 $("#exportDataBtn").onclick = exportData;
 $("#importDataBtn").onclick = importData;
+$("#restoreAutoBtn") && ($("#restoreAutoBtn").onclick = ()=>{ closeMore(); restoreFromAutoSlot(); });
+
+/* ---- flip odds quick-entry modal (pre-game, triggered by card ⇅) ---- */
+let _flipOddsTarget = null;
+function openFlipOddsModal(it){
+  _flipOddsTarget = it;
+  const m = $("#flipOddsModal"); if(!m) return;
+  $("#flipOddsSub").innerHTML = `<b>${esc(it.away)}</b>（客） vs <b>${esc(it.home)}</b>（主）<br>`+
+    `可順手填 STAKE 兩隊<b>獨贏賠率</b>（歐洲盤）。分析「獨贏熱門 vs 讓分方背離」會用到，不填也可以，結算時還能補。`;
+  $("#flipOddsAwayLbl").textContent = it.away+"（客）";
+  $("#flipOddsHomeLbl").textContent = it.home+"（主）";
+  $("#flipOddsAwayInput").value = it.flipOddsAway!=null ? it.flipOddsAway : "";
+  $("#flipOddsHomeInput").value = it.flipOddsHome!=null ? it.flipOddsHome : "";
+  m.classList.add("show");
+  setTimeout(()=>$("#flipOddsAwayInput").focus(), 50);
+}
+function closeFlipOddsModal(){ const m=$("#flipOddsModal"); if(m) m.classList.remove("show"); _flipOddsTarget=null; }
+$("#flipOddsSave") && ($("#flipOddsSave").onclick = ()=>{
+  if(!_flipOddsTarget){ closeFlipOddsModal(); return; }
+  const oa = parseFloat($("#flipOddsAwayInput").value);
+  const oh = parseFloat($("#flipOddsHomeInput").value);
+  _flipOddsTarget.flipOddsAway = isNaN(oa) ? null : oa;
+  _flipOddsTarget.flipOddsHome = isNaN(oh) ? null : oh;
+  save();
+  closeFlipOddsModal();
+});
+$("#flipOddsSkip") && ($("#flipOddsSkip").onclick = closeFlipOddsModal);
+$("#flipOddsModal") && ($("#flipOddsModal").addEventListener("click", e=>{ if(e.target.id==="flipOddsModal") closeFlipOddsModal(); }));
 
 /* ============================================================
    STATS PAGE — list teams, show W-L per market, click to edit
@@ -4418,6 +4541,10 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns(); refreshThrBtns(); refreshUiBtns(); applyUiScale(); refreshVenueBtns();
   applyView();
   if(!state.view) fitView();
+  // backup safety net: snapshot to in-browser slot now + every 5 min, and remind if overdue
+  autoBackupSnapshot();
+  setInterval(autoBackupSnapshot, 5*60*1000);
+  setTimeout(checkBackupReminder, 1200);
 })();
 </script>
 </body>
