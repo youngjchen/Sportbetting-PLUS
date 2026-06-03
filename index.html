@@ -2956,6 +2956,7 @@ function collectFlipGames(leagueFilter){
     stakeFavWon:0, stakeFavLost:0, stakeFavTie:0,
     taicaiFavWon:0, taicaiFavLost:0, taicaiFavTie:0,
     stakeCover:0, stakeNoCover:0,
+    taicaiCover:0, taicaiNoCover:0,
     list:[]
   };
   for(let gi=0; gi<games.length; gi++){
@@ -2974,6 +2975,10 @@ function collectFlipGames(leagueFilter){
     else { out.stakeFavTie++; out.taicaiFavTie++; }
     if(stakeFavScore - stakeUndScore > 1.5) out.stakeCover++;
     else out.stakeNoCover++;
+    // 台彩 favorite = Stake underdog; it covers -1.5 if IT wins by >1.5,
+    // i.e. the Stake favorite LOSES by >1.5 (margin < -1.5).
+    if(stakeFavScore - stakeUndScore < -1.5) out.taicaiCover++;
+    else out.taicaiNoCover++;
     out.list.push({
       date:g.date, league:g.league, away:g.awayTeam, home:g.homeTeam,
       aScore:g.awayScore, hScore:g.homeScore,
@@ -3248,8 +3253,9 @@ function renderReviewPage(){
     html += `<div class="cap">標記為平台顛倒的場次</div>`;
     html += `<div class="row2">`;
     html += `<div class="blk"><div class="v" style="color:#28c76f">${sPct!=null?Math.round(sPct*100):"—"}%</div><div class="k">STAKE 熱門獲勝率（${fp.stakeFavWon}/${sTot}）</div></div>`;
-    html += `<div class="blk"><div class="v" style="color:#b56bff">${tPct!=null?Math.round(tPct*100):"—"}%</div><div class="k">台彩熱門獲勝率（${fp.taicaiFavWon}/${tTot}）</div></div>`;
-    html += `<div class="blk"><div class="v">${fp.stakeCover}/${fp.stakeCover+fp.stakeNoCover}</div><div class="k">STAKE 讓分過盤（-1.5）</div></div>`;
+    html += `<div class="blk"><div class="v" style="color:#28c76f">${fp.stakeCover}/${fp.stakeCover+fp.stakeNoCover}</div><div class="k">STAKE 讓分過盤（-1.5）</div></div>`;
+    html += `<div class="blk" style="border-left:1px solid var(--line);padding-left:18px"><div class="v" style="color:#b56bff">${tPct!=null?Math.round(tPct*100):"—"}%</div><div class="k">台彩 熱門獲勝率（${fp.taicaiFavWon}/${tTot}）</div></div>`;
+    html += `<div class="blk"><div class="v" style="color:#b56bff">${fp.taicaiCover}/${fp.taicaiCover+fp.taicaiNoCover}</div><div class="k">台彩 讓分過盤（-1.5）</div></div>`;
     html += `</div></div>`;
     if(sTot>=RV_SAMPLE_MIN && tTot>=RV_SAMPLE_MIN){
       if(sPct!=null && tPct!=null && Math.abs(sPct-tPct)>=0.15){
