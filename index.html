@@ -328,6 +328,13 @@
   .rv-table td.lbl,.rv-table th.lbl{text-align:left;font-weight:700;font-size:16px;}
   .rv-bar-wrap{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
   .rv-bar{width:120px;height:10px;border-radius:6px;background:#1b232e;overflow:hidden;flex:0 0 auto;}
+  .rv-tug{display:flex;width:100%;max-width:420px;height:26px;border-radius:7px;overflow:hidden;background:#1b232e;font-family:"Oswald";font-weight:700;font-size:13px;}
+  .rv-tug .tug-l{display:flex;align-items:center;justify-content:flex-start;padding-left:9px;color:#06210f;transition:width .25s;}
+  .rv-tug .tug-r{display:flex;align-items:center;justify-content:flex-end;padding-right:9px;color:#2a1d04;transition:width .25s;}
+  .rv-tug.dim .tug-l,.rv-tug.dim .tug-r{color:#aeb9c8;}
+  .rv-tug-legend{display:flex;gap:16px;font-size:11px;color:var(--ink-dim);margin:4px 0 2px;}
+  .rv-tug-legend .lg{display:flex;align-items:center;gap:5px;}
+  .rv-tug-legend .sw{width:10px;height:10px;border-radius:3px;}
   .rv-bar > span{display:block;height:100%;border-radius:6px;}
   .rv-pct{font-family:"Oswald";font-weight:700;font-size:17px;min-width:50px;display:inline-block;text-align:right;}
   .rv-pct.hi{color:#28c76f;}
@@ -3135,7 +3142,7 @@ function collectFlipGames(leagueFilter){
    Splits results into flip vs non-flip subsets (二B). */
 function collectDivergence(leagueFilter){
   const ODDS_MIN_DIFF = 0.10;
-  const mk = ()=>({ total:0, favWon:0, undWon:0, noClearFav:0, withOdds:0 });
+  const mk = ()=>({ total:0, favWon:0, undWon:0, noClearFav:0, withOdds:0, recvCover:0, recvCoverDenom:0 });
   const out = { all:mk(), flip:mk(), nonflip:mk() };
   const games = doc.games || [];
   for(let gi=0; gi<games.length; gi++){
@@ -3155,7 +3162,14 @@ function collectDivergence(leagueFilter){
     buckets.forEach(b=>b.total++);
     if(favScore > undScore) buckets.forEach(b=>b.favWon++);
     else if(favScore < undScore) buckets.forEach(b=>b.undWon++);
-    // tie: not counted
+    // tie: not counted for win-rate
+    // 受讓過盤率: read the settled hdResult directly (no margin recompute).
+    // In a divergence game the moneyline favorite is the RECEIVING side (not the spread fav),
+    // so 受讓過盤 = 讓分方沒過 = hdResult === "fav_nocover".
+    if(g.hdResult==="fav_cover" || g.hdResult==="fav_nocover"){
+      buckets.forEach(b=>b.recvCoverDenom++);
+      if(g.hdResult==="fav_nocover") buckets.forEach(b=>b.recvCover++);
+    }
   }
   return out;
 }
@@ -3191,6 +3205,20 @@ function rvPctCell(agg){
   if(agg.pct==null) return `<span class="rv-pct low-sample">—</span>`;
   const cls = pctClassFor(agg.pct, agg.total);
   return `<span class="rv-pct ${cls}">${Math.round(agg.pct*100)}%</span>`;
+}
+/* tug-of-war bar: left green = heavier(燈多)-side wins, right amber = lighter(燈少)-side wins.
+   Width proportional to win share; center label shows total. low-sample = muted. */
+function rvTugBar(won, lost){
+  const tot = won + lost;
+  const dim = tot < RV_SAMPLE_MIN;
+  const lp = tot>0 ? Math.round(won/tot*100) : 50;
+  const rp = 100 - lp;
+  const green = dim ? "#3a5a48" : "#28c76f";
+  const amber = dim ? "#5a5230" : "#ffb02e";
+  return `<div class="rv-tug${dim?" dim":""}">`+
+           `<div class="tug-l" style="width:${lp}%;background:${green}">${won>0?won:""}</div>`+
+           `<div class="tug-r" style="width:${rp}%;background:${amber}">${lost>0?lost:""}</div>`+
+         `</div>`;
 }
 
 let _reviewFilledOnce = false;
@@ -3389,16 +3417,17 @@ function renderReviewPage(){
     // by-diff breakdown: does a BIGGER light lead help?
     const diffs = Object.keys(cf.byDiff).map(Number).sort((a,b)=>a-b).filter(d=>d>0);
     if(diffs.length){
-      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">燈數差距 × 燈多邊獲勝率 <span class="rv-sub">差距越大是否越可信？</span></div>`;
-      html += `<table class="rv-table"><thead><tr><th class="lbl">燈數差</th><th>燈多邊獲勝率</th><th>勝 / 樣本</th></tr></thead><tbody>`;
+      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">燈數差距 × 拉鋸結果 <span class="rv-sub">差距越大，燈多邊是否越常贏？</span></div>`;
+      html += `<div class="rv-tug-legend"><span class="lg"><span class="sw" style="background:#28c76f"></span>燈多邊贏</span>`+
+              `<span class="lg"><span class="sw" style="background:#ffb02e"></span>燈少邊贏</span></div>`;
+      html += `<table class="rv-table"><thead><tr><th class="lbl">燈數差</th><th style="text-align:left">燈多 ← 拉鋸 → 燈少</th><th>合計</th></tr></thead><tbody>`;
       diffs.forEach(d=>{
         const rec = cf.byDiff[d]; const tot = rec.won+rec.lost;
-        const pct = tot>0 ? rec.won/tot : null;
         const low = tot < RV_SAMPLE_MIN;
         html += `<tr class="rv-row${low?" low-sample":""}">`+
                 `<td class="lbl">差 ${d} 燈</td>`+
-                `<td><div class="rv-bar-wrap">${rvBar(pct,tot)}${rvPctCell({pct,total:tot})}</div></td>`+
-                `<td><span class="rv-samp">${rec.won} / ${tot}${low&&tot>0?"（樣本不足）":""}</span></td>`+
+                `<td style="text-align:left">${rvTugBar(rec.won, rec.lost)}</td>`+
+                `<td><span class="rv-samp">${tot} 場${low&&tot>0?"（少）":""}</span></td>`+
                 `</tr>`;
       });
       html += `</tbody></table>`;
@@ -3473,17 +3502,18 @@ function renderReviewPage(){
     const renderDivBlock = (label, d, tone)=>{
       const dTot = d.favWon + d.undWon;
       const dPct = dTot>0 ? d.favWon/dTot : null;
+      const cPct = d.recvCoverDenom>0 ? d.recvCover/d.recvCoverDenom : null;
       html += `<div class="rv-headline" style="margin-bottom:12px">`;
       html += `<div class="big">${d.total}<span class="unit">場背離</span></div>`;
       html += `<div class="cap"><b>${label}</b>　·　已填賠率 ${d.withOdds} 場${d.noClearFav?`、${d.noClearFav} 場無明確熱門`:""}</div>`;
       html += `<div class="row2">`;
-      html += `<div class="blk"><div class="v" style="color:#28c76f">${dPct!=null?Math.round(dPct*100):"—"}%</div><div class="k">獨贏熱門獲勝率（${d.favWon}/${dTot}）</div></div>`;
-      html += `<div class="blk"><div class="v" style="color:var(--conflict)">${dPct!=null?Math.round((1-dPct)*100):"—"}%</div><div class="k">讓分方獲勝率（${d.undWon}/${dTot}）</div></div>`;
+      html += `<div class="blk"><div class="v" style="color:#28c76f">${dPct!=null?Math.round(dPct*100):"—"}%</div><div class="k">低賠（熱門方）獲勝率（${d.favWon}/${dTot}）</div></div>`;
+      html += `<div class="blk"><div class="v" style="color:#3d8bfd">${cPct!=null?Math.round(cPct*100):"—"}%</div><div class="k">受讓過盤率（${d.recvCover}/${d.recvCoverDenom}）</div></div>`;
       html += `</div></div>`;
       if(dTot>=RV_SAMPLE_MIN){
-        if(dPct!=null && dPct>=0.60) html += `<div class="rv-insight">🎯【${label}】獨贏熱門勝率 ${Math.round(dPct*100)}%——<b>讓分盤誘盤的跡象</b>。遇到背離時信獨贏熱門、別跟讓分方向。</div>`;
-        else if(dPct!=null && dPct<=0.40) html += `<div class="rv-insight warn">⚠️【${label}】反而讓分方較常贏（${Math.round((1-dPct)*100)}%），讓分盤可能藏了資訊。</div>`;
-        else html += `<div class="rv-insight">【${label}】兩邊接近，看不出誘盤，繼續累積。</div>`;
+        if(dPct!=null && dPct>=0.60) html += `<div class="rv-insight">🎯【${label}】低賠熱門方勝率 ${Math.round(dPct*100)}%——<b>讓分盤誘盤的跡象</b>。遇到背離時信獨贏熱門、別跟讓分方向。</div>`;
+        else if(dPct!=null && dPct<=0.40) html += `<div class="rv-insight warn">⚠️【${label}】低賠熱門方反而少贏（${Math.round(dPct*100)}%），讓分盤方向可能藏了資訊。</div>`;
+        else html += `<div class="rv-insight">【${label}】低賠熱門方勝率接近五成，看不出誘盤，繼續累積。</div>`;
       } else {
         html += `<div class="rv-insight">【${label}】樣本太少（${dTot}），先別下結論。</div>`;
       }
