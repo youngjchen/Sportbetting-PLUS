@@ -275,6 +275,13 @@
     border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(6px);
     box-shadow:0 12px 30px rgba(0,0,0,.5);overflow:hidden;
   }
+  #summary .sum-resize{
+    position:absolute;right:0;bottom:0;width:22px;height:22px;cursor:nwse-resize;z-index:60;
+    background:linear-gradient(135deg, transparent 0 45%, var(--ink-dim) 45% 55%, transparent 55% 65%, var(--ink-dim) 65% 75%, transparent 75% 85%, var(--ink-dim) 85% 95%, transparent 95%);
+    opacity:.5;border-bottom-right-radius:13px;touch-action:none;
+  }
+  #summary .sum-resize:hover{opacity:1;}
+  @media (pointer:coarse){ #summary .sum-resize{width:30px;height:30px;} }
   #summary .sumhead{
     display:flex;align-items:center;gap:8px;padding:11px 14px;cursor:grab;touch-action:none;
     font-family:"Oswald";font-weight:600;letter-spacing:.08em;font-size:13px;text-transform:uppercase;
@@ -1932,6 +1939,10 @@ function renderSummary(){
   const box = document.createElement("div"); box.id="summary";
   if(doc.summaryCollapsed) box.classList.add("mini");
   box.style.left = pos.x+"px"; box.style.top = pos.y+"px";
+  // apply user-resized size if present (only when expanded)
+  if(!doc.summaryCollapsed && doc.summarySize){
+    if(doc.summarySize.w) box.style.width = doc.summarySize.w+"px";
+  }
 
   const head = document.createElement("div"); head.className="sumhead";
   const caret = doc.summaryCollapsed ? "▸" : "▾";
@@ -1985,8 +1996,35 @@ function renderSummary(){
     // still useful, no empty note needed
   }
   box.appendChild(body);
+  // apply saved body height + add a resize handle (expanded only)
+  if(!doc.summaryCollapsed){
+    if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
+    const rz = document.createElement("div"); rz.className="sum-resize no-drag"; rz.title="拖曳調整大小";
+    rz.addEventListener("pointerdown", e=> startSummaryResize(e, box, body));
+    box.appendChild(rz);
+  }
   canvas.appendChild(box);
   applySummaryScale();
+}
+let sumRz = null;
+function startSummaryResize(e, box, body){
+  e.preventDefault(); e.stopPropagation();
+  const w = box.offsetWidth, bh = body.offsetHeight;
+  sumRz = { box, body, startX:e.clientX, startY:e.clientY, startW:w, startBH:bh };
+  try{ box.setPointerCapture(e.pointerId); }catch(_){}
+}
+function moveSummaryResize(e){
+  if(!sumRz) return;
+  const k = uiScale||1;
+  const w  = Math.max(200, Math.min(560, sumRz.startW  + (e.clientX-sumRz.startX)/k));
+  const bh = Math.max(120, Math.min(720, sumRz.startBH + (e.clientY-sumRz.startY)/k));
+  sumRz.box.style.width = Math.round(w)+"px";
+  sumRz.body.style.maxHeight = Math.round(bh)+"px";
+}
+function endSummaryResize(){
+  if(!sumRz) return;
+  doc.summarySize = { w: Math.round(sumRz.box.offsetWidth), bodyH: Math.round(sumRz.body.offsetHeight) };
+  sumRz=null; save();
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
@@ -2002,12 +2040,43 @@ function startSummaryDrag(e){
 function moveSummaryDrag(e){
   if(!sumDrag) return;
   const cr = canvas.getBoundingClientRect();
-  const x = Math.max(0, Math.min(cr.width-60, e.clientX-cr.left-sumDrag.offX));
-  const y = Math.max(0, Math.min(cr.height-40, e.clientY-cr.top -sumDrag.offY));
+  const bw = sumDrag.box.offsetWidth * (uiScale||1);
+  const bh = sumDrag.box.offsetHeight * (uiScale||1);
+  // keep at least a margin on-screen; allow full box within canvas
+  const x = Math.max(0, Math.min(cr.width  - bw, e.clientX-cr.left-sumDrag.offX));
+  const y = Math.max(0, Math.min(cr.height - bh, e.clientY-cr.top -sumDrag.offY));
   state.summaryPos = {x,y};
   sumDrag.box.style.left = x+"px"; sumDrag.box.style.top = y+"px";
 }
-function endSummaryDrag(){ if(sumDrag){ sumDrag=null; save(); } }
+function endSummaryDrag(){
+  if(!sumDrag) return;
+  // magnetic snap: if near an edge, stick to it
+  const box = sumDrag.box;
+  const cr = canvas.getBoundingClientRect();
+  const bw = box.offsetWidth * (uiScale||1);
+  const bh = box.offsetHeight * (uiScale||1);
+  const SNAP_EDGE = 28, PAD = 8;
+  let {x,y} = state.summaryPos || {x:0,y:0};
+  if(x <= SNAP_EDGE) x = PAD;
+  else if(x >= cr.width - bw - SNAP_EDGE) x = Math.max(PAD, cr.width - bw - PAD);
+  if(y <= SNAP_EDGE) y = PAD;
+  else if(y >= cr.height - bh - SNAP_EDGE) y = Math.max(PAD, cr.height - bh - PAD);
+  state.summaryPos = {x,y};
+  box.style.left = x+"px"; box.style.top = y+"px";
+  sumDrag=null; save();
+}
+// re-clamp summary into view on window resize / orientation change
+window.addEventListener("resize", ()=>{
+  const box = document.getElementById("summary");
+  if(!box || !state.summaryPos) return;
+  const cr = canvas.getBoundingClientRect();
+  const bw = box.offsetWidth * (uiScale||1), bh = box.offsetHeight * (uiScale||1);
+  let {x,y} = state.summaryPos;
+  x = Math.max(0, Math.min(cr.width - bw, x));
+  y = Math.max(0, Math.min(cr.height - bh, y));
+  state.summaryPos = {x,y};
+  box.style.left = x+"px"; box.style.top = y+"px";
+});
 
 /* ---------------- snapping (all in WORLD coords) ---------------- */
 // world-space footprint of an item (offsetWidth is unaffected by the world transform)
@@ -2181,15 +2250,16 @@ function endChipDrag(e){
 }
 
 /* ---------------- global pointer handlers ---------------- */
-function anyDragActive(){ return !!(sumDrag || rsz || drag || chipDrag); }
+function anyDragActive(){ return !!(sumDrag || sumRz || rsz || drag || chipDrag); }
 window.addEventListener("pointermove", e=>{
   if(anyDragActive() && e.cancelable) e.preventDefault();
-  moveSummaryDrag(e); moveResize(e); moveItemDrag(e); moveChipDrag(e);
+  moveSummaryDrag(e); moveSummaryResize(e); moveResize(e); moveItemDrag(e); moveChipDrag(e);
 }, {passive:false});
-window.addEventListener("pointerup",   e=>{ endSummaryDrag(e); endResize(e); endItemDrag(e); endChipDrag(e); });
+window.addEventListener("pointerup",   e=>{ endSummaryDrag(e); endSummaryResize(e); endResize(e); endItemDrag(e); endChipDrag(e); });
 // also catch touch fallbacks so a drag still finishes if pointer events misbehave
 window.addEventListener("touchmove", e=>{ if(anyDragActive() && e.cancelable) e.preventDefault(); }, {passive:false});
 window.addEventListener("pointercancel", e=>{
+  if(sumRz){ endSummaryResize(e); }
   // commit the drag instead of throwing it away (iOS fires cancel mid-gesture)
   if(sumDrag){ endSummaryDrag(e); }
   if(rsz){ endResize(e); }
@@ -3176,19 +3246,41 @@ function collectDivergence(leagueFilter){
   return out;
 }
 function monthOf(dateStr){ return parseInt(dateStr.split("-")[1],10); }
-/* Validate the "讓分過盤率低" warning: among games where it fired, how often did the
-   spread favorite indeed FAIL to cover (warning correct)? Reads stored lowCoverWarnHd + hdResult. */
+/* Validate the "過盤率低" warning per market. For each market, among games where the
+   warning fired, how often was it "correct" (the warned-against outcome happened)?
+   - hd : warned 讓分易不過 → correct when hdResult==="fav_nocover"
+   - ml : warned 被看好的隊獨贏勝率低 → correct when that lit team LOST
+   - tot: warned 大分被看好但傾向小 → correct when totResult==="under"
+   Returns { hd:{fired,correct,pct}, ml:{...}, tot:{...}, all:{...} } */
 function collectLowCoverWarning(leagueFilter){
-  let fired=0, correct=0;   // correct = warning fired AND fav did not cover
+  const mk = ()=>({fired:0, correct:0, pct:null});
+  const r = { hd:mk(), ml:mk(), tot:mk(), all:mk() };
+  const finalize = o=>{ o.pct = o.fired>0 ? o.correct/o.fired : null; };
   const games = doc.games || [];
   for(const g of games){
     if(leagueFilter!=="all" && g.league!==leagueFilter) continue;
-    if(!g.lowCoverWarnHd) continue;
-    if(g.hdResult!=="fav_cover" && g.hdResult!=="fav_nocover") continue;
-    fired++;
-    if(g.hdResult==="fav_nocover") correct++;   // warning said "易不過盤", and it didn't cover
+    // hd
+    if(g.lowCoverWarnHd && (g.hdResult==="fav_cover"||g.hdResult==="fav_nocover")){
+      r.hd.fired++; r.all.fired++;
+      if(g.hdResult==="fav_nocover"){ r.hd.correct++; r.all.correct++; }
+    }
+    // ml: need which side was lit + whether it lost
+    if(g.lowCoverWarnMl && g.mlLitSide){
+      const ml = g.mlResult || (g.awayScore!=null&&g.homeScore!=null
+                 ? (g.awayScore>g.homeScore?"away":(g.homeScore>g.awayScore?"home":"tie")) : null);
+      if(ml && ml!=="tie"){
+        r.ml.fired++; r.all.fired++;
+        if(ml !== g.mlLitSide){ r.ml.correct++; r.all.correct++; }  // lit team lost = warning correct
+      }
+    }
+    // tot
+    if(g.lowCoverWarnTot && (g.totResult==="over"||g.totResult==="under")){
+      r.tot.fired++; r.all.fired++;
+      if(g.totResult==="under"){ r.tot.correct++; r.all.correct++; }
+    }
   }
-  return { fired, correct, pct: fired>0 ? correct/fired : null };
+  finalize(r.hd); finalize(r.ml); finalize(r.tot); finalize(r.all);
+  return r;
 }
 function weekdayOf(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d).getDay(); }
 const WD_NAMES = ["週日","週一","週二","週三","週四","週五","週六"];
@@ -3539,24 +3631,34 @@ function renderReviewPage(){
   }
   html += `</div>`;
 
-  // ---- ⑦ 「讓分過盤率低」警告驗證 ----
+  // ---- ⑦ 「過盤率低」警告驗證 ----
   const lw = collectLowCoverWarning(leagueF);
   html += `<div class="rv-section">`;
-  html += `<div class="rv-head">⑦ 「過盤率低」警告驗證 <span class="rv-sub">這個警告準不準</span></div>`;
-  if(lw.fired===0){
-    html += `<div class="rv-empty">還沒有結算過觸發「⚠ 過盤率低」的場次。<br>當某隊讓分被點 ≥3 燈、但牠歷史讓分過盤率偏低時，卡片會出現這個警告；結算後就會在這裡累積它的命中率。</div>`;
+  html += `<div class="rv-head">⑦ 「過盤率低」警告驗證 <span class="rv-sub">這個警告準不準（分盤口）</span></div>`;
+  if(lw.all.fired===0){
+    html += `<div class="rv-empty">還沒有結算過觸發「⚠ 過盤率低」的場次。<br>當某選項被點 ≥3 燈、但該隊歷史過盤率偏低時，卡片會出現這個警告；結算後就會在這裡累積它的命中率（獨贏／讓分／大小分分開算）。</div>`;
   } else {
-    html += `<div class="rv-note">當卡片亮出「⚠ 過盤率低」時，代表「明牌看好讓分」但「該隊歷史不太會過盤」——一種矛盾訊號。這裡驗證：警告出現的場，讓分方<b>事後真的沒過盤</b>的比率（=警告命中）。</div>`;
+    html += `<div class="rv-note">「⚠ 過盤率低」＝明牌看好某選項，但該隊歷史在那個盤口不太會過盤——一種矛盾訊號。命中＝警告所擔心的事真的發生了（讓分沒過／被看好的隊輸／開小分）。</div>`;
     html += `<div class="rv-headline">`;
-    html += `<div class="big">${lw.pct!=null?Math.round(lw.pct*100):"—"}<span class="unit">%</span></div>`;
-    html += `<div class="cap">警告命中率　·　共出現 ${lw.fired} 次，其中 ${lw.correct} 次讓分方確實沒過盤</div>`;
+    html += `<div class="big">${lw.all.pct!=null?Math.round(lw.all.pct*100):"—"}<span class="unit">%</span></div>`;
+    html += `<div class="cap">整體警告命中率　·　共出現 ${lw.all.fired} 次，命中 ${lw.all.correct} 次</div>`;
     html += `</div>`;
-    if(lw.fired>=RV_SAMPLE_MIN){
-      if(lw.pct!=null && lw.pct>=0.60) html += `<div class="rv-insight">🎯 這個警告命中率 ${Math.round(lw.pct*100)}%——看好讓分但歷史過盤率低時，確實常常不過盤。是個值得信的避雷訊號。</div>`;
-      else if(lw.pct!=null && lw.pct<=0.45) html += `<div class="rv-insight warn">這個警告命中率偏低（${Math.round(lw.pct*100)}%），歷史過盤率低不太能預示單場不過盤，別過度依賴它。</div>`;
-      else html += `<div class="rv-insight">命中率中庸，參考即可。</div>`;
+    html += `<table class="rv-table"><thead><tr><th class="lbl">盤口</th><th>警告命中率</th><th>命中 / 出現</th></tr></thead><tbody>`;
+    [["獨贏",lw.ml],["讓分",lw.hd],["大小分",lw.tot]].forEach(([label,o])=>{
+      const low = o.fired < RV_SAMPLE_MIN;
+      html += `<tr class="rv-row${low?" low-sample":""}">`+
+              `<td class="lbl">${label}</td>`+
+              `<td><div class="rv-bar-wrap">${rvBar(o.pct,o.fired)}${rvPctCell({pct:o.pct,total:o.fired})}</div></td>`+
+              `<td><span class="rv-samp">${o.correct} / ${o.fired}${low&&o.fired>0?"（樣本不足）":""}</span></td>`+
+              `</tr>`;
+    });
+    html += `</tbody></table>`;
+    if(lw.all.fired>=RV_SAMPLE_MIN){
+      if(lw.all.pct!=null && lw.all.pct>=0.60) html += `<div class="rv-insight">🎯 整體命中率 ${Math.round(lw.all.pct*100)}%——這個警告整體有效，看到它時可以保守看待。看上表哪個盤口最靈。</div>`;
+      else if(lw.all.pct!=null && lw.all.pct<=0.45) html += `<div class="rv-insight warn">整體命中率偏低（${Math.round(lw.all.pct*100)}%），歷史過盤率低不太能預示單場，別過度依賴。</div>`;
+      else html += `<div class="rv-insight">整體命中率中庸，參考即可。</div>`;
     } else {
-      html += `<div class="rv-insight">樣本還少（${lw.fired} 次），先別下結論——但你主觀感覺它常應驗，繼續累積看數字會不會證實。</div>`;
+      html += `<div class="rv-insight">樣本還少（${lw.all.fired} 次），先別下結論，繼續累積看數字會不會證實你的主觀感覺。</div>`;
     }
   }
   html += `</div>`;
@@ -4077,10 +4179,12 @@ function applySettlement(it, picks, delta){
     const tlist = trendForMatch(it);
     if(tlist && tlist.length){ trendTop = { label: tlist[0].label, pn: tlist[0].pn }; }
   }catch(_){}
-  // snapshot whether the "讓分過盤率低" warning was showing on this card at settle time,
-  // so the review page can later verify how often that warning correctly预示了沒過盤.
-  let lowCoverWarnHd = false;
-  try{ lowCoverWarnHd = isLitSideLow(it, "hd"); }catch(_){}
+  // snapshot whether each market's "過盤率低" warning was showing at settle time,
+  // so the review page can verify how often each warning correctly預示了結果.
+  let lowCoverWarnHd=false, lowCoverWarnMl=false, lowCoverWarnTot=false;
+  try{ lowCoverWarnHd  = isLitSideLow(it, "hd"); }catch(_){}
+  try{ lowCoverWarnMl  = isLitSideLow(it, "ml"); }catch(_){}
+  try{ lowCoverWarnTot = isLitSideLow(it, "tot"); }catch(_){}
   const game = {
     sid: picks._sid,
     date: doc.activeDate,
@@ -4095,7 +4199,11 @@ function applySettlement(it, picks, delta){
     platformFlip: !!picks.platformFlip,
     flipOddsAway: (picks.flipOddsAway!=null ? picks.flipOddsAway : null),
     flipOddsHome: (picks.flipOddsHome!=null ? picks.flipOddsHome : null),
-    lowCoverWarnHd
+    lowCoverWarnHd, lowCoverWarnMl, lowCoverWarnTot,
+    // store which side was lit for ml so we can judge "did that team lose"
+    mlLitSide: ( (it.mlAway.lights>=3 && it.mlHome.lights>=3) ? null
+               : (it.mlAway.lights>=3 ? "away" : (it.mlHome.lights>=3 ? "home" : null)) ),
+    mlResult: (picks.ml || null)
   };
   gameUpsert(game);
 }
