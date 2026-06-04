@@ -694,13 +694,15 @@
   .summary-line .pill .pin{width:8px;height:8px;border-radius:50%;background:var(--lit);box-shadow:0 0 7px var(--lit-glow);}
   .summary-line .pill.hot .pin{background:var(--hot);box-shadow:0 0 7px var(--hot-glow);}
   .summary-line .none{color:var(--ink-dim);font-size:12px;}
-  /* final score pill (settled cards) — client left, home right, matches card title order */
+  /* final score pill (settled cards) — full row, centered, large gold numbers */
   .summary-line .pill.score-pill{
-    background:#0c0f14;border-color:#3a4a5e;gap:5px;font-family:"Oswald";
+    flex:1 1 100%;justify-content:center;
+    background:rgba(255,176,46,.07);border-color:var(--lit);gap:8px;font-family:"Oswald";
+    padding:7px 12px;margin-bottom:2px;
   }
-  .summary-line .pill.score-pill .sc-nm{color:var(--ink-dim);font-weight:600;font-size:11px;}
-  .summary-line .pill.score-pill .sc-v{color:var(--ink);font-weight:700;font-size:15px;}
-  .summary-line .pill.score-pill .sc-dash{color:var(--ink-dim);font-weight:400;margin:0 1px;}
+  .summary-line .pill.score-pill .sc-nm{color:#cbb783;font-weight:600;font-size:13px;}
+  .summary-line .pill.score-pill .sc-v{color:var(--lit);font-weight:700;font-size:24px;text-shadow:0 0 10px var(--lit-glow);}
+  .summary-line .pill.score-pill .sc-dash{color:#cbb783;font-weight:400;font-size:18px;margin:0 2px;}
   /* hit/miss result pills (settled cards) */
   .summary-line .pill.res-pill .rmk{font-weight:900;font-size:13px;margin-right:2px;}
   .summary-line .pill.res-pill.hit{border-color:#2a4a36;background:rgba(40,199,111,.10);color:#9be3b5;}
@@ -766,6 +768,7 @@
     <div class="spacer"></div>
     <button class="btn" id="addBlank">+ 空白卡</button>
     <button class="btn" id="fitBtn" title="適中縮放：看到全部卡片">⊡ 適中</button>
+    <button class="btn" id="reviewQuickBtn" title="燈號回顧">🔍 回顧</button>
     <div id="moreWrap">
       <button class="btn" id="moreBtn" title="更多">⋯</button>
       <div id="moreMenu">
@@ -1588,7 +1591,7 @@ function renderCard(it){
   del.onclick = ()=>{ snapshot(); state.items = state.items.filter(x=>x.id!==it.id); save(); render(); };
   const col = document.createElement("div"); col.className="ico collapse no-drag"; col.title=it.collapsed?"展開":"收合";
   col.textContent = it.collapsed?"▸":"▾";
-  col.onclick = ()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
+  col.onclick = ()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); relayoutPreservingState(); };
   // platform-flip marker: this match's 讓分方 is OPPOSITE between 台彩 and Stake.
   // Toggling here (pre-game) carries through to the settle modal automatically.
   const flip = document.createElement("div");
@@ -1610,7 +1613,7 @@ function renderCard(it){
     if(e.target.closest(".no-drag")) return;
     if(drag && drag.moved) return; // was a drag, not a tap
     const now=Date.now();
-    if(now-lastTapG < 320){ snapshot(); it.collapsed=!it.collapsed; save(); render(); lastTapG=0; }
+    if(now-lastTapG < 320){ snapshot(); it.collapsed=!it.collapsed; save(); render(); relayoutPreservingState(); lastTapG=0; }
     else lastTapG=now;
   });
   // long-press the grip to open the settlement modal
@@ -2492,8 +2495,8 @@ function autoLayout(){
   const order = ["mlb","npb","kbo","cpbl","zz"];
   const groups = {}; order.forEach(k=>groups[k]=[]);
   state.items.forEach(it=>{ (groups[leagueOf(it)]||groups.zz).push(it); });
-  // reset size/collapse so every card measures at its natural full height
-  state.items.forEach(it=>{ if(it.type==="match"){ it.collapsed=false; } it.scale=1; });
+  // keep each card's current collapse state; only reset scale so heights measure cleanly
+  state.items.forEach(it=>{ it.scale=1; });
   render(); // lay out DOM so we can measure real heights (incl. wrapped lights)
   let cursorY = LAY.TOP;
   order.forEach(k=>{
@@ -2586,42 +2589,32 @@ document.querySelectorAll("#moreMenu .leaguecolbtn").forEach(b=>{
 });
 
 /* ---- repack: after a card changes height, push same-column cards down so none overlap ---- */
-function repackColumns(doSave){
-  // group cards by their x (column), then ensure vertical gaps >= card height + min gap
-  const MIN_GAP = 18;
-  const cols = {};
-  state.items.forEach(it=>{ if(it.type!=="match") return; const key=Math.round(it.x); (cols[key]=cols[key]||[]).push(it); });
-  let moved=false;
-  Object.values(cols).forEach(list=>{
-    list.sort((a,b)=>a.y-b.y);
-    for(let i=1;i<list.length;i++){
-      const prev=list[i-1], cur=list[i];
-      const needTop = prev.y + itemBox(prev).h + MIN_GAP;
-      if(cur.y < needTop){ cur.y = needTop; moved=true; }
-    }
-  });
-  if(moved){ render(); if(doSave!==false){ save(); } }
-}
-
-/* ---- compact: re-stack each column from the top with a fixed gap, removing
-   the empty space left behind when cards collapse. Unlike repackColumns (which
-   only pushes down to avoid overlap), this also pulls cards UP to fill gaps. ---- */
-function compactColumns(doSave){
-  const MIN_GAP = 18;
-  const cols = {};
-  state.items.forEach(it=>{ if(it.type!=="match") return; const key=Math.round(it.x); (cols[key]=cols[key]||[]).push(it); });
-  Object.values(cols).forEach(list=>{
-    list.sort((a,b)=>a.y-b.y);
-    if(!list.length) return;
-    let cursorY = list[0].y;   // keep the column's current top anchor
-    list.forEach(it=>{
-      it.y = cursorY;
-      cursorY += itemBox(it).h + MIN_GAP;
-    });
+/* ---- relayout preserving collapse state: same row-aligned grid as autoLayout,
+   but does NOT force-expand cards. Used after any collapse/expand change so the
+   whole board re-packs and stays aligned (no overlap, no gaps, rows level). ---- */
+function relayoutPreservingState(doSave){
+  const order = ["mlb","npb","kbo","cpbl","zz"];
+  const groups = {}; order.forEach(k=>groups[k]=[]);
+  // preserve each league's current visual order (top→bottom, left→right)
+  state.items.filter(i=>i.type==="match")
+    .slice()
+    .sort((a,b)=> (a.y-b.y) || (a.x-b.x))
+    .forEach(it=>{ (groups[leagueOf(it)]||groups.zz).push(it); });
+  state.items.forEach(it=>{ if(it.type==="match"){ it.scale=1; } });
+  render(); // measure real heights at current collapse state
+  let cursorY = LAY.TOP;
+  order.forEach(k=>{
+    const list = groups[k]; if(!list.length) return;
+    cursorY = placeRows(list, gridCols(list.length), cursorY);
+    cursorY += LAY.GROUP_GAP;
   });
   render();
   if(doSave!==false) save();
 }
+
+/* kept for backward compat — now both route to the row-aligned relayout */
+function repackColumns(doSave){ relayoutPreservingState(doSave); }
+function compactColumns(doSave){ relayoutPreservingState(doSave); }
 
 /* per-row column selector (auto / 2 / 3 / 4 / 5) */
 function refreshColBtns(){
@@ -3178,6 +3171,7 @@ function openReviewPage(){
 }
 function closeReviewPage(){ const rp=$("#reviewpage"); if(rp) rp.classList.remove("show"); }
 $("#reviewBtn") && ($("#reviewBtn").onclick = openReviewPage);
+$("#reviewQuickBtn") && ($("#reviewQuickBtn").onclick = openReviewPage);
 $("#reviewClose") && ($("#reviewClose").onclick = closeReviewPage);
 ["reviewLeague","reviewScope","reviewMarket"].forEach(id=>{
   const el = $("#"+id); if(el) el.onchange = renderReviewPage;
