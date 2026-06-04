@@ -935,6 +935,7 @@
     <div class="actions">
       <button class="btn" id="settleCancel">取消</button>
       <button class="btn" id="settleRemove" style="display:none;color:var(--danger);">取消結算</button>
+      <button class="btn" id="settleSaveOdds" title="只存賠率，不需填比分；賽後再回來補比分結算">💾 暫存賠率</button>
       <button class="btn" id="settleConfirm" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">確認結算</button>
     </div>
   </div></div>
@@ -1946,7 +1947,7 @@ function renderSummary(){
   });
   box.appendChild(head);
 
-  if(doc.summaryCollapsed){ canvas.appendChild(box); return; }
+  if(doc.summaryCollapsed){ canvas.appendChild(box); applySummaryScale(); return; }
 
   const body = document.createElement("div"); body.className="sumbody";
   if(strong.length){
@@ -1985,6 +1986,7 @@ function renderSummary(){
   }
   box.appendChild(body);
   canvas.appendChild(box);
+  applySummaryScale();
 }
 function esc(s){ return String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c])); }
 
@@ -3174,6 +3176,20 @@ function collectDivergence(leagueFilter){
   return out;
 }
 function monthOf(dateStr){ return parseInt(dateStr.split("-")[1],10); }
+/* Validate the "讓分過盤率低" warning: among games where it fired, how often did the
+   spread favorite indeed FAIL to cover (warning correct)? Reads stored lowCoverWarnHd + hdResult. */
+function collectLowCoverWarning(leagueFilter){
+  let fired=0, correct=0;   // correct = warning fired AND fav did not cover
+  const games = doc.games || [];
+  for(const g of games){
+    if(leagueFilter!=="all" && g.league!==leagueFilter) continue;
+    if(!g.lowCoverWarnHd) continue;
+    if(g.hdResult!=="fav_cover" && g.hdResult!=="fav_nocover") continue;
+    fired++;
+    if(g.hdResult==="fav_nocover") correct++;   // warning said "易不過盤", and it didn't cover
+  }
+  return { fired, correct, pct: fired>0 ? correct/fired : null };
+}
 function weekdayOf(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d).getDay(); }
 const WD_NAMES = ["週日","週一","週二","週三","週四","週五","週六"];
 
@@ -3265,15 +3281,14 @@ function renderReviewPage(){
   html += `<div class="blk"><div class="v">${overall.hit}/${overall.total}</div><div class="k">命中 / 總帶燈選擇</div></div>`;
   if(trendAgg.total>0){
     html += `<div class="blk"><div class="v">${trendAgg.pct!=null?Math.round(trendAgg.pct*100):"—"}%</div>`+
-            `<div class="k">數據偏向方向命中（≥${Math.round(trendThreshold*100)}%）（${trendAgg.hit}/${trendAgg.total}）</div></div>`;
+            `<div class="k">歷史過盤率方向命中（≥${Math.round(trendThreshold*100)}%）（${trendAgg.hit}/${trendAgg.total}）</div></div>`;
   }
   html += `</div></div>`;
   if(trendAgg.total>=RV_SAMPLE_MIN){
     if(trendAgg.pct!=null && trendAgg.pct < 0.50){
-      html += `<div class="rv-insight warn">📉 卡片上的「數據偏向」目前命中率只有 ${Math.round(trendAgg.pct*100)}%，低於擲硬幣。`+
-              `這代表這版過盤率的預測力存疑，看數據偏向下注前要保守。</div>`;
+      html += `<div class="rv-insight warn">📉 卡片上的「歷史過盤率」只是球隊本季的平均表現，並非單場預測。目前依它的方向命中率僅 ${Math.round(trendAgg.pct*100)}%，低於擲硬幣——把它當參考、別當訊號。</div>`;
     } else if(trendAgg.pct!=null && trendAgg.pct >= 0.55){
-      html += `<div class="rv-insight">📈 「數據偏向」方向命中率 ${Math.round(trendAgg.pct*100)}%，看起來有一點預測力，可以繼續觀察累積。</div>`;
+      html += `<div class="rv-insight">📈 依「歷史過盤率」方向命中率 ${Math.round(trendAgg.pct*100)}%，略高於五成，但它本質是球隊平均、非單場預測，繼續觀察。</div>`;
     }
   }
 
@@ -3521,6 +3536,28 @@ function renderReviewPage(){
     renderDivBlock("全部背離場", dv.all);
     renderDivBlock("顛倒場中的背離", dv.flip);
     renderDivBlock("非顛倒場的背離", dv.nonflip);
+  }
+  html += `</div>`;
+
+  // ---- ⑦ 「讓分過盤率低」警告驗證 ----
+  const lw = collectLowCoverWarning(leagueF);
+  html += `<div class="rv-section">`;
+  html += `<div class="rv-head">⑦ 「過盤率低」警告驗證 <span class="rv-sub">這個警告準不準</span></div>`;
+  if(lw.fired===0){
+    html += `<div class="rv-empty">還沒有結算過觸發「⚠ 過盤率低」的場次。<br>當某隊讓分被點 ≥3 燈、但牠歷史讓分過盤率偏低時，卡片會出現這個警告；結算後就會在這裡累積它的命中率。</div>`;
+  } else {
+    html += `<div class="rv-note">當卡片亮出「⚠ 過盤率低」時，代表「明牌看好讓分」但「該隊歷史不太會過盤」——一種矛盾訊號。這裡驗證：警告出現的場，讓分方<b>事後真的沒過盤</b>的比率（=警告命中）。</div>`;
+    html += `<div class="rv-headline">`;
+    html += `<div class="big">${lw.pct!=null?Math.round(lw.pct*100):"—"}<span class="unit">%</span></div>`;
+    html += `<div class="cap">警告命中率　·　共出現 ${lw.fired} 次，其中 ${lw.correct} 次讓分方確實沒過盤</div>`;
+    html += `</div>`;
+    if(lw.fired>=RV_SAMPLE_MIN){
+      if(lw.pct!=null && lw.pct>=0.60) html += `<div class="rv-insight">🎯 這個警告命中率 ${Math.round(lw.pct*100)}%——看好讓分但歷史過盤率低時，確實常常不過盤。是個值得信的避雷訊號。</div>`;
+      else if(lw.pct!=null && lw.pct<=0.45) html += `<div class="rv-insight warn">這個警告命中率偏低（${Math.round(lw.pct*100)}%），歷史過盤率低不太能預示單場不過盤，別過度依賴它。</div>`;
+      else html += `<div class="rv-insight">命中率中庸，參考即可。</div>`;
+    } else {
+      html += `<div class="rv-insight">樣本還少（${lw.fired} 次），先別下結論——但你主觀感覺它常應驗，繼續累積看數字會不會證實。</div>`;
+    }
   }
   html += `</div>`;
 
@@ -3936,6 +3973,23 @@ function openSettleModal(it){
   setTimeout(()=>{ const el = $("#settleAwayScore"); if(el && !prior.awayScore) el.focus(); }, 50);
 }
 $("#settleCancel") && ($("#settleCancel").onclick = ()=>{ $("#settleModal").classList.remove("show"); settleTarget=null; });
+$("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
+  if(!settleTarget) return;
+  const it = settleTarget;
+  // store odds + flip mark onto the card WITHOUT requiring score / settling
+  const flipChecked = !!($("#settleFlip") && $("#settleFlip").checked);
+  it.platformFlip = flipChecked;
+  const oa = parseFloat($("#flipOddsAway")?.value);
+  const oh = parseFloat($("#flipOddsHome")?.value);
+  it.flipOddsAway = isNaN(oa) ? null : oa;
+  it.flipOddsHome = isNaN(oh) ? null : oh;
+  snapshot(); save();
+  $("#settleModal").classList.remove("show");
+  settleTarget=null;
+  render();
+  // brief confirmation
+  const b=$("#saveBadge"); if(b){ b.textContent="已暫存賠率 ✓"; b.classList.add("show"); setTimeout(()=>b.classList.remove("show"),1600); }
+});
 $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   if(!settleTarget) return;
   const it = settleTarget;
@@ -4023,6 +4077,10 @@ function applySettlement(it, picks, delta){
     const tlist = trendForMatch(it);
     if(tlist && tlist.length){ trendTop = { label: tlist[0].label, pn: tlist[0].pn }; }
   }catch(_){}
+  // snapshot whether the "讓分過盤率低" warning was showing on this card at settle time,
+  // so the review page can later verify how often that warning correctly预示了沒過盤.
+  let lowCoverWarnHd = false;
+  try{ lowCoverWarnHd = isLitSideLow(it, "hd"); }catch(_){}
   const game = {
     sid: picks._sid,
     date: doc.activeDate,
@@ -4036,7 +4094,8 @@ function applySettlement(it, picks, delta){
     trendTop,
     platformFlip: !!picks.platformFlip,
     flipOddsAway: (picks.flipOddsAway!=null ? picks.flipOddsAway : null),
-    flipOddsHome: (picks.flipOddsHome!=null ? picks.flipOddsHome : null)
+    flipOddsHome: (picks.flipOddsHome!=null ? picks.flipOddsHome : null),
+    lowCoverWarnHd
   };
   gameUpsert(game);
 }
@@ -4181,7 +4240,7 @@ function trendHTML(it){
     const cls = strong ? "strong" : "";
     return `<div class="trow ${cls}">· <b>${esc(t.label)}</b> <span class="td">${pct}</span></div>`;
   }).join("");
-  return `<div class="trendline"><div class="thd">📊 數據偏向</div>${rows}</div>`;
+  return `<div class="trendline"><div class="thd">📊 歷史過盤率</div>${rows}</div>`;
 }
 
 /* Per-option dampening: a lit-up market WHOSE chosen side has a low cover rate
@@ -4277,6 +4336,14 @@ function applyUiScale(){
     const el = document.getElementById(id);
     if(el) el.style.zoom = s;
   });
+  // summary panel lives on the canvas; it's re-created on each render, so scale it
+  // here AND re-apply after render (renderSummary calls applySummaryScale).
+  applySummaryScale();
+}
+function applySummaryScale(){
+  const s = uiScale || 1;
+  const sm = document.getElementById("summary");
+  if(sm) sm.style.zoom = s;
 }
 document.querySelectorAll("#moreMenu .uibtn").forEach(b=>{
   b.onclick = (e)=>{
