@@ -766,12 +766,10 @@
   <header>
     <div class="logo"><span class="dot"></span>排盤板 <small>中職 · 日職 · 韓職 · MLB</small></div>
     <div class="spacer"></div>
-    <button class="btn" id="addBlank">+ 空白卡</button>
-    <button class="btn" id="fitBtn" title="適中縮放：看到全部卡片">⊡ 適中</button>
-    <button class="btn" id="reviewQuickBtn" title="燈號回顧">🔍 回顧</button>
     <div id="moreWrap">
       <button class="btn" id="moreBtn" title="更多">⋯</button>
       <div id="moreMenu">
+        <button id="addBlankMenu">＋ 空白卡</button>
         <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
         <button id="layoutBtn">⊞ 依聯盟排版</button>
         <button id="copyDayBtn">📋 複製某天到今天</button>
@@ -851,6 +849,7 @@
       <div class="zlabel" id="zlabel">100%</div>
       <button id="zoomOut" title="縮小">－</button>
       <button class="fit" id="fitBtn2" title="適中縮放">⊡</button>
+      <button class="fit" id="reviewQuickBtn" title="燈號回顧">🔍</button>
     </div>
   </div>
 
@@ -2797,7 +2796,8 @@ function updateSaveBadge(){
 $("#undoBtn").onclick = ()=>{ undo(); };
 document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); } });
 
-$("#addBlank").onclick = ()=>{
+$("#addBlankMenu").onclick = ()=>{
+  closeMore();
   snapshot();
   // place near top-left of current view, in world coords
   const cr = canvas.getBoundingClientRect();
@@ -2833,7 +2833,7 @@ $("#exportBtn").onclick = ()=>{ closeMore(); openExport(); };
 $("#zoomIn").onclick  = ()=> nudgeZoom(1.2);
 $("#zoomOut").onclick = ()=> nudgeZoom(1/1.2);
 const doFit = ()=> fitView();
-$("#fitBtn").onclick  = doFit;
+$("#fitBtn") && ($("#fitBtn").onclick = doFit);
 $("#fitBtn2").onclick = doFit;
 
 /* overflow menu */
@@ -3128,6 +3128,37 @@ function collectFlipGames(leagueFilter){
   }
   return out;
 }
+
+/* Divergence analysis across ALL settled games that have Stake moneyline odds
+   (no longer limited to flip games). A game is "divergent" when the moneyline
+   favorite (lower odds) is NOT the spread favorite (hdFav), with odds差 >= MIN.
+   Splits results into flip vs non-flip subsets (二B). */
+function collectDivergence(leagueFilter){
+  const ODDS_MIN_DIFF = 0.10;
+  const mk = ()=>({ total:0, favWon:0, undWon:0, noClearFav:0, withOdds:0 });
+  const out = { all:mk(), flip:mk(), nonflip:mk() };
+  const games = doc.games || [];
+  for(let gi=0; gi<games.length; gi++){
+    const g = games[gi];
+    if(leagueFilter!=="all" && g.league!==leagueFilter) continue;
+    const oa = g.flipOddsAway, oh = g.flipOddsHome;
+    if(oa==null || oh==null || oa<=0 || oh<=0) continue;
+    if(g.awayScore==null || g.homeScore==null) continue;
+    const buckets = [out.all, g.platformFlip ? out.flip : out.nonflip];
+    buckets.forEach(b=>b.withOdds++);
+    if(Math.abs(oa-oh) < ODDS_MIN_DIFF){ buckets.forEach(b=>b.noClearFav++); continue; }
+    const oddsFavSide = (oa < oh) ? "away" : "home";   // moneyline favorite
+    if(oddsFavSide === g.hdFav) continue;              // not divergent
+    // divergent
+    const favScore = (oddsFavSide==="away") ? g.awayScore : g.homeScore;
+    const undScore = (oddsFavSide==="away") ? g.homeScore : g.awayScore;
+    buckets.forEach(b=>b.total++);
+    if(favScore > undScore) buckets.forEach(b=>b.favWon++);
+    else if(favScore < undScore) buckets.forEach(b=>b.undWon++);
+    // tie: not counted
+  }
+  return out;
+}
 function monthOf(dateStr){ return parseInt(dateStr.split("-")[1],10); }
 function weekdayOf(dateStr){ const [y,m,d]=dateStr.split("-").map(Number); return new Date(y,m-1,d).getDay(); }
 const WD_NAMES = ["週日","週一","週二","週三","週四","週五","週六"];
@@ -3411,34 +3442,6 @@ function renderReviewPage(){
       html += `<div class="rv-insight">樣本還太少，先別下結論。記得每遇到顛倒場就標記，累積到 ${RV_SAMPLE_MIN} 場以上才看得出規律。</div>`;
     }
 
-    // ---- divergence analysis: 獨贏熱門 vs 讓分方 背離 (needs odds) ----
-    if(fp.divWithOdds>0){
-      html += `<div class="rv-head" style="font-size:15px;margin-top:20px">獨贏熱門 vs 讓分方 背離 <span class="rv-sub">最可能的誘盤訊號</span></div>`;
-      html += `<div class="rv-note">背離＝STAKE 的「獨贏熱門（賠率較低那隊）」跟「讓分方（-1.5）」不是同一隊（賠率差 <0.10 視為無明確熱門，不計）。`+
-              `若背離場裡「獨贏熱門」勝率明顯較高，代表讓分盤是用賠率把你推離真正強隊——<b>這就是誘盤的實證</b>。</div>`;
-      const dTot = fp.divFavWon + fp.divUndWon;
-      const dPct = dTot>0 ? fp.divFavWon/dTot : null;
-      html += `<div class="rv-headline" style="margin-bottom:14px">`;
-      html += `<div class="big">${fp.divTotal}<span class="unit">場背離</span></div>`;
-      html += `<div class="cap">已填賠率的顛倒場 ${fp.divWithOdds} 場，其中 ${fp.divTotal} 場背離`+
-              `${fp.divNoClearFav?`、${fp.divNoClearFav} 場無明確熱門`:""}</div>`;
-      html += `<div class="row2">`;
-      html += `<div class="blk"><div class="v" style="color:#28c76f">${dPct!=null?Math.round(dPct*100):"—"}%</div><div class="k">獨贏熱門獲勝率（${fp.divFavWon}/${dTot}）</div></div>`;
-      html += `<div class="blk"><div class="v" style="color:var(--conflict)">${dPct!=null?Math.round((1-dPct)*100):"—"}%</div><div class="k">讓分方獲勝率（${fp.divUndWon}/${dTot}）</div></div>`;
-      html += `</div></div>`;
-      if(dTot>=RV_SAMPLE_MIN){
-        if(dPct!=null && dPct>=0.60){
-          html += `<div class="rv-insight">🎯 背離場裡「獨贏熱門」勝率達 ${Math.round(dPct*100)}%——強烈跡象顯示<b>讓分盤在誘盤</b>。遇到「獨贏看好 A、讓分卻讓 B」時，信獨贏熱門 A，別跟讓分方向。</div>`;
-        } else if(dPct!=null && dPct<=0.40){
-          html += `<div class="rv-insight warn">⚠️ 背離場裡反而是「讓分方」較常贏（${Math.round((1-dPct)*100)}%）。讓分盤的方向可能藏了你看不到的資訊，獨贏賠率反而是煙霧。</div>`;
-        } else {
-          html += `<div class="rv-insight">背離場兩邊勝率接近，目前看不出讓分盤是否誘盤，繼續累積。</div>`;
-        }
-      } else {
-        html += `<div class="rv-insight">背離場樣本還太少（${dTot}），先別下結論。每遇到顛倒場記得填 STAKE 兩隊獨贏賠率，這個分析才會長出來。</div>`;
-      }
-    }
-
     // recent flip games list
     if(fp.list.length){
       html += `<div class="rv-head" style="font-size:15px;margin-top:18px">最近的顛倒場</div>`;
@@ -3455,6 +3458,39 @@ function renderReviewPage(){
       });
       html += `</tbody></table>`;
     }
+  }
+  html += `</div>`;
+
+  // ---- ⑥ 獨贏熱門 vs 讓分方 背離 (all games with odds; split flip/non-flip) ----
+  const dv = collectDivergence(leagueF);
+  html += `<div class="rv-section">`;
+  html += `<div class="rv-head">⑥ 獨贏熱門 vs 讓分方 背離 <span class="rv-sub">最可能的誘盤訊號（不限顛倒場）</span></div>`;
+  if(dv.all.withOdds===0){
+    html += `<div class="rv-empty">還沒有填過獨贏賠率的結算場次。<br>結算任何一場時，填上 STAKE 兩隊獨贏賠率，這個分析就會開始累積（不限平台顛倒場）。</div>`;
+  } else {
+    html += `<div class="rv-note">背離＝STAKE「獨贏熱門（賠率較低那隊）」≠「讓分方」（賠率差 <0.10 視為無明確熱門，不計）。`+
+            `若背離場「獨贏熱門」勝率明顯高，代表讓分盤用賠率把你推離真正強隊——<b>誘盤的實證</b>。下面分「全部 / 顛倒場 / 非顛倒場」三組，看顛倒是否讓背離更明顯。</div>`;
+    const renderDivBlock = (label, d, tone)=>{
+      const dTot = d.favWon + d.undWon;
+      const dPct = dTot>0 ? d.favWon/dTot : null;
+      html += `<div class="rv-headline" style="margin-bottom:12px">`;
+      html += `<div class="big">${d.total}<span class="unit">場背離</span></div>`;
+      html += `<div class="cap"><b>${label}</b>　·　已填賠率 ${d.withOdds} 場${d.noClearFav?`、${d.noClearFav} 場無明確熱門`:""}</div>`;
+      html += `<div class="row2">`;
+      html += `<div class="blk"><div class="v" style="color:#28c76f">${dPct!=null?Math.round(dPct*100):"—"}%</div><div class="k">獨贏熱門獲勝率（${d.favWon}/${dTot}）</div></div>`;
+      html += `<div class="blk"><div class="v" style="color:var(--conflict)">${dPct!=null?Math.round((1-dPct)*100):"—"}%</div><div class="k">讓分方獲勝率（${d.undWon}/${dTot}）</div></div>`;
+      html += `</div></div>`;
+      if(dTot>=RV_SAMPLE_MIN){
+        if(dPct!=null && dPct>=0.60) html += `<div class="rv-insight">🎯【${label}】獨贏熱門勝率 ${Math.round(dPct*100)}%——<b>讓分盤誘盤的跡象</b>。遇到背離時信獨贏熱門、別跟讓分方向。</div>`;
+        else if(dPct!=null && dPct<=0.40) html += `<div class="rv-insight warn">⚠️【${label}】反而讓分方較常贏（${Math.round((1-dPct)*100)}%），讓分盤可能藏了資訊。</div>`;
+        else html += `<div class="rv-insight">【${label}】兩邊接近，看不出誘盤，繼續累積。</div>`;
+      } else {
+        html += `<div class="rv-insight">【${label}】樣本太少（${dTot}），先別下結論。</div>`;
+      }
+    };
+    renderDivBlock("全部背離場", dv.all);
+    renderDivBlock("顛倒場中的背離", dv.flip);
+    renderDivBlock("非顛倒場的背離", dv.nonflip);
   }
   html += `</div>`;
 
@@ -3788,8 +3824,8 @@ function openSettleModal(it){
       <input type="checkbox" id="settleFlip" ${flipOn?"checked":""} style="width:18px;height:18px;cursor:pointer;">
       <span>此場兩平台受讓方顛倒（台彩 vs STAKE）</span>
     </label>
-    <div style="color:var(--ink-dim);font-size:11px;margin-top:4px;line-height:1.5;">勾選後，這場會進「⑤ 平台顛倒場」統計。可填 STAKE 兩隊獨贏賠率，分析「獨贏熱門 vs 讓分方背離」。</div>
-    <div id="flipOddsRow" style="display:${flipOn?"flex":"none"};align-items:center;gap:12px;margin-top:8px;">
+    <div style="color:var(--ink-dim);font-size:11px;margin-top:4px;line-height:1.5;">勾選＝這場進「⑤ 平台顛倒場」。下方獨贏賠率<b>任何場都可填</b>，用來分析「獨贏熱門 vs 讓分方背離」（不限顛倒場）。</div>
+    <div id="flipOddsRow" style="display:flex;align-items:center;gap:12px;margin-top:8px;">
       <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-dim);">
         <span>${esc(it.away)}（客）獨贏賠率</span>
         <input id="flipOddsAway" type="number" inputmode="decimal" step="0.01" min="1" placeholder="如 1.95"
@@ -3805,11 +3841,6 @@ function openSettleModal(it){
     </div>
   `;
   body.appendChild(flipWrap);
-  // show/hide odds inputs when the flip checkbox toggles
-  setTimeout(()=>{
-    const fc = $("#settleFlip"), row = $("#flipOddsRow");
-    if(fc && row){ fc.addEventListener("change", ()=>{ row.style.display = fc.checked ? "flex" : "none"; }); }
-  }, 0);
 
   function q(label, key, options){
     const wrap = document.createElement("div"); wrap.className="settle-q"; wrap.dataset.key=key;
@@ -3900,16 +3931,15 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   const flipChecked = !!($("#settleFlip") && $("#settleFlip").checked);
   it.platformFlip = flipChecked;
   picks.platformFlip = flipChecked;
-  // optional Stake moneyline odds (only meaningful on flip games)
-  if(flipChecked){
+  // Stake moneyline odds — now read for ANY game (divergence analysis no longer
+  // limited to flip games). Blank = not recorded.
+  {
     const oa = parseFloat($("#flipOddsAway")?.value);
     const oh = parseFloat($("#flipOddsHome")?.value);
     it.flipOddsAway = isNaN(oa) ? null : oa;
     it.flipOddsHome = isNaN(oh) ? null : oh;
     picks.flipOddsAway = it.flipOddsAway;
     picks.flipOddsHome = it.flipOddsHome;
-  } else {
-    picks.flipOddsAway = null; picks.flipOddsHome = null;
   }
   snapshot();
   // if revising, remove the old game record first
