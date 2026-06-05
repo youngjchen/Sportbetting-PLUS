@@ -113,6 +113,11 @@
   }
   #zoomctl button:hover{border-color:#3a4756;background:rgba(34,42,54,.95);}
   #zoomctl button.fit{font-size:15px;}
+  #zoomctl button#batchSettleBtn{font-size:14px;font-weight:700;font-family:"Noto Sans TC";position:relative;}
+  #zoomctl button#batchSettleBtn .usc{
+    position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;
+    background:var(--hot);color:#1a1205;font-size:11px;font-weight:800;display:grid;place-items:center;font-family:"Oswald";
+  }
   #zoomctl button.leaguejump{
     width:auto;min-width:64px;height:38px;padding:0 12px;font-size:13px;font-weight:700;
     display:flex;align-items:center;gap:7px;justify-content:flex-start;
@@ -350,6 +355,19 @@
   .rv-tug-legend{display:flex;gap:16px;font-size:11px;color:var(--ink-dim);margin:4px 0 2px;}
   .rv-tug-legend .lg{display:flex;align-items:center;gap:5px;}
   .rv-tug-legend .sw{width:10px;height:10px;border-radius:3px;}
+  .drill{margin:2px 0 10px;border-left:2px solid var(--line);padding-left:10px;max-height:280px;overflow:auto;}
+  .drill-row{display:flex;align-items:center;gap:10px;padding:5px 2px;font-size:12px;border-bottom:1px solid rgba(255,255,255,.04);}
+  .drill-row:last-child{border-bottom:none;}
+  .drill-row .dr-date{color:var(--ink-dim);font-family:"Oswald";flex:0 0 auto;width:40px;}
+  .drill-row .dr-match{flex:1 1 auto;color:var(--ink);}
+  .drill-row .dr-match b{font-family:"Oswald";color:var(--lit);}
+  .drill-row .dr-role{flex:0 0 auto;color:var(--ink-dim);text-align:right;font-size:11px;}
+  .drill-row .dr-hit{color:#28c76f;font-weight:700;}
+  .drill-row .dr-miss{color:#ff3b5c;font-weight:700;}
+  .drill-toggle{cursor:pointer;}
+  .drill-toggle::after{content:"▸";display:inline-block;margin-left:6px;color:var(--ink-dim);font-size:10px;transition:transform .15s;}
+  .drill-toggle.drill-open::after{transform:rotate(90deg);}
+  tr.drill-toggle:hover{background:rgba(255,255,255,.03);}
   .rv-bar > span{display:block;height:100%;border-radius:6px;}
   .rv-pct{font-family:"Oswald";font-weight:700;font-size:17px;min-width:50px;display:inline-block;text-align:right;}
   .rv-pct.hi{color:#28c76f;}
@@ -872,6 +890,7 @@
       <button class="leaguejump" data-lg="kbo" title="跳到 韓職"><span class="lgdot" style="background:var(--kbo)"></span>韓職</button>
       <button class="leaguejump" data-lg="cpbl" title="跳到 中職"><span class="lgdot" style="background:var(--cpbl)"></span>中職</button>
       <button class="fit" id="reviewQuickBtn" title="燈號回顧">🔍</button>
+      <button class="fit" id="batchSettleBtn" title="批次結算今天未結算的比賽">結算<span id="unsettledCount" class="usc" style="display:none"></span></button>
     </div>
   </div>
 
@@ -949,6 +968,7 @@
     <div id="settleBody"></div>
     <div class="actions">
       <button class="btn" id="settleCancel">取消</button>
+      <button class="btn" id="settleSkip" style="display:none;">略過這場 →</button>
       <button class="btn" id="settleRemove" style="display:none;color:var(--danger);">取消結算</button>
       <button class="btn" id="settleSaveOdds" title="只存賠率，不需填比分；賽後再回來補比分結算">💾 暫存賠率</button>
       <button class="btn" id="settleConfirm" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">確認結算</button>
@@ -1558,6 +1578,7 @@ function render(){
   renderSummary();
   buildTray();
   if(typeof refreshLeagueJumpBtns==="function") refreshLeagueJumpBtns();
+  if(typeof refreshUnsettledCount==="function") refreshUnsettledCount();
 }
 
 function renderToken(it){
@@ -1901,6 +1922,7 @@ function collectSummary(){
   const strong = [], conflicts = [];
   state.items.forEach(it=>{
     if(it.type!=="match") return;
+    if(it.settled) return;   // settled games drop out of the live summary
     normMatch(it);
     const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
     const matchName = `${it.away}/${it.home}`;
@@ -2938,6 +2960,49 @@ document.querySelectorAll("#zoomctl .leaguejump").forEach(b=>{
   b.onclick = ()=>{ if(!b.disabled) jumpToLeague(b.dataset.lg); };
 });
 
+/* ---- batch settle: relay through every unsettled match on today's board ---- */
+let batchQueue = null;   // array of item ids pending settlement, or null when not batching
+function unsettledMatches(){
+  return state.items.filter(i=>i.type==="match" && !i.settled);
+}
+function refreshUnsettledCount(){
+  const el = $("#unsettledCount"); if(!el) return;
+  const n = unsettledMatches().length;
+  if(n>0){ el.textContent = n; el.style.display=""; }
+  else { el.style.display="none"; }
+}
+function startBatchSettle(){
+  const pending = unsettledMatches();
+  if(!pending.length){ alert("今天沒有尚未結算的比賽，全部都結算過了。"); return; }
+  batchQueue = pending.map(i=>i.id);
+  openNextBatchSettle();
+}
+function openNextBatchSettle(){
+  if(!batchQueue || !batchQueue.length){ batchQueue=null; return; }
+  // skip ids that no longer exist or are already settled
+  let it=null;
+  while(batchQueue.length){
+    const id = batchQueue[0];
+    const found = state.items.find(s=>s.id===id && s.type==="match" && !s.settled);
+    if(found){ it=found; break; }
+    batchQueue.shift();
+  }
+  if(!it){ batchQueue=null; render(); return; }
+  openSettleModal(it);
+  updateBatchSkipBtn();
+}
+function updateBatchSkipBtn(){
+  const sk = $("#settleSkip");
+  if(sk) sk.style.display = (batchQueue && batchQueue.length) ? "" : "none";
+}
+function advanceBatch(){
+  if(!batchQueue) return false;
+  batchQueue.shift();          // drop the one we just handled
+  if(batchQueue.length){ setTimeout(openNextBatchSettle, 150); return true; }
+  batchQueue=null; return false;
+}
+$("#batchSettleBtn") && ($("#batchSettleBtn").onclick = startBatchSettle);
+
 /* overflow menu */
 function closeMore(){ $("#moreMenu").classList.remove("show"); }
 $("#moreBtn").onclick = (e)=>{ e.stopPropagation(); $("#moreMenu").classList.toggle("show"); };
@@ -3140,8 +3205,17 @@ function collectConflictGames(leagueFilter){
       if(!tied && heavierWon!==null){
         out.totalConflictGames; // counted per-game below
         if(heavierWon) out.heavierWon++; else out.heavierLost++;
-        out.byDiff[diff] = out.byDiff[diff] || {won:0, lost:0};
+        out.byDiff[diff] = out.byDiff[diff] || {won:0, lost:0, games:[]};
         if(heavierWon) out.byDiff[diff].won++; else out.byDiff[diff].lost++;
+        // record the constituent game for drill-down verification
+        const heavierIsA2 = (market==="獨贏") ? ((ls.mlAway||0) > (ls.mlHome||0))
+                          : (market==="讓分") ? ((ls.hdGive||0) > (ls.hdRecv||0))
+                          : ((ls.over||0) > (ls.under||0));
+        out.byDiff[diff].games.push({
+          date:g.date, away:g.awayTeam, home:g.homeTeam,
+          aScore:g.awayScore, hScore:g.homeScore,
+          market, diff, heavierWon
+        });
       } else if(tied){ out.heavierTieLights++; }
     }
     if(mlC && mlRes!=null && mlRes!=="tie"){
@@ -3237,7 +3311,7 @@ function collectFlipGames(leagueFilter){
    Splits results into flip vs non-flip subsets (二B). */
 function collectDivergence(leagueFilter){
   const ODDS_MIN_DIFF = 0.10;
-  const mk = ()=>({ total:0, favWon:0, undWon:0, noClearFav:0, withOdds:0, recvCover:0, recvCoverDenom:0 });
+  const mk = ()=>({ total:0, favWon:0, undWon:0, noClearFav:0, withOdds:0, recvCover:0, recvCoverDenom:0, games:[] });
   const out = { all:mk(), flip:mk(), nonflip:mk() };
   const games = doc.games || [];
   for(let gi=0; gi<games.length; gi++){
@@ -3261,10 +3335,19 @@ function collectDivergence(leagueFilter){
     // 受讓過盤率: read the settled hdResult directly (no margin recompute).
     // In a divergence game the moneyline favorite is the RECEIVING side (not the spread fav),
     // so 受讓過盤 = 讓分方沒過 = hdResult === "fav_nocover".
+    let recvCovered = null;
     if(g.hdResult==="fav_cover" || g.hdResult==="fav_nocover"){
       buckets.forEach(b=>b.recvCoverDenom++);
-      if(g.hdResult==="fav_nocover") buckets.forEach(b=>b.recvCover++);
+      recvCovered = (g.hdResult==="fav_nocover");
+      if(recvCovered) buckets.forEach(b=>b.recvCover++);
     }
+    const favTeam = (oddsFavSide==="away") ? g.awayTeam : g.homeTeam;
+    const detail = {
+      date:g.date, away:g.awayTeam, home:g.homeTeam,
+      aScore:g.awayScore, hScore:g.homeScore,
+      favTeam, favWon: favScore>undScore, recvCovered, flip: !!g.platformFlip
+    };
+    buckets.forEach(b=>b.games.push(detail));
   }
   return out;
 }
@@ -3276,16 +3359,19 @@ function monthOf(dateStr){ return parseInt(dateStr.split("-")[1],10); }
    - tot: warned 大分被看好但傾向小 → correct when totResult==="under"
    Returns { hd:{fired,correct,pct}, ml:{...}, tot:{...}, all:{...} } */
 function collectLowCoverWarning(leagueFilter){
-  const mk = ()=>({fired:0, correct:0, pct:null});
+  const mk = ()=>({fired:0, correct:0, pct:null, games:[]});
   const r = { hd:mk(), ml:mk(), tot:mk(), all:mk() };
   const finalize = o=>{ o.pct = o.fired>0 ? o.correct/o.fired : null; };
   const games = doc.games || [];
+  const base = g=>({date:g.date, away:g.awayTeam, home:g.homeTeam, aScore:g.awayScore, hScore:g.homeScore});
   for(const g of games){
     if(leagueFilter!=="all" && g.league!==leagueFilter) continue;
     // hd
     if(g.lowCoverWarnHd && (g.hdResult==="fav_cover"||g.hdResult==="fav_nocover")){
       r.hd.fired++; r.all.fired++;
-      if(g.hdResult==="fav_nocover"){ r.hd.correct++; r.all.correct++; }
+      const hit = (g.hdResult==="fav_nocover");
+      if(hit){ r.hd.correct++; r.all.correct++; }
+      const d = Object.assign(base(g), {market:"讓分", hit}); r.hd.games.push(d); r.all.games.push(d);
     }
     // ml: need which side was lit + whether it lost
     if(g.lowCoverWarnMl && g.mlLitSide){
@@ -3293,13 +3379,17 @@ function collectLowCoverWarning(leagueFilter){
                  ? (g.awayScore>g.homeScore?"away":(g.homeScore>g.awayScore?"home":"tie")) : null);
       if(ml && ml!=="tie"){
         r.ml.fired++; r.all.fired++;
-        if(ml !== g.mlLitSide){ r.ml.correct++; r.all.correct++; }  // lit team lost = warning correct
+        const hit = (ml !== g.mlLitSide);   // lit team lost = warning correct
+        if(hit){ r.ml.correct++; r.all.correct++; }
+        const d = Object.assign(base(g), {market:"獨贏", hit}); r.ml.games.push(d); r.all.games.push(d);
       }
     }
     // tot
     if(g.lowCoverWarnTot && (g.totResult==="over"||g.totResult==="under")){
       r.tot.fired++; r.all.fired++;
-      if(g.totResult==="under"){ r.tot.correct++; r.all.correct++; }
+      const hit = (g.totResult==="under");
+      if(hit){ r.tot.correct++; r.all.correct++; }
+      const d = Object.assign(base(g), {market:"大小分", hit}); r.tot.games.push(d); r.all.games.push(d);
     }
   }
   finalize(r.hd); finalize(r.ml); finalize(r.tot); finalize(r.all);
@@ -3337,6 +3427,29 @@ function rvPctCell(agg){
   const cls = pctClassFor(agg.pct, agg.total);
   return `<span class="rv-pct ${cls}">${Math.round(agg.pct*100)}%</span>`;
 }
+/* ---- drill-down: render a list of constituent games as compact one-line rows ----
+   roleFn(g) -> short string describing this game's role/result in the stat. */
+let _drillSeq = 0;
+function drillBlock(games, roleFn){
+  if(!games || !games.length) return {id:null, html:""};
+  const id = "drill_"+(++_drillSeq);
+  let rows = "";
+  games.slice().sort((a,b)=> (a.date<b.date?1:-1)).forEach(g=>{
+    const sc = (g.aScore!=null&&g.hScore!=null) ? `${g.aScore}-${g.hScore}` : "—";
+    rows += `<div class="drill-row"><span class="dr-date">${(g.date||"").slice(5)}</span>`+
+            `<span class="dr-match">${esc(g.away)} <b>${sc}</b> ${esc(g.home)}</span>`+
+            `<span class="dr-role">${roleFn(g)}</span></div>`;
+  });
+  return {id, html:`<div class="drill" id="${id}" style="display:none">${rows}</div>`};
+}
+function toggleDrillById(id, triggerEl){
+  const d = document.getElementById(id);
+  if(!d) return;
+  const open = d.style.display!=="none";
+  d.style.display = open ? "none" : "block";
+  if(triggerEl) triggerEl.classList.toggle("drill-open", !open);
+}
+window.toggleDrillById = toggleDrillById;
 /* tug-of-war bar: left green = heavier(燈多)-side wins, right amber = lighter(燈少)-side wins.
    Width proportional to win share; center label shows total. low-sample = muted. */
 function rvTugBar(won, lost){
@@ -3554,11 +3667,16 @@ function renderReviewPage(){
       diffs.forEach(d=>{
         const rec = cf.byDiff[d]; const tot = rec.won+rec.lost;
         const low = tot < RV_SAMPLE_MIN;
-        html += `<tr class="rv-row${low?" low-sample":""}">`+
+        const detail = drillBlock(rec.games, g=>{
+          const winTxt = g.heavierWon ? `<span class="dr-hit">燈多贏</span>` : `<span class="dr-miss">燈少贏</span>`;
+          return `${g.market}・${winTxt}`;
+        });
+        html += `<tr class="rv-row drill-toggle${low?" low-sample":""}"${detail.id?` onclick="toggleDrillById('${detail.id}',this)" style="cursor:pointer"`:""}>`+
                 `<td class="lbl">差 ${d} 燈</td>`+
                 `<td style="text-align:left">${rvTugBar(rec.won, rec.lost)}</td>`+
                 `<td><span class="rv-samp">${tot} 場${low&&tot>0?"（少）":""}</span></td>`+
                 `</tr>`;
+        if(detail.id) html += `<tr class="drill-tr"><td colspan="3" style="padding:0">${detail.html}</td></tr>`;
       });
       html += `</tbody></table>`;
     }
@@ -3640,6 +3758,16 @@ function renderReviewPage(){
       html += `<div class="blk"><div class="v" style="color:#28c76f">${dPct!=null?Math.round(dPct*100):"—"}%</div><div class="k">低賠（熱門方）獲勝率（${d.favWon}/${dTot}）</div></div>`;
       html += `<div class="blk"><div class="v" style="color:#3d8bfd">${cPct!=null?Math.round(cPct*100):"—"}%</div><div class="k">受讓過盤率（${d.recvCover}/${d.recvCoverDenom}）</div></div>`;
       html += `</div></div>`;
+      // drill-down: list the constituent divergence games
+      const det = drillBlock(d.games.filter(x=>true), g=>{
+        const fav = g.favWon ? `<span class="dr-hit">熱門贏</span>` : `<span class="dr-miss">熱門輸</span>`;
+        const cov = g.recvCovered===true ? `受讓過` : (g.recvCovered===false ? `受讓沒過` : ``);
+        return `熱門:${esc(g.favTeam)}・${fav}${cov?`・${cov}`:""}`;
+      });
+      if(det.id){
+        html += `<div class="drill-toggle" onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:-4px 0 6px">展開 ${d.games.length} 場明細核對</div>`;
+        html += det.html;
+      }
       if(dTot>=RV_SAMPLE_MIN){
         if(dPct!=null && dPct>=0.60) html += `<div class="rv-insight">🎯【${label}】低賠熱門方勝率 ${Math.round(dPct*100)}%——<b>讓分盤誘盤的跡象</b>。遇到背離時信獨贏熱門、別跟讓分方向。</div>`;
         else if(dPct!=null && dPct<=0.40) html += `<div class="rv-insight warn">⚠️【${label}】低賠熱門方反而少贏（${Math.round(dPct*100)}%），讓分盤方向可能藏了資訊。</div>`;
@@ -3669,11 +3797,15 @@ function renderReviewPage(){
     html += `<table class="rv-table"><thead><tr><th class="lbl">盤口</th><th>警告命中率</th><th>命中 / 出現</th></tr></thead><tbody>`;
     [["獨贏",lw.ml],["讓分",lw.hd],["大小分",lw.tot]].forEach(([label,o])=>{
       const low = o.fired < RV_SAMPLE_MIN;
-      html += `<tr class="rv-row${low?" low-sample":""}">`+
+      const det = drillBlock(o.games, g=>{
+        return g.hit ? `<span class="dr-hit">命中</span>` : `<span class="dr-miss">沒命中</span>`;
+      });
+      html += `<tr class="rv-row drill-toggle${low?" low-sample":""}"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
               `<td class="lbl">${label}</td>`+
               `<td><div class="rv-bar-wrap">${rvBar(o.pct,o.fired)}${rvPctCell({pct:o.pct,total:o.fired})}</div></td>`+
               `<td><span class="rv-samp">${o.correct} / ${o.fired}${low&&o.fired>0?"（樣本不足）":""}</span></td>`+
               `</tr>`;
+      if(det.id) html += `<tr class="drill-tr"><td colspan="3" style="padding:0">${det.html}</td></tr>`;
     });
     html += `</tbody></table>`;
     if(lw.all.fired>=RV_SAMPLE_MIN){
@@ -3685,6 +3817,35 @@ function renderReviewPage(){
     }
   }
   html += `</div>`;
+
+  // ---- ⑧ 全部比賽紀錄 (verify nothing was missed) ----
+  {
+    const all = (doc.games||[]).filter(g=> leagueF==="all" || g.league===leagueF)
+                  .slice().sort((a,b)=> (a.date<b.date?1:-1));
+    html += `<div class="rv-section">`;
+    html += `<div class="rv-head">⑧ 全部比賽紀錄 <span class="rv-sub">核對結算有沒有漏（共 ${all.length} 場）</span></div>`;
+    if(!all.length){
+      html += `<div class="rv-empty">還沒有任何已結算的比賽。</div>`;
+    } else {
+      const LG = {mlb:"MLB",npb:"日",kbo:"韓",cpbl:"中"};
+      html += `<table class="rv-table rv-allgames"><thead><tr><th class="lbl">日期</th><th style="text-align:left">對戰（比分）</th><th>讓分</th><th>大小</th></tr></thead><tbody>`;
+      all.forEach(g=>{
+        const sc = (g.awayScore!=null&&g.homeScore!=null)?`${g.awayScore}-${g.homeScore}`:"—";
+        const hd = g.hdResult==="fav_cover"?`<span class="dr-hit">過</span>`
+                  :g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`
+                  :g.hdResult==="push"?"推":"—";
+        const tot = g.totResult==="over"?"大":g.totResult==="under"?"小":g.totResult==="push"?"推":"—";
+        html += `<tr class="rv-row">`+
+                `<td class="lbl" style="white-space:nowrap">${(g.date||"").slice(5)} <span style="color:var(--ink-dim);font-size:10px">${LG[g.league]||""}</span></td>`+
+                `<td style="text-align:left">${esc(g.awayTeam)} <b style="font-family:Oswald;color:var(--lit)">${sc}</b> ${esc(g.homeTeam)}${g.platformFlip?` <span style="color:#a06bff;font-size:10px">顛</span>`:""}</td>`+
+                `<td>${hd}</td>`+
+                `<td>${tot}</td>`+
+                `</tr>`;
+      });
+      html += `</tbody></table>`;
+    }
+    html += `</div>`;
+  }
 
   body.innerHTML = html;
 }
@@ -4094,10 +4255,15 @@ function openSettleModal(it){
 
   $("#settleRemove").style.display = isRevise ? "" : "none";
   m.classList.add("show");
+  updateBatchSkipBtn();
   // focus the away-score for fast keyboard entry
   setTimeout(()=>{ const el = $("#settleAwayScore"); if(el && !prior.awayScore) el.focus(); }, 50);
 }
-$("#settleCancel") && ($("#settleCancel").onclick = ()=>{ $("#settleModal").classList.remove("show"); settleTarget=null; });
+$("#settleCancel") && ($("#settleCancel").onclick = ()=>{ $("#settleModal").classList.remove("show"); settleTarget=null; batchQueue=null; });
+$("#settleSkip") && ($("#settleSkip").onclick = ()=>{
+  $("#settleModal").classList.remove("show"); settleTarget=null;
+  if(batchQueue){ advanceBatch(); }   // move to next without settling this one
+});
 $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   if(!settleTarget) return;
   const it = settleTarget;
@@ -4162,6 +4328,8 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   $("#settleModal").classList.remove("show");
   settleTarget=null;
   render();
+  refreshUnsettledCount();
+  advanceBatch();   // if batch-settling, open the next unsettled game
 });
 $("#settleRemove") && ($("#settleRemove").onclick = ()=>{
   if(!settleTarget || !settleTarget.settled) return;
