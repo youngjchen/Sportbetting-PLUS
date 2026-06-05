@@ -113,6 +113,14 @@
   }
   #zoomctl button:hover{border-color:#3a4756;background:rgba(34,42,54,.95);}
   #zoomctl button.fit{font-size:15px;}
+  #zoomctl button.leaguejump{
+    width:auto;min-width:64px;height:38px;padding:0 12px;font-size:13px;font-weight:700;
+    display:flex;align-items:center;gap:7px;justify-content:flex-start;
+    font-family:"Noto Sans TC";
+  }
+  #zoomctl button.leaguejump .lgdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto;}
+  #zoomctl button.leaguejump:disabled{opacity:.35;cursor:not-allowed;}
+  #zoomctl button.leaguejump:disabled:hover{border-color:var(--line);background:rgba(21,26,34,.92);}
   #zoomctl .zlabel{
     text-align:center;font-family:"Oswald";font-size:11px;color:var(--ink-dim);
     background:rgba(21,26,34,.92);border:1px solid var(--line);border-radius:8px;padding:2px 0;backdrop-filter:blur(6px);
@@ -859,10 +867,10 @@
     <div id="world"></div>
     <div id="saveBadge"></div>
     <div id="zoomctl">
-      <button id="zoomIn" title="放大">＋</button>
-      <div class="zlabel" id="zlabel">100%</div>
-      <button id="zoomOut" title="縮小">－</button>
-      <button class="fit" id="fitBtn2" title="適中縮放">⊡</button>
+      <button class="leaguejump" data-lg="mlb" title="跳到 MLB"><span class="lgdot" style="background:var(--mlb)"></span>MLB</button>
+      <button class="leaguejump" data-lg="npb" title="跳到 日職"><span class="lgdot" style="background:var(--npb)"></span>日職</button>
+      <button class="leaguejump" data-lg="kbo" title="跳到 韓職"><span class="lgdot" style="background:var(--kbo)"></span>韓職</button>
+      <button class="leaguejump" data-lg="cpbl" title="跳到 中職"><span class="lgdot" style="background:var(--cpbl)"></span>中職</button>
       <button class="fit" id="reviewQuickBtn" title="燈號回顧">🔍</button>
     </div>
   </div>
@@ -1549,6 +1557,7 @@ function render(){
   state.items.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
   renderSummary();
   buildTray();
+  if(typeof refreshLeagueJumpBtns==="function") refreshLeagueJumpBtns();
 }
 
 function renderToken(it){
@@ -1927,18 +1936,12 @@ function renderSummary(){
   const {strong, conflicts} = collectSummary();
   if(strong.length===0 && conflicts.length===0) return;
 
-  const r = canvas.getBoundingClientRect();
-  let pos = state.summaryPos || {x: Math.max(12, r.width-312), y: 12};
-  // clamp into the visible canvas — after a browser zoom or window resize a stored
-  // position can fall offscreen, making the panel unreachable. Keep a margin visible.
-  const MARGIN = 60;
-  pos = {
-    x: Math.max(0, Math.min(pos.x, Math.max(0, r.width  - MARGIN))),
-    y: Math.max(0, Math.min(pos.y, Math.max(0, r.height - MARGIN)))
-  };
   const box = document.createElement("div"); box.id="summary";
   if(doc.summaryCollapsed) box.classList.add("mini");
-  box.style.left = pos.x+"px"; box.style.top = pos.y+"px";
+  // corner-anchored positioning: never goes offscreen regardless of zoom/screen size.
+  // corner ∈ "tl" | "tr" | "bl" | "br" (default top-right).
+  const corner = doc.summaryCorner || "tr";
+  positionSummaryByCorner(box, corner);
   // apply user-resized size if present (only when expanded)
   if(!doc.summaryCollapsed && doc.summarySize){
     if(doc.summarySize.w) box.style.width = doc.summarySize.w+"px";
@@ -2034,7 +2037,10 @@ function startSummaryDrag(e){
   e.preventDefault(); e.stopPropagation();
   const box = canvas.querySelector("#summary");
   const r = box.getBoundingClientRect();
+  // switch to free dragging during the gesture; snap to a corner on release
   sumDrag = { box, offX:e.clientX-r.left, offY:e.clientY-r.top };
+  // neutralise corner anchoring so left/top driving works during drag
+  box.style.right = "auto"; box.style.bottom = "auto";
   try{ box.setPointerCapture(e.pointerId); }catch(_){}
 }
 function moveSummaryDrag(e){
@@ -2042,41 +2048,36 @@ function moveSummaryDrag(e){
   const cr = canvas.getBoundingClientRect();
   const bw = sumDrag.box.offsetWidth * (uiScale||1);
   const bh = sumDrag.box.offsetHeight * (uiScale||1);
-  // keep at least a margin on-screen; allow full box within canvas
   const x = Math.max(0, Math.min(cr.width  - bw, e.clientX-cr.left-sumDrag.offX));
   const y = Math.max(0, Math.min(cr.height - bh, e.clientY-cr.top -sumDrag.offY));
-  state.summaryPos = {x,y};
   sumDrag.box.style.left = x+"px"; sumDrag.box.style.top = y+"px";
+  sumDrag.lastX = x; sumDrag.lastY = y; sumDrag.bw = bw; sumDrag.bh = bh;
 }
 function endSummaryDrag(){
   if(!sumDrag) return;
-  // magnetic snap: if near an edge, stick to it
   const box = sumDrag.box;
   const cr = canvas.getBoundingClientRect();
-  const bw = box.offsetWidth * (uiScale||1);
-  const bh = box.offsetHeight * (uiScale||1);
-  const SNAP_EDGE = 28, PAD = 8;
-  let {x,y} = state.summaryPos || {x:0,y:0};
-  if(x <= SNAP_EDGE) x = PAD;
-  else if(x >= cr.width - bw - SNAP_EDGE) x = Math.max(PAD, cr.width - bw - PAD);
-  if(y <= SNAP_EDGE) y = PAD;
-  else if(y >= cr.height - bh - SNAP_EDGE) y = Math.max(PAD, cr.height - bh - PAD);
-  state.summaryPos = {x,y};
-  box.style.left = x+"px"; box.style.top = y+"px";
+  const bw = sumDrag.bw || box.offsetWidth*(uiScale||1);
+  const bh = sumDrag.bh || box.offsetHeight*(uiScale||1);
+  // center of the box decides which quadrant → which corner
+  const cx = (sumDrag.lastX!=null ? sumDrag.lastX : 0) + bw/2;
+  const cy = (sumDrag.lastY!=null ? sumDrag.lastY : 0) + bh/2;
+  const right = cx > cr.width/2;
+  const bottom = cy > cr.height/2;
+  const corner = (bottom?"b":"t") + (right?"r":"l");
+  doc.summaryCorner = corner;
+  positionSummaryByCorner(box, corner);
   sumDrag=null; save();
 }
-// re-clamp summary into view on window resize / orientation change
-window.addEventListener("resize", ()=>{
-  const box = document.getElementById("summary");
-  if(!box || !state.summaryPos) return;
-  const cr = canvas.getBoundingClientRect();
-  const bw = box.offsetWidth * (uiScale||1), bh = box.offsetHeight * (uiScale||1);
-  let {x,y} = state.summaryPos;
-  x = Math.max(0, Math.min(cr.width - bw, x));
-  y = Math.max(0, Math.min(cr.height - bh, y));
-  state.summaryPos = {x,y};
-  box.style.left = x+"px"; box.style.top = y+"px";
-});
+// Anchor the summary box to a screen corner using CSS edge offsets (never goes offscreen).
+function positionSummaryByCorner(box, corner){
+  const PAD = 12;
+  box.style.left = box.style.right = box.style.top = box.style.bottom = "auto";
+  if(corner==="tl"){ box.style.left=PAD+"px";  box.style.top=PAD+"px"; }
+  else if(corner==="tr"){ box.style.right=PAD+"px"; box.style.top=PAD+"px"; }
+  else if(corner==="bl"){ box.style.left=PAD+"px";  box.style.bottom=PAD+"px"; }
+  else { box.style.right=PAD+"px"; box.style.bottom=PAD+"px"; }  // br
+}
 
 /* ---------------- snapping (all in WORLD coords) ---------------- */
 // world-space footprint of an item (offsetWidth is unaffected by the world transform)
@@ -2908,12 +2909,34 @@ $("#clearRecent") && ($("#clearRecent").onclick = ()=>{
 });
 $("#exportBtn").onclick = ()=>{ closeMore(); openExport(); };
 
-/* zoom controls */
-$("#zoomIn").onclick  = ()=> nudgeZoom(1.2);
-$("#zoomOut").onclick = ()=> nudgeZoom(1/1.2);
+/* zoom: wheel/pinch only now; buttons removed. doFit kept for internal use. */
 const doFit = ()=> fitView();
 $("#fitBtn") && ($("#fitBtn").onclick = doFit);
-$("#fitBtn2").onclick = doFit;
+$("#fitBtn2") && ($("#fitBtn2").onclick = doFit);
+
+/* ---- league jump buttons (bottom-right): pan to a league's top-left card ---- */
+function jumpToLeague(lg){
+  const cards = state.items.filter(i=>i.type==="match" && leagueOf(i)===lg);
+  if(!cards.length) return;
+  // top-left card = smallest y, then smallest x
+  const target = cards.slice().sort((a,b)=> (a.y-b.y) || (a.x-b.x))[0];
+  const cr = canvas.getBoundingClientRect();
+  const PAD = 40;  // leave a little margin from the top-left
+  // pan only (keep current zoom): place target's top-left near viewport top-left
+  view.x = PAD - target.x * view.k;
+  view.y = PAD - target.y * view.k;
+  applyView(); saveViewSoon();
+}
+function refreshLeagueJumpBtns(){
+  document.querySelectorAll("#zoomctl .leaguejump").forEach(b=>{
+    const lg = b.dataset.lg;
+    const has = state.items.some(i=>i.type==="match" && leagueOf(i)===lg);
+    b.disabled = !has;
+  });
+}
+document.querySelectorAll("#zoomctl .leaguejump").forEach(b=>{
+  b.onclick = ()=>{ if(!b.disabled) jumpToLeague(b.dataset.lg); };
+});
 
 /* overflow menu */
 function closeMore(){ $("#moreMenu").classList.remove("show"); }
