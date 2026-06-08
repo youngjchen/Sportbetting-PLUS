@@ -625,8 +625,9 @@
     position:absolute;right:0;top:calc(100% + 6px);z-index:300;display:none;flex-direction:column;gap:2px;
     background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:6px;
     box-shadow:0 16px 40px rgba(0,0,0,.55);min-width:150px;
-    max-height:80vh;overflow-y:auto;overscroll-behavior:contain;
+    max-height:70vh;overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
   }
+  /* when the UI is scaled up the menu can exceed the viewport; cap to a safe portion */
   #moreMenu.show{display:flex;}
   #moreMenu button{
     text-align:left;font-family:"Noto Sans TC";font-size:14px;color:var(--ink);
@@ -814,10 +815,7 @@
     <div id="moreWrap">
       <button class="btn" id="moreBtn" title="更多">⋯</button>
       <div id="moreMenu">
-        <button id="addBlankMenu">＋ 空白卡</button>
-        <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
-        <button id="layoutBtn">⊞ 依聯盟排版</button>
-        <button id="copyDayBtn">📋 複製某天到今天</button>
+        <!-- 天天使用：排版與顯示設定 -->
         <div class="colrow">
           <span class="collabel">每排</span>
           <button class="colbtn" data-cols="auto">自動</button>
@@ -832,6 +830,7 @@
           <button class="sortbtn" data-sort="hd">讓分</button>
           <button class="sortbtn" data-sort="tot">大小分</button>
         </div>
+        <button id="layoutBtn">⊞ 依聯盟排版</button>
         <button id="collapseAllBtn">⊟ 收合／展開全部</button>
         <div class="colrow">
           <span class="collabel">收合聯盟</span>
@@ -840,9 +839,6 @@
           <button class="leaguecolbtn" data-lg="kbo">韓職</button>
           <button class="leaguecolbtn" data-lg="cpbl">中職</button>
         </div>
-        <div class="sep"></div>
-        <button id="statsBtn">📊 隊伍統計</button>
-        <button id="reviewBtn">🔍 燈號回顧</button>
         <div class="colrow">
           <span class="collabel">過盤率</span>
           <button class="winbtn" data-win="season">本季</button>
@@ -868,18 +864,22 @@
           <button class="uibtn" data-ui="1.15">大</button>
           <button class="uibtn" data-ui="1.3">特大</button>
         </div>
-        <button id="importGamesBtn">📥 匯入比賽資料（純文字）</button>
         <div class="sep"></div>
+        <!-- 中頻：檢視與資料進出 -->
+        <button id="statsBtn">📊 隊伍統計</button>
+        <button id="reviewBtn">🔍 燈號回顧</button>
+        <button id="copyDayBtn">📋 複製某天到今天</button>
+        <button id="importGamesBtn">📥 匯入比賽資料（純文字）</button>
         <button id="exportBtn">⎘ 匯出文字</button>
         <button id="pngBtn">⤓ 存成圖片</button>
         <div class="sep"></div>
+        <!-- 很少使用：備份與清理 -->
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
-        <div class="sep"></div>
-        <button id="clearAll" class="danger">✕ 清空這天</button>
         <button id="clearOldDates">🧹 清除已結算的舊日期</button>
-        <button id="clearRecent" class="danger">⚠ 清除所有比賽紀錄</button>
+        <div class="sep"></div>
+        <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
       </div>
     </div>
   </header>
@@ -2155,13 +2155,10 @@ function snap(it, x, y){
 /* ---------------- dragging existing items ---------------- */
 let drag = null;
 function startItemDrag(e, it, el){
-  if(e.target.closest(".no-drag")) return;
-  e.preventDefault();
-  // grab offset in WORLD space
-  const w0 = screenToWorld(e.clientX, e.clientY);
-  drag = { it, el, offX:w0.x-it.x, offY:w0.y-it.y, moved:false, pid:e.pointerId, snapped:false };
-  el.classList.add("dragging");
-  try{ el.setPointerCapture(e.pointerId); }catch(_){}
+  // Manual card dragging is disabled — card positions are managed by the layout
+  // functions only. This prevents accidental nudges while panning the canvas.
+  // (Panning the whole canvas is handled separately and still works.)
+  return;
 }
 function moveItemDrag(e){
   if(!drag) return;
@@ -2915,21 +2912,7 @@ function updateSaveBadge(){
 $("#undoBtn").onclick = ()=>{ undo(); };
 document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); } });
 
-$("#addBlankMenu").onclick = ()=>{
-  closeMore();
-  snapshot();
-  // place near top-left of current view, in world coords
-  const cr = canvas.getBoundingClientRect();
-  const tl = screenToWorld(cr.left+40, cr.top+40);
-  const p = snap({id:-1}, tl.x, tl.y);
-  state.items.push({ id:uid++, type:"match", x:p.x, y:p.y, away:"客隊", home:"主隊",
-    awayColor:"var(--ink-dim)", homeColor:"var(--ink-dim)",
-    mlAway:{lights:0}, mlHome:{lights:0},
-    hdFav:"home", hdVal:"", hdGive:{lights:0}, hdRecv:{lights:0},
-    totVal:"", over:{lights:0}, under:{lights:0}, collapsed:false });
-  save(); render();
-};
-$("#clearAll").onclick = ()=>{ closeMore(); if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } };
+$("#clearAll") && ($("#clearAll").onclick = ()=>{ closeMore(); if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } });
 $("#clearOldDates") && ($("#clearOldDates").onclick = ()=>{
   closeMore();
   const today = todayStr();
@@ -3054,7 +3037,22 @@ $("#batchSettleBtn") && ($("#batchSettleBtn").onclick = startBatchSettle);
 
 /* overflow menu */
 function closeMore(){ $("#moreMenu").classList.remove("show"); }
-$("#moreBtn").onclick = (e)=>{ e.stopPropagation(); $("#moreMenu").classList.toggle("show"); };
+$("#moreBtn").onclick = (e)=>{
+  e.stopPropagation();
+  const menu = $("#moreMenu");
+  const willShow = !menu.classList.contains("show");
+  menu.classList.toggle("show");
+  if(willShow){
+    // header is CSS-zoomed by uiScale; vh-based max-height miscomputes under zoom,
+    // so set an explicit pixel cap = (real viewport below the menu top) / zoom.
+    const z = uiScale || 1;
+    requestAnimationFrame(()=>{
+      const rect = menu.getBoundingClientRect();   // already in zoomed screen px
+      const avail = window.innerHeight - rect.top - 12;  // real px from menu top to viewport bottom
+      if(avail > 80){ menu.style.maxHeight = (avail / z) + "px"; }
+    });
+  }
+};
 document.addEventListener("pointerdown", e=>{ if(!e.target.closest("#moreWrap")) closeMore(); }, true);
 
 /* tray collapse (manual only) */
@@ -3316,12 +3314,22 @@ function collectFlipGames(leagueFilter){
     if(stakeFavScore > stakeUndScore){ out.stakeFavWon++; out.taicaiFavLost++; }
     else if(stakeFavScore < stakeUndScore){ out.stakeFavLost++; out.taicaiFavWon++; }
     else { out.stakeFavTie++; out.taicaiFavTie++; }
-    if(stakeFavScore - stakeUndScore > 1.5) out.stakeCover++;
-    else out.stakeNoCover++;
-    // 台彩 favorite = Stake underdog; it covers -1.5 if IT wins by >1.5,
-    // i.e. the Stake favorite LOSES by >1.5 (margin < -1.5).
-    if(stakeFavScore - stakeUndScore < -1.5) out.taicaiCover++;
+    // ---- 讓分過盤率: use the SETTLED result (actual line), not a hardcoded 1.5 ----
+    // Stake 讓分方 cover = exactly what was stored at settlement against the real line.
+    const margin = stakeFavScore - stakeUndScore;   // Stake fav 的淨勝分
+    const line = (g.hdVal!=null && g.hdVal!=="" && !isNaN(parseFloat(g.hdVal)))
+               ? Math.abs(parseFloat(g.hdVal)) : 1.5;   // 實際讓分盤口，缺值才退回 1.5
+    if(g.hdResult==="fav_cover" || g.hdResult==="fav_nocover"){
+      if(g.hdResult==="fav_cover") out.stakeCover++; else out.stakeNoCover++;
+    } else {
+      // no stored result (shouldn't happen for settled games) → fall back to margin
+      if(margin > line) out.stakeCover++; else out.stakeNoCover++;
+    }
+    // 台彩熱門 = Stake 冷門；它過盤 ⇔ Stake 讓分方「輸超過盤口」(margin < -line)。
+    // 這需要實際分差，hdResult 的 nocover 無法區分「贏不到盤口」與「輸」，故用 margin 精算。
+    if(margin < -line) out.taicaiCover++;
     else out.taicaiNoCover++;
+    // 註：stakeCover + taicaiCover 不必等於 total——中間差額是「分差落在盤口內、雙方都沒過」的場。
     // ---- divergence analysis (needs Stake moneyline odds) ----
     const oa = g.flipOddsAway, oh = g.flipOddsHome;
     if(oa!=null && oh!=null && oa>0 && oh>0){
@@ -3751,10 +3759,13 @@ function renderReviewPage(){
     html += `<div class="cap">標記為平台顛倒的場次</div>`;
     html += `<div class="row2">`;
     html += `<div class="blk"><div class="v" style="color:#28c76f">${sPct!=null?Math.round(sPct*100):"—"}%</div><div class="k">STAKE 熱門獲勝率（${fp.stakeFavWon}/${sTot}）</div></div>`;
-    html += `<div class="blk"><div class="v" style="color:#28c76f">${fp.stakeCover}/${fp.stakeCover+fp.stakeNoCover}</div><div class="k">STAKE 讓分過盤（-1.5）</div></div>`;
+    html += `<div class="blk"><div class="v" style="color:#28c76f">${fp.stakeCover}/${fp.total}</div><div class="k">STAKE 讓分方過盤</div></div>`;
     html += `<div class="blk" style="border-left:1px solid var(--line);padding-left:18px"><div class="v" style="color:#b56bff">${tPct!=null?Math.round(tPct*100):"—"}%</div><div class="k">台彩 熱門獲勝率（${fp.taicaiFavWon}/${tTot}）</div></div>`;
-    html += `<div class="blk"><div class="v" style="color:#b56bff">${fp.taicaiCover}/${fp.taicaiCover+fp.taicaiNoCover}</div><div class="k">台彩 讓分過盤（-1.5）</div></div>`;
-    html += `</div></div>`;
+    html += `<div class="blk"><div class="v" style="color:#b56bff">${fp.taicaiCover}/${fp.total}</div><div class="k">台彩 熱門方過盤</div></div>`;
+    html += `</div>`;
+    const bothNoCover = fp.total - fp.stakeCover - fp.taicaiCover;
+    html += `<div class="rv-note" style="margin-top:10px">過盤依各場<b>實際讓分盤口</b>判定（非固定 1.5），與結算結果一致。兩邊過盤數相加${bothNoCover>0?`少了 ${bothNoCover} 場`:`等於總場數`}——${bothNoCover>0?`那 ${bothNoCover} 場是「分差落在讓分盤口內、雙方讓分都沒過」（例如只贏 1 分）。`:`代表每場都有一方過盤。`}</div>`;
+    html += `</div>`;
     if(sTot>=RV_SAMPLE_MIN && tTot>=RV_SAMPLE_MIN){
       if(sPct!=null && tPct!=null && Math.abs(sPct-tPct)>=0.15){
         const better = sPct>tPct ? "STAKE" : "台彩";
@@ -4241,6 +4252,26 @@ function openSettleModal(it){
           style="width:90px;padding:7px 8px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
       </label>
     </div>
+    <div style="color:var(--ink-dim);font-size:11px;margin-top:12px;line-height:1.5;">初盤（開盤時）獨贏賠率 — 用來日後比對「不同場次但初盤賠率相似」的比賽結果。可留空。</div>
+    <div id="openOddsRow" style="display:flex;align-items:center;gap:12px;margin-top:6px;">
+      <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-dim);">
+        <span>${esc(it.away)}（客）初盤</span>
+        <input id="openOddsAway" type="number" inputmode="decimal" step="0.01" min="1" placeholder="初盤"
+          value="${it.openOddsAway!=null?it.openOddsAway:""}"
+          style="width:90px;padding:7px 8px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
+      </label>
+      <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-dim);">
+        <span>${esc(it.home)}（主）初盤</span>
+        <input id="openOddsHome" type="number" inputmode="decimal" step="0.01" min="1" placeholder="初盤"
+          value="${it.openOddsHome!=null?it.openOddsHome:""}"
+          style="width:90px;padding:7px 8px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
+      </label>
+    </div>
+    <label class="settle-flip" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;margin-top:14px;">
+      <input type="checkbox" id="settlePreSwap" ${it.preGameSwap?"checked":""} style="width:18px;height:18px;cursor:pointer;">
+      <span>賽前讓分方曾對調（開賽前盤口反轉）</span>
+    </label>
+    <div style="color:var(--ink-dim);font-size:11px;margin-top:4px;line-height:1.5;">標記這場在開賽前讓分方／受讓方曾被對調，日後可單獨檢視這類場次的結果。</div>
   `;
   body.appendChild(flipWrap);
 
@@ -4323,6 +4354,11 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   const oh = parseFloat($("#flipOddsHome")?.value);
   it.flipOddsAway = isNaN(oa) ? null : oa;
   it.flipOddsHome = isNaN(oh) ? null : oh;
+  const ooa = parseFloat($("#openOddsAway")?.value);
+  const ooh = parseFloat($("#openOddsHome")?.value);
+  it.openOddsAway = isNaN(ooa) ? null : ooa;
+  it.openOddsHome = isNaN(ooh) ? null : ooh;
+  it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
   snapshot(); save();
   $("#settleModal").classList.remove("show");
   settleTarget=null;
@@ -4364,6 +4400,14 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     it.flipOddsHome = isNaN(oh) ? null : oh;
     picks.flipOddsAway = it.flipOddsAway;
     picks.flipOddsHome = it.flipOddsHome;
+    const ooa = parseFloat($("#openOddsAway")?.value);
+    const ooh = parseFloat($("#openOddsHome")?.value);
+    it.openOddsAway = isNaN(ooa) ? null : ooa;
+    it.openOddsHome = isNaN(ooh) ? null : ooh;
+    picks.openOddsAway = it.openOddsAway;
+    picks.openOddsHome = it.openOddsHome;
+    it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
+    picks.preGameSwap = it.preGameSwap;
   }
   snapshot();
   // if revising, remove the old game record first
@@ -4439,6 +4483,9 @@ function applySettlement(it, picks, delta){
     platformFlip: !!picks.platformFlip,
     flipOddsAway: (picks.flipOddsAway!=null ? picks.flipOddsAway : null),
     flipOddsHome: (picks.flipOddsHome!=null ? picks.flipOddsHome : null),
+    openOddsAway: (picks.openOddsAway!=null ? picks.openOddsAway : null),
+    openOddsHome: (picks.openOddsHome!=null ? picks.openOddsHome : null),
+    preGameSwap: !!picks.preGameSwap,
     lowCoverWarnHd, lowCoverWarnMl, lowCoverWarnTot,
     // store which side was lit for ml so we can judge "did that team lose"
     mlLitSide: ( (it.mlAway.lights>=3 && it.mlHome.lights>=3) ? null
