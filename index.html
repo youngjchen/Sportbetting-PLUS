@@ -103,8 +103,11 @@
 
   /* zoom controls (bottom-right of canvas) */
   #zoomctl{
-    position:absolute;right:12px;bottom:12px;z-index:200;display:flex;flex-direction:column;gap:6px;
+    position:absolute;right:12px;bottom:12px;z-index:200;display:flex;flex-direction:column;gap:6px;align-items:flex-end;
   }
+  #zoomctlBtns{display:flex;flex-direction:column;gap:6px;align-items:flex-end;}
+  #zoomctl.collapsed #zoomctlBtns{display:none;}
+  #zoomctlToggle{align-self:flex-end;}
   #zoomctl button{
     width:42px;height:42px;border-radius:11px;border:1px solid var(--line);
     background:rgba(21,26,34,.92);color:var(--ink);font-size:21px;font-weight:700;line-height:1;
@@ -195,6 +198,8 @@
   .ico.x:hover{color:var(--danger);}
   .ico.flipbtn.on{color:var(--cross);background:rgba(160,90,255,.16);}
   .ico.flipbtn.on:hover{color:var(--cross);}
+  .ico.oddsmark{filter:grayscale(1);opacity:.32;font-size:13px;}
+  .ico.oddsmark.on{filter:none;opacity:1;background:rgba(255,176,46,.16);}
 
   .row{display:flex;align-items:center;gap:8px;padding:7px 12px;border-top:1px solid rgba(255,255,255,.05);}
   .row .tag{font-family:"Oswald";font-size:12px;letter-spacing:.08em;color:var(--ink-dim);width:30px;flex:0 0 auto;text-transform:uppercase;}
@@ -873,6 +878,7 @@
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
         <div class="sep"></div>
         <button id="clearAll" class="danger">✕ 清空這天</button>
+        <button id="clearOldDates">🧹 清除已結算的舊日期</button>
         <button id="clearRecent" class="danger">⚠ 清除所有比賽紀錄</button>
       </div>
     </div>
@@ -885,12 +891,15 @@
     <div id="world"></div>
     <div id="saveBadge"></div>
     <div id="zoomctl">
-      <button class="leaguejump" data-lg="mlb" title="跳到 MLB"><span class="lgdot" style="background:var(--mlb)"></span>MLB</button>
-      <button class="leaguejump" data-lg="npb" title="跳到 日職"><span class="lgdot" style="background:var(--npb)"></span>日職</button>
-      <button class="leaguejump" data-lg="kbo" title="跳到 韓職"><span class="lgdot" style="background:var(--kbo)"></span>韓職</button>
-      <button class="leaguejump" data-lg="cpbl" title="跳到 中職"><span class="lgdot" style="background:var(--cpbl)"></span>中職</button>
-      <button class="fit" id="reviewQuickBtn" title="燈號回顧">🔍</button>
-      <button class="fit" id="batchSettleBtn" title="批次結算今天未結算的比賽">結算<span id="unsettledCount" class="usc" style="display:none"></span></button>
+      <div id="zoomctlBtns">
+        <button class="leaguejump" data-lg="mlb" title="跳到 MLB"><span class="lgdot" style="background:var(--mlb)"></span>MLB</button>
+        <button class="leaguejump" data-lg="npb" title="跳到 日職"><span class="lgdot" style="background:var(--npb)"></span>日職</button>
+        <button class="leaguejump" data-lg="kbo" title="跳到 韓職"><span class="lgdot" style="background:var(--kbo)"></span>韓職</button>
+        <button class="leaguejump" data-lg="cpbl" title="跳到 中職"><span class="lgdot" style="background:var(--cpbl)"></span>中職</button>
+        <button class="fit" id="reviewQuickBtn" title="燈號回顧">🔍</button>
+        <button class="fit" id="batchSettleBtn" title="批次結算今天未結算的比賽">結算<span id="unsettledCount" class="usc" style="display:none"></span></button>
+      </div>
+      <button class="fit" id="zoomctlToggle" title="收合 / 展開快捷鍵">⋮</button>
     </div>
   </div>
 
@@ -1648,7 +1657,15 @@ function renderCard(it){
     // when turning flip ON pre-game, offer the odds quick-entry right away
     if(it.platformFlip){ openFlipOddsModal(it); }
   };
-  grip.append(vs,swap,flip,col,del);
+  // odds marker: 💰 lit if this card already has Stake moneyline odds recorded.
+  // Click to view/edit; faint outline if not yet filled.
+  const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
+  const oddsMark = document.createElement("div");
+  oddsMark.className = "ico no-drag oddsmark" + (hasOdds ? " on" : "");
+  oddsMark.title = hasOdds ? `已填賠率：客 ${it.flipOddsAway??"—"} / 主 ${it.flipOddsHome??"—"}（點擊修改）` : "尚未填獨贏賠率（點擊填寫）";
+  oddsMark.textContent = "💰";
+  oddsMark.onclick = ()=> openFlipOddsModal(it);
+  grip.append(vs,swap,flip,oddsMark,col,del);
   if(it.settled) el.classList.add("settled");
   grip.addEventListener("pointerdown", e=>{ if(e.target.closest(".no-drag")) return; startItemDrag(e,it,el); });
   // double-tap / double-click the header to collapse/expand
@@ -2913,6 +2930,29 @@ $("#addBlankMenu").onclick = ()=>{
   save(); render();
 };
 $("#clearAll").onclick = ()=>{ closeMore(); if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } };
+$("#clearOldDates") && ($("#clearOldDates").onclick = ()=>{
+  closeMore();
+  const today = todayStr();
+  syncStateToDoc();
+  // a date is removable if: it's before today AND every match on it is settled (or it has no matches)
+  const removable = Object.keys(doc.boards).filter(d=>{
+    if(d >= today) return false;
+    const items = (doc.boards[d].items)||[];
+    const matches = items.filter(i=>i.type==="match");
+    return matches.every(m=>m.settled);
+  });
+  if(!removable.length){ alert("沒有可清除的舊日期。\n（只會清除「今天以前、且當天每場都已結算」的日期，未結算的場會保留。）"); return; }
+  if(Object.keys(doc.boards).length - removable.length < 1){
+    // keep at least one board
+    removable.pop();
+  }
+  if(!confirm(`將清除 ${removable.length} 個已結算的舊日期，只是把畫面上的日期分頁移除。\n\n你的回顧數據（所有比賽紀錄）完全不受影響，仍保留在統計裡。\n\n確定清除？`)) return;
+  snapshot();
+  removable.forEach(d=> delete doc.boards[d]);
+  if(!doc.boards[doc.activeDate]){ doc.activeDate = Object.keys(doc.boards).sort().pop() || today; loadActiveBoard(); }
+  save(); render(); buildDateBar();
+  alert(`已清除 ${removable.length} 個舊日期。回顧數據不受影響。`);
+});
 $("#clearRecent") && ($("#clearRecent").onclick = ()=>{
   closeMore();
   const count = (doc.games && doc.games.length) || 0;
@@ -2958,6 +2998,15 @@ function refreshLeagueJumpBtns(){
 }
 document.querySelectorAll("#zoomctl .leaguejump").forEach(b=>{
   b.onclick = ()=>{ if(!b.disabled) jumpToLeague(b.dataset.lg); };
+});
+function applyZoomctlCollapsed(){
+  const z = $("#zoomctl"); if(!z) return;
+  z.classList.toggle("collapsed", !!doc.zoomctlCollapsed);
+  const t = $("#zoomctlToggle"); if(t) t.textContent = doc.zoomctlCollapsed ? "⋯" : "⋮";
+}
+$("#zoomctlToggle") && ($("#zoomctlToggle").onclick = ()=>{
+  doc.zoomctlCollapsed = !doc.zoomctlCollapsed;
+  applyZoomctlCollapsed(); save();
 });
 
 /* ---- batch settle: relay through every unsettled match on today's board ---- */
@@ -3721,9 +3770,9 @@ function renderReviewPage(){
 
     // recent flip games list
     if(fp.list.length){
-      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">最近的顛倒場</div>`;
+      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">所有顛倒場 <span class="rv-sub">共 ${fp.list.length} 場，全部列出核對</span></div>`;
       html += `<table class="rv-table"><thead><tr><th class="lbl">日期</th><th class="lbl">對戰（比分）</th><th>STAKE熱門</th><th>結果</th></tr></thead><tbody>`;
-      fp.list.slice(-8).reverse().forEach(r=>{
+      fp.list.slice().reverse().forEach(r=>{
         const won = r.stakeFavWon;
         const resTxt = won ? `<span style="color:#28c76f">熱門贏 ${r.margin}</span>` : `<span style="color:var(--conflict)">熱門輸</span>`;
         html += `<tr class="rv-row">`+
@@ -4959,6 +5008,7 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   const t = todayStr();
   if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
   buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns(); refreshThrBtns(); refreshUiBtns(); applyUiScale(); refreshVenueBtns();
+  applyZoomctlCollapsed();
   applyView();
   if(!state.view) fitView();
   // backup safety net: snapshot to in-browser slot now + every 5 min, and remind if overdue
