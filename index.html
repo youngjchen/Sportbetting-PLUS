@@ -3226,7 +3226,8 @@ function collectPicks(scope, leagueFilter, marketFilter){
              totalConflictGames, heavierWon, heavierLost, heavierTieLights, crossCount } */
 function collectConflictGames(leagueFilter){
   const games = doc.games || [];
-  const out = { games:[], totalConflictGames:0, heavierWon:0, heavierLost:0, heavierTieLights:0, crossCount:0, byDiff:{} };
+  const out = { games:[], totalConflictGames:0, heavierWon:0, heavierLost:0, heavierTieLights:0, crossCount:0,
+                byDiff:{}, byMarket:{ "獨贏":{}, "讓分":{}, "大小分":{} } };
   for(let gi=0; gi<games.length; gi++){
     const g = games[gi];
     if(!g.lightsSnapshot) continue;
@@ -3266,15 +3267,23 @@ function collectConflictGames(leagueFilter){
         if(heavierWon) out.heavierWon++; else out.heavierLost++;
         out.byDiff[diff] = out.byDiff[diff] || {won:0, lost:0, games:[]};
         if(heavierWon) out.byDiff[diff].won++; else out.byDiff[diff].lost++;
+        // per-market breakdown
+        const mm = out.byMarket[market];
+        if(mm){
+          mm[diff] = mm[diff] || {won:0, lost:0, games:[]};
+          if(heavierWon) mm[diff].won++; else mm[diff].lost++;
+        }
         // record the constituent game for drill-down verification
         const heavierIsA2 = (market==="獨贏") ? ((ls.mlAway||0) > (ls.mlHome||0))
                           : (market==="讓分") ? ((ls.hdGive||0) > (ls.hdRecv||0))
                           : ((ls.over||0) > (ls.under||0));
-        out.byDiff[diff].games.push({
+        const gameRec = {
           date:g.date, away:g.awayTeam, home:g.homeTeam,
           aScore:g.awayScore, hScore:g.homeScore,
           market, diff, heavierWon
-        });
+        };
+        out.byDiff[diff].games.push(gameRec);
+        if(mm) mm[diff].games.push(gameRec);
       } else if(tied){ out.heavierTieLights++; }
     }
     if(mlC && mlRes!=null && mlRes!=="tie"){
@@ -3716,29 +3725,36 @@ function renderReviewPage(){
     html += `<div class="blk"><div class="v">${heavierPct!=null?Math.round(heavierPct*100):"—"}%</div><div class="k">衝突時「燈多邊」獲勝率（${cf.heavierWon}/${heavierTotal}）</div></div>`;
     if(cf.heavierTieLights>0) html += `<div class="blk"><div class="v">${cf.heavierTieLights}</div><div class="k">兩邊燈數相同（無多寡可分）</div></div>`;
     html += `</div></div>`;
-    // by-diff breakdown: does a BIGGER light lead help?
-    const diffs = Object.keys(cf.byDiff).map(Number).sort((a,b)=>a-b).filter(d=>d>0);
-    if(diffs.length){
-      const dinfo = rvInfo("把衝突場依「兩邊燈數差幾個」分組。綠色長條＝燈多邊的獲勝率，黃色＝燈少邊的獲勝率，數字是各自的命中率百分比。看差距越大時，燈多邊是否越常贏。");
-      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">燈數差距 × 兩邊獲勝率 <span class="rv-sub">差距越大，燈多邊是否越常贏？</span>${dinfo.icon}</div>${dinfo.pop}`;
-      html += `<div class="rv-tug-legend"><span class="lg"><span class="sw" style="background:#28c76f"></span>燈多邊獲勝率</span>`+
-              `<span class="lg"><span class="sw" style="background:#ffb02e"></span>燈少邊獲勝率</span></div>`;
-      html += `<table class="rv-table"><thead><tr><th class="lbl">燈數差</th><th style="text-align:left">燈多　vs　燈少 獲勝率</th><th>合計</th></tr></thead><tbody>`;
-      diffs.forEach(d=>{
-        const rec = cf.byDiff[d]; const tot = rec.won+rec.lost;
-        const low = tot < RV_SAMPLE_MIN;
-        const detail = drillBlock(rec.games, g=>{
-          const winTxt = g.heavierWon ? `<span class="dr-hit">燈多贏</span>` : `<span class="dr-miss">燈少贏</span>`;
-          return `${g.market}・${winTxt}`;
+    // by-diff breakdown, split into three markets (獨贏/讓分/大小分)
+    const anyDiff = ["獨贏","讓分","大小分"].some(m=>Object.keys(cf.byMarket[m]||{}).some(d=>+d>0));
+    if(anyDiff){
+      const dinfo = rvInfo("把衝突場依「兩邊燈數差幾個」分組，並拆成三個盤口分開看。綠＝燈多邊命中率，黃＝燈少邊命中率。讓分的命中＝過盤，獨贏＝贏球，大小分＝開大/小。看哪個盤口的燈多邊最可信，以及差距越大是否越準。");
+      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">燈數差距 × 各盤口命中率 <span class="rv-sub">分獨贏／讓分／大小分</span>${dinfo.icon}</div>${dinfo.pop}`;
+      html += `<div class="rv-tug-legend"><span class="lg"><span class="sw" style="background:#28c76f"></span>燈多邊命中率</span>`+
+              `<span class="lg"><span class="sw" style="background:#ffb02e"></span>燈少邊命中率</span></div>`;
+      ["獨贏","讓分","大小分"].forEach(mk=>{
+        const md = cf.byMarket[mk] || {};
+        const diffs = Object.keys(md).map(Number).sort((a,b)=>a-b).filter(d=>d>0);
+        const mkTotal = diffs.reduce((s,d)=>s+md[d].won+md[d].lost,0);
+        html += `<div style="margin-top:14px;font-size:13px;font-weight:700;color:var(--ink)">${mk}<span style="color:var(--ink-dim);font-weight:400;font-size:11px">　${mkTotal} 場衝突</span></div>`;
+        if(!diffs.length){ html += `<div style="color:var(--ink-dim);font-size:12px;padding:6px 2px">尚無此盤口的衝突場</div>`; return; }
+        html += `<table class="rv-table"><thead><tr><th class="lbl">燈數差</th><th style="text-align:left">燈多 vs 燈少 命中率</th><th>合計</th></tr></thead><tbody>`;
+        diffs.forEach(d=>{
+          const rec = md[d]; const tot = rec.won+rec.lost;
+          const low = tot < RV_SAMPLE_MIN;
+          const detail = drillBlock(rec.games, g=>{
+            const winTxt = g.heavierWon ? `<span class="dr-hit">燈多命中</span>` : `<span class="dr-miss">燈少命中</span>`;
+            return winTxt;
+          });
+          html += `<tr class="rv-row drill-toggle${low?" low-sample":""}"${detail.id?` onclick="toggleDrillById('${detail.id}',this)" style="cursor:pointer"`:""}>`+
+                  `<td class="lbl">差 ${d} 燈</td>`+
+                  `<td style="text-align:left">${rvTugBar(rec.won, rec.lost)}</td>`+
+                  `<td><span class="rv-samp">${tot} 場${low&&tot>0?"（少）":""}</span></td>`+
+                  `</tr>`;
+          if(detail.id) html += `<tr class="drill-tr"><td colspan="3" style="padding:0">${detail.html}</td></tr>`;
         });
-        html += `<tr class="rv-row drill-toggle${low?" low-sample":""}"${detail.id?` onclick="toggleDrillById('${detail.id}',this)" style="cursor:pointer"`:""}>`+
-                `<td class="lbl">差 ${d} 燈</td>`+
-                `<td style="text-align:left">${rvTugBar(rec.won, rec.lost)}</td>`+
-                `<td><span class="rv-samp">${tot} 場${low&&tot>0?"（少）":""}</span></td>`+
-                `</tr>`;
-        if(detail.id) html += `<tr class="drill-tr"><td colspan="3" style="padding:0">${detail.html}</td></tr>`;
+        html += `</tbody></table>`;
       });
-      html += `</tbody></table>`;
     }
   }
   html += `</div>`;
@@ -4195,7 +4211,7 @@ function openSettleModal(it){
   // ---- score input row (top) ----
   const scoreRow = document.createElement("div"); scoreRow.className="settle-q score-row";
   scoreRow.innerHTML = `
-    <div class="qlabel">比分（輸入後會自動點選下方選項，預設讓分 1.5）</div>
+    <div class="qlabel">比分</div>
     <div class="score-inputs">
       <label><span>${esc(it.away)}（客）</span><input id="settleAwayScore" type="number" inputmode="numeric" min="0" max="99" value="${prior.awayScore!==undefined?prior.awayScore:""}"></label>
       <span class="vs">:</span>
@@ -4210,43 +4226,38 @@ function openSettleModal(it){
   flipWrap.innerHTML = `
     <label class="settle-flip" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;">
       <input type="checkbox" id="settleFlip" ${flipOn?"checked":""} style="width:18px;height:18px;cursor:pointer;">
-      <span>此場兩平台受讓方顛倒（台彩 vs STAKE）</span>
+      <span>平台顛倒（台彩 vs STAKE）</span>
     </label>
-    <div style="color:var(--ink-dim);font-size:11px;margin-top:4px;line-height:1.5;">勾選＝這場進「⑤ 平台顛倒場」。下方獨贏賠率<b>任何場都可填</b>，用來分析「獨贏熱門 vs 讓分方背離」（不限顛倒場）。</div>
-    <div id="flipOddsRow" style="display:flex;align-items:center;gap:12px;margin-top:8px;">
+    <div id="flipOddsRow" style="display:flex;align-items:center;gap:12px;margin-top:10px;">
       <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-dim);">
-        <span>${esc(it.away)}（客）獨贏賠率</span>
-        <input id="flipOddsAway" type="number" inputmode="decimal" step="0.01" min="1" placeholder="如 1.95"
+        <span>${esc(it.away)} 獨贏</span>
+        <input id="flipOddsAway" type="number" inputmode="decimal" step="0.01" min="1" placeholder="賠率"
           value="${it.flipOddsAway!=null?it.flipOddsAway:""}"
-          style="width:90px;padding:7px 8px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
+          style="width:84px;padding:7px 8px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
       </label>
       <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-dim);">
-        <span>${esc(it.home)}（主）獨贏賠率</span>
-        <input id="flipOddsHome" type="number" inputmode="decimal" step="0.01" min="1" placeholder="如 1.85"
+        <span>${esc(it.home)} 獨贏</span>
+        <input id="flipOddsHome" type="number" inputmode="decimal" step="0.01" min="1" placeholder="賠率"
           value="${it.flipOddsHome!=null?it.flipOddsHome:""}"
-          style="width:90px;padding:7px 8px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
+          style="width:84px;padding:7px 8px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
       </label>
-    </div>
-    <div style="color:var(--ink-dim);font-size:11px;margin-top:12px;line-height:1.5;">初盤（開盤時）獨贏賠率 — 用來日後比對「不同場次但初盤賠率相似」的比賽結果。可留空。</div>
-    <div id="openOddsRow" style="display:flex;align-items:center;gap:12px;margin-top:6px;">
       <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-dim);">
-        <span>${esc(it.away)}（客）初盤</span>
+        <span>${esc(it.away)} 初盤</span>
         <input id="openOddsAway" type="number" inputmode="decimal" step="0.01" min="1" placeholder="初盤"
           value="${it.openOddsAway!=null?it.openOddsAway:""}"
-          style="width:90px;padding:7px 8px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
+          style="width:84px;padding:7px 8px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
       </label>
       <label style="display:flex;flex-direction:column;align-items:center;gap:3px;font-size:11px;color:var(--ink-dim);">
-        <span>${esc(it.home)}（主）初盤</span>
+        <span>${esc(it.home)} 初盤</span>
         <input id="openOddsHome" type="number" inputmode="decimal" step="0.01" min="1" placeholder="初盤"
           value="${it.openOddsHome!=null?it.openOddsHome:""}"
-          style="width:90px;padding:7px 8px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
+          style="width:84px;padding:7px 8px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:15px;font-family:'Oswald';">
       </label>
     </div>
     <label class="settle-flip" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;margin-top:14px;">
       <input type="checkbox" id="settlePreSwap" ${it.preGameSwap?"checked":""} style="width:18px;height:18px;cursor:pointer;">
-      <span>賽前讓分方曾對調（開賽前盤口反轉）</span>
+      <span>賽前讓分方曾對調</span>
     </label>
-    <div style="color:var(--ink-dim);font-size:11px;margin-top:4px;line-height:1.5;">標記這場在開賽前讓分方／受讓方曾被對調，日後可單獨檢視這類場次的結果。</div>
   `;
   body.appendChild(flipWrap);
 
