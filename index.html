@@ -398,6 +398,18 @@
     padding:11px 15px;border-radius:0 8px 8px 0;margin:8px 0 0;font-size:14px;line-height:1.7;color:#e9d8b0;max-width:760px;
   }
   .rv-insight.warn{border-left-color:var(--conflict);background:rgba(255,59,92,.06);color:#f0c0c8;}
+  /* info circle — click to toggle an explanation popup next to a section title */
+  .rv-info{
+    display:inline-flex;align-items:center;justify-content:center;width:17px;height:17px;margin-left:7px;
+    border-radius:50%;border:1px solid var(--ink-dim);color:var(--ink-dim);font-size:11px;font-weight:700;
+    cursor:pointer;vertical-align:middle;font-family:Georgia,serif;font-style:italic;user-select:none;flex:0 0 auto;
+  }
+  .rv-info:hover{border-color:var(--lit);color:var(--lit);}
+  .rv-info-pop{
+    display:none;margin:8px 0 4px;padding:11px 14px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:9px;font-size:13px;line-height:1.7;color:var(--ink-dim);max-width:680px;
+  }
+  .rv-info-pop.show{display:block;}
   .stats-toolbar{
     display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);
     background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);flex-wrap:wrap;
@@ -3507,8 +3519,8 @@ function toggleDrillById(id, triggerEl){
   if(triggerEl) triggerEl.classList.toggle("drill-open", !open);
 }
 window.toggleDrillById = toggleDrillById;
-/* tug-of-war bar: left green = heavier(燈多)-side wins, right amber = lighter(燈少)-side wins.
-   Width proportional to win share; center label shows total. low-sample = muted. */
+/* split bar with explicit win-rate %: green = 燈多邊, amber = 燈少邊.
+   Shows each side's win-rate percentage so it can be read directly. */
 function rvTugBar(won, lost){
   const tot = won + lost;
   const dim = tot < RV_SAMPLE_MIN;
@@ -3517,10 +3529,22 @@ function rvTugBar(won, lost){
   const green = dim ? "#3a5a48" : "#28c76f";
   const amber = dim ? "#5a5230" : "#ffb02e";
   return `<div class="rv-tug${dim?" dim":""}">`+
-           `<div class="tug-l" style="width:${lp}%;background:${green}">${won>0?won:""}</div>`+
-           `<div class="tug-r" style="width:${rp}%;background:${amber}">${lost>0?lost:""}</div>`+
+           `<div class="tug-l" style="width:${lp}%;background:${green}">${tot>0?lp+"%":""}</div>`+
+           `<div class="tug-r" style="width:${rp}%;background:${amber}">${tot>0?rp+"%":""}</div>`+
          `</div>`;
 }
+/* info circle: returns an ⓘ button + a hidden explanation paragraph.
+   Clicking the circle toggles the paragraph. Pure self-contained markup. */
+let _rvInfoSeq = 0;
+function rvInfo(text){
+  const id = "rvinfo_" + (++_rvInfoSeq);
+  return {
+    icon: `<span class="rv-info" onclick="toggleRvInfo('${id}')" title="說明">i</span>`,
+    pop: `<div class="rv-info-pop" id="${id}">${text}</div>`
+  };
+}
+function toggleRvInfo(id){ const el=document.getElementById(id); if(el) el.classList.toggle("show"); }
+window.toggleRvInfo = toggleRvInfo;
 
 let _reviewFilledOnce = false;
 function openReviewPage(){
@@ -3569,18 +3593,13 @@ function renderReviewPage(){
             `<div class="k">歷史過盤率方向命中（≥${Math.round(trendThreshold*100)}%）（${trendAgg.hit}/${trendAgg.total}）</div></div>`;
   }
   html += `</div></div>`;
-  if(trendAgg.total>=RV_SAMPLE_MIN){
-    if(trendAgg.pct!=null && trendAgg.pct < 0.50){
-      html += `<div class="rv-insight warn">📉 卡片上的「歷史過盤率」只是球隊本季的平均表現，並非單場預測。目前依它的方向命中率僅 ${Math.round(trendAgg.pct*100)}%，低於擲硬幣——把它當參考、別當訊號。</div>`;
-    } else if(trendAgg.pct!=null && trendAgg.pct >= 0.55){
-      html += `<div class="rv-insight">📈 依「歷史過盤率」方向命中率 ${Math.round(trendAgg.pct*100)}%，略高於五成，但它本質是球隊平均、非單場預測，繼續觀察。</div>`;
-    }
-  }
 
   // ---- 回顧一: by light count bucket ----
   html += `<div class="rv-section">`;
-  html += `<div class="rv-head">① 燈號數 × 命中率 <span class="rv-sub">驗證「燈越多越容易爆冷」</span></div>`;
-  html += `<div class="rv-note">每個「帶燈選項」依當時燈數分桶。如果 6、7+ 桶的命中率明顯比 3-5 低，就支持「明牌大量一致看好時反而易冷（誘盤）」的直覺。</div>`;
+  {
+    const info = rvInfo("每個「帶燈選項」依當時燈數分桶。如果 6、7+ 桶的命中率明顯比 3-5 低，就支持「明牌大量一致看好時反而易冷（誘盤）」的直覺。");
+    html += `<div class="rv-head">① 燈號數 × 命中率 <span class="rv-sub">驗證「燈越多越容易爆冷」</span>${info.icon}</div>${info.pop}`;
+  }
   const buckets = [
     {key:"3", label:"3 燈", test:n=>n===3},
     {key:"4", label:"4 燈", test:n=>n===4},
@@ -3611,17 +3630,14 @@ function renderReviewPage(){
             `</tr>`;
   });
   html += `</tbody></table>`;
-  // insight for light-count
-  if(worst && worst.agg.pct<0.50 && worst.b.key>="6"){
-    html += `<div class="rv-insight warn">🎯 你的直覺有跡象：<b>${worst.b.label}</b>這桶命中率只有 ${Math.round(worst.agg.pct*100)}%（${worst.agg.hit}/${worst.agg.total}），`+
-            `是所有燈數中最低。明牌大量一致看好時要特別警覺。樣本再多一點會更可靠。</div>`;
-  }
   html += `</div>`;
 
   // ---- 回顧二: by weekday + by month ----
   html += `<div class="rv-section">`;
-  html += `<div class="rv-head">② 星期幾 × 命中率 <span class="rv-sub">驗證「週一最不準」</span></div>`;
-  html += `<div class="rv-note">依比賽日期的星期幾分組。樣本 <${RV_SAMPLE_MIN} 的格子以灰色標示，先別當真。</div>`;
+  {
+    const info = rvInfo("依比賽日期的星期幾分組。樣本 <"+RV_SAMPLE_MIN+" 的格子以灰色標示，先別當真。");
+    html += `<div class="rv-head">② 星期幾 × 命中率 <span class="rv-sub">驗證「週一最不準」</span>${info.icon}</div>${info.pop}`;
+  }
   html += `<table class="rv-table"><thead><tr><th class="lbl">星期</th><th>命中率</th><th>命中 / 樣本</th></tr></thead><tbody>`;
   const wdAggs = [];
   for(let wd=0; wd<7; wd++){
@@ -3643,10 +3659,6 @@ function renderReviewPage(){
             `</tr>`;
   });
   html += `</tbody></table>`;
-  if(wdWorst && wdWorst.agg.pct<0.50){
-    html += `<div class="rv-insight">📅 目前最不準的是<b>${WD_NAMES[wdWorst.wd]}</b>（${Math.round(wdWorst.agg.pct*100)}%，${wdWorst.agg.hit}/${wdWorst.agg.total}）。`+
-            `${wdWorst.wd===1?"跟你「週一最不準」的感覺一致。":"跟「週一最不準」的直覺不完全一樣，可再觀察。"}</div>`;
-  }
 
   // month sub-table
   html += `<div class="rv-head" style="margin-top:18px">月份 × 命中率 <span class="rv-sub">賽季階段差異</span></div>`;
@@ -3688,14 +3700,15 @@ function renderReviewPage(){
   // ---- ④ 衝突場次 (not mixed into hit-rate; pure警示 + heavier-side analysis) ----
   const cf = collectConflictGames(leagueF);
   html += `<div class="rv-section">`;
-  html += `<div class="rv-head">④ 衝突場次 <span class="rv-sub">同區兩邊都有燈／跨盤口矛盾，不列入上面的命中率</span></div>`;
+  {
+    const info = rvInfo("同一盤口兩邊都點燈、或「讓分方＋對手獨贏」同時點，代表你（或明牌）當時兩邊都壓、沒明確方向，這些場不列入上面的命中率。下面單看：衝突盤口中「燈數較多的那一邊」結算後是否獲勝。明顯 >50% 代表可偏向跟燈多邊；≈50% 代表燈多寡無參考價值。");
+    html += `<div class="rv-head">④ 衝突場次 <span class="rv-sub">兩邊都有燈／跨盤口矛盾，不列入命中率</span>${info.icon}</div>${info.pop}`;
+  }
   if(cf.totalConflictGames===0){
     html += `<div class="rv-empty">目前沒有出現過衝突的結算場次。<br>（衝突＝同一盤口兩邊都點燈，或「讓分方＋對手獨贏」同時點。）</div>`;
   } else {
     const heavierTotal = cf.heavierWon + cf.heavierLost;
     const heavierPct = heavierTotal>0 ? cf.heavierWon/heavierTotal : null;
-    html += `<div class="rv-note">出現衝突代表你（或明牌）當時兩邊都壓、沒有明確方向。這裡單看：衝突盤口中「<b>燈數較多的那一邊</b>」結算後是否獲勝。`+
-            `若明顯 >50%，代表衝突時可以偏向跟燈多的一邊；若 ≈50%，代表衝突時燈數多寡沒有參考價值，該避戰。</div>`;
     html += `<div class="rv-headline" style="margin-bottom:18px">`;
     html += `<div class="big">${cf.totalConflictGames}<span class="unit">場</span></div>`;
     html += `<div class="cap">出現衝突的場次${cf.crossCount?`　·　其中 ${cf.crossCount} 場有「讓分↔對手獨贏」跨盤口矛盾`:""}</div>`;
@@ -3703,24 +3716,14 @@ function renderReviewPage(){
     html += `<div class="blk"><div class="v">${heavierPct!=null?Math.round(heavierPct*100):"—"}%</div><div class="k">衝突時「燈多邊」獲勝率（${cf.heavierWon}/${heavierTotal}）</div></div>`;
     if(cf.heavierTieLights>0) html += `<div class="blk"><div class="v">${cf.heavierTieLights}</div><div class="k">兩邊燈數相同（無多寡可分）</div></div>`;
     html += `</div></div>`;
-    if(heavierTotal>=RV_SAMPLE_MIN){
-      if(heavierPct!=null && heavierPct>=0.55){
-        html += `<div class="rv-insight">⚖️ 衝突時「燈多的一邊」獲勝率 ${Math.round(heavierPct*100)}%，似乎有參考性——衝突時可偏向跟多數燈那邊。仍需更多樣本確認。</div>`;
-      } else if(heavierPct!=null && heavierPct<=0.45){
-        html += `<div class="rv-insight warn">⚠️ 衝突時「燈多的一邊」反而較常輸（${Math.round(heavierPct*100)}%）。這支持「大量明牌一致＝可能誘盤」的疑慮，衝突場更該避戰。</div>`;
-      } else {
-        html += `<div class="rv-insight">⚖️ 衝突時燈多邊獲勝率約 ${Math.round(heavierPct*100)}%，接近擲硬幣——代表衝突時「燈多寡」無預測力，建議直接避開這類場次。</div>`;
-      }
-    } else {
-      html += `<div class="rv-insight">樣本還太少（${heavierTotal} 筆），先別下結論。衝突場累積到 ${RV_SAMPLE_MIN} 筆以上再看「燈多邊獲勝率」才有意義。</div>`;
-    }
     // by-diff breakdown: does a BIGGER light lead help?
     const diffs = Object.keys(cf.byDiff).map(Number).sort((a,b)=>a-b).filter(d=>d>0);
     if(diffs.length){
-      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">燈數差距 × 拉鋸結果 <span class="rv-sub">差距越大，燈多邊是否越常贏？</span></div>`;
-      html += `<div class="rv-tug-legend"><span class="lg"><span class="sw" style="background:#28c76f"></span>燈多邊贏</span>`+
-              `<span class="lg"><span class="sw" style="background:#ffb02e"></span>燈少邊贏</span></div>`;
-      html += `<table class="rv-table"><thead><tr><th class="lbl">燈數差</th><th style="text-align:left">燈多 ← 拉鋸 → 燈少</th><th>合計</th></tr></thead><tbody>`;
+      const dinfo = rvInfo("把衝突場依「兩邊燈數差幾個」分組。綠色長條＝燈多邊的獲勝率，黃色＝燈少邊的獲勝率，數字是各自的命中率百分比。看差距越大時，燈多邊是否越常贏。");
+      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">燈數差距 × 兩邊獲勝率 <span class="rv-sub">差距越大，燈多邊是否越常贏？</span>${dinfo.icon}</div>${dinfo.pop}`;
+      html += `<div class="rv-tug-legend"><span class="lg"><span class="sw" style="background:#28c76f"></span>燈多邊獲勝率</span>`+
+              `<span class="lg"><span class="sw" style="background:#ffb02e"></span>燈少邊獲勝率</span></div>`;
+      html += `<table class="rv-table"><thead><tr><th class="lbl">燈數差</th><th style="text-align:left">燈多　vs　燈少 獲勝率</th><th>合計</th></tr></thead><tbody>`;
       diffs.forEach(d=>{
         const rec = cf.byDiff[d]; const tot = rec.won+rec.lost;
         const low = tot < RV_SAMPLE_MIN;
@@ -3743,7 +3746,10 @@ function renderReviewPage(){
   // ---- ⑤ 平台顛倒場 (台彩 vs STAKE 讓分方相反) ----
   const fp = collectFlipGames(leagueF);
   html += `<div class="rv-section">`;
-  html += `<div class="rv-head">⑤ 平台顛倒場 <span class="rv-sub">台彩與 STAKE 認定的讓分方相反</span></div>`;
+  {
+    const info = rvInfo("顛倒場中兩平台各自認定不同的熱門隊。並排「STAKE 熱門獲勝率」與「台彩熱門獲勝率」（兩者非互補，因和局與樣本不同）。哪個平台的熱門勝率明顯較高，代表它在這種分歧場判斷較準，可偏向信它。<br><br>過盤依各場<b>實際讓分盤口</b>判定（非固定 1.5），與結算一致。兩邊過盤數相加若不足總場數，差額是「分差落在讓分盤口內、雙方讓分都沒過」（例如只贏 1 分）的場。");
+    html += `<div class="rv-head">⑤ 平台顛倒場 <span class="rv-sub">台彩與 STAKE 認定的讓分方相反</span>${info.icon}</div>${info.pop}`;
+  }
   if(fp.total===0){
     html += `<div class="rv-empty">目前沒有標記為「平台顛倒」的結算場次。<br>`+
             `下注前在卡片上點 ⇅ 標記，或結算時勾選，這場就會進這個統計。</div>`;
@@ -3752,8 +3758,6 @@ function renderReviewPage(){
     const sPct = sTot>0 ? fp.stakeFavWon/sTot : null;
     const tTot = fp.taicaiFavWon + fp.taicaiFavLost;
     const tPct = tTot>0 ? fp.taicaiFavWon/tTot : null;
-    html += `<div class="rv-note">顛倒場中兩平台各自認定不同的熱門隊。這裡並排「STAKE 熱門獲勝率」與「台彩熱門獲勝率」（兩者非互補，因為和局與樣本不同）。`+
-            `<b>哪個平台的熱門勝率明顯較高，代表那個平台在這種分歧場的判斷較準</b>，你就該偏向信它。</div>`;
     html += `<div class="rv-headline" style="margin-bottom:16px">`;
     html += `<div class="big">${fp.total}<span class="unit">場</span></div>`;
     html += `<div class="cap">標記為平台顛倒的場次</div>`;
@@ -3763,37 +3767,19 @@ function renderReviewPage(){
     html += `<div class="blk" style="border-left:1px solid var(--line);padding-left:18px"><div class="v" style="color:#b56bff">${tPct!=null?Math.round(tPct*100):"—"}%</div><div class="k">台彩 熱門獲勝率（${fp.taicaiFavWon}/${tTot}）</div></div>`;
     html += `<div class="blk"><div class="v" style="color:#b56bff">${fp.taicaiCover}/${fp.total}</div><div class="k">台彩 熱門方過盤</div></div>`;
     html += `</div>`;
-    const bothNoCover = fp.total - fp.stakeCover - fp.taicaiCover;
-    html += `<div class="rv-note" style="margin-top:10px">過盤依各場<b>實際讓分盤口</b>判定（非固定 1.5），與結算結果一致。兩邊過盤數相加${bothNoCover>0?`少了 ${bothNoCover} 場`:`等於總場數`}——${bothNoCover>0?`那 ${bothNoCover} 場是「分差落在讓分盤口內、雙方讓分都沒過」（例如只贏 1 分）。`:`代表每場都有一方過盤。`}</div>`;
     html += `</div>`;
-    if(sTot>=RV_SAMPLE_MIN && tTot>=RV_SAMPLE_MIN){
-      if(sPct!=null && tPct!=null && Math.abs(sPct-tPct)>=0.15){
-        const better = sPct>tPct ? "STAKE" : "台彩";
-        const bcls = sPct>tPct ? "" : "warn";
-        html += `<div class="rv-insight ${bcls}">📊 在顛倒場中，<b>${better}</b>的熱門判斷明顯較準（${Math.round((sPct>tPct?sPct:tPct)*100)}% vs ${Math.round((sPct>tPct?tPct:sPct)*100)}%）。`+
-                `下次遇到顛倒場，可偏向信 ${better} 的讓分方向。</div>`;
-      } else {
-        html += `<div class="rv-insight">📊 兩平台熱門勝率接近，顛倒場目前看不出哪個平台更準，建議這類場次保守或避戰。</div>`;
-      }
-    } else {
-      html += `<div class="rv-insight">樣本還太少，先別下結論。記得每遇到顛倒場就標記，累積到 ${RV_SAMPLE_MIN} 場以上才看得出規律。</div>`;
-    }
-
-    // recent flip games list
+    // all flip games — collapsible (click to expand for verification)
     if(fp.list.length){
-      html += `<div class="rv-head" style="font-size:15px;margin-top:18px">所有顛倒場 <span class="rv-sub">共 ${fp.list.length} 場，全部列出核對</span></div>`;
-      html += `<table class="rv-table"><thead><tr><th class="lbl">日期</th><th class="lbl">對戰（比分）</th><th>STAKE熱門</th><th>結果</th></tr></thead><tbody>`;
-      fp.list.slice().reverse().forEach(r=>{
+      const rows = fp.list.slice().reverse().map(r=>{
         const won = r.stakeFavWon;
-        const resTxt = won ? `<span style="color:#28c76f">熱門贏 ${r.margin}</span>` : `<span style="color:var(--conflict)">熱門輸</span>`;
-        html += `<tr class="rv-row">`+
-                `<td class="lbl">${esc(r.date.slice(5))}</td>`+
-                `<td class="lbl">${esc(r.away)} ${r.aScore}-${r.hScore} ${esc(r.home)}</td>`+
-                `<td>${esc(r.stakeFav)}</td>`+
-                `<td>${resTxt}</td>`+
-                `</tr>`;
-      });
-      html += `</tbody></table>`;
+        const resTxt = won ? `<span class="dr-hit">熱門贏 ${r.margin}</span>` : `<span class="dr-miss">熱門輸</span>`;
+        return `<div class="drill-row"><span class="dr-date">${esc(r.date.slice(5))}</span>`+
+               `<span class="dr-match">${esc(r.away)} <b>${r.aScore}-${r.hScore}</b> ${esc(r.home)}</span>`+
+               `<span class="dr-role">熱門:${esc(r.stakeFav)}・${resTxt}</span></div>`;
+      }).join("");
+      const did = "flipall_" + Math.random().toString(36).slice(2,8);
+      html += `<div class="drill-toggle" onclick="toggleDrillById('${did}',this)" style="cursor:pointer;font-size:13px;color:var(--accent);margin-top:14px">展開所有顛倒場明細（${fp.list.length} 場）核對</div>`;
+      html += `<div class="drill" id="${did}" style="display:none">${rows}</div>`;
     }
   }
   html += `</div>`;
@@ -3801,12 +3787,13 @@ function renderReviewPage(){
   // ---- ⑥ 獨贏熱門 vs 讓分方 背離 (all games with odds; split flip/non-flip) ----
   const dv = collectDivergence(leagueF);
   html += `<div class="rv-section">`;
-  html += `<div class="rv-head">⑥ 獨贏熱門 vs 讓分方 背離 <span class="rv-sub">最可能的誘盤訊號（不限顛倒場）</span></div>`;
+  {
+    const info = rvInfo("背離＝STAKE「獨贏熱門（賠率較低那隊）」≠「讓分方」（賠率差 <0.10 視為無明確熱門，不計）。若背離場「低賠熱門方」勝率明顯高，代表讓分盤用賠率把你推離真正強隊——誘盤的實證。下面分「全部／顛倒場／非顛倒場」三組，看顛倒是否讓背離更明顯。");
+    html += `<div class="rv-head">⑥ 獨贏熱門 vs 讓分方 背離 <span class="rv-sub">最可能的誘盤訊號（不限顛倒場）</span>${info.icon}</div>${info.pop}`;
+  }
   if(dv.all.withOdds===0){
     html += `<div class="rv-empty">還沒有填過獨贏賠率的結算場次。<br>結算任何一場時，填上 STAKE 兩隊獨贏賠率，這個分析就會開始累積（不限平台顛倒場）。</div>`;
   } else {
-    html += `<div class="rv-note">背離＝STAKE「獨贏熱門（賠率較低那隊）」≠「讓分方」（賠率差 <0.10 視為無明確熱門，不計）。`+
-            `若背離場「獨贏熱門」勝率明顯高，代表讓分盤用賠率把你推離真正強隊——<b>誘盤的實證</b>。下面分「全部 / 顛倒場 / 非顛倒場」三組，看顛倒是否讓背離更明顯。</div>`;
     const renderDivBlock = (label, d, tone)=>{
       const dTot = d.favWon + d.undWon;
       const dPct = dTot>0 ? d.favWon/dTot : null;
@@ -3828,13 +3815,6 @@ function renderReviewPage(){
         html += `<div class="drill-toggle" onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:-4px 0 6px">展開 ${d.games.length} 場明細核對</div>`;
         html += det.html;
       }
-      if(dTot>=RV_SAMPLE_MIN){
-        if(dPct!=null && dPct>=0.60) html += `<div class="rv-insight">🎯【${label}】低賠熱門方勝率 ${Math.round(dPct*100)}%——<b>讓分盤誘盤的跡象</b>。遇到背離時信獨贏熱門、別跟讓分方向。</div>`;
-        else if(dPct!=null && dPct<=0.40) html += `<div class="rv-insight warn">⚠️【${label}】低賠熱門方反而少贏（${Math.round(dPct*100)}%），讓分盤方向可能藏了資訊。</div>`;
-        else html += `<div class="rv-insight">【${label}】低賠熱門方勝率接近五成，看不出誘盤，繼續累積。</div>`;
-      } else {
-        html += `<div class="rv-insight">【${label}】樣本太少（${dTot}），先別下結論。</div>`;
-      }
     };
     renderDivBlock("全部背離場", dv.all);
     renderDivBlock("顛倒場中的背離", dv.flip);
@@ -3845,11 +3825,13 @@ function renderReviewPage(){
   // ---- ⑦ 「過盤率低」警告驗證 ----
   const lw = collectLowCoverWarning(leagueF);
   html += `<div class="rv-section">`;
-  html += `<div class="rv-head">⑦ 「過盤率低」警告驗證 <span class="rv-sub">這個警告準不準（分盤口）</span></div>`;
+  {
+    const info = rvInfo("「⚠ 過盤率低」＝明牌看好某選項，但該隊歷史在那個盤口不太會過盤，一種矛盾訊號。命中＝警告所擔心的事真的發生了（讓分沒過／被看好的隊輸／開小分）。三個盤口分開算，看哪種警告最靈。");
+    html += `<div class="rv-head">⑦ 「過盤率低」警告驗證 <span class="rv-sub">這個警告準不準（分盤口）</span>${info.icon}</div>${info.pop}`;
+  }
   if(lw.all.fired===0){
     html += `<div class="rv-empty">還沒有結算過觸發「⚠ 過盤率低」的場次。<br>當某選項被點 ≥3 燈、但該隊歷史過盤率偏低時，卡片會出現這個警告；結算後就會在這裡累積它的命中率（獨贏／讓分／大小分分開算）。</div>`;
   } else {
-    html += `<div class="rv-note">「⚠ 過盤率低」＝明牌看好某選項，但該隊歷史在那個盤口不太會過盤——一種矛盾訊號。命中＝警告所擔心的事真的發生了（讓分沒過／被看好的隊輸／開小分）。</div>`;
     html += `<div class="rv-headline">`;
     html += `<div class="big">${lw.all.pct!=null?Math.round(lw.all.pct*100):"—"}<span class="unit">%</span></div>`;
     html += `<div class="cap">整體警告命中率　·　共出現 ${lw.all.fired} 次，命中 ${lw.all.correct} 次</div>`;
@@ -3868,13 +3850,6 @@ function renderReviewPage(){
       if(det.id) html += `<tr class="drill-tr"><td colspan="3" style="padding:0">${det.html}</td></tr>`;
     });
     html += `</tbody></table>`;
-    if(lw.all.fired>=RV_SAMPLE_MIN){
-      if(lw.all.pct!=null && lw.all.pct>=0.60) html += `<div class="rv-insight">🎯 整體命中率 ${Math.round(lw.all.pct*100)}%——這個警告整體有效，看到它時可以保守看待。看上表哪個盤口最靈。</div>`;
-      else if(lw.all.pct!=null && lw.all.pct<=0.45) html += `<div class="rv-insight warn">整體命中率偏低（${Math.round(lw.all.pct*100)}%），歷史過盤率低不太能預示單場，別過度依賴。</div>`;
-      else html += `<div class="rv-insight">整體命中率中庸，參考即可。</div>`;
-    } else {
-      html += `<div class="rv-insight">樣本還少（${lw.all.fired} 次），先別下結論，繼續累積看數字會不會證實你的主觀感覺。</div>`;
-    }
   }
   html += `</div>`;
 
