@@ -179,15 +179,18 @@
   }
   .resize:hover{opacity:1;}
   .card .grip{
-    display:flex;align-items:center;gap:6px;
+    display:flex;flex-direction:column;align-items:stretch;gap:4px;
     padding:10px 12px 8px;cursor:grab;
     background:linear-gradient(180deg,rgba(255,255,255,.04),transparent);
   }
   .card.dragging .grip{cursor:grabbing;}
   .vs{
-    flex:1;display:flex;align-items:center;gap:7px;font-weight:900;font-size:16px;flex-wrap:wrap;
+    display:flex;align-items:center;gap:7px;font-weight:900;font-size:16px;
+    white-space:nowrap;overflow:hidden;min-width:0;
   }
-  .vs .team{padding:1px 3px;border-radius:5px;outline:none;}
+  .gripbar{display:flex;align-items:center;gap:6px;min-width:0;}
+  .gripbar .gspacer{flex:1 1 auto;}
+  .vs .team{padding:1px 3px;border-radius:5px;outline:none;flex:0 1 auto;min-width:0;overflow:hidden;white-space:nowrap;}
   .vs .team:focus{background:#0c0f14;box-shadow:0 0 0 1.5px var(--lit);}
   .vs .slash{color:var(--ink-dim);font-weight:400;}
   .ico{
@@ -540,7 +543,8 @@
   .card.settled .grip{position:relative;}
   .settled-mark{
     background:#28c76f;color:#0c0f14;font-size:10px;font-weight:700;
-    padding:2px 7px;border-radius:6px;letter-spacing:.04em;cursor:pointer;margin-left:6px;
+    padding:2px 7px;border-radius:6px;letter-spacing:.04em;cursor:pointer;
+    white-space:nowrap;flex:0 0 auto;
   }
 
   /* pct hint shown on card section headers */
@@ -566,24 +570,28 @@
   .pctline-row .v.lo{color:var(--conflict);}
   .pctline-row .v.low-sample{color:#5b6b80;}
   .pctline-row .ssize{font-size:9px;color:#5b6b80;margin-left:1px;font-family:"Oswald";}
-  /* 隊伍近況 (form line) — runs avg + current streak, two teams side by side */
+  /* 隊伍近況 (form line) — runs avg + last-5/10 W-L boxes, one row per team */
   .formline{
-    margin:4px 12px 2px;padding:5px 8px;border-radius:6px;font-size:11px;
+    margin:4px 12px 9px;padding:6px 8px;border-radius:6px;font-size:11px;
     background:rgba(255,255,255,.025);border:1px solid var(--line);color:var(--ink-dim);
-    display:flex;align-items:center;gap:6px;line-height:1.4;
-    font-family:"Noto Sans TC";letter-spacing:0;
+    font-family:"Noto Sans TC";letter-spacing:0;cursor:pointer;
   }
-  .formline .lbl{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:var(--ink-dim);flex:0 0 auto;}
-  .formline .side{flex:1 1 0;min-width:0;}
-  .formline .side .nm{font-weight:700;color:var(--ink);}
-  .formline .side .runs{font-family:"Oswald";font-weight:700;color:#aeb9c8;margin-left:4px;}
-  .formline .side .stk{font-family:"Oswald";font-weight:700;margin-left:4px;}
-  .formline .side .stk.win{color:#28c76f;}
-  .formline .side .stk.lose{color:var(--conflict);}
-  .formline .sep{flex:0 0 auto;color:#3a4a5e;}
+  .formline .lbl{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:var(--ink-dim);margin-bottom:3px;}
+  .formline .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:1px 0;min-width:0;}
+  .formline .frow .nm{font-weight:700;color:var(--ink);flex:0 0 auto;}
+  .formline .frow .runs{font-family:"Oswald";font-weight:700;color:#aeb9c8;flex:0 0 auto;}
+  .formline .frow .boxes{display:flex;gap:3px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;}
+  .formline .bx{
+    width:15px;height:15px;border-radius:4px;display:grid;place-items:center;
+    font-size:9px;font-family:"Oswald";font-weight:700;flex:0 0 auto;
+  }
+  .formline .bx.w{background:rgba(40,199,111,.16);color:#2ee07f;border:1px solid rgba(40,199,111,.45);}
+  .formline .bx.l{background:rgba(255,92,92,.10);color:#ff7a7a;border:1px solid rgba(255,92,92,.4);}
+  .formline .bx.t{background:rgba(255,255,255,.05);color:#8a97a8;border:1px solid var(--line);}
+  .formline .bx.empty{background:transparent;border:1px dashed #2a3340;}
   /* trend line at the bottom of a card */
   .trendline{
-    margin:6px 12px 8px;padding:7px 9px;border-radius:7px;font-size:12px;
+    margin:6px 12px 9px;padding:7px 9px;border-radius:7px;font-size:12px;
     background:rgba(255,255,255,.03);border:1px solid var(--line);color:var(--ink-dim);
   }
   .trendline .thd{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:var(--ink-dim);margin-bottom:3px;}
@@ -1499,6 +1507,20 @@ function streakStr(s){
   if(!s || s.n===0) return "—";
   return `${s.n}${s.kind}`;   // "5W" or "5L"
 }
+/* Last N results for a team this season, ordered oldest → newest.
+   Returns array of "w" | "l" | "t". */
+function recentResults(season, team, n){
+  const list = (doc.games || []).filter(g=>{
+    if(g.awayTeam!==team && g.homeTeam!==team) return false;
+    if(seasonOf(g.date) !== season) return false;
+    if(g.awayScore==null || g.homeScore==null) return false;
+    return true;
+  }).sort((a,b)=> a.date < b.date ? 1 : -1).slice(0, n);
+  return list.map(g=>{
+    const r = _gameResultFor(team, g);
+    return (r && r.ml) ? r.ml : null;
+  }).filter(Boolean).reverse();
+}
 
 /* user preference: which window to show on cards. "season" or 10/30/50 */
 let pctWindow = "season";
@@ -1640,17 +1662,20 @@ function renderCard(it){
   el.style.left = it.x+"px"; el.style.top = it.y+"px";
   if(it.scale && it.scale!==1) el.style.transform = "scale("+it.scale+")";
 
-  // ---- header ----
+  // ---- header (row 1: team names / row 2: settled-mark + action icons) ----
   const grip = document.createElement("div"); grip.className="grip";
   const vs = document.createElement("div"); vs.className="vs";
   const slash = document.createElement("span"); slash.className="slash"; slash.textContent="/";
   vs.append(mkTeam(it,"away"), slash, mkTeam(it,"home"));
+  const bar = document.createElement("div"); bar.className="gripbar";
   // settled mark (click to revise; clicking should NOT start drag)
   if(it.settled){
     const sm = document.createElement("span"); sm.className="settled-mark no-drag"; sm.textContent="✓ 已結算"; sm.title="按一下重新結算 / 取消結算";
     sm.onclick = (e)=>{ e.stopPropagation(); openSettleModal(it); };
-    vs.appendChild(sm);
+    bar.appendChild(sm);
   }
+  const gsp = document.createElement("span"); gsp.className="gspacer";
+  bar.appendChild(gsp);
   const swap = document.createElement("div"); swap.className="ico no-drag"; swap.title="主客對調"; swap.textContent="⇄";
   swap.onclick = ()=>{
     snapshot();
@@ -1684,7 +1709,8 @@ function renderCard(it){
   oddsMark.title = hasOdds ? `已填賠率：客 ${it.flipOddsAway??"—"} / 主 ${it.flipOddsHome??"—"}（點擊修改）` : "尚未填獨贏賠率（點擊填寫）";
   oddsMark.textContent = "💰";
   oddsMark.onclick = ()=> openFlipOddsModal(it);
-  grip.append(vs,swap,flip,oddsMark,col,del);
+  bar.append(swap,flip,oddsMark,col,del);
+  grip.append(vs,bar);
   if(it.settled) el.classList.add("settled");
   grip.addEventListener("pointerdown", e=>{ if(e.target.closest(".no-drag")) return; startItemDrag(e,it,el); });
   // double-tap / double-click the header to collapse/expand
@@ -1820,27 +1846,36 @@ function renderCard(it){
   el.appendChild(optRow("大", "", "大分", null, it.over, totConflict));
   el.appendChild(optRow("小", "", "小分", null, it.under, totConflict));
 
-  // ---- 近況 (隊伍場均得失分 + 目前連勝) ----
+  // ---- 近況 (隊伍場均得失分 + 最近 5/10 場勝負格，點擊切換) ----
   {
     const season = seasonOf(doc.activeDate);
-    const sideHTML = (team)=>{
+    const N = it.form10 ? 10 : 5;
+    const sideRow = (team)=>{
       const runs = runsRead(season, team, null);
-      const stk = streakRead(season, team, null);
       let runsStr = "—";
       if(runs.games>0){
         const af = (runs.scored/runs.games).toFixed(2);
         const ag = (runs.conceded/runs.games).toFixed(2);
         runsStr = `${af}/${ag}`;
       }
-      const stkCls = stk.n===0 ? "" : (stk.kind==="W" ? "win" : "lose");
-      const stkStr = stk.n===0 ? "—" : `${stk.n}${stk.kind}`;
-      return `<span class="side"><span class="nm">${esc(team)}</span><span class="runs">${runsStr}</span><span class="stk ${stkCls}">${stkStr}</span></span>`;
+      const res = recentResults(season, team, N);   // oldest → newest
+      let boxes = "";
+      for(let i=0;i<N;i++){
+        const idx = i - (N - res.length);
+        if(idx < 0){ boxes += `<span class="bx empty"></span>`; continue; }
+        const r = res[idx];
+        const c = r==="w" ? "w" : (r==="l" ? "l" : "t");
+        boxes += `<span class="bx ${c}">${c.toUpperCase()}</span>`;
+      }
+      return `<div class="frow"><span class="nm">${esc(team)}</span><span class="runs">${runsStr}</span><span class="boxes">${boxes}</span></div>`;
     };
     // only show if at least one team has any data
     const hasData = runsRead(season, it.away, null).games>0 || runsRead(season, it.home, null).games>0;
     if(hasData){
-      const fl = document.createElement("div"); fl.className="formline";
-      fl.innerHTML = `<span class="lbl">近況</span>${sideHTML(it.away)}<span class="sep">·</span>${sideHTML(it.home)}`;
+      const fl = document.createElement("div"); fl.className="formline no-drag";
+      fl.title = "左舊右新。點擊切換最近 5 場 / 10 場";
+      fl.innerHTML = `<div class="lbl">近況 · 近${N}場</div>${sideRow(it.away)}${sideRow(it.home)}`;
+      fl.onclick = ()=>{ it.form10 = !it.form10; save(); render(); relayoutPreservingState(); };
       el.appendChild(fl);
     }
   }
@@ -1916,6 +1951,15 @@ function renderCard(it){
   el.appendChild(rz);
 
   world.appendChild(el);
+  fitTeamRow(vs);
+}
+
+/* Shrink the team-name row's font until it fits on one line (16px → 11px floor). */
+function fitTeamRow(vs){
+  if(!vs || !vs.isConnected) return;
+  let fs = 16;
+  vs.style.fontSize = fs+"px";
+  while(fs>11 && vs.scrollWidth > vs.clientWidth+1){ fs--; vs.style.fontSize = fs+"px"; }
 }
 
 function mkTeam(it,side){
