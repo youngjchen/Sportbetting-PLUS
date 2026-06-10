@@ -580,6 +580,12 @@
   .formline .frow{display:flex;align-items:center;gap:5px;flex-wrap:wrap;padding:1px 0;min-width:0;}
   .formline .frow .nm{font-weight:700;color:var(--ink);flex:0 0 auto;}
   .formline .frow .runs{font-family:"Oswald";font-weight:700;color:#aeb9c8;flex:0 0 auto;}
+  .formline .pychip{
+    font-family:"Noto Sans TC";font-weight:700;font-size:10px;line-height:1;
+    padding:2px 6px;border-radius:6px;flex:0 0 auto;letter-spacing:.02em;
+  }
+  .formline .pychip.xu{color:#ffb02e;background:rgba(255,176,46,.10);border:1px solid rgba(255,176,46,.45);}
+  .formline .pychip.shi{color:#2ee07f;background:rgba(40,199,111,.10);border:1px solid rgba(40,199,111,.45);}
   .formline .frow .boxes{display:flex;gap:3px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end;}
   .formline .bx{
     width:15px;height:15px;border-radius:4px;display:grid;place-items:center;
@@ -1522,6 +1528,31 @@ function recentResults(season, team, n){
   }).filter(Boolean).reverse();
 }
 
+/* Pythagenpat：動態指數 x = ((RS+RA)/G)^0.287，期望勝率 = RS^x/(RS^x+RA^x)。
+   每次渲染即時從 doc.games 重算，結算新比賽後自動更新。
+   回傳 {g, x, pyth, act, gap}；gap = 實際勝率 − 期望勝率（正=戰績虛、負=被低估）。 */
+function pythRead(season, team){
+  const list = doc.games || [];
+  let rs=0, ra=0, g=0, w=0, l=0;
+  for(let i=0;i<list.length;i++){
+    const gm = list[i];
+    if(gm.awayTeam!==team && gm.homeTeam!==team) continue;
+    if(seasonOf(gm.date) !== season) continue;
+    if(gm.awayScore==null || gm.homeScore==null) continue;
+    const isA = gm.awayTeam===team;
+    const ms = isA ? gm.awayScore : gm.homeScore;
+    const os = isA ? gm.homeScore : gm.awayScore;
+    rs+=ms; ra+=os; g++;
+    if(ms>os) w++; else if(ms<os) l++;
+  }
+  if(g < 1 || (rs+ra) === 0) return null;
+  const x = Math.pow((rs+ra)/g, 0.287);
+  const pyth = Math.pow(rs,x) / (Math.pow(rs,x) + Math.pow(ra,x));
+  const dec = w + l;
+  const act = dec > 0 ? w/dec : null;
+  return { g, x, pyth, act, gap: act==null ? null : (act - pyth) };
+}
+
 /* user preference: which window to show on cards. "season" or 10/30/50 */
 let pctWindow = "season";
 /* user preference: card pct shows split 主客 ("split") or 綜合 ("combined") */
@@ -1851,12 +1882,13 @@ function renderCard(it){
     const season = seasonOf(doc.activeDate);
     const N = it.form10 ? 10 : 5;
     const sideRow = (team)=>{
-      const runs = runsRead(season, team, null);
-      let runsStr = "—";
-      if(runs.games>0){
-        const af = (runs.scored/runs.games).toFixed(2);
-        const ag = (runs.conceded/runs.games).toFixed(2);
-        runsStr = `${af}/${ag}`;
+      const py = pythRead(season, team);
+      let chip = "";
+      if(py && py.g>=20 && py.gap!=null){
+        const gp = py.gap*100;
+        const tip = `畢氏期望 ${ (py.pyth*100).toFixed(1) }% / 實際 ${ (py.act*100).toFixed(1) }%（指數 ${py.x.toFixed(2)}，${py.g} 場）`;
+        if(gp >= 4)       chip = `<span class="pychip xu"  title="${tip}　戰績優於實力，回歸風險">虛 +${gp.toFixed(0)}</span>`;
+        else if(gp <= -4) chip = `<span class="pychip shi" title="${tip}　戰績低於實力，被低估">實 ${gp.toFixed(0)}</span>`;
       }
       const res = recentResults(season, team, N);   // oldest → newest
       let boxes = "";
@@ -1867,7 +1899,7 @@ function renderCard(it){
         const c = r==="w" ? "w" : (r==="l" ? "l" : "t");
         boxes += `<span class="bx ${c}">${c.toUpperCase()}</span>`;
       }
-      return `<div class="frow"><span class="nm">${esc(team)}</span><span class="runs">${runsStr}</span><span class="boxes">${boxes}</span></div>`;
+      return `<div class="frow"><span class="nm">${esc(team)}</span>${chip}<span class="boxes">${boxes}</span></div>`;
     };
     // only show if at least one team has any data
     const hasData = runsRead(season, it.away, null).games>0 || runsRead(season, it.home, null).games>0;
