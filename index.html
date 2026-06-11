@@ -603,6 +603,11 @@
   .formline .frow.model .mv{font-family:"Noto Sans TC";font-weight:700;color:#8a97a8;font-size:11px;}
   .formline .frow.model .mv.hi{color:#aeb9c8;}
   .formline .frow.model .msep{color:#3a4a5e;}
+  .formline .gapchip{
+    margin-left:auto;font-family:"Noto Sans TC";font-weight:700;font-size:10px;line-height:1;
+    padding:2px 6px;border-radius:6px;color:#8a97a8;background:rgba(255,255,255,.04);border:1px solid var(--line);
+  }
+  .formline .gapchip.big{color:#ffb02e;background:rgba(255,176,46,.10);border-color:rgba(255,176,46,.45);}
   /* trend line at the bottom of a card */
   .trendline{
     margin:6px 12px 9px;padding:7px 9px;border-radius:7px;font-size:12px;
@@ -1042,6 +1047,7 @@
           style="width:96px;padding:9px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:17px;font-family:'Oswald';">
       </label>
     </div>
+    <div id="flipOddsCalc" style="text-align:center;font-size:12px;color:var(--ink-dim);line-height:1.8;min-height:18px;margin-bottom:6px;"></div>
     <div class="modal-actions" style="margin-top:14px;">
       <button class="btn" id="flipOddsSkip">略過</button>
       <span class="grow"></span>
@@ -1963,6 +1969,13 @@ function renderCard(it){
             const aPct = Math.round((1-pH)*100), hPct = Math.round(pH*100);
             const mtip = `Log5（畢氏勝率＋主場修正 ${(hAdv*100).toFixed(0)}%）｜${esc(it.away)} 畢氏 ${(pa.pyth*100).toFixed(1)}%、一分差 ${pa.orw}-${pa.orl}｜${esc(it.home)} 畢氏 ${(ph.pyth*100).toFixed(1)}%、一分差 ${ph.orw}-${ph.orl}`;
             modelRow = `<div class="frow model" title="${mtip}"><span class="mlbl">模型</span><span class="mv${(1-pH)>pH?" hi":""}">${esc(it.away)} ${aPct}%</span><span class="msep">·</span><span class="mv${pH>(1-pH)?" hi":""}">${esc(it.home)} ${hPct}%</span></div>`;
+            const oa = parseFloat(it.flipOddsAway), oh = parseFloat(it.flipOddsHome);
+            if(!isNaN(oa) && !isNaN(oh) && oa>1 && oh>1){
+              const mp = (1/oa)/(1/oa+1/oh);   // 去水後客隊隱含勝率
+              const gap = Math.abs((1-pH)-mp)*100;
+              const gtip = `STAKE 下注賠率 ${oa}/${oh} 去水後的隱含勝率（客／主）。與模型差 ${gap.toFixed(1)} 個百分點${gap>=8?"——落差大，先查兩邊先發投手再下判斷":""}`;
+              modelRow += `<div class="frow model" title="${gtip}"><span class="mlbl">盤口</span><span class="mv${mp>0.5?" hi":""}">${Math.round(mp*100)}%</span><span class="msep">·</span><span class="mv${mp<0.5?" hi":""}">${Math.round((1-mp)*100)}%</span><span class="gapchip${gap>=8?" big":""}">差${gap.toFixed(0)}</span></div>`;
+            }
           }
         }
       }
@@ -3239,8 +3252,34 @@ function openFlipOddsModal(it){
   $("#flipOddsHomeLbl").textContent = it.home+"（主）";
   $("#flipOddsAwayInput").value = it.flipOddsAway!=null ? it.flipOddsAway : "";
   $("#flipOddsHomeInput").value = it.flipOddsHome!=null ? it.flipOddsHome : "";
+  $("#flipOddsAwayInput").oninput = _updFlipOddsCalc;
+  $("#flipOddsHomeInput").oninput = _updFlipOddsCalc;
+  _updFlipOddsCalc();
   m.classList.add("show");
   setTimeout(()=>$("#flipOddsAwayInput").focus(), 50);
+}
+/* 即時把輸入的賠率去水換算成隱含勝率，並與 Log5 模型並排比較 */
+function _updFlipOddsCalc(){
+  const out = $("#flipOddsCalc"); const it = _flipOddsTarget;
+  if(!out) return;
+  if(!it){ out.innerHTML=""; return; }
+  const oa = parseFloat($("#flipOddsAwayInput").value);
+  const oh = parseFloat($("#flipOddsHomeInput").value);
+  if(isNaN(oa) || isNaN(oh) || oa<=1 || oh<=1){ out.innerHTML=""; return; }
+  const pa = (1/oa) / (1/oa + 1/oh);   // 去水後客隊隱含勝率
+  let html = `盤口隱含：${esc(it.away)} <b style="color:var(--ink)">${(pa*100).toFixed(1)}%</b> ／ ${esc(it.home)} <b style="color:var(--ink)">${((1-pa)*100).toFixed(1)}%</b>`;
+  try{
+    const season = seasonOf(doc.activeDate);
+    const A = pythRead(season, it.away), H = pythRead(season, it.home);
+    if(A && H && A.g>=20 && H.g>=20){
+      const pH = log5Home(H.pyth, A.pyth, leagueHomeRate(season, leagueOf(it)));
+      if(pH != null){
+        const d = Math.abs((1-pH) - pa) * 100;
+        html += `<br>模型：${esc(it.away)} ${((1-pH)*100).toFixed(0)}% ／ ${esc(it.home)} ${(pH*100).toFixed(0)}%　<b style="color:${d>=8?'#ffb02e':'#8a97a8'}">差 ${d.toFixed(0)}</b>`;
+      }
+    }
+  }catch(_){}
+  out.innerHTML = html;
 }
 function closeFlipOddsModal(){ const m=$("#flipOddsModal"); if(m) m.classList.remove("show"); _flipOddsTarget=null; }
 $("#flipOddsSave") && ($("#flipOddsSave").onclick = ()=>{
