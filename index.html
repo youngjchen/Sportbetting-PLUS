@@ -517,7 +517,10 @@
   #settleModal .odds-grid input:focus{outline:none;border-color:var(--lit);}
   #settleModal .odds-grid input.dash{background:#161d27;border-style:dashed;}
   .settle-q{margin:14px 0;}
-  .settle-q .qlabel{font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-family:"Oswald";letter-spacing:.05em;}
+  .settle-q .qlabel{font-size:13px;color:var(--ink-dim);margin-bottom:6px;font-family:"Oswald";letter-spacing:.05em;display:flex;align-items:center;gap:8px;}
+  .settle-q .qline{margin-left:auto;font-size:11px;color:var(--ink-dim);display:flex;align-items:center;gap:4px;letter-spacing:0;}
+  .settle-q .qline input{width:54px;padding:4px 5px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:6px;color:var(--ink);font-size:13px;font-family:"Oswald";}
+  .settle-q .qline input:focus{outline:none;border-color:var(--lit);}
   .settle-q .opts{display:flex;gap:6px;flex-wrap:wrap;}
   .settle-q .opt{
     flex:1 1 auto;min-width:80px;padding:10px 12px;border-radius:9px;
@@ -595,6 +598,11 @@
   .formline .bx.l{background:rgba(255,92,92,.10);color:#ff7a7a;border:1px solid rgba(255,92,92,.4);}
   .formline .bx.t{background:rgba(255,255,255,.05);color:#8a97a8;border:1px solid var(--line);}
   .formline .bx.empty{background:transparent;border:1px dashed #2a3340;}
+  .formline .frow.model{margin-top:3px;padding-top:4px;border-top:1px dashed rgba(255,255,255,.07);}
+  .formline .frow.model .mlbl{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:var(--ink-dim);}
+  .formline .frow.model .mv{font-family:"Noto Sans TC";font-weight:700;color:#8a97a8;font-size:11px;}
+  .formline .frow.model .mv.hi{color:#aeb9c8;}
+  .formline .frow.model .msep{color:#3a4a5e;}
   /* trend line at the bottom of a card */
   .trendline{
     margin:6px 12px 9px;padding:7px 9px;border-radius:7px;font-size:12px;
@@ -1544,7 +1552,7 @@ function recentResults(season, team, n){
    回傳 {g, x, pyth, act, gap}；gap = 實際勝率 − 期望勝率（正=戰績虛、負=被低估）。 */
 function pythRead(season, team){
   const list = doc.games || [];
-  let rs=0, ra=0, g=0, w=0, l=0;
+  let rs=0, ra=0, g=0, w=0, l=0, orw=0, orl=0;
   for(let i=0;i<list.length;i++){
     const gm = list[i];
     if(gm.awayTeam!==team && gm.homeTeam!==team) continue;
@@ -1555,13 +1563,38 @@ function pythRead(season, team){
     const os = isA ? gm.homeScore : gm.awayScore;
     rs+=ms; ra+=os; g++;
     if(ms>os) w++; else if(ms<os) l++;
+    if(Math.abs(ms-os)===1){ if(ms>os) orw++; else orl++; }
   }
   if(g < 1 || (rs+ra) === 0) return null;
   const x = Math.pow((rs+ra)/g, 0.287);
   const pyth = Math.pow(rs,x) / (Math.pow(rs,x) + Math.pow(ra,x));
   const dec = w + l;
   const act = dec > 0 ? w/dec : null;
-  return { g, x, pyth, act, gap: act==null ? null : (act - pyth) };
+  return { g, x, pyth, act, gap: act==null ? null : (act - pyth), orw, orl };
+}
+
+/* 聯盟本季主隊勝率（平手不計），樣本 <100 場退回 0.54。Log5 的主場修正用。 */
+function leagueHomeRate(season, league){
+  const list = doc.games || [];
+  let w=0, n=0;
+  for(let i=0;i<list.length;i++){
+    const g = list[i];
+    if(g.league!==league) continue;
+    if(seasonOf(g.date) !== season) continue;
+    if(g.awayScore==null || g.homeScore==null) continue;
+    if(g.awayScore===g.homeScore) continue;
+    n++; if(g.homeScore>g.awayScore) w++;
+  }
+  return n>=100 ? w/n : 0.54;
+}
+/* Log5：以兩隊畢氏勝率推這場主隊獲勝機率，再以聯盟主場勝率做賠率比修正。 */
+function log5Home(pHome, pAway, h){
+  const num = pHome*(1-pAway);
+  const den = num + pAway*(1-pHome);
+  if(den<=0) return null;
+  let p = num/den;
+  p = (p*h) / (p*h + (1-p)*(1-h));
+  return p;
 }
 
 /* user preference: which window to show on cards. "season" or 10/30/50 */
@@ -1897,7 +1930,7 @@ function renderCard(it){
       let chip = "";
       if(py && py.g>=20 && py.gap!=null){
         const gp = py.gap*100;
-        const tip = `畢氏期望 ${ (py.pyth*100).toFixed(1) }% / 實際 ${ (py.act*100).toFixed(1) }%（指數 ${py.x.toFixed(2)}，${py.g} 場）`;
+        const tip = `畢氏期望 ${ (py.pyth*100).toFixed(1) }% / 實際 ${ (py.act*100).toFixed(1) }%（指數 ${py.x.toFixed(2)}，${py.g} 場）　一分差 ${py.orw}-${py.orl}`;
         if(gp >= 4)       chip = `<span class="pychip xu"  title="${tip}　戰績優於實力，回歸風險">虛 +${gp.toFixed(0)}</span>`;
         else if(gp <= -4) chip = `<span class="pychip shi" title="${tip}　戰績低於實力，被低估">實 ${gp.toFixed(0)}</span>`;
       }
@@ -1920,7 +1953,20 @@ function renderCard(it){
     if(hasData){
       const fl = document.createElement("div"); fl.className="formline no-drag";
       fl.title = "左舊右新。點擊切換最近 5 場 / 10 場";
-      fl.innerHTML = `<div class="lbl">近況 · 近${N}場</div>${sideRow(it.away)}${sideRow(it.home)}`;
+      let modelRow = "";
+      {
+        const pa = pythRead(season, it.away), ph = pythRead(season, it.home);
+        if(pa && ph && pa.g>=20 && ph.g>=20){
+          const hAdv = leagueHomeRate(season, leagueOf(it));
+          const pH = log5Home(ph.pyth, pa.pyth, hAdv);
+          if(pH!=null){
+            const aPct = Math.round((1-pH)*100), hPct = Math.round(pH*100);
+            const mtip = `Log5（畢氏勝率＋主場修正 ${(hAdv*100).toFixed(0)}%）｜${esc(it.away)} 畢氏 ${(pa.pyth*100).toFixed(1)}%、一分差 ${pa.orw}-${pa.orl}｜${esc(it.home)} 畢氏 ${(ph.pyth*100).toFixed(1)}%、一分差 ${ph.orw}-${ph.orl}`;
+            modelRow = `<div class="frow model" title="${mtip}"><span class="mlbl">模型</span><span class="mv${(1-pH)>pH?" hi":""}">${esc(it.away)} ${aPct}%</span><span class="msep">·</span><span class="mv${pH>(1-pH)?" hi":""}">${esc(it.home)} ${hPct}%</span></div>`;
+          }
+        }
+      }
+      fl.innerHTML = `<div class="lbl">近況 · 近${N}場</div>${sideRow(it.away)}${sideRow(it.home)}${modelRow}`;
       fl.onclick = ()=>{ it.form10 = !it.form10; save(); render(); relayoutPreservingState(); };
       el.appendChild(fl);
     }
@@ -4367,9 +4413,12 @@ function openSettleModal(it){
   `;
   body.appendChild(flipWrap);
 
-  function q(label, key, options){
+  function q(label, key, options, lineInput){
     const wrap = document.createElement("div"); wrap.className="settle-q"; wrap.dataset.key=key;
-    wrap.innerHTML = `<div class="qlabel">${label}</div>`;
+    const extra = lineInput
+      ? `<span class="qline">${lineInput.lbl} <input id="${lineInput.id}" type="number" inputmode="decimal" step="0.5" value="${lineInput.value!=null?lineInput.value:""}" placeholder="${lineInput.ph||""}"></span>`
+      : "";
+    wrap.innerHTML = `<div class="qlabel"><span>${label}</span>${extra}</div>`;
     const opts = document.createElement("div"); opts.className="opts";
     options.forEach(o=>{
       const b = document.createElement("button");
@@ -4394,11 +4443,11 @@ function openSettleModal(it){
   q(`讓分：${favName} 過盤了嗎？`, "hd", [
     { label:`${favName} 過盤`, value:"cover" },
     { label:`${favName} 沒過`, value:"nocover" }
-  ]);
+  ], { id:"settleHdVal", lbl:"盤口", value:(it.hdVal!=="" && it.hdVal!=null) ? it.hdVal : "1.5" });
   q("大小分：兩隊總分大於基準？", "tot", [
     { label:"大", value:"over" },
     { label:"小", value:"under" }
-  ]);
+  ], { id:"settleTotVal", lbl:"基準", value:(it.totVal!=="" && it.totVal!=null) ? it.totVal : "", ph:"8.5" });
 
   // ---- auto-fill from score (default handicap = 1.5) ----
   function autoFillFromScore(){
@@ -4411,13 +4460,14 @@ function openSettleModal(it){
     else if(h>a) mlPick = "home";
     else mlPick = "tie";
     body.querySelector('.settle-q[data-key="ml"] .opt[data-value="'+mlPick+'"]')?.click();
-    // 讓分: 默認讓分基準 1.5 分；讓分方 = it.hdFav
-    // 讓分方贏對方多少分？算 margin
+    // 讓分: 用結算視窗輸入的實際盤口（缺值退回 1.5）；讓分方 = it.hdFav
+    const lineV = parseFloat($("#settleHdVal")?.value);
+    const line = isNaN(lineV) ? 1.5 : Math.abs(lineV);
     const favIsAway = it.hdFav==="away";
     const favScore = favIsAway ? a : h;
     const undScore = favIsAway ? h : a;
     const margin = favScore - undScore;   // positive = fav won by N
-    const cover = margin > 1.5;            // fav covers if won by 2+
+    const cover = margin > line;
     const hdPick = cover ? "cover" : "nocover";
     body.querySelector('.settle-q[data-key="hd"] .opt[data-value="'+hdPick+'"]')?.click();
     // 大小分: 不自動點，因為基準變動
@@ -4456,6 +4506,9 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   it.closeOddsHome = isNaN(coh) ? null : coh;
   it.flipVanished = !!($("#settleFlipVanished") && $("#settleFlipVanished").checked);
   it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
+  const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
+  if(_hv!==undefined) it.hdVal = (_hv==="" ? "" : _hv);
+  if(_tv!==undefined) it.totVal = (_tv==="" ? "" : _tv);
   snapshot(); save();
   $("#settleModal").classList.remove("show");
   settleTarget=null;
@@ -4513,6 +4566,9 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     picks.flipVanished = it.flipVanished;
     it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
     picks.preGameSwap = it.preGameSwap;
+    const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
+    if(_hv!==undefined) it.hdVal = (_hv==="" ? "" : _hv);
+    if(_tv!==undefined) it.totVal = (_tv==="" ? "" : _tv);
   }
   snapshot();
   // if revising, remove the old game record first
@@ -4581,6 +4637,8 @@ function applySettlement(it, picks, delta){
     awayTeam: it.away, homeTeam: it.home,
     awayScore: picks.awayScore, homeScore: picks.homeScore,
     hdFav: it.hdFav,
+    hdVal: (function(){ const v = parseFloat(it.hdVal); return isNaN(v) ? null : v; })(),
+    totVal: (function(){ const v = parseFloat(it.totVal); return isNaN(v) ? null : v; })(),
     hdResult,
     totResult,
     lightsSnapshot,
