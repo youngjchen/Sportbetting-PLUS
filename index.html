@@ -1514,7 +1514,7 @@ function streakStr(s){
   return `${s.n}${s.kind}`;   // "5W" or "5L"
 }
 /* Last N results for a team this season, ordered oldest → newest.
-   Returns array of "w" | "l" | "t". */
+   Returns array of {r:"w"|"l"|"t", date, opp, my, op, venue}. */
 function recentResults(season, team, n){
   const list = (doc.games || []).filter(g=>{
     if(g.awayTeam!==team && g.homeTeam!==team) return false;
@@ -1522,10 +1522,21 @@ function recentResults(season, team, n){
     if(g.awayScore==null || g.homeScore==null) return false;
     return true;
   }).sort((a,b)=> a.date < b.date ? 1 : -1).slice(0, n);
-  return list.map(g=>{
+  const out = [];
+  for(let i=0;i<list.length;i++){
+    const g = list[i];
     const r = _gameResultFor(team, g);
-    return (r && r.ml) ? r.ml : null;
-  }).filter(Boolean).reverse();
+    if(!r || !r.ml) continue;
+    const isA = g.awayTeam===team;
+    out.push({
+      r: r.ml, date: g.date,
+      opp: isA ? g.homeTeam : g.awayTeam,
+      my:  isA ? g.awayScore : g.homeScore,
+      op:  isA ? g.homeScore : g.awayScore,
+      venue: isA ? "away" : "home"
+    });
+  }
+  return out.reverse();
 }
 
 /* Pythagenpat：動態指數 x = ((RS+RA)/G)^0.287，期望勝率 = RS^x/(RS^x+RA^x)。
@@ -1895,9 +1906,12 @@ function renderCard(it){
       for(let i=0;i<N;i++){
         const idx = i - (N - res.length);
         if(idx < 0){ boxes += `<span class="bx empty"></span>`; continue; }
-        const r = res[idx];
-        const c = r==="w" ? "w" : (r==="l" ? "l" : "t");
-        boxes += `<span class="bx ${c}">${c.toUpperCase()}</span>`;
+        const e = res[idx];
+        const c = e.r==="w" ? "w" : (e.r==="l" ? "l" : "t");
+        const md = e.date.slice(5).replace("-","/");
+        const word = e.r==="w" ? "勝" : (e.r==="l" ? "敗" : "和");
+        const tip = `${md}　${e.venue==="away"?"客場":"主場"} vs ${esc(e.opp)}　${e.my}:${e.op} ${word}`;
+        boxes += `<span class="bx ${c}" title="${tip}">${c.toUpperCase()}</span>`;
       }
       return `<div class="frow"><span class="nm">${esc(team)}</span>${chip}<span class="boxes">${boxes}</span></div>`;
     };
