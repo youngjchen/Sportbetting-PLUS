@@ -1048,6 +1048,13 @@
       </label>
     </div>
     <div id="flipOddsCalc" style="text-align:center;font-size:12px;color:var(--ink-dim);line-height:1.8;min-height:18px;margin-bottom:6px;"></div>
+    <div style="display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:6px;">
+      <span style="font-size:11px;color:var(--ink-dim);font-family:'Oswald';letter-spacing:.05em;">初盤</span>
+      <input id="flipOpenAwayInput" type="number" inputmode="decimal" step="0.01" min="1" placeholder="客 初盤"
+        style="width:84px;padding:6px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:14px;font-family:'Oswald';">
+      <input id="flipOpenHomeInput" type="number" inputmode="decimal" step="0.01" min="1" placeholder="主 初盤"
+        style="width:84px;padding:6px;text-align:center;background:#161d27;border:1px dashed var(--line);border-radius:7px;color:var(--ink);font-size:14px;font-family:'Oswald';">
+    </div>
     <div class="modal-actions" style="margin-top:14px;">
       <button class="btn" id="flipOddsSkip">略過</button>
       <span class="grow"></span>
@@ -3252,8 +3259,12 @@ function openFlipOddsModal(it){
   $("#flipOddsHomeLbl").textContent = it.home+"（主）";
   $("#flipOddsAwayInput").value = it.flipOddsAway!=null ? it.flipOddsAway : "";
   $("#flipOddsHomeInput").value = it.flipOddsHome!=null ? it.flipOddsHome : "";
+  $("#flipOpenAwayInput").value = it.openOddsAway!=null ? it.openOddsAway : "";
+  $("#flipOpenHomeInput").value = it.openOddsHome!=null ? it.openOddsHome : "";
   $("#flipOddsAwayInput").oninput = _updFlipOddsCalc;
   $("#flipOddsHomeInput").oninput = _updFlipOddsCalc;
+  $("#flipOpenAwayInput").oninput = _updFlipOddsCalc;
+  $("#flipOpenHomeInput").oninput = _updFlipOddsCalc;
   _updFlipOddsCalc();
   m.classList.add("show");
   setTimeout(()=>$("#flipOddsAwayInput").focus(), 50);
@@ -3268,6 +3279,20 @@ function _updFlipOddsCalc(){
   if(isNaN(oa) || isNaN(oh) || oa<=1 || oh<=1){ out.innerHTML=""; return; }
   const pa = (1/oa) / (1/oa + 1/oh);   // 去水後客隊隱含勝率
   let html = `盤口隱含：${esc(it.away)} <b style="color:var(--ink)">${(pa*100).toFixed(1)}%</b> ／ ${esc(it.home)} <b style="color:var(--ink)">${((1-pa)*100).toFixed(1)}%</b>`;
+  // 初盤→當下 移動
+  const qa = parseFloat($("#flipOpenAwayInput")?.value);
+  const qh = parseFloat($("#flipOpenHomeInput")?.value);
+  if(!isNaN(qa) && !isNaN(qh) && qa>1 && qh>1){
+    const pa0 = (1/qa) / (1/qa + 1/qh);
+    const mv = (pa - pa0) * 100;   // 客隊隱含勝率變化（pp）
+    if(Math.abs(mv) < 1.0){
+      html += `<br>初盤→現在：幾乎沒動（${Math.abs(mv).toFixed(1)}pp）`;
+    }else{
+      const team = mv>0 ? it.away : it.home;
+      const strong = Math.abs(mv) >= 2.5;
+      html += `<br>初盤→現在：<b style="color:${strong?'#ffb02e':'var(--ink)'}">${esc(team)} 被買進 +${Math.abs(mv).toFixed(1)}pp</b>${strong?"（大幅移動）":""}`;
+    }
+  }
   try{
     const season = seasonOf(doc.activeDate);
     const A = pythRead(season, it.away), H = pythRead(season, it.home);
@@ -3288,6 +3313,10 @@ $("#flipOddsSave") && ($("#flipOddsSave").onclick = ()=>{
   const oh = parseFloat($("#flipOddsHomeInput").value);
   _flipOddsTarget.flipOddsAway = isNaN(oa) ? null : oa;
   _flipOddsTarget.flipOddsHome = isNaN(oh) ? null : oh;
+  const qa = parseFloat($("#flipOpenAwayInput").value);
+  const qh = parseFloat($("#flipOpenHomeInput").value);
+  _flipOddsTarget.openOddsAway = isNaN(qa) ? null : qa;
+  _flipOddsTarget.openOddsHome = isNaN(qh) ? null : qh;
   save();
   closeFlipOddsModal();
 });
@@ -4455,7 +4484,7 @@ function openSettleModal(it){
   function q(label, key, options, lineInput){
     const wrap = document.createElement("div"); wrap.className="settle-q"; wrap.dataset.key=key;
     const extra = lineInput
-      ? `<span class="qline">${lineInput.lbl} <input id="${lineInput.id}" type="number" inputmode="decimal" step="0.5" value="${lineInput.value!=null?lineInput.value:""}" placeholder="${lineInput.ph||""}"></span>`
+      ? `<span class="qline">${lineInput.lbl} <input id="${lineInput.id}" type="number" inputmode="decimal" step="${lineInput.step||"0.5"}" value="${lineInput.value!=null?lineInput.value:""}" placeholder="${lineInput.ph||""}"></span>`
       : "";
     wrap.innerHTML = `<div class="qlabel"><span>${label}</span>${extra}</div>`;
     const opts = document.createElement("div"); opts.className="opts";
@@ -4486,7 +4515,7 @@ function openSettleModal(it){
   q("大小分：兩隊總分大於基準？", "tot", [
     { label:"大", value:"over" },
     { label:"小", value:"under" }
-  ], { id:"settleTotVal", lbl:"基準", value:(it.totVal!=="" && it.totVal!=null) ? it.totVal : "", ph:"8.5" });
+  ], { id:"settleTotVal", lbl:"基準", value:(it.totVal!=="" && it.totVal!=null) ? it.totVal : "8.5", step:"1" });
 
   // ---- auto-fill from score (default handicap = 1.5) ----
   function autoFillFromScore(){
@@ -4509,10 +4538,19 @@ function openSettleModal(it){
     const cover = margin > line;
     const hdPick = cover ? "cover" : "nocover";
     body.querySelector('.settle-q[data-key="hd"] .opt[data-value="'+hdPick+'"]')?.click();
-    // 大小分: 不自動點，因為基準變動
+    // 大小分: 用輸入的基準自動判讀（總分恰等於整數基準時不自動點，留人工判走盤）
+    const basisV = parseFloat($("#settleTotVal")?.value);
+    if(!isNaN(basisV)){
+      const tot = a + h;
+      if(tot > basisV)      body.querySelector('.settle-q[data-key="tot"] .opt[data-value="over"]')?.click();
+      else if(tot < basisV) body.querySelector('.settle-q[data-key="tot"] .opt[data-value="under"]')?.click();
+    }
   }
   $("#settleAwayScore").oninput = autoFillFromScore;
   $("#settleHomeScore").oninput = autoFillFromScore;
+  const _hvEl = $("#settleHdVal"), _tvEl = $("#settleTotVal");
+  if(_hvEl) _hvEl.oninput = autoFillFromScore;   // 改盤口/基準也即時重判
+  if(_tvEl) _tvEl.oninput = autoFillFromScore;
 
   $("#settleRemove").style.display = isRevise ? "" : "none";
   m.classList.add("show");
