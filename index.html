@@ -37,6 +37,15 @@
     --danger:#ff5b6e;
   }
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  /* keyboard-only focus ring: shows for Tab users, stays hidden on pointer taps.
+     Amber so focus reads as part of the board's own "lit" signal language. */
+  :focus:not(:focus-visible){outline:none;}
+  :focus-visible{outline:2px solid var(--lit);outline-offset:2px;}
+  .vs .team:focus-visible{outline:none;}   /* contenteditable name keeps its own inset ring */
+  ::selection{background:rgba(255,176,46,.30);color:#fff;}
+  /* form controls don't inherit numeric figures by UA default — opt them in so
+     odds/handicap inputs and date counts get the same aligned tabular digits. */
+  button,input,select,textarea{font-variant-numeric:inherit;font-feature-settings:inherit;}
   html,body{margin:0;height:100%;height:100dvh;}
   body{
     background:
@@ -45,6 +54,13 @@
       var(--bg);
     color:var(--ink);
     font-family:"Noto Sans TC",system-ui,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
+    /* tabular figures: odds, percentages, W-L and scores align into clean
+       columns and stop shifting width as their values change. */
+    font-variant-numeric:tabular-nums;
+    font-feature-settings:"tnum" 1;
+    scrollbar-color:#2a3340 transparent;   /* Firefox; WebKit styled separately below */
     display:flex;flex-direction:column;
     overflow:hidden;
     user-select:none;
@@ -852,6 +868,18 @@
   }
   @media (hover:none){
     .resize{opacity:.7;}
+  }
+
+  /* respect a reduced-motion preference: drop transitions, hover lifts and
+     ambient animation while leaving every interaction fully functional. */
+  @media (prefers-reduced-motion: reduce){
+    *,*::before,*::after{
+      transition-duration:.01ms!important;
+      animation-duration:.01ms!important;
+      animation-iteration-count:1!important;
+      scroll-behavior:auto!important;
+    }
+    .chip:hover{transform:none;}
   }
 </style>
 </head>
