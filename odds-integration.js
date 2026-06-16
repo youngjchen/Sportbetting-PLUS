@@ -370,17 +370,17 @@
     return !!(a && (a.isContentEditable || a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT"));
   }
   function fetchFeed(force) {
-    fetch(FEED_URL + "?t=" + Date.now(), { cache: "no-store" })
-      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+    return fetch(FEED_URL + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
       .then(function (j) {
-        if (!j || !j.matches) return;
+        if (!j || !j.matches) throw new Error("空檔");
         var changed = (j.lastUpdated !== feed.lastUpdated);
         feed = j;
         var flipChanged = syncFlipFlags();
         if (flipChanged && typeof save === "function") save();
         if ((force || ((changed || flipChanged) && !anyModalOpen() && !editingNow())) && typeof render === "function") render();
-      })
-      .catch(function () { /* 離線 / 還沒在 Pages 上 / 檔還沒生 — 排盤板照常 */ });
+        return { ok: true, lastUpdated: j.lastUpdated, changed: changed };
+      });
   }
 
   /* ---- 鈕：自動排盤→選單；手動更新→快捷鍵（右下，跟 🔍 / 結算 同排） ---- */
@@ -396,13 +396,22 @@
     if (qb && !document.getElementById("refreshOddsQuickBtn")) {
       var r = document.createElement("button");
       r.id = "refreshOddsQuickBtn"; r.className = "fit"; r.title = "更新賠率"; r.textContent = "🔄";
-      r.onclick = function (e) { e.stopPropagation(); fetchFeed(true); badge("已更新賠率 ✓"); };
+      r.onclick = function (e) {
+        e.stopPropagation();
+        badge("更新中…");
+        fetchFeed(true).then(function (res) {
+          var t = (res.lastUpdated || "").slice(5, 16).replace("T", " ");   // MM-DD HH:MM
+          badge(res.changed ? ("賠率已更新 " + t + " ✓") : ("雲端仍是 " + t + "（scraper 未產新檔）"));
+        }).catch(function () {
+          badge("抓取失敗 · 是否在 GitHub Pages 上？");
+        });
+      };
       qb.appendChild(r);
     }
   }
 
   /* ---- 啟動 ---- */
-  function boot() { injectButtons(); fetchFeed(false); setInterval(function () { fetchFeed(false); }, REFRESH_MS); }
+  function boot() { injectButtons(); fetchFeed(false).catch(function () {}); setInterval(function () { fetchFeed(false).catch(function () {}); }, REFRESH_MS); }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
