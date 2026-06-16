@@ -15,7 +15,7 @@ const path = require('path');
 // 只抓「未來這麼多小時內開打」的比賽。離開賽還很遠的盤幾乎不動，抓了也是雜訊、
 // 又增加對 Titan007 的請求量。8 小時足以涵蓋 MLB 整批賽事＋賽前真正會動的時段。
 // 想連更早的盤都記就調大（例如 24），代價是請求量與檔案成長變多。
-const ACTIVE_WINDOW_HOURS = 8;
+const ACTIVE_WINDOW_HOURS = 24;
 
 const OUTPUT_FILE = path.join('data', 'odds_log.json');
 const REQUEST_GAP_MS = 900;   // 每場之間稍微間隔，對來源客氣一點
