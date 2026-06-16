@@ -60,11 +60,13 @@
     if (isNaN(oa) || isNaN(oh) || oa <= 1 || oh <= 1) return null;
     return (1 / oa) / (1 / oa + 1 / oh);
   }
-  // 讓分/大小水位去水：自動辨識歐賠或港盤（兩邊都 ≤1.4 視為港盤，+1 約當歐賠）
+  // 讓分/大小水位去水：自動辨識歐賠或港盤。
+  // 港盤的讓分/大小至少有一邊 <1（讓分方水位低），歐賠兩邊都 >1，
+  // 故以「任一邊 <1」判港盤，整列 +1 約當歐賠（HK→Dec = 賠率+1）。
   function devig(a, b) {
     a = parseFloat(a); b = parseFloat(b);
     if (isNaN(a) || isNaN(b) || a <= 0 || b <= 0) return null;
-    if (a <= 1.4 && b <= 1.4) { a += 1; b += 1; }
+    if (a < 1.0 || b < 1.0) { a += 1; b += 1; }
     return (1 / a) / (1 / a + 1 / b);
   }
   function fmtHd(v) { var n = parseFloat(v); if (isNaN(n)) return String(v || "—"); return n > 0 ? "+" + n : "" + n; }
