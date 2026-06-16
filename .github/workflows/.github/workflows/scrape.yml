@@ -1,0 +1,41 @@
+name: MLB Odds Scraper
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'      # 每 5 分鐘觸發（GitHub 允許的最密；實際時間可能略有延遲）
+  workflow_dispatch: {}         # 也允許在 Actions 分頁手動按鈕觸發（用來測試）
+
+# 這行必須有：讓內建的 GITHUB_TOKEN 有權限把 commit push 回 repo（缺了會 403 失敗）
+permissions:
+  contents: write
+
+# 避免某次執行卡住時跟下一次重疊
+concurrency:
+  group: odds-scraper
+  cancel-in-progress: false
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - run: npm install
+
+      - run: node index.js
+
+      - name: Commit & push if changed
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if [ -f data/odds_log.json ]; then
+            git add data/odds_log.json
+            git diff --staged --quiet || git commit -m "odds update $(date -u +%FT%TZ)"
+            git push
+          else
+            echo "本次未產生資料檔，略過 commit。"
+          fi
