@@ -1,225 +1,46 @@
-# 排盤板 Sportbetting-PLUS × 自動賠率管線 — 統一交接文件 v3
+name: scrape-odds
 
-> 把本專案接到新對話用。建議連同這些檔一起帶過去：本文件、`index.html`(排盤板本體)、`index.js`(scraper)、`scrape.yml`、`package.json`、`odds-integration.js`(add-on)、一份最新 `odds_log.json`、一份排盤板備份 JSON。
+on:
+  workflow_dispatch:
+  schedule:
+    # GitHub 的 schedule 不準、會被大量延遲/丟棄（越高頻越會被降級），
+    # 所以這裡【不靠它每 5 分鐘】，只把它當「迴圈結束後重啟」的後援。
+    # 排密一點(半小時一次)、避開整點(整點 GitHub 負載最重 → 更容易被丟)。
+    - cron: '7,37 * * * *'
 
----
+# 同一時間只允許一個迴圈在跑；期間被觸發的新 run 會排隊(pending)，
+# 等正在跑的迴圈結束後【立刻接手】→ 近乎不間斷的 5 分鐘輪詢。
+concurrency:
+  group: scrape-odds-loop
+  cancel-in-progress: false
 
-## 〇、開場提醒（動工前必做，別跳過）
+permissions:
+  contents: write
 
-**動手前先請用戶上傳當前檔案、`view` 程式碼、用真實資料重算/煙霧測試，確認現狀再動。** 切勿空口回答或假設功能未完成——本專案已歷經多輪深度迭代，多數「直覺上該加」的功能早已存在。
-
-**驗證流程（每次交付前必做）：**
-
-*排盤板（index.html）：*
-1. 抽出 `<script>` → `node --check` 確認語法。
-2. 用 **jsdom**（非 puppeteer，環境裝不了 Chromium）載入真實備份做 headless 煙霧測試。關鍵：localStorage 鍵名 `sportbetting_plus_doc_v2`，需用 `Object.defineProperty(window,'localStorage',{value:...,configurable:true})` 覆寫（直接賦值無效）。實測開結算視窗、回顧頁、統計頁、各篩選，確認零 error。
-3. 用 **Python 獨立重算統計值**，與頁面渲染值交叉比對。
-4. 無誤才 `cp` 到 `/mnt/user-data/outputs/index.html` 並 present。
-
-*賠率管線（index.js / odds-integration.js）：*
-1. `node --check` 兩支。
-2. 把 add-on 的分析函式（`mlSentiment / hdSentiment / ouSentiment / feedFavTeam / devig`）對**用戶上傳的真實 `odds_log.json`** 跑一遍（IIFE 會碰 `document`，測試時要 stub `window/document/setInterval/fetch`；它有 `module.exports`）。
-3. 用 `mapTeam(raw, league)` 對真實檔所有 raw 名跑一次，確認 **0 未對應**。
-4. 無誤才 `cp` 到 outputs 並 present。
-
----
-
-## 一、全貌：兩個元件 + 如何連接
-
-1. **排盤板（`index.html`）** — 單檔 HTML、繁中、約 5,427 行、CSS/JS 全內聯、無外部依賴、部署 GitHub Pages（`youngjchen.github.io/Sportbetting-PLUS/`）。這是**手動排盤 / 結算 / 回顧 / 統計 / 模型**的大腦。
-2. **自動賠率管線** — `index.js`(scraper, Node) + `scrape.yml`(Actions 排程) + `package.json`，每次跑把 Titan007 棒球盤口寫進 repo 的 `data/odds_log.json`。
-3. **`odds-integration.js`(add-on)** — **橋**。載進 `index.html`(一行 `<script src>`)，讀 `odds_log.json`，在卡片上疊「📡 盤口動向」、提供「用賠率自動排盤」「🔄 更新賠率」。**非侵入**：不改排盤板任何一行，刪掉那行即復原。
-
-**資料流**：Titan007 → scraper → `odds_log.json`(repo) → add-on 疊在排盤板卡片上 / 自動生卡 →（用戶手動結算）→ 排盤板 `doc.games[]`（統計來源）。目前 add-on 只負責「顯示賠率 + 生卡」；賠率**尚未**自動寫進結算紀錄（那是未完成的「點六」）。
-
----
-
-## 二、排盤板（index.html）架構
-
-**核心資料模型：**
-- `doc` 頂層：`boards`(按日期的對戰卡)、`games`(**獨立的已結算比賽陣列，所有回顧統計的唯一來源**，與 boards 完全獨立，刪 board 不影響 games)、各項設定。
-- localStorage 鍵 `sportbetting_plus_doc_v2`；備份槽 `sportbetting_plus_autobackup`、`sportbetting_plus_lastbackup`。
-- **game record 主要欄位**：`sid, date, league, awayTeam, homeTeam, awayScore, homeScore, hdFav, hdVal(實際讓分盤口), totVal(大小分基準), hdResult(fav_cover/fav_nocover), totResult, mlResult, lightsSnapshot{mlAway,mlHome,hdGive,hdRecv,over,under}, platformFlip, flipVanished(收盤前變一致), preGameSwap, flipOddsAway/Home(下注時賠率), openOddsAway/Home(初盤), closeOddsAway/Home(收盤), eraAway/eraHome(先發防禦率), trendTop, mlLitSide, lowCoverWarnHd/Ml/Tot`。
-- **歷史匯入資料**另有 `totBasis` 欄位（1588 場帶基準線，3/26–6/1），早期匯入轉換器留下的。
-- **match-card item 形狀**（boards 內，add-on 生卡也照這個）：`{id, type:"match", x, y, away, home, awayColor, homeColor, mlAway/mlHome:{lights}, hdFav:"home"|"away", hdVal:"", hdGive/hdRecv:{lights}, totVal:"", over/under:{lights}, +選配 flipOddsAway/Home, openOddsAway/Home, closeOddsAway/Home, eraAway/Home, platformFlip, flipVanished, preGameSwap, settled{...}, autoHdFlip(add-on 加的自動顛倒旗標)}`。卡片顏色＝聯盟色（兩隊同色）。
-
-**關鍵函式：**
-- 統計源：`collectPicks`(命中率，衝突場不計入)、`collectConflictGames`(byMarket 分盤口)、`collectFlipGames`、`collectDivergence`、`collectLowCoverWarning`。
-- 數據判讀：`pythRead`(Pythagenpat 動態係數、期望勝率、虛實落差、一分差戰績)、`leagueHomeRate`(聯盟主場勝率即時算)、`log5Home`(Log5 對戰勝率＋主場修正)、`impliedAway`(賠率去水隱含勝率)、`eraAdjustedHome`(ERA 修正，每 1.00 ERA 差≈5pp，常數 `GAP_WARN=8`)、`recentResults`(最近 N 場勝負＋對手比分)。
-- 渲染：`renderCard`、`renderReviewPage`、`fitTeamRow`(隊名自動縮字 16→11px)、`drillBlock`、`rvInfo`、`rvTugBar`、`_updFlipOddsCalc`(💰視窗即時判讀)、`_updSettleOddsCalc`(結算視窗即時判讀＋ERA驗證)、`autoFillFromScore`(比分自動判讓分/大小)。
-- 版面：`relayoutPreservingState`(手動拖卡已停用，卡片靠列對齊排版，收合/展開需重排)。
-
-**已知邊界 bug（未修，實務難觸發）**：若某天所有結算場全是衝突場，`collectPicks` 回空 → 回顧頁顯示「無資料」即使衝突統計有料。
-
----
-
-## 三、自動賠率管線架構
-
-**scraper（`index.js`）：**
-- 三市場：獨贏(12BET/Bet365/Bwin) / 讓分(Bet365) / 大小分(Bet365)。讓分與大小分**完整保留整張變動表**（每列＝一次盤口移動，row[0]=最新、末列=初盤）；獨贏無歷史，只有初盤＋當前，故「**價有變才追加**」自己縫軌跡。
-- **四聯盟**：MLB(1) / 日職 NPB(2) / 韓職 KBO(17) / 中職 CPBL(5)。賽程檔網址 `…/matchResult/<年>/l<id>_1_<年>_<月>.js`。（代號由用戶從網站 network tab 查得，已確認。）
-- **分聯盟隊名對照**：`LEAGUE_TEAMS = {mlb,npb,kbo,cpbl}`，`mapTeam(raw, league)` 只在該場聯盟內比對。解決「巨人」跨聯盟撞名（NPB＝讀賣巨人、MLB＝舊金山巨人、KBO＝樂天巨人/Lotte），「樂天」在日/韓/中各自對到 樂天金鷲/樂天巨人/樂天桃猿。
-- 窗格 `ACTIVE_WINDOW_HOURS = 24`（**定案，見雷區**）；`cron */5`；每場標 `league`；未對應 log 附**聯盟＋對手**。
-- MLB 別名**原樣保留用戶的修正**（金鶯＝`['金鶯','金莺','黃鸝','黄鹂']`，Titan007 用黃鸝指金鶯）。
-
-**`scrape.yml`（自迴圈版，重要）**：**不靠 GitHub 排程「每 5 分鐘」**(它不準、會大量丟棄高頻排程)。改成：一個 job 跑約 **5h25m**、內部 `while` 迴圈**每 5 分鐘 `node index.js` + commit/pull --rebase/push**；`schedule: '7,37 * * * *'`(半小時一次、避開整點)只當「迴圈結束後重啟」的後援；`concurrency:{group, cancel-in-progress:false}` 確保同時只有一個迴圈、新觸發排隊接力 → **近乎不間斷的 5 分鐘輪詢**。`permissions: contents: write`(沒有會 push 403)；`timeout-minutes: 350`(上限 360)。`package.json` 只依賴 `axios`。**只因 repo 是 public(Actions 分鐘無限)才能這樣連續跑。**
-
-**部署**：三檔放 repo → Settings→Actions→General→Workflow permissions 設 **Read and write** → Actions Run 一次 → 確認 `data/odds_log.json`。
-
-**add-on（`odds-integration.js`）安裝（一行）**：放 repo 根目錄，在 `index.html` 的 `</body>` 正上方、原本大 `<script>` 之後加 `<script src="./odds-integration.js"></script>`。
-**橋的運作機制（重要）**：排盤板是 **classic script**，頂層 `function`/`let`/`const` 都在共用全域 → 外部 classic script(add-on)能讀、且能**重新指派 `renderCard`**。add-on 就是包住 `renderCard`（先跑原本的，再把分析區塊塞進該卡 DOM、改 STAKE 那條），並讀寫這些全域：`doc, state, LEAGUES, render, renderCard, autoLayout, save, snapshot, uid, leagueOf, switchDate, closeMore, fmtDate, esc, impliedAway, suppress, world`。
-
----
-
-## 四、`odds_log.json` 結構（已用真實檔確認）
-```
-{ lastUpdated, matches: { "<id>": {
-  id, league:"mlb"|"npb"|"kbo"|"cpbl", time, startISO:"...+08:00",
-  homeTeam, awayTeam,            // 對到排盤板繁中縮寫；對不上＝null
-  homeTeamRaw, awayTeamRaw,      // Titan007 原始名
-  firstSeen, lastUpdated,
-  ml:{ bet365|"12bet"|bwin:{ open:{home,away}, live:[{ts,home,away}] } },  // 獨贏＝歐賠
-  hd:{ bet365:[{home,line,away}] },    // 讓分；row[0]最新, 末列初盤
-  ou:{ bet365:[{over,line,under}] }    // 大小；row[0]最新, 末列初盤
-}}}
-```
-**格式關鍵（踩過坑）：**
-- **獨贏 ml 是歐賠**（1.61/2.47，兩邊 >1），用 `impliedAway` 去水。
-- **讓分/大小水位是「港盤」**：熱門邊 <1（0.49~0.9），冷門邊可 >1（到約 1.7）。**偵測：任一邊 <1 就當港盤，整列 +1 換歐賠再去水**。先前曾用「兩邊 ≤1.4」誤判，遇 `{0.59,1.45}` 會把 0.59 當歐賠算錯，**務必沿用 min<1**。
-- `line` 是字串（可帶正負）；`home/away/over/under` 是數字。獨贏 `open` 首見記一次、`live` 價變才追加；讓分/大小留整張歷史（留比較長的那張）。
-- `league` 是每場標記，排盤板靠它判聯盟（隊名沒對上時也認得出聯盟）。
-
----
-
-## 五、本輪「新增/修改」總清單
-
-### 5a 排盤板 v2（較舊總結後新增）
-- **結算視窗重構**：加寬 464px、賠率改三列兩欄表格(下注/初盤/收盤)、新增讓分盤口與大小基準輸入(基準預填 8.5、上下鍵跳 1 分)、比分自動判讓分與大小、改盤口即時重判、「收盤前變一致」勾選。
-- **連勝連敗改勝負格**：每隊一排五格(綠W/紅L/灰T，左舊右新)，點擊切 5↔10 場，桌面懸停顯示該場對手比分(手機不觸發)。
-- **存檔失敗警告**：localStorage 寫入失敗不再靜默，紅徽章提示立即匯出。
-- **Pythagenpat 虛實標籤**：四聯盟全隊動態係數、每次渲染即時重算；近況區隊名旁標「虛+N」(琥珀，灌水/回歸候選)或「實−N」(綠，被低估)，±4pp 內不顯示，懸停含期望勝率/係數/一分差戰績。
-- **Log5 模型勝率**：近況區「模型」列，畢氏勝率＋從自身資料即時算的聯盟主場修正(MLB 約 52.8%)。
-- **賠率去水換算**：💰視窗與結算視窗即時顯示莊家隱含勝率、與模型並排標差距。
-- **市場方向白話**：初盤→下注的去水機率變化，直接顯示「市場逐漸/大幅轉向看好 X」。
-- **ERA 驗證警報**：模型vs盤口差距≥8時，結算視窗自動展開先發 ERA 輸入，用 ×5pp 換算修正，即時判「✓差距可由先發解釋—正常場」或「⚠先發無法解釋—建議避開」；卡片標四態(差N / 差N⚠ / 差N✓ / ⚠避開)；ERA 存紀錄供回測係數。
-
-### 5b 賠率管線（本對話新建）
-- **scraper**：多聯盟＋分聯盟對照＋league 標記＋附對手的未對應 log；Titan007 實際用字補齊(巨人=讀賣、金鷹、鬥山、TSG、羅德巨人、友利英雄…)。
-- **add-on（整支新做）**：
-  - 卡片「📡 盤口動向(自動)」：三市場**同一套 3 段方向評語**(`逐漸看好`≥1pp/`看好`≥2.5pp/`大幅轉向`≥4pp)＋**原始數字**。獨贏＝三家去水隱含勝率平均移動；讓分＝Bet365 水位去水移動(讓分方＝獨贏熱門)→「看好 X讓分/受讓 +X.Xpp · 盤±1.5」；大小＝大/小水位去水→「看好 大/小分 +X.Xpp · 基準8.5→9.0」。**「加深/縮小/上移/下移」已拿掉，改原始數字。**
-  - 三家方向不一致標「分歧」；抓到的讓分熱門與 STAKE(`hdFav`)相反 → 卡上提示＋記 `it.autoHdFlip`(**獨立旗標，刻意不覆蓋手動 `platformFlip`**，以免污染 ⑤平台顛倒場分析)。
-  - 現有「市場」那條改標「市場·STAKE(參考)」、淡化、同套用詞；**差距計算(差N/ERA驗證)保留**。
-  - 對不到且該聯盟有抓 → 淡淡「無盤口資料」(其他聯盟卡不被洗版)。
-  - **排版修乾淨**(修掉「灰細字→突然白字加粗」)：標籤一色、評語一色一字重、隊名/方向只用顏色不加粗、數字靠右淡色。
-  - 鈕：選單「⚡用賠率自動排今天的盤」(生當天卡、讓分/基準留空、只補沒有的場、不動已排的卡或燈)；右下快捷鍵「🔄更新賠率」。
-  - **🔄 誠實回報**：成功有新資料→「賠率已更新 MM-DD HH:MM ✓」；抓到但雲端沒變→「雲端仍是 …(scraper 未產新檔)」；抓不到→「抓取失敗」。
-  - **自動更新非干擾**：只在資料有變、沒開彈窗、沒在打字時重畫；手動則強制。collapsed 卡隱藏該區塊。
-  - **港盤水位修正**(見 §四)：先前 MLB 讓分/大小評語算錯，已修。
-
----
-
-## 六、未完成項目
-
-### 6a 排盤板
-- **【最高優先・多輪未動的結構性改造】回顧頁按「用戶下注的決策路徑」重組**：目前按「分析類型」排列。應先問出用戶看一場球、決定下不下注的**完整思考順序**(先看燈數？顛倒？過盤率警告？模型差距？)，再讓回顧頁順那條路徑長。可能比所有零碎功能加起來更有價值。
-- **資料到位後的回測**：CLV 計算(下注+收盤賠率成對已 100 場，累積一個月可算)、線路移動分析表(成對到 150 場)、弱背離分組回測(門檻維持 0.10 不降)、ERA×5pp 係數校正、顛倒 vanish 兩組對比(收盤前收走 vs 撐到收盤)、初盤相似場次分析、賽前對調場特性(樣本仍遠不足)。
-
-### 6b 賠率管線
-- **點六（設計已定，實作延後）：收盤動向存進結算紀錄。** 只存「初盤→收盤」會把「中途劇烈波動又回調」抹平。設計：每市場存 **淨值**(初→收) + **最大擺幅**(離初盤最遠) + **回調旗標**(最大擺幅≫|淨值|時標) + **收盤前方向**(最後一段)；完整軌跡留 `odds_log.json`，結算紀錄只存摘要(比賽開打後會從 feed 掉出，得留底)。**延後原因**：碰排盤板結算流程(`applySettlement`/`settleModal`)，風險較高，等 add-on 上線穩定後做。做法：add-on 包住結算 confirm 把當下動向摘要寫進 `doc.games` 紀錄，或板上小改。
-- `T1/T2/T3`(1.0/2.5/4.0 pp)三市場共用，可視實測微調(改 add-on 開頭常數)。
-- **KBO/CPBL 賠率覆蓋**：目前透過 Bet365/12bet/bwin 三家，**KBO 常常沒賠率**(只有賽程，實測 5 場全空)，NPB/CPBL 部分有。若要補需查 Titan007 對 KBO 是否用別的 companyid/book。**這是資料覆蓋，非 bug。**
-
----
-
-## 七、用戶理念（務必內化）
-1. **學習市場結構、識別誘盤(莊家陷阱)，非追求獲利。** 最看重「**受讓過盤率**」勝過獨贏勝率。主市場＝讓分，獨贏＝輔助，大小＝追蹤。
-2. **讀市場訊號、避開該避的場**，而不是預測誰贏。
-3. **討論先於動工。** 先完整理解需求、確認方案才寫 code。用戶會丟「不成熟的想法」要求一起討論——要**正面接住並給專業判斷**，不是照單全收、也不是打發。
-4. **資訊要直白、低密度、可直接判讀。** 痛恨小字、雜訊、要「轉彎才懂」的呈現(例：堅持把「X 被買進 +Npp」改成「市場轉向看好 X」)。痛恨雞肋功能與堆砌的開關。
-5. **數據必須精確、定義正確**(過盤率用結算時實際盤口非寫死、賠率比較須去水)。
-6. **系統能做就現在做，絕不把工作量推給用戶**(叫他手記、截圖)。但**外部已免費且日更的資料不自建**(投手資料庫的結論)。
-7. **以下注當下狀態為準**：顛倒/背離/對調的賽後變化不重新分類，但「曾變化」本身要標記累積。
-8. **主要在 STAKE 下注、觀察 STAKE 的變化。** 抓的是 Titan007 軟盤(Bet365/12bet/bwin)當**參考訊號**，非下注處。Pinnacle 是 sharp 盤但在 Cloudflare 後抓不到，已接受用軟盤替代。顛倒場明牌以**台彩讓分方**為主，記錄時降級成獨贏燈(嚴格子集，寧低估不虛胖)。
-9. **重視誠實方法論**：預測歸預測、驗證歸驗證；樣本不足明說、不過早下結論。
-10. 跨電腦/手機，主要在電腦；手機限定功能可接受(懸停僅桌面)。
-
----
-
-## 八、設計雷區（務必避免）
-1. **【最重要】談定的參數絕不擅自更改，先問。** 我曾兩次把 `ACTIVE_WINDOW_HOURS` 從 24 擅自改 8，用戶很火。**24 是定案。**
-2. **絕不提雞肋功能、不順著當下議題擠小功能。** 要通盤檢討提真正的體驗提升。
-3. **絕不用「先觀察再做」當不做的藉口**(除非規格真未明)。
-4. **不要一直新增開關**，要直接的行為改變。
-5. **編輯精準**：曾多次誤刪相鄰函式；大段 `str_replace` 小心連帶刪除；**改完務必重新 view 再編輯**。
-6. **不要重複造輪子或誤判已完成功能**——先查證程式碼現狀。
-7. **手動拖卡已停用**(`startItemDrag` 直接 return)，位置靠 `relayoutPreservingState` 列對齊；**加卡後呼叫 autoLayout/relayout 是正常、非破壞**。
-8. **顯示與判斷的四捨五入要一致**(曾出現「差8卻不觸發警報」的 7.x 邊界 bug，已統一先 round 再判斷)。
-9. **不要過度反應小樣本**：多重比較下單一切片 p 值不可靠，要求累積足量再下定論。
-10. **Token 敏感**：只交付**測過、正確**的程式，對真實資料驗證，不丟沒驗證的猜測；輸出精簡密度高。
-11. **重寫前先拿用戶當前的檔**，別洗掉他手動的修改(金鶯別名、24h 是他自己改的)。
-12. **回饋直接、不卑微、不過度道歉**；不對下注說教；用戶挫折咒罵時不要回罵，保持溫和專業。
-
----
-
-## 九、技術注意事項（gotchas）
-- **排盤板＝classic script**：全域共用，add-on 靠此包住 `renderCard`、讀寫全域(見 §三)。
-- **港盤水位**：讓分/大小用 `devig()`、`min<1→港盤(+1)`；獨贏用 `impliedAway`(歐賠)。
-- **分聯盟對照**：`mapTeam(raw, league)`，短名(巨人/樂天/阪神)因分聯盟可安全使用；把某聯盟隊名丟進別聯盟 scope 會回 null。
-- **讓分盤翻面**(如 -1.5→1.5)會算出很大 pp(曾見 +26pp)＋原始數字同時顯示翻面，屬**正常/預期**(翻面＝最強方向訊號)。
-- **未對應的隊(homeTeam=null)不會對到板上的卡**(`feedGameFor` 需兩隊皆非 null)，所以**不會在板上顯示錯誤**；補別名後才對到。(驗證腳本若繞過 `feedGameFor` 會看到「null」字樣，正常。)
-- **手動拖卡停用** → 加卡後 `autoLayout()` 正常；自動排盤用 `snapshot()`＋`suppress=true` 包住 `autoLayout()` 讓多場只算一個復原步。
-- **結算流程風險較高**(點六因此延後)。
-- jsdom 測排盤板：localStorage 鍵 `sportbetting_plus_doc_v2`，需 `Object.defineProperty` 覆寫。
-
----
-
-## 十、關鍵數據結論（截至 6/13，**務必傳達「仍偏小、多為雜訊」**）
-
-> 註：這是**排盤板 `doc.games[]`** 的歷史結算資料結論，與「live 的 `odds_log.json`」是兩個不同資料集。
-
-當前資料量：總 **1876 場**、帶燈快照 288、初+收成對 100、初+下注成對 62、顛倒 25(vanish 8)、有 ERA 11、app 結算有盤口 ~48。
-
-**已驗證、可採信：**
-- **大小分基準線無預測魔法**：1588 場歷史，|終場總分−基準| 平均 3.41、中位數 2.5；「只差0.5」僅 19.2%；大分 50.4%/小分 49.6%——莊家開線是切兩邊各半收水，非猜總分。用戶「準得誇張」的印象來自記憶偏誤。
-- **市場越接近開賽越準**：收盤熱門命中 56% > 初盤 51%；收盤 Brier 0.2401 優於初盤 0.2441。實務：**能晚下就晚下**。
-- **被買進方略佔優**：被買邊命中 57%(26/46)，大幅移動時 60%。方向對但未達確認門檻。
-
-**有方向但需繼續累積：**
-- **顛倒場是目前最強訊號**：台彩受讓方過盤約 **78%**(14/18)，p≈0.04 摸到顯著但多重比較下不夠硬。莊家意圖兩解釋(台彩開盤慢/向國際線收斂 vs 誘盤)**可操作結論相同**：顛倒窗口的台彩受讓方是錯價的一邊。vanish 標記累積後(兩組各 15 場)才能區分。**注意：用戶觀察的是 STAKE 變化，若動的常是 STAKE，解釋會倒過來(國際市場收到新資訊、台彩慢)。**
-- **帶燈命中率**：全部約 50%、≥3 燈約 52%；大小分燈最差(約 36%，反指標等級，用戶很少下大小分)。
-- **一分差戰績已可看**(如紅雀 12-6，是其「虛+6」標籤主因)。
-
-**已明確否決、不要再提**：自建選手/投手資料庫(外部免費且日更)、NRFI/每局得分(屬投手市場、需從零建逐局管線)、畢氏與近況的主客拆分(每隊拆後僅~30場、雜訊內無意義，主客已併入 Log5 主場修正項)。
-
----
-
-## 十一、Titan007 隊名實況（真實檔確認，補別名參考）
-- **MLB**：城市＋暱稱全名(`三藩市巨人`、`巴爾的摩黃鸝`=金鶯、`坦帕湾魔鬼鱼`=光芒、`科羅拉多洛基`=落磯、`迈亚密馬林魚`)，暱稱子字串即對上。
-- **NPB**：讀賣＝純 **`巨人`**(用戶親自確認)；東北樂天＝**`金鷹`**(非金鷲)；`阪神老虎`=阪神虎。
-- **KBO**：`鬥山熊`(**鬥**非斗)；`友利英雄`=培證英雄(Kiwoom)；`羅德巨人`=樂天巨人(Lotte，**KBO 的非 MLB**)；`起亞老虎`=起亞虎；`韓華老鷹`=韓華鷹；`三星獅子`=三星獅。**KBO 常無賠率。**
-- **CPBL**：`TSG鷹隊`=台鋼雄鷹；`乐天猴`=樂天桃猿(Rakuten Monkeys)；`富邦保护者`=富邦悍將(Fubon Guardians)。
-- 易踩字(鬥 vs 斗、金鷹 vs 金鷲、TSG、保护者)已補進 `index.js`。新名字出現看 log「未對應」(附聯盟+對手)貼來即補。
-
----
-
-## 十二、運維注意（重要，解過用戶的困惑）
-- **排盤板「🔄 更新賠率」≠ 跑 scraper。** 🔄 只是**重讀** `odds_log.json`；scraper 是 GitHub Actions 跑、與排盤板分開。
-- **GitHub `schedule`(cron)根本不可靠：它會大量延遲/丟棄排程事件，越高頻越被降級丟棄。** 實測 `*/5` 被砍到一天只跑約 6 次(間隔數小時、近乎隨機)。**改 `*/10` 沒用——間隔值不是槓桿，GitHub 沒在理你的頻率。**
-- **解法＝自迴圈 workflow(已部署，見 §三)**：一個 run 內部每 5 分鐘抓一次、跑 ~5.5 小時，由 `7,37` 排程＋concurrency 鎖接力重啟 → 近乎不間斷。免費(public repo)、無外部服務、無 token。**啟動方式：手動 Run workflow 一次把第一個迴圈點起來**(之後排程會自動接力)。
-- **小殘留風險**：若 GitHub 連續 >5.5 小時都沒成功觸發排程，會有短暫空窗——再手動 Run 一次即可。若要更精準的定時，替代方案是外部 cron(如 cron-job.org)打 `repository_dispatch`，但需在外部服務存一支 GitHub PAT(多一個憑證、多一個依賴)。
-- **怎麼判斷有沒有成功**：① Actions 分頁看 run 的時間與綠勾/紅叉(自迴圈版每個 run 會持續約 5.5 小時是正常的)；② 點開 repo 的 `data/odds_log.json` 看 `lastUpdated`；③ 排盤板 🔄 會顯示抓到的雲端時間("賠率已更新 …✓" / "雲端仍是 …未產新檔" / "抓取失敗")。
-- **cron 不準可容忍的部分**：**讓分(主市場)與大小每次抓都拿 Bet365 整張變動史**，漏掉某些 tick 不丟歷史；只有獨贏(自己縫)軌跡會變粗。**但收盤線要靠「開賽前最後一次抓」**——這正是要近乎不間斷輪詢的主因(自迴圈版解決)。
-- **GitHub Pages**：public repo＝免費無限 Actions 分鐘；commit 後約 1 分鐘 build 延遲。
-- **【永久紅線】不做任何 Cloudflare/反爬蟲繞過**(Stake/Pinnacle 在 Cloudflare 後，抓不到也不碰)；Titan007 靜態站才抓。
-
----
-
-## 十三、下一步（依優先序）
-1. **立即**：Actions → Run workflow 手動跑一次(用新 index.js)，確認 `odds_log.json` 時間更新、鬥山/TSG 對上、0 未對應。
-2. **排盤板最高優先**：問出用戶決策路徑 → 重組回顧頁。
-3. **賠率管線**：做點六(收盤動向存結算紀錄，設計見 §6b)。
-4. 視需要：微調 T1/T2/T3、排查 KBO/CPBL 賠率來源、各項回測(資料到位後)。
-
----
-
-*v3 合併自「排盤板交接 v2」＋「賠率管線交接」。所有程式皆對用戶上傳的真實資料跑過驗證。交接時間 2026-06-17。*
+jobs:
+  poll:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350            # 單一 job 上限 360 分；留餘裕避免被硬砍
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: 每 5 分鐘抓一次，本 run 持續約 5h25m 後結束，由排程接力
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          END=$(( SECONDS + 19500 ))          # 約 5h25m，安全落在 350 分鐘 timeout 內
+          while [ "$SECONDS" -lt "$END" ]; do
+            node index.js || true
+            if [ -f data/odds_log.json ]; then
+              git add data/odds_log.json
+              if ! git diff --cached --quiet; then
+                git commit -m "odds update $(date -u +%FT%TZ)" || true
+                git pull --rebase --autostash || true
+                git push || true
+              fi
+            fi
+            sleep 300                           # 5 分鐘
+          done
