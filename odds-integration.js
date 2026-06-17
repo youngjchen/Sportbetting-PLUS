@@ -197,36 +197,31 @@
       else {
         var team = ml.towardAway ? g.awayTeam : g.homeTeam;
         rows += ofRow("獨贏",
-          tierOf(a1) + " <span class='of-tm'>" + safeEsc(team) + "</span>",
-          "+" + a1.toFixed(1) + "pp" + (ml.split ? " · 分歧" : ""),
-          a1 >= T2 ? "strong" : "");
+          tierOf(a1) + " <span class='of-tm'>" + safeEsc(team) + "</span>" + (ml.split ? " · 分歧" : ""),
+          "", a1 >= T2 ? "strong" : "");
       }
     }
 
     // 讓分
     var hd = hdSentiment(g);
     if (hd) {
-      var lineStr = hd.lineChanged ? ("盤 " + fmtHd(hd.initLine) + "→" + fmtHd(hd.nowLine)) : ("盤 " + fmtHd(hd.nowLine));
       if (hd.lean && !hd.lean.flat) {
         var a2 = Math.abs(hd.lean.mvpp);
         rows += ofRow("讓分",
           tierOf(a2) + " <span class='of-tm'>" + safeEsc(hd.lean.team) + hd.lean.suffix + "</span>",
-          "+" + a2.toFixed(1) + "pp · " + lineStr,
-          a2 >= T2 ? "strong" : "");
-      } else rows += ofRow("讓分", "持平", lineStr, "flat");
+          "", a2 >= T2 ? "strong" : "");
+      } else rows += ofRow("讓分", "持平", "", "flat");
     }
 
     // 大小
     var ou = ouSentiment(g);
     if (ou) {
-      var basisStr = ou.basisChanged ? ("基準 " + fmtOu(ou.initBasis) + "→" + fmtOu(ou.nowBasis)) : ("基準 " + fmtOu(ou.nowBasis));
       if (ou.lean && !ou.lean.flat) {
         var a3 = Math.abs(ou.lean.mvpp);
         rows += ofRow("大小",
           tierOf(a3) + " <span class='of-tm'>" + ou.lean.side + "</span>",
-          "+" + a3.toFixed(1) + "pp · " + basisStr,
-          a3 >= T2 ? "strong" : "");
-      } else rows += ofRow("大小", "持平", basisStr, "flat");
+          "", a3 >= T2 ? "strong" : "");
+      } else rows += ofRow("大小", "持平", "", "flat");
     }
 
     var html = "<div class='ofhd'>📡 盤口動向（自動）</div>" + rows;
