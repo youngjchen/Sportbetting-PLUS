@@ -23,7 +23,14 @@
   if (window.__oddsAddonLoaded) return;
   window.__oddsAddonLoaded = true;
 
-  var FEED_URL = "./data/odds_log.json";
+  // 直接讀 GitHub raw，繞過 GitHub Pages 的 build 節流。
+  // 原因：Pages 每次 commit 要重新 build 才更新對外檔，而每 5 分鐘 commit 會灌爆
+  // Pages 的 build 速率(約每小時 10 次)→ 對外檔嚴重落後。raw 反映 commit 幾乎即時，
+  // 且回應帶 CORS 允許跨來源讀取。若 raw 讀失敗(極少數)，自動退回 Pages 相對路徑。
+  var REPO = "youngjchen/Sportbetting-PLUS";   // 你的 owner/repo（改名要同步改）
+  var BRANCH = "main";
+  var FEED_URL = "https://raw.githubusercontent.com/" + REPO + "/" + BRANCH + "/data/odds_log.json";
+  var FEED_FALLBACK = "./data/odds_log.json";
   var REFRESH_MS = 5 * 60 * 1000;
   var feed = { matches: {}, lastUpdated: null };
 
@@ -369,9 +376,13 @@
     var a = document.activeElement;
     return !!(a && (a.isContentEditable || a.tagName === "INPUT" || a.tagName === "TEXTAREA" || a.tagName === "SELECT"));
   }
+  function getJSON(url) {
+    return fetch(url + "?t=" + Date.now(), { cache: "no-store" })
+      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
+  }
   function fetchFeed(force) {
-    return fetch(FEED_URL + "?t=" + Date.now(), { cache: "no-store" })
-      .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); })
+    return getJSON(FEED_URL)
+      .catch(function () { return getJSON(FEED_FALLBACK); })   // raw 失敗(如 CORS) → 退回 Pages 相對路徑
       .then(function (j) {
         if (!j || !j.matches) throw new Error("空檔");
         var changed = (j.lastUpdated !== feed.lastUpdated);
