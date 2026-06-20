@@ -150,6 +150,7 @@ function extractGames(html, leagueName) {
       awayAVG: num(ba[0]), awayOBP: num(ba[1]), awayRuns: num(ba[2]),
       homeAVG: num(bh[0]), homeOBP: num(bh[1]), homeRuns: num(bh[2]),
       lotteryHandicap: handicap, lotteryHdCoverAway: hdCoverAway, lotteryHdCoverHome: hdCoverHome,
+      lotteryTotal: (function (s) { const m = String(s == null ? '' : s).match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : null; })(ouAwayRaw),  // 運彩大小基準（賽前才有）
       awayScore, homeScore,
       rawHd: { away: ahAwayRaw, home: ahHomeRaw, ou: ouAwayRaw },  // 原始字串供首次校準
       scrapedAt: new Date().toISOString(),
@@ -180,7 +181,7 @@ function mergeStore(existing, fresh, keepDays) {
     const prev = byId.get(g.officialId);
     if (!prev) { byId.set(g.officialId, g); continue; }
     const merged = { ...prev, ...g };
-    for (const k of ['awayERA', 'homeERA', 'awayBAA', 'homeBAA', 'awayAVG', 'awayOBP', 'awayRuns', 'homeAVG', 'homeOBP', 'homeRuns'])
+    for (const k of ['awayERA', 'homeERA', 'awayBAA', 'homeBAA', 'awayAVG', 'awayOBP', 'awayRuns', 'homeAVG', 'homeOBP', 'homeRuns', 'lotteryTotal'])
       merged[k] = keepPre(g[k], prev[k]);
     merged.awayPitcher = g.awayPitcher || prev.awayPitcher;
     merged.homePitcher = g.homePitcher || prev.homePitcher;
