@@ -32,11 +32,10 @@
     d1 = norm(d1).slice(0, 10); d2 = norm(d2).slice(0, 10);
     return !!d1 && !!d2 && d1 === d2;
   }
-  function findGame(data, it, activeDate) {
+  function findGame(data, it, activeDate) {                     // 不限狀態：未開賽場才有 ERA，要能撈到
     if (!Array.isArray(data) || !it) return null;
     for (var i = 0; i < data.length; i++) {
       var g = data[i];
-      if (g.status !== 'finished') continue;                    // 只認真正結束的場
       if (!dateEq(activeDate, g.date)) continue;
       if (teamMatch(it.away, g.awayTeam) && teamMatch(it.home, g.homeTeam)) return g;
     }
@@ -102,24 +101,28 @@
       var g = findGame(DATA, it, activeDate);
       if (!g) return;                                                       // 沒對應場：完全不動
 
-      var sFilled = (fillIfEmpty('settleAwayScore', g.awayScore) | fillIfEmpty('settleHomeScore', g.homeScore)) ? true : false;
+      var isFinal = g.status === 'finished';
+      // 比分：只在「真正結束」才填（進行中是即時比分、未開賽沒比分，都不能當終場）
+      var sFilled = isFinal ? ((fillIfEmpty('settleAwayScore', g.awayScore) | fillIfEmpty('settleHomeScore', g.homeScore)) ? true : false) : false;
+      // ERA：只要有值就填（未開賽場才抓得到，這正是 ERA 驗證需要的時機）
       var hasEra = (g.awayERA || 0) > 0 || (g.homeERA || 0) > 0;
       if (hasEra) { fillIfEmpty('settleEraAway', g.awayERA); fillIfEmpty('settleEraHome', g.homeERA); }
       var flip = buildFlipHint(g, it);
 
-      var scoreLine = (g.awayScore != null && g.homeScore != null)
+      var statusTxt = isFinal ? '已結束' : (g.status === 'inprogress' ? '進行中' : '未開賽');
+      var scoreLine = (isFinal && g.awayScore != null && g.homeScore != null)
         ? ('比分 ' + g.awayScore + ' : ' + g.homeScore + (sFilled ? '（已帶入）' : '（你已填，未覆蓋）'))
-        : '比分 無';
+        : ('比分 尚未結束（' + statusTxt + '，不帶比分）');
       var eraLine = hasEra
         ? ('先發 ERA 客 ' + g.awayERA + '／主 ' + g.homeERA + '（已帶入）')
-        : '先發 ERA 尚未帶入（賽前未抓到，玩運彩賽後即清空）';
-      var flipColor = flip.state === 'flip' ? '#ffb02e' : (flip.state === 'same' ? '#8aa0b4' : '#8aa0b4');
+        : '先發 ERA 無資料（賽前未抓到）';
+      var flipColor = flip.state === 'flip' ? '#ffb02e' : '#8aa0b4';
 
       var el = document.createElement('div');
       el.className = 'ps-banner';
       el.style.cssText = 'background:#13202c;border:1px solid #214055;border-left:3px solid #3aa0ff;border-radius:8px;padding:9px 11px;margin-bottom:12px;font-size:12.5px;line-height:1.75;color:#cfe3f2;';
       el.innerHTML =
-        '<div style="font-weight:700;color:#7ec3ff;margin-bottom:2px;">玩運彩 ' + norm(g.date) + ' 已帶入（藍框=自動填，可改）</div>'
+        '<div style="font-weight:700;color:#7ec3ff;margin-bottom:2px;">玩運彩 ' + norm(g.date) + '（' + statusTxt + '）　藍框=自動填，可改</div>'
         + '<div>' + scoreLine + '</div>'
         + '<div>' + eraLine + '</div>'
         + '<div style="margin-top:2px;">顛倒判定：<b style="color:' + flipColor + ';">' + flip.text + '</b>'
