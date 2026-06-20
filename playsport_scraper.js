@@ -142,6 +142,21 @@ function extractGames(html, leagueName) {
     const isFinished = /比賽結束|完場|終場|Final/.test(onText);
     const status = isFinished ? 'finished' : (previewVisible ? 'upcoming' : 'inprogress');
 
+    // 即時：目前局數 + 逐局比分（只在進行中/已結束的 on-box 有值；未開賽為空）
+    const inning = clean($on.find('[id$="_inning"]').first().text());   // 例「4局下」；未開賽/已結束多半為空
+    const sideInn = (sc) => {                                           // sc='a'(客)|'h'(主)；逐局 1~15（含延長局）
+      const out = [];
+      for (let i = 1; i <= 15; i++) out.push(clean($on.find('[id$="_' + sc + 's' + i + '"]').first().text()));
+      return out;
+    };
+    const aInn = sideInn('a'), hInn = sideInn('h');
+    let innMax = -1;
+    for (let i = 0; i < 15; i++) if (aInn[i] != null || hInn[i] != null) innMax = i;   // 取已打過的最後一局（兩隊取大）
+    const rhe = (sc) => ({ r: num($on.find('[id$="_' + sc + 'sr"]').first().text()), h: num($on.find('[id$="_' + sc + 'sh"]').first().text()), e: num($on.find('[id$="_' + sc + 'se"]').first().text()) });
+    const lineScore = innMax >= 0
+      ? { away: aInn.slice(0, innMax + 1), home: hInn.slice(0, innMax + 1), awayRHE: rhe('a'), homeRHE: rhe('h') }
+      : null;
+
     games.push({
       league: leagueName, officialId: oid, gameid, date, time, awayAbbr, homeAbbr,
       awayTeam, homeTeam, status,
@@ -152,6 +167,7 @@ function extractGames(html, leagueName) {
       lotteryHandicap: handicap, lotteryHdCoverAway: hdCoverAway, lotteryHdCoverHome: hdCoverHome,
       lotteryTotal: (function (s) { const m = String(s == null ? '' : s).match(/(\d+(?:\.\d+)?)/); return m ? parseFloat(m[1]) : null; })(ouAwayRaw),  // 運彩大小基準（賽前才有）
       awayScore, homeScore,
+      inning, lineScore,                                           // 即時局數 + 逐局比分（浮動面板用）
       rawHd: { away: ahAwayRaw, home: ahHomeRaw, ou: ouAwayRaw },  // 原始字串供首次校準
       scrapedAt: new Date().toISOString(),
     });
@@ -181,7 +197,7 @@ function mergeStore(existing, fresh, keepDays) {
     const prev = byId.get(g.officialId);
     if (!prev) { byId.set(g.officialId, g); continue; }
     const merged = { ...prev, ...g };
-    for (const k of ['awayERA', 'homeERA', 'awayBAA', 'homeBAA', 'awayAVG', 'awayOBP', 'awayRuns', 'homeAVG', 'homeOBP', 'homeRuns', 'lotteryTotal'])
+    for (const k of ['awayERA', 'homeERA', 'awayBAA', 'homeBAA', 'awayAVG', 'awayOBP', 'awayRuns', 'homeAVG', 'homeOBP', 'homeRuns', 'lotteryTotal', 'lineScore'])
       merged[k] = keepPre(g[k], prev[k]);
     merged.awayPitcher = g.awayPitcher || prev.awayPitcher;
     merged.homePitcher = g.homePitcher || prev.homePitcher;
