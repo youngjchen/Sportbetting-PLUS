@@ -72,10 +72,14 @@
     function load() {
       fetchJson(FEED_URL)
         .catch(function () { return fetchJson(FEED_FALLBACK); })   // raw 失敗就改用 Pages 相對路徑
-        .then(function (arr) { DATA = Array.isArray(arr) ? arr : []; loaded = true; console.log('[玩運彩融合] 載入', DATA.length, '場'); })
+        .then(function (arr) {
+          DATA = Array.isArray(arr) ? arr : []; loaded = true; console.log('[玩運彩融合] 載入', DATA.length, '場');
+          if (AUTO_SETTLE) setTimeout(autoSettleSweep, 1000);      // 載入後先掃一次（等板子就緒）
+        })
         .catch(function (e) { console.warn('[玩運彩融合] 載入失敗（結算照常運作）:', e.message); });
     }
     load();
+    setInterval(function () { load(); }, SWEEP_MS);                // 定時重抓最新資料，抓完再觸發掃描
 
     function $(id) { return document.getElementById(id); }
     function markFilled(inp) {
@@ -110,6 +114,12 @@
       // ERA：只要有值就填（未開賽場才抓得到，這正是 ERA 驗證需要的時機）
       var hasEra = (g.awayERA || 0) > 0 || (g.homeERA || 0) > 0;
       if (hasEra) { fillIfEmpty('settleEraAway', g.awayERA); fillIfEmpty('settleEraHome', g.homeERA); }
+      // 運彩盤口數值：讓分盤口→#settleHdVal、大小基準→#settleTotVal（填完觸發板子自動判讓分/大小）
+      var lh = g.lotteryHandicap || {};
+      var hdLine = (lh.line != null) ? lh.line : null;
+      var totLine = (g.lotteryTotal != null) ? g.lotteryTotal : null;
+      var hdFilled = hdLine != null ? fillIfEmpty('settleHdVal', hdLine) : false;
+      var totFilled = totLine != null ? fillIfEmpty('settleTotVal', totLine) : false;
       var flip = buildFlipHint(g, it);
 
       var statusTxt = isFinal ? '已結束' : (g.status === 'inprogress' ? '進行中' : '未開賽');
@@ -119,6 +129,13 @@
       var eraLine = hasEra
         ? ('先發 ERA 客 ' + g.awayERA + '／主 ' + g.homeERA + '（已帶入）')
         : '先發 ERA 無資料（賽前未抓到）';
+      // 盤口行（運彩＝台彩盤口，非 STAKE；若你下的 STAKE 盤不同請自行改）
+      var lineBits = [];
+      if (hdLine != null) lineBits.push('讓分盤口 ' + hdLine);
+      if (totLine != null) lineBits.push('大小基準 ' + totLine);
+      var lineLine = lineBits.length
+        ? ('運彩盤口：' + lineBits.join('／') + '（已帶入，台彩盤口非 STAKE，可改）')
+        : '運彩盤口：賽前未抓到';
       var flipColor = flip.state === 'flip' ? '#ffb02e' : '#8aa0b4';
 
       var el = document.createElement('div');
@@ -128,9 +145,74 @@
         '<div style="font-weight:700;color:#7ec3ff;margin-bottom:2px;">玩運彩 ' + norm(g.date) + '（' + statusTxt + '）　藍框=自動填，可改</div>'
         + '<div>' + scoreLine + '</div>'
         + '<div>' + eraLine + '</div>'
+        + '<div>' + lineLine + '</div>'
         + '<div style="margin-top:2px;">顛倒判定：<b style="color:' + flipColor + ';">' + flip.text + '</b>'
         + (flip.state === 'flip' ? '　<span style="color:#8aa0b4;">（勾選由你決定）</span>' : '') + '</div>';
       body.insertBefore(el, body.firstChild);
+    }
+
+    // ===== 全自動結算 =====
+    var AUTO_SETTLE = true;          // 不想自動結算就設 false
+    var SWEEP_MS = 180000;           // 每 3 分掃一次未結算場
+    function getDoc() {
+      try { if (typeof doc !== 'undefined' && doc) return doc; } catch (e) {}
+      return global.doc || null;
+    }
+    function psToast(msg) {
+      var t = document.getElementById('ps-toast');
+      if (!t) {
+        t = document.createElement('div'); t.id = 'ps-toast';
+        t.style.cssText = 'position:fixed;right:16px;bottom:16px;z-index:99999;background:#13202c;border:1px solid #3aa0ff;color:#cfe3f2;padding:9px 13px;border-radius:8px;font-size:13px;box-shadow:0 4px 16px rgba(0,0,0,.4);transition:opacity .6s;';
+        document.body.appendChild(t);
+      }
+      t.textContent = msg; t.style.opacity = '1';
+      clearTimeout(t._h); t._h = setTimeout(function () { t.style.opacity = '0'; }, 4500);
+    }
+    function allPicked(body) {
+      return ['ml', 'hd', 'tot'].every(function (k) { return body.querySelector('.settle-q[data-key="' + k + '"] .opt.on'); });
+    }
+    // 結算單場：驅動板子自己的結算視窗（隱藏進行），缺項就放棄
+    function autoSettleOne(it) {
+      if (typeof global.openSettleModal !== 'function') return false;
+      var modal = $('settleModal'); var prev = modal ? modal.style.display : '';
+      if (modal) modal.style.display = 'none';                 // 全程隱藏，不閃畫面
+      try {
+        global.openSettleModal(it);                            // 板子渲染 + 我的 hook 帶值 + autoFill 自動點選
+        var a = $('settleAwayScore'), h = $('settleHomeScore'), body = $('settleBody');
+        if (!body || !a || !h || a.value === '' || h.value === '' || !allPicked(body)) {
+          if (modal) modal.classList.remove('show'); return false;   // 缺比分/缺選項(走盤) → 交人工
+        }
+        var btn = $('settleConfirm'); if (!btn) { if (modal) modal.classList.remove('show'); return false; }
+        btn.click();                                           // 走板子自己的結算流程（applySettlement）
+        return true;
+      } catch (e) { console.warn('[玩運彩融合] 自動結算單場失敗:', e); if (modal) modal.classList.remove('show'); return false; }
+      finally { if (modal) modal.style.display = prev; }
+    }
+    function autoSettleSweep() {
+      if (!AUTO_SETTLE || !loaded) return;
+      var modal = $('settleModal');
+      if (modal && modal.classList.contains('show') && modal.style.display !== 'none') return;  // 你正在手動結算 → 不打擾
+      var d = getDoc(); if (!d || !d.boards) return;
+      var n = 0;
+      Object.keys(d.boards).forEach(function (date) {
+        var items = (d.boards[date] && d.boards[date].items) || [];
+        for (var i = 0; i < items.length; i++) {
+          var it = items[i];
+          if (!it || it.type !== 'match' || it.settled) continue;
+          if (it.hdVal == null || it.hdVal === '' || it.totVal == null || it.totVal === '') continue;  // 只結算已填 STAKE 線的卡
+          var g = findGame(DATA, it, date);
+          if (!g || g.status !== 'finished' || g.awayScore == null || g.homeScore == null) continue;
+          // 走盤(push) → 交人工
+          var basis = parseFloat(it.totVal);
+          if (!isNaN(basis) && (g.awayScore + g.homeScore) === basis) continue;
+          var line = Math.abs(parseFloat(it.hdVal));
+          var favS = it.hdFav === 'away' ? g.awayScore : g.homeScore;
+          var undS = it.hdFav === 'away' ? g.homeScore : g.awayScore;
+          if (!isNaN(line) && (favS - undS) === line) continue;
+          if (autoSettleOne(it)) n++;
+        }
+      });
+      if (n > 0) { console.log('[玩運彩融合] 自動結算', n, '場'); psToast('玩運彩：已自動結算 ' + n + ' 場'); }
     }
 
     function hook() {
@@ -151,7 +233,7 @@
     else hook();
 
     // 供測試：注入資料 / 直接呼叫
-    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, findGame: findGame, buildFlipHint: buildFlipHint };
+    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, findGame: findGame, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne };
   }
 
   // ---- 測試匯出 ----
