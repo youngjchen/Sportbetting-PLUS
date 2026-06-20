@@ -1063,7 +1063,7 @@
   <div id="flipOddsModal" class="modal-overlay"><div class="box" style="width:340px;max-width:100%;">
     <h3 style="margin:0 0 4px;font-size:16px;">輸入賠率</h3>
     <div class="sub" id="flipOddsSub" style="color:var(--ink-dim);font-size:12px;margin-bottom:12px;line-height:1.6;">
-      可順手填 STAKE 兩隊的<b>獨贏賠率</b>（歐洲盤，押 1 收回的總額）。<br>之後分析「獨贏熱門 vs 讓分方背離」會用到。不填也可以，稍後結算時還能補。
+      可順手填 STAKE 兩隊的<b>獨贏賠率</b>（歐洲盤，押 1 收回的總額）。<br>之後分析「獨贏低賠 vs 讓分方背離」會用到。不填也可以，稍後結算時還能補。
     </div>
     <div style="display:flex;align-items:flex-end;gap:12px;justify-content:center;margin-bottom:6px;">
       <label style="display:flex;flex-direction:column;align-items:center;gap:4px;font-size:12px;color:var(--ink-dim);">
@@ -3601,7 +3601,7 @@ function collectFlipGames(leagueFilter){
     taicaiFavWon:0, taicaiFavLost:0, taicaiFavTie:0,
     stakeCover:0, stakeNoCover:0,
     taicaiCover:0, taicaiNoCover:0,
-    // divergence: 獨贏熱門(odds) ≠ 讓分方(hdFav). Tracks who actually won.
+    // divergence: 獨贏低賠(odds) ≠ 讓分方(hdFav). Tracks who actually won.
     divTotal:0, divFavWon:0, divUndWon:0, divNoClearFav:0, divWithOdds:0,
     list:[]
   };
@@ -3630,7 +3630,7 @@ function collectFlipGames(leagueFilter){
       // no stored result (shouldn't happen for settled games) → fall back to margin
       if(margin > line) out.stakeCover++; else out.stakeNoCover++;
     }
-    // 台彩熱門 = Stake 冷門；它過盤 ⇔ Stake 讓分方「輸超過盤口」(margin < -line)。
+    // 台彩讓分方 = Stake 受讓方；它過盤 ⇔ Stake 讓分方「輸超過盤口」(margin < -line)。
     // 這需要實際分差，hdResult 的 nocover 無法區分「贏不到盤口」與「輸」，故用 margin 精算。
     if(margin < -line) out.taicaiCover++;
     else out.taicaiNoCover++;
@@ -3639,19 +3639,19 @@ function collectFlipGames(leagueFilter){
     const oa = g.flipOddsAway, oh = g.flipOddsHome;
     if(oa!=null && oh!=null && oa>0 && oh>0){
       out.divWithOdds++;
-      const ODDS_MIN_DIFF = 0.10;   // 賠率差 <0.10 → 無明確獨贏熱門, 不算背離
+      const ODDS_MIN_DIFF = 0.10;   // 賠率差 <0.10 → 無明確獨贏低賠, 不算背離
       if(Math.abs(oa - oh) < ODDS_MIN_DIFF){
         out.divNoClearFav++;
       } else {
         // moneyline favorite = lower odds side
-        const oddsFavSide = (oa < oh) ? "away" : "home";   // 獨贏熱門那一邊
-        // hdFav = Stake 讓分方. divergence when 獨贏熱門 ≠ 讓分方.
+        const oddsFavSide = (oa < oh) ? "away" : "home";   // 獨贏低賠那一邊
+        // hdFav = Stake 讓分方. divergence when 獨贏低賠 ≠ 讓分方.
         if(oddsFavSide !== g.hdFav){
           out.divTotal++;
           // who won outright?
           const oddsFavScore = (oddsFavSide==="away") ? g.awayScore : g.homeScore;
           const oddsUndScore = (oddsFavSide==="away") ? g.homeScore : g.awayScore;
-          if(oddsFavScore > oddsUndScore) out.divFavWon++;     // 獨贏熱門贏 (賠率較準)
+          if(oddsFavScore > oddsUndScore) out.divFavWon++;     // 獨贏低賠贏 (賠率較準)
           else if(oddsFavScore < oddsUndScore) out.divUndWon++; // 讓分方贏 (讓分盤較準/可能誘盤反向)
           // tie: not counted either way
         }
@@ -4047,7 +4047,7 @@ function renderReviewPage(){
   const fp = collectFlipGames(leagueF);
   html += `<div class="rv-section">`;
   {
-    const info = rvInfo("顛倒場中兩平台各自認定不同的熱門隊。並排「STAKE 熱門獲勝率」與「台彩熱門獲勝率」（兩者非互補，因和局與樣本不同）。哪個平台的熱門勝率明顯較高，代表它在這種分歧場判斷較準，可偏向信它。<br><br>過盤依各場<b>實際讓分盤口</b>判定（非固定 1.5），與結算一致。兩邊過盤數相加若不足總場數，差額是「分差落在讓分盤口內、雙方讓分都沒過」（例如只贏 1 分）的場。");
+    const info = rvInfo("顛倒場中兩平台各自認定不同的讓分方。並排「STAKE 讓分方獲勝率」與「台彩讓分方獲勝率」（兩者非互補，因和局與樣本不同）。哪個平台的讓分方勝率明顯較高，代表它在這種分歧場判斷較準，可偏向信它。<br><br>過盤依各場<b>實際讓分盤口</b>判定（非固定 1.5），與結算一致。兩邊過盤數相加若不足總場數，差額是「分差落在讓分盤口內、雙方讓分都沒過」（例如只贏 1 分）的場。");
     html += `<div class="rv-head">⑤ 平台顛倒場 <span class="rv-sub">台彩與 STAKE 認定的讓分方相反</span>${info.icon}</div>${info.pop}`;
   }
   if(fp.total===0){
@@ -4062,20 +4062,20 @@ function renderReviewPage(){
     html += `<div class="big">${fp.total}<span class="unit">場</span></div>`;
     html += `<div class="cap">標記為平台顛倒的場次</div>`;
     html += `<div class="row2">`;
-    html += `<div class="blk"><div class="v" style="color:#28c76f">${sPct!=null?Math.round(sPct*100):"—"}%</div><div class="k">STAKE 熱門獲勝率（${fp.stakeFavWon}/${sTot}）</div></div>`;
-    html += `<div class="blk"><div class="v" style="color:#28c76f">${fp.stakeCover}/${fp.total}</div><div class="k">STAKE 讓分方過盤</div></div>`;
-    html += `<div class="blk" style="border-left:1px solid var(--line);padding-left:18px"><div class="v" style="color:#b56bff">${tPct!=null?Math.round(tPct*100):"—"}%</div><div class="k">台彩 熱門獲勝率（${fp.taicaiFavWon}/${tTot}）</div></div>`;
-    html += `<div class="blk"><div class="v" style="color:#b56bff">${fp.taicaiCover}/${fp.total}</div><div class="k">台彩 熱門方過盤</div></div>`;
+    html += `<div class="blk"><div class="v" style="color:#28c76f">${sPct!=null?Math.round(sPct*100):"—"}%</div><div class="k">STAKE 讓分方獲勝率（${fp.stakeFavWon}/${sTot}）</div></div>`;
+    html += `<div class="blk"><div class="v" style="color:#28c76f">${fp.total>0?Math.round(fp.stakeCover/fp.total*100):"—"}%</div><div class="k">STAKE 讓分方過盤率（${fp.stakeCover}/${fp.total}）</div></div>`;
+    html += `<div class="blk" style="border-left:1px solid var(--line);padding-left:18px"><div class="v" style="color:#b56bff">${tPct!=null?Math.round(tPct*100):"—"}%</div><div class="k">台彩 讓分方獲勝率（${fp.taicaiFavWon}/${tTot}）</div></div>`;
+    html += `<div class="blk"><div class="v" style="color:#b56bff">${fp.total>0?Math.round(fp.taicaiCover/fp.total*100):"—"}%</div><div class="k">台彩 讓分方過盤率（${fp.taicaiCover}/${fp.total}）</div></div>`;
     html += `</div>`;
     html += `</div>`;
     // all flip games — collapsible (click to expand for verification)
     if(fp.list.length){
       const rows = fp.list.slice().reverse().map(r=>{
         const won = r.stakeFavWon;
-        const resTxt = won ? `<span class="dr-hit">熱門贏 ${r.margin}</span>` : `<span class="dr-miss">熱門輸</span>`;
+        const resTxt = won ? `<span class="dr-hit">讓分方贏 ${r.margin}</span>` : `<span class="dr-miss">讓分方輸</span>`;
         return `<div class="drill-row"><span class="dr-date">${esc(r.date.slice(5))}</span>`+
                `<span class="dr-match">${esc(r.away)} <b>${r.aScore}-${r.hScore}</b> ${esc(r.home)}</span>`+
-               `<span class="dr-role">熱門:${esc(r.stakeFav)}・${resTxt}</span></div>`;
+               `<span class="dr-role">讓分方:${esc(r.stakeFav)}・${resTxt}</span></div>`;
       }).join("");
       const did = "flipall_" + Math.random().toString(36).slice(2,8);
       html += `<div class="drill-toggle" onclick="toggleDrillById('${did}',this)" style="cursor:pointer;font-size:13px;color:var(--accent);margin-top:14px">展開所有顛倒場明細（${fp.list.length} 場）核對</div>`;
@@ -4084,12 +4084,12 @@ function renderReviewPage(){
   }
   html += `</div>`;
 
-  // ---- ⑥ 獨贏熱門 vs 讓分方 背離 (all games with odds; split flip/non-flip) ----
+  // ---- ⑥ 獨贏低賠 vs 讓分方 背離 (all games with odds; split flip/non-flip) ----
   const dv = collectDivergence(leagueF);
   html += `<div class="rv-section">`;
   {
-    const info = rvInfo("背離＝STAKE「獨贏熱門（賠率較低那隊）」≠「讓分方」（賠率差 <0.10 視為無明確熱門，不計）。若背離場「低賠熱門方」勝率明顯高，代表讓分盤用賠率把你推離真正強隊——誘盤的實證。下面分「全部／顛倒場／非顛倒場」三組，看顛倒是否讓背離更明顯。");
-    html += `<div class="rv-head">⑥ 獨贏熱門 vs 讓分方 背離 <span class="rv-sub">最可能的誘盤訊號（不限顛倒場）</span>${info.icon}</div>${info.pop}`;
+    const info = rvInfo("背離＝STAKE「獨贏低賠（賠率較低那隊）」≠「讓分方」（賠率差 <0.10 視為無明確低賠，不計）。若背離場「低賠方」勝率明顯高，代表讓分盤用賠率把你推離真正強隊——誘盤的實證。下面分「全部／顛倒場／非顛倒場」三組，看顛倒是否讓背離更明顯。");
+    html += `<div class="rv-head">⑥ 獨贏低賠 vs 讓分方 背離 <span class="rv-sub">最可能的誘盤訊號（不限顛倒場）</span>${info.icon}</div>${info.pop}`;
   }
   if(dv.all.withOdds===0){
     html += `<div class="rv-empty">還沒有填過獨贏賠率的結算場次。<br>結算任何一場時，填上 STAKE 兩隊獨贏賠率，這個分析就會開始累積（不限平台顛倒場）。</div>`;
@@ -4100,16 +4100,16 @@ function renderReviewPage(){
       const cPct = d.recvCoverDenom>0 ? d.recvCover/d.recvCoverDenom : null;
       html += `<div class="rv-headline" style="margin-bottom:12px">`;
       html += `<div class="big">${d.total}<span class="unit">場背離</span></div>`;
-      html += `<div class="cap"><b>${label}</b>　·　已填賠率 ${d.withOdds} 場${d.noClearFav?`、${d.noClearFav} 場無明確熱門`:""}</div>`;
+      html += `<div class="cap"><b>${label}</b>　·　已填賠率 ${d.withOdds} 場${d.noClearFav?`、${d.noClearFav} 場無明確低賠`:""}</div>`;
       html += `<div class="row2">`;
-      html += `<div class="blk"><div class="v" style="color:#28c76f">${dPct!=null?Math.round(dPct*100):"—"}%</div><div class="k">低賠（熱門方）獲勝率（${d.favWon}/${dTot}）</div></div>`;
-      html += `<div class="blk"><div class="v" style="color:#3d8bfd">${cPct!=null?Math.round(cPct*100):"—"}%</div><div class="k">受讓過盤率（${d.recvCover}/${d.recvCoverDenom}）</div></div>`;
+      html += `<div class="blk"><div class="v" style="color:#28c76f">${dPct!=null?Math.round(dPct*100):"—"}%</div><div class="k">低賠方獲勝率（${d.favWon}/${dTot}）</div></div>`;
+      html += `<div class="blk"><div class="v" style="color:#3d8bfd">${cPct!=null?Math.round(cPct*100):"—"}%</div><div class="k">受讓方過盤率（${d.recvCover}/${d.recvCoverDenom}）</div></div>`;
       html += `</div></div>`;
       // drill-down: list the constituent divergence games
       const det = drillBlock(d.games.filter(x=>true), g=>{
-        const fav = g.favWon ? `<span class="dr-hit">熱門贏</span>` : `<span class="dr-miss">熱門輸</span>`;
+        const fav = g.favWon ? `<span class="dr-hit">低賠贏</span>` : `<span class="dr-miss">低賠輸</span>`;
         const cov = g.recvCovered===true ? `受讓過` : (g.recvCovered===false ? `受讓沒過` : ``);
-        return `熱門:${esc(g.favTeam)}・${fav}${cov?`・${cov}`:""}`;
+        return `低賠:${esc(g.favTeam)}・${fav}${cov?`・${cov}`:""}`;
       });
       if(det.id){
         html += `<div class="drill-toggle" onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:-4px 0 6px">展開 ${d.games.length} 場明細核對</div>`;
