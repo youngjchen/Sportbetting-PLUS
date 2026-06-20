@@ -64,6 +64,13 @@
   // ---- 瀏覽器接線 ----
   if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     var DATA = [], loaded = false;
+    // 設定（提前宣告：下面 load()/setInterval 會立刻用到，var 雖提升但賦值須在使用前）
+    var AUTO_SETTLE = true;          // 全自動結算；不想要就設 false
+    var SWEEP_MS = 180000;           // 每 3 分：重抓資料 + 掃描結算 + 更新即時比分面板
+    // 即時比分浮動面板狀態（僅本次連線有效，重整會重置）
+    var psDismissed = {};            // 你手動移除的「已結束」場：officialId → true
+    var psExpanded = {};             // 展開逐局的場：officialId → true
+    var psCollapsed = false;         // 面板是否收合成一條
 
     function fetchJson(url) {
       return fetch(url + '?t=' + Date.now(), { cache: 'no-store' })
@@ -74,6 +81,7 @@
         .catch(function () { return fetchJson(FEED_FALLBACK); })   // raw 失敗就改用 Pages 相對路徑
         .then(function (arr) {
           DATA = Array.isArray(arr) ? arr : []; loaded = true; console.log('[玩運彩融合] 載入', DATA.length, '場');
+          try { renderPanel(); } catch (e) {}                       // 更新即時比分面板
           if (AUTO_SETTLE) setTimeout(autoSettleSweep, 1000);      // 載入後先掃一次（等板子就緒）
         })
         .catch(function (e) { console.warn('[玩運彩融合] 載入失敗（結算照常運作）:', e.message); });
@@ -151,9 +159,98 @@
       body.insertBefore(el, body.firstChild);
     }
 
-    // ===== 全自動結算 =====
-    var AUTO_SETTLE = true;          // 不想自動結算就設 false
-    var SWEEP_MS = 180000;           // 每 3 分掃一次未結算場
+    // ===== 即時比分浮動面板 =====
+    function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
+    function num0(v) { return v == null ? '' : v; }
+    // 要顯示的場：進行中（永遠）＋ 已結束（未被你移除的）；進行中排前面，再依開賽時間
+    function psScoreList() {
+      return (DATA || []).filter(function (g) {
+        if (g.status === 'inprogress') return true;
+        if (g.status === 'finished' && !psDismissed[g.officialId]) return true;
+        return false;
+      }).sort(function (a, b) {
+        var ai = a.status === 'inprogress' ? 0 : 1, bi = b.status === 'inprogress' ? 0 : 1;
+        if (ai !== bi) return ai - bi;
+        return String(a.time || '').localeCompare(String(b.time || ''));
+      });
+    }
+    function psLineTable(g) {
+      var ls = g.lineScore;
+      if (!ls || !ls.away) return '<div style="color:#6f8597;padding:3px 2px;">尚無逐局</div>';
+      var n = Math.max(ls.away.length, ls.home.length);
+      var th = function (t) { return '<td style="padding:1px 4px;text-align:center;color:#5f7587;">' + t + '</td>'; };
+      var cell = function (v) { return '<td style="padding:1px 4px;text-align:center;color:#bcd3e6;">' + (v == null || v === '' ? '·' : esc(v)) + '</td>'; };
+      var head = '<td style="padding:1px 4px;"></td>';
+      for (var i = 1; i <= n; i++) head += th(i);
+      head += '<td style="padding:1px 5px;text-align:center;color:#7ec3ff;border-left:1px solid #2a4357;">R</td>' + th('H') + th('E');
+      var rowOf = function (name, arr, rhe) {
+        var tds = '<td style="padding:1px 5px;color:#9fb6c9;white-space:nowrap;">' + esc(name) + '</td>';
+        for (var i = 0; i < n; i++) tds += cell(arr[i]);
+        var R = rhe ? num0(rhe.r) : '', H = rhe ? num0(rhe.h) : '', E = rhe ? num0(rhe.e) : '';
+        tds += '<td style="padding:1px 5px;text-align:center;color:#e7f1fb;font-weight:700;border-left:1px solid #2a4357;">' + R + '</td>'
+             + '<td style="padding:1px 4px;text-align:center;color:#9fb6c9;">' + H + '</td>'
+             + '<td style="padding:1px 4px;text-align:center;color:#9fb6c9;">' + E + '</td>';
+        return '<tr>' + tds + '</tr>';
+      };
+      return '<table style="border-collapse:collapse;font-size:11px;margin:2px 0 3px;">'
+        + '<tr>' + head + '</tr>' + rowOf(g.awayTeam, ls.away, ls.awayRHE) + rowOf(g.homeTeam, ls.home, ls.homeRHE) + '</table>';
+    }
+    function psRowHtml(g) {
+      var fin = g.status === 'finished';
+      var as = g.awayScore == null ? '–' : g.awayScore;
+      var hs = g.homeScore == null ? '–' : g.homeScore;
+      var chip = fin ? '結束' : (g.inning || '進行中');
+      var chipBg = fin ? '#37475a' : '#1f6f4a', chipFg = fin ? '#b9c9d6' : '#7df0b0';
+      var x = fin ? '<span class="ps-x" data-oid="' + esc(g.officialId) + '" title="從面板移除" style="margin-left:5px;color:#7d92a3;cursor:pointer;font-weight:700;padding:0 3px;">✕</span>' : '';
+      var head =
+        '<div class="ps-row" data-oid="' + esc(g.officialId) + '" style="display:flex;align-items:center;gap:6px;padding:5px 8px;cursor:pointer;border-top:1px solid #1b2c3a;">'
+        +   '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#dcebf8;font-size:12.5px;">'
+        +     esc(g.awayTeam) + ' <b style="color:#fff;">' + as + '</b> <span style="color:#5f7587;">:</span> <b style="color:#fff;">' + hs + '</b> ' + esc(g.homeTeam)
+        +   '</span>'
+        +   '<span style="font-size:10.5px;padding:1px 6px;border-radius:8px;background:' + chipBg + ';color:' + chipFg + ';white-space:nowrap;">' + esc(chip) + '</span>' + x
+        + '</div>';
+      var detail = psExpanded[g.officialId] ? '<div style="padding:0 8px 5px;overflow-x:auto;">' + psLineTable(g) + '</div>' : '';
+      return head + detail;
+    }
+    function psCreateShell() {
+      var p = document.createElement('div');
+      p.id = 'ps-live-panel';
+      p.style.cssText = 'position:fixed;top:66px;right:14px;width:236px;max-height:62vh;display:flex;flex-direction:column;z-index:9998;background:#101c27;border:1px solid rgba(33,66,85,.6);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.45);font-family:inherit;overflow:hidden;';
+      p.innerHTML =
+        '<div class="ps-head" style="display:flex;align-items:center;gap:6px;padding:7px 10px;cursor:pointer;background:#13202c;border-bottom:1px solid rgba(33,66,85,.4);user-select:none;">'
+        +   '<span class="ps-caret" style="color:#7ec3ff;font-size:11px;">▾</span>'
+        +   '<span style="font-weight:700;color:#7ec3ff;font-size:12.5px;">即時比分</span>'
+        +   '<span class="ps-count" style="color:#8aa0b4;font-size:11.5px;flex:1;"></span>'
+        + '</div>'
+        + '<div class="ps-body" style="overflow-y:auto;"></div>';
+      document.body.appendChild(p);
+      p.addEventListener('click', function (ev) {
+        var t = ev.target;
+        var x = t.closest ? t.closest('.ps-x') : null;
+        if (x) { psDismissed[x.getAttribute('data-oid')] = true; renderPanel(); return; }   // 移除已結束場
+        if (t.closest && t.closest('.ps-head')) { psCollapsed = !psCollapsed; renderPanel(); return; }  // 收合/展開面板
+        var row = t.closest ? t.closest('.ps-row') : null;
+        if (row) { var oid = row.getAttribute('data-oid'); psExpanded[oid] = !psExpanded[oid]; renderPanel(); }  // 展開逐局
+      });
+      return p;
+    }
+    function renderPanel() {
+      if (typeof document === 'undefined') return;
+      var list = psScoreList();
+      var p = document.getElementById('ps-live-panel');
+      if (!list.length) { if (p) p.style.display = 'none'; return; }   // 沒有進行中/未移除的已結束 → 整個藏起來
+      if (!p) p = psCreateShell();
+      p.style.display = 'flex';
+      var liveN = list.filter(function (g) { return g.status === 'inprogress'; }).length;
+      p.querySelector('.ps-count').textContent = '(' + (liveN ? liveN + ' 進行中' : list.length + ' 場') + ')';
+      p.querySelector('.ps-caret').textContent = psCollapsed ? '▸' : '▾';
+      var body = p.querySelector('.ps-body');
+      if (psCollapsed) { body.style.display = 'none'; return; }
+      body.style.display = 'block';
+      body.innerHTML = list.map(psRowHtml).join('');
+    }
+
+    // ===== 全自動結算 =====（AUTO_SETTLE / SWEEP_MS 已於頂端宣告）
     function getDoc() {
       try { if (typeof doc !== 'undefined' && doc) return doc; } catch (e) {}
       return global.doc || null;
@@ -233,7 +330,7 @@
     else hook();
 
     // 供測試：注入資料 / 直接呼叫
-    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, findGame: findGame, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne };
+    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, findGame: findGame, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne, renderPanel: renderPanel, psScoreList: psScoreList };
   }
 
   // ---- 測試匯出 ----
