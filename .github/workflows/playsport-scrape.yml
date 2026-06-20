@@ -1,28 +1,30 @@
 # ============================================================
-#  模組 A：玩運彩賽前數據 — 獨立工作流
+#  模組 A：玩運彩賽前數據 + 即時比分 — 獨立工作流（自迴圈版）
 #  · 與 Titan007 模組 B(scrape.yml)完全分開，互不影響。
-#  · 賽前數據變慢，每 30 分鐘一次即可(cron 偶爾延遲對慢資料無妨)。
-#  · 不需自迴圈(那是 B 為了 5 分鐘高頻才用的)。
-#  · 不更動任何既有檔；輸出 data/pregame_data.json 供 add-on 讀取時融合。
+#  · GitHub 的 schedule 不準、會被延遲/丟棄；故改用「自迴圈」：
+#    cron 只負責把迴圈重新點起來，單次 run 自己跑 ~5h25m、每 5 分一輪。
+#  · 每輪抓今天+明天，賽前累積 ERA/盤口、賽後抓即時比分→終場，
+#    寫進 data/pregame_data.json 供 add-on 讀取融合。
 # ============================================================
 name: Playsport Pregame Scrape
 
 on:
+  workflow_dispatch:
   schedule:
-    - cron: '15,45 * * * *'    # 每 30 分；錯開整點，降低與 B 撞車機率
-  workflow_dispatch:           # 也可手動觸發
+    # 只為「重新點燃」迴圈用；錯開模組 B 的 7,37 降低撞車
+    - cron: '15,45 * * * *'
 
 permissions:
   contents: write
 
 concurrency:
-  group: playsport-pregame     # 同時間只跑一個，避免自我撞車
+  group: playsport-pregame      # 同時間只跑一個迴圈
   cancel-in-progress: false
 
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 350         # 自迴圈上限，安全落在 GitHub 360 分鐘硬上限內
     steps:
       - uses: actions/checkout@v4
 
@@ -30,25 +32,25 @@ jobs:
         with:
           node-version: '20'
 
-      # 內聯安裝，不需動任何 package.json
       - name: Install deps
         run: npm install axios cheerio
 
-      - name: Scrape Playsport
-        run: node playsport_scraper.js
-
-      - name: Commit pregame_data.json
+      - name: Scrape loop（每 5 分一輪，抓即時比分＋累積賽前資料）
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          mkdir -p data
-          cp -f pregame_data.json data/pregame_data.json
-          git add data/pregame_data.json
-          if git diff --cached --quiet -- data/pregame_data.json; then
-            echo "無變化，不提交。"
-            exit 0
-          fi
-          git commit -m "chore: update pregame_data.json [skip ci]"
-          # 與 B 共用同一個 repo，推送前先 rebase 避免衝突
-          git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
-          git push
+          END=$(( SECONDS + 19500 ))          # 約 5h25m
+          while [ "$SECONDS" -lt "$END" ]; do
+            node playsport_scraper.js || true
+            if [ -f pregame_data.json ]; then
+              mkdir -p data
+              cp -f pregame_data.json data/pregame_data.json
+              git add data/pregame_data.json
+              if ! git diff --cached --quiet -- data/pregame_data.json; then
+                git commit -m "chore: update pregame_data.json [skip ci]" || true
+                git pull --rebase --autostash || true   # 與 B 共用 repo，先 rebase 再推
+                git push || true
+              fi
+            fi
+            sleep 300                           # 5 分鐘
+          done
