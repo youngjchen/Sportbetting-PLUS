@@ -68,9 +68,9 @@
     var AUTO_SETTLE = true;          // 全自動結算；不想要就設 false
     var SWEEP_MS = 180000;           // 每 3 分：重抓資料 + 掃描結算 + 更新即時比分面板
     // 即時比分浮動面板狀態（僅本次連線有效，重整會重置）
-    var psDismissed = {};            // 你手動移除的「已結束」場：officialId → true
+    var psDismissed = {};            // 你手動移除的場：officialId → true
     var psExpanded = {};             // 展開逐局的場：officialId → true
-    var psCollapsed = false;         // 面板是否收合成一條
+    var psMin = false;               // 面板是否最小化（收進快捷鍵）
 
     function fetchJson(url) {
       return fetch(url + '?t=' + Date.now(), { cache: 'no-store' })
@@ -159,15 +159,25 @@
       body.insertBefore(el, body.firstChild);
     }
 
-    // ===== 即時比分浮動面板 =====
+    // ===== 即時比分浮動面板（可拖曳 / 縮放 / 最小化收進快捷鍵；只顯示當天）=====
+    var PS_UI_KEY = 'ps_live_ui';
+    var psUI = { left: null, top: null, w: null, bodyH: null, min: false };
+    try { var _sv = JSON.parse(localStorage.getItem(PS_UI_KEY) || '{}'); if (_sv && typeof _sv === 'object') { psUI = Object.assign(psUI, _sv); psMin = !!psUI.min; } } catch (e) {}
+    function psSaveUI() { try { localStorage.setItem(PS_UI_KEY, JSON.stringify(psUI)); } catch (e) {} }
+    function twToday() {                                            // 台灣當天日期（與 scraper 的 g.date 同口徑）
+      var now = new Date();
+      var tw = new Date(now.getTime() + (8 * 60 + now.getTimezoneOffset()) * 60000);
+      return tw.getFullYear() + '-' + String(tw.getMonth() + 1).padStart(2, '0') + '-' + String(tw.getDate()).padStart(2, '0');
+    }
     function esc(s) { return (s == null ? '' : String(s)).replace(/[&<>"]/g, function (c) { return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]; }); }
     function num0(v) { return v == null ? '' : v; }
-    // 要顯示的場：進行中（永遠）＋ 已結束（未被你移除的）；進行中排前面，再依開賽時間
+    // 只列「當天」的 進行中 + 已結束（未被你移除的）；進行中排前面，再依開賽時間
     function psScoreList() {
+      var today = twToday();
       return (DATA || []).filter(function (g) {
-        if (g.status === 'inprogress') return true;
-        if (g.status === 'finished' && !psDismissed[g.officialId]) return true;
-        return false;
+        if (g.date !== today) return false;                        // 只顯示當天（昨天卡住的延期場/已結束場一律不顯示）
+        if (psDismissed[g.officialId]) return false;               // 你已手動移除
+        return g.status === 'inprogress' || g.status === 'finished';
       }).sort(function (a, b) {
         var ai = a.status === 'inprogress' ? 0 : 1, bi = b.status === 'inprogress' ? 0 : 1;
         if (ai !== bi) return ai - bi;
@@ -201,7 +211,8 @@
       var hs = g.homeScore == null ? '–' : g.homeScore;
       var chip = fin ? '結束' : (g.inning || '進行中');
       var chipBg = fin ? '#37475a' : '#1f6f4a', chipFg = fin ? '#b9c9d6' : '#7df0b0';
-      var x = fin ? '<span class="ps-x" data-oid="' + esc(g.officialId) + '" title="從面板移除" style="margin-left:5px;color:#7d92a3;cursor:pointer;font-weight:700;padding:0 3px;">✕</span>' : '';
+      // ✕ 每一列都有（不只已結束）→ 卡住的延期場也能手動移除
+      var x = '<span class="ps-x" data-oid="' + esc(g.officialId) + '" title="從面板移除" style="margin-left:5px;color:#7d92a3;cursor:pointer;font-weight:700;padding:0 3px;">✕</span>';
       var head =
         '<div class="ps-row" data-oid="' + esc(g.officialId) + '" style="display:flex;align-items:center;gap:6px;padding:5px 8px;cursor:pointer;border-top:1px solid #1b2c3a;">'
         +   '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#dcebf8;font-size:12.5px;">'
@@ -212,42 +223,122 @@
       var detail = psExpanded[g.officialId] ? '<div style="padding:0 8px 5px;overflow-x:auto;">' + psLineTable(g) + '</div>' : '';
       return head + detail;
     }
+    // ---- 最小化：收進快捷鍵的「比分」鈕 ----
+    function psEnsureLauncher() {
+      var b = document.getElementById('ps-launcher');
+      if (b) return b;
+      b = document.createElement('button');
+      b.id = 'ps-launcher'; b.type = 'button'; b.title = '展開即時比分'; b.textContent = '比分';
+      b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); psMin = false; psUI.min = false; psSaveUI(); renderPanel(); });
+      var bar = document.getElementById('zoomctlBtns');               // 真的收進快捷鍵那一排（沿用快捷鍵按鈕樣式）
+      if (bar) { b.className = 'fit'; bar.insertBefore(b, bar.firstChild); }
+      else {                                                          // 沒有快捷鍵列就浮一顆小鈕
+        b.style.cssText = 'position:fixed;right:14px;bottom:60px;z-index:9998;background:#13202c;color:#7ec3ff;border:1px solid #2a4f6a;border-radius:8px;padding:5px 11px;font-size:12.5px;cursor:pointer;';
+        document.body.appendChild(b);
+      }
+      return b;
+    }
+    function psShowLauncher(list) {
+      var b = psEnsureLauncher();
+      var liveN = list.filter(function (g) { return g.status === 'inprogress'; }).length;
+      b.textContent = '比分' + (liveN ? ' ' + liveN : '');
+      b.style.display = '';
+    }
+    function psHideLauncher() { var b = document.getElementById('ps-launcher'); if (b) b.style.display = 'none'; }
+
     function psCreateShell() {
       var p = document.createElement('div');
       p.id = 'ps-live-panel';
-      p.style.cssText = 'position:fixed;top:66px;right:14px;width:236px;max-height:62vh;display:flex;flex-direction:column;z-index:9998;background:#101c27;border:1px solid rgba(33,66,85,.6);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.45);font-family:inherit;overflow:hidden;';
+      p.style.cssText = 'position:fixed;width:236px;max-height:62vh;display:flex;flex-direction:column;z-index:9998;background:#101c27;border:1px solid rgba(33,66,85,.6);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.45);font-family:inherit;overflow:hidden;';
+      var vw = (typeof window !== 'undefined' && window.innerWidth) || 1024;
+      var vh = (typeof window !== 'undefined' && window.innerHeight) || 768;
+      p.style.top = Math.max(0, Math.min(vh - 60, psUI.top != null ? psUI.top : 66)) + 'px';
+      if (psUI.left != null) { p.style.left = Math.max(0, Math.min(vw - 120, psUI.left)) + 'px'; p.style.right = 'auto'; }
+      else { p.style.right = '14px'; }
+      if (psUI.w) p.style.width = psUI.w + 'px';
       p.innerHTML =
-        '<div class="ps-head" style="display:flex;align-items:center;gap:6px;padding:7px 10px;cursor:pointer;background:#13202c;border-bottom:1px solid rgba(33,66,85,.4);user-select:none;">'
-        +   '<span class="ps-caret" style="color:#7ec3ff;font-size:11px;">▾</span>'
+        '<div class="ps-head" style="display:flex;align-items:center;gap:6px;padding:7px 10px;cursor:move;background:#13202c;border-bottom:1px solid rgba(33,66,85,.4);user-select:none;touch-action:none;">'
         +   '<span style="font-weight:700;color:#7ec3ff;font-size:12.5px;">即時比分</span>'
         +   '<span class="ps-count" style="color:#8aa0b4;font-size:11.5px;flex:1;"></span>'
+        +   '<span class="ps-min" title="最小化（收進快捷鍵）" style="cursor:pointer;color:#9fb6c9;font-size:15px;line-height:1;padding:0 4px;">▁</span>'
         + '</div>'
-        + '<div class="ps-body" style="overflow-y:auto;"></div>';
+        + '<div class="ps-body" style="overflow-y:auto;"></div>'
+        + '<div class="ps-resize" title="拖曳調整大小" style="position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;opacity:.5;touch-action:none;background:linear-gradient(135deg,transparent 50%,#5f7587 50%);border-bottom-right-radius:10px;"></div>';
       document.body.appendChild(p);
+      if (psUI.bodyH) p.querySelector('.ps-body').style.maxHeight = psUI.bodyH + 'px';
+      p.querySelector('.ps-head').addEventListener('pointerdown', psStartDrag);
+      var minBtn = p.querySelector('.ps-min');
+      minBtn.addEventListener('pointerdown', function (e) { e.stopPropagation(); });
+      minBtn.addEventListener('click', function (e) { e.stopPropagation(); psMin = true; psUI.min = true; psSaveUI(); renderPanel(); });
+      p.querySelector('.ps-resize').addEventListener('pointerdown', psStartResize);
       p.addEventListener('click', function (ev) {
         var t = ev.target;
         var x = t.closest ? t.closest('.ps-x') : null;
-        if (x) { psDismissed[x.getAttribute('data-oid')] = true; renderPanel(); return; }   // 移除已結束場
-        if (t.closest && t.closest('.ps-head')) { psCollapsed = !psCollapsed; renderPanel(); return; }  // 收合/展開面板
+        if (x) { psDismissed[x.getAttribute('data-oid')] = true; renderPanel(); return; }
+        if (t.closest && (t.closest('.ps-head') || t.closest('.ps-resize'))) return;
         var row = t.closest ? t.closest('.ps-row') : null;
-        if (row) { var oid = row.getAttribute('data-oid'); psExpanded[oid] = !psExpanded[oid]; renderPanel(); }  // 展開逐局
+        if (row && (!psDrag || !psDrag.moved)) { var oid = row.getAttribute('data-oid'); psExpanded[oid] = !psExpanded[oid]; renderPanel(); }
       });
       return p;
     }
+    // 拖曳（標題列）
+    var psDrag = null, psRz = null;
+    function psStartDrag(e) {
+      if (e.target.closest && e.target.closest('.ps-min')) return;
+      var p = document.getElementById('ps-live-panel'); if (!p) return;
+      var r = p.getBoundingClientRect();
+      psDrag = { offX: e.clientX - r.left, offY: e.clientY - r.top, moved: false };
+      p.style.right = 'auto';
+      try { p.setPointerCapture(e.pointerId); } catch (_) {}
+      e.preventDefault();
+    }
+    function psMoveDrag(e) {
+      if (!psDrag) return;
+      var p = document.getElementById('ps-live-panel'); if (!p) return;
+      var w = p.offsetWidth, h = p.offsetHeight;
+      var x = Math.max(0, Math.min((window.innerWidth || 1024) - w, e.clientX - psDrag.offX));
+      var y = Math.max(0, Math.min((window.innerHeight || 768) - h, e.clientY - psDrag.offY));
+      p.style.left = x + 'px'; p.style.top = y + 'px';
+      psDrag.moved = true; psDrag.x = x; psDrag.y = y;
+    }
+    function psEndDrag() { if (!psDrag) return; if (psDrag.moved) { psUI.left = psDrag.x; psUI.top = psDrag.y; psSaveUI(); } var d = psDrag; psDrag = null; setTimeout(function () {}, 0); return d; }
+    // 縮放（右下角）
+    function psStartResize(e) {
+      e.preventDefault(); e.stopPropagation();
+      var p = document.getElementById('ps-live-panel'); if (!p) return;
+      var body = p.querySelector('.ps-body');
+      psRz = { startX: e.clientX, startY: e.clientY, startW: p.offsetWidth, startBH: body.offsetHeight };
+      try { p.setPointerCapture(e.pointerId); } catch (_) {}
+    }
+    function psMoveResize(e) {
+      if (!psRz) return;
+      var p = document.getElementById('ps-live-panel'); if (!p) return;
+      var body = p.querySelector('.ps-body');
+      var w = Math.max(190, Math.min(460, psRz.startW + (e.clientX - psRz.startX)));
+      var bh = Math.max(80, Math.min((window.innerHeight || 768) * 0.8, psRz.startBH + (e.clientY - psRz.startY)));
+      p.style.width = Math.round(w) + 'px'; body.style.maxHeight = Math.round(bh) + 'px';
+      psRz.w = Math.round(w); psRz.bh = Math.round(bh);
+    }
+    function psEndResize() { if (!psRz) return; if (psRz.w) psUI.w = psRz.w; if (psRz.bh) psUI.bodyH = psRz.bh; psSaveUI(); psRz = null; }
+    if (!global.__psPanelMoveBound) {
+      global.__psPanelMoveBound = true;
+      document.addEventListener('pointermove', function (e) { if (psDrag) psMoveDrag(e); else if (psRz) psMoveResize(e); });
+      document.addEventListener('pointerup', function () { psEndDrag(); psEndResize(); });
+      document.addEventListener('pointercancel', function () { psEndDrag(); psEndResize(); });
+    }
+
     function renderPanel() {
       if (typeof document === 'undefined') return;
       var list = psScoreList();
       var p = document.getElementById('ps-live-panel');
-      if (!list.length) { if (p) p.style.display = 'none'; return; }   // 沒有進行中/未移除的已結束 → 整個藏起來
+      if (!list.length) { if (p) p.style.display = 'none'; psHideLauncher(); return; }   // 當天沒有可顯示的場 → 面板+快捷鍵鈕都藏
+      if (psMin) { if (p) p.style.display = 'none'; psShowLauncher(list); return; }       // 最小化 → 只剩快捷鍵那顆「比分」鈕
+      psHideLauncher();
       if (!p) p = psCreateShell();
       p.style.display = 'flex';
       var liveN = list.filter(function (g) { return g.status === 'inprogress'; }).length;
       p.querySelector('.ps-count').textContent = '(' + (liveN ? liveN + ' 進行中' : list.length + ' 場') + ')';
-      p.querySelector('.ps-caret').textContent = psCollapsed ? '▸' : '▾';
-      var body = p.querySelector('.ps-body');
-      if (psCollapsed) { body.style.display = 'none'; return; }
-      body.style.display = 'block';
-      body.innerHTML = list.map(psRowHtml).join('');
+      p.querySelector('.ps-body').innerHTML = list.map(psRowHtml).join('');
     }
 
     // ===== 全自動結算 =====（AUTO_SETTLE / SWEEP_MS 已於頂端宣告）
