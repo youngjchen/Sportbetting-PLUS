@@ -2183,17 +2183,18 @@ function collectSummary(){
     normMatch(it);
     const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
     const matchName = `${it.away}/${it.home}`;
+    const lg = leagueOf(it);
     const mlC  = it.mlAway.lights>0 && it.mlHome.lights>0;
     const hdC  = it.hdGive.lights>0 && it.hdRecv.lights>0;
     const totC = it.over.lights>0  && it.under.lights>0;
     const oppML = (undSide==="away") ? it.mlAway.lights : it.mlHome.lights;
     const crossC = it.hdGive.lights>0 && oppML>0;
-    if(mlC)  conflicts.push({matchName, market:"獨贏", kind:"same"});
-    if(hdC)  conflicts.push({matchName, market:"讓分", kind:"same"});
-    if(totC) conflicts.push({matchName, market:"大小分", kind:"same"});
-    if(crossC) conflicts.push({matchName, market:"讓分↔對手獨贏", kind:"cross"});
+    if(mlC)  conflicts.push({matchName, league:lg, market:"獨贏", kind:"same"});
+    if(hdC)  conflicts.push({matchName, league:lg, market:"讓分", kind:"same"});
+    if(totC) conflicts.push({matchName, league:lg, market:"大小分", kind:"same"});
+    if(crossC) conflicts.push({matchName, league:lg, market:"讓分↔對手獨贏", kind:"cross"});
     // strong entries: attach `it` + `market` so renderSummary can do per-entry checks (e.g. "⚠ 過盤率低")
-    const add=(cond,lights,pick,mk,market)=>{ if(cond && lights>=3) strong.push({matchName, pick, mk, n:lights, it, market}); };
+    const add=(cond,lights,pick,mk,market)=>{ if(cond && lights>=3) strong.push({matchName, league:lg, pick, mk, n:lights, it, market}); };
     const mlAwayOK  = !mlC && !(crossC && undSide==="away");
     const mlHomeOK  = !mlC && !(crossC && undSide==="home");
     const hdGiveOK  = !hdC && !crossC;
@@ -2211,42 +2212,60 @@ function collectSummary(){
 
 function renderSummary(){
   const old = canvas.querySelector("#summary"); if(old) old.remove();
-  if(!state.items.some(i=>i.type==="match")) return;
+  if(!state.items.some(i=>i.type==="match")){ hideSummaryLauncher(); return; }
   const {strong, conflicts} = collectSummary();
-  if(strong.length===0 && conflicts.length===0) return;
+  if(strong.length===0 && conflicts.length===0){ hideSummaryLauncher(); return; }
+
+  // 最小化 → 不畫面板，只在快捷鍵留一顆「總結」鈕
+  if(doc.summaryMin){ showSummaryLauncher(strong.length); return; }
+  hideSummaryLauncher();
+
+  // 聯盟篩選
+  const LG_ORDER = ["mlb","npb","kbo","cpbl","zz"];
+  const LG_LABEL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
+  const present = LG_ORDER.filter(k => strong.some(s=>s.league===k) || conflicts.some(c=>c.league===k));
+  let lgSel = doc.summaryLeague || "all";
+  if(lgSel!=="all" && !present.includes(lgSel)){ lgSel="all"; doc.summaryLeague="all"; }   // 選的聯盟今天沒訊號 → 自動回全部
+  const fStrong   = (lgSel==="all") ? strong    : strong.filter(s=>s.league===lgSel);
+  const fConflict = (lgSel==="all") ? conflicts : conflicts.filter(c=>c.league===lgSel);
 
   const box = document.createElement("div"); box.id="summary";
-  if(doc.summaryCollapsed) box.classList.add("mini");
   // corner-anchored positioning: never goes offscreen regardless of zoom/screen size.
-  // corner ∈ "tl" | "tr" | "bl" | "br" (default top-right).
   const corner = doc.summaryCorner || "tr";
   positionSummaryByCorner(box, corner);
-  // apply user-resized size if present (only when expanded)
-  if(!doc.summaryCollapsed && doc.summarySize){
-    if(doc.summarySize.w) box.style.width = doc.summarySize.w+"px";
-  }
+  if(doc.summarySize && doc.summarySize.w) box.style.width = doc.summarySize.w+"px";
 
   const head = document.createElement("div"); head.className="sumhead";
-  const caret = doc.summaryCollapsed ? "▸" : "▾";
-  head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${strong.length} 個強訊號</span>`+
-                   `<span class="sumtoggle no-drag" title="收合／展開">${caret}</span>`;
+  head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${fStrong.length} 個強訊號</span>`+
+                   `<span class="summin no-drag" title="最小化（收進快捷鍵）" style="cursor:pointer;margin-left:6px;font-size:15px;line-height:1;color:#9fb6c9;">▁</span>`;
   head.addEventListener("pointerdown", startSummaryDrag);
-  const tog = head.querySelector(".sumtoggle");
-  // intercept pointer events on the toggle so the drag handler never runs
-  tog.addEventListener("pointerdown", (e)=>{ e.stopPropagation(); });
-  tog.addEventListener("click", (e)=>{
-    e.stopPropagation();
-    doc.summaryCollapsed = !doc.summaryCollapsed; save(); render();
-  });
+  const mn = head.querySelector(".summin");
+  mn.addEventListener("pointerdown", (e)=>{ e.stopPropagation(); });          // 別觸發拖曳
+  mn.addEventListener("click", (e)=>{ e.stopPropagation(); doc.summaryMin=true; save(); render(); });
   box.appendChild(head);
 
-  if(doc.summaryCollapsed){ canvas.appendChild(box); applySummaryScale(); return; }
+  // 聯盟分頁（只有兩個以上聯盟才出現；單一聯盟沒必要篩）
+  if(present.length >= 2){
+    const tabs = document.createElement("div"); tabs.className="sumfilter no-drag";
+    tabs.style.cssText = "display:flex;flex-wrap:wrap;gap:4px;padding:6px 8px 2px;";
+    const mkTab = (key,label)=>{
+      const on = (lgSel===key);
+      const b = document.createElement("button"); b.type="button"; b.textContent=label;
+      b.style.cssText = "font-size:11px;padding:2px 8px;border-radius:8px;cursor:pointer;border:1px solid "+(on?"#3aa0ff":"var(--line,#2a3441)")+";background:"+(on?"rgba(58,160,255,.18)":"transparent")+";color:"+(on?"#7ec3ff":"#9fb6c9")+";";
+      b.addEventListener("pointerdown",(e)=>e.stopPropagation());
+      b.addEventListener("click",(e)=>{ e.stopPropagation(); doc.summaryLeague=key; save(); render(); });
+      return b;
+    };
+    tabs.appendChild(mkTab("all","全部"));
+    present.forEach(k=> tabs.appendChild(mkTab(k, LG_LABEL[k]||k)));
+    box.appendChild(tabs);
+  }
 
   const body = document.createElement("div"); body.className="sumbody";
-  if(strong.length){
+  if(fStrong.length){
     const t = document.createElement("div"); t.className="sumsec"; t.textContent="3 個以上（無衝突）";
     body.appendChild(t);
-    strong.forEach(s=>{
+    fStrong.forEach(s=>{
       const r = document.createElement("div"); r.className="sumrow";
       const low = (s.it && s.market) ? isLitSideLow(s.it, s.market) : false;
       const lowWarn = low ? `<span class="lowwarn">⚠ 過盤率低</span>` : "";
@@ -2256,7 +2275,7 @@ function renderSummary(){
       body.appendChild(r);
     });
   }
-  if(conflicts.length){
+  if(fConflict.length){
     const cCar = doc.conflictsCollapsed ? "▸" : "▾";
     const t = document.createElement("div"); t.className="sumsec collapsible";
     t.innerHTML = `<span>衝突 / 矛盾</span><span class="seccaret">${cCar}</span>`;
@@ -2264,7 +2283,7 @@ function renderSummary(){
     t.onclick = ()=>{ doc.conflictsCollapsed = !doc.conflictsCollapsed; save(); render(); };
     body.appendChild(t);
     if(!doc.conflictsCollapsed){
-      conflicts.forEach(c=>{
+      fConflict.forEach(c=>{
         const r = document.createElement("div"); r.className="sumrow conflict"+(c.kind==="cross"?" cross":"");
         const desc = c.kind==="cross" ? `${esc(c.market)} 矛盾` : `${esc(c.market)} 兩邊都有燈`;
         r.innerHTML = `<span class="mt">${esc(c.matchName)}</span>`+
@@ -2274,20 +2293,29 @@ function renderSummary(){
       });
     }
   }
-  if(!strong.length && conflicts.length){
-    // still useful, no empty note needed
-  }
   box.appendChild(body);
-  // apply saved body height + add a resize handle (expanded only)
-  if(!doc.summaryCollapsed){
-    if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
-    const rz = document.createElement("div"); rz.className="sum-resize no-drag"; rz.title="拖曳調整大小";
-    rz.addEventListener("pointerdown", e=> startSummaryResize(e, box, body));
-    box.appendChild(rz);
-  }
+  // 已存的高度 + 縮放把手
+  if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
+  const rz = document.createElement("div"); rz.className="sum-resize no-drag"; rz.title="拖曳調整大小";
+  rz.addEventListener("pointerdown", e=> startSummaryResize(e, box, body));
+  box.appendChild(rz);
   canvas.appendChild(box);
   applySummaryScale();
 }
+// 重點總結「最小化」用的快捷鍵啟動鈕（與比分鈕同一排）
+function ensureSummaryLauncher(){
+  let b = document.getElementById("sumLauncher");
+  if(b) return b;
+  b = document.createElement("button");
+  b.id="sumLauncher"; b.type="button"; b.className="fit"; b.title="展開重點總結"; b.textContent="總結";
+  b.style.display="none";
+  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); doc.summaryMin=false; save(); render(); });
+  const bar = document.getElementById("zoomctlBtns");
+  if(bar) bar.insertBefore(b, bar.firstChild); else document.body.appendChild(b);
+  return b;
+}
+function showSummaryLauncher(n){ const b=ensureSummaryLauncher(); b.textContent="總結"+(n?` ${n}`:""); b.style.display=""; }
+function hideSummaryLauncher(){ const b=document.getElementById("sumLauncher"); if(b) b.style.display="none"; }
 let sumRz = null;
 function startSummaryResize(e, box, body){
   e.preventDefault(); e.stopPropagation();
