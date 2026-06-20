@@ -43,11 +43,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           mkdir -p data
           cp -f pregame_data.json data/pregame_data.json
-          if git diff --quiet -- data/pregame_data.json; then
+          git add data/pregame_data.json
+          if git diff --cached --quiet -- data/pregame_data.json; then
             echo "無變化，不提交。"
             exit 0
           fi
-          git add data/pregame_data.json
           git commit -m "chore: update pregame_data.json [skip ci]"
           # 與 B 共用同一個 repo，推送前先 rebase 避免衝突
           git pull --rebase --autostash origin "${GITHUB_REF_NAME}"
