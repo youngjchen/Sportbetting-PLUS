@@ -12,8 +12,11 @@
 (function (global) {
   'use strict';
 
-  // ⚠️ 確認這條跟你的 odds add-on 同一個 repo/分支（main 或 master）
-  var RAW_URL = 'https://raw.githubusercontent.com/youngjchen/Sportbetting-PLUS/main/data/pregame_data.json';
+  // 跟你的 odds add-on 同樣的抓法：raw 主、Pages 相對路徑備援（不用另外設分支）
+  var REPO = 'youngjchen/Sportbetting-PLUS';   // owner/repo（改名要同步改）
+  var BRANCH = 'main';
+  var FEED_URL = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/data/pregame_data.json';
+  var FEED_FALLBACK = './data/pregame_data.json';
 
   // ---- 純邏輯（可單元測試）----
   var ALIAS = { '華老鷹': '韓華鷹' };               // 玩運彩→排盤板 唯一不規則隊名
@@ -63,9 +66,13 @@
   if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     var DATA = [], loaded = false;
 
+    function fetchJson(url) {
+      return fetch(url + '?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
+    }
     function load() {
-      fetch(RAW_URL + '?t=' + Date.now(), { cache: 'no-store' })
-        .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      fetchJson(FEED_URL)
+        .catch(function () { return fetchJson(FEED_FALLBACK); })   // raw 失敗就改用 Pages 相對路徑
         .then(function (arr) { DATA = Array.isArray(arr) ? arr : []; loaded = true; console.log('[玩運彩融合] 載入', DATA.length, '場'); })
         .catch(function (e) { console.warn('[玩運彩融合] 載入失敗（結算照常運作）:', e.message); });
     }
