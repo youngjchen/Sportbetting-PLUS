@@ -97,7 +97,10 @@
     function inject(it) {
       var body = $('settleBody'); if (!body) return;
       var old = body.querySelector('.ps-banner'); if (old) old.remove();   // 修改結算重開時清掉
-      var activeDate = (global.doc && global.doc.activeDate) || null;
+      // doc 在板子裡是 let 宣告（全域語彙變數，不在 window 上）→ 必須讀裸 doc，像 odds add-on 那樣
+      var activeDate = null;
+      try { if (typeof doc !== 'undefined' && doc && doc.activeDate) activeDate = doc.activeDate; } catch (e) {}
+      if (!activeDate && global.doc && global.doc.activeDate) activeDate = global.doc.activeDate;
       var g = findGame(DATA, it, activeDate);
       if (!g) return;                                                       // 沒對應場：完全不動
 
