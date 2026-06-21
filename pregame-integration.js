@@ -186,23 +186,21 @@
     }
     function psLineTable(g) {
       var ls = g.lineScore;
-      if (!ls || !ls.away) return '<div style="color:#6f8597;padding:3px 2px;">尚無逐局</div>';
+      if (!ls || !ls.away) return '<div class="empty">尚無逐局</div>';
       var n = Math.max(ls.away.length, ls.home.length);
-      var th = function (t) { return '<td style="padding:1px 4px;text-align:center;color:#5f7587;">' + t + '</td>'; };
-      var cell = function (v) { return '<td style="padding:1px 4px;text-align:center;color:#bcd3e6;">' + (v == null || v === '' ? '·' : esc(v)) + '</td>'; };
-      var head = '<td style="padding:1px 4px;"></td>';
+      var th = function (t) { return '<td class="hd">' + t + '</td>'; };
+      var cell = function (v) { return '<td>' + (v == null || v === '' ? '·' : esc(v)) + '</td>'; };
+      var head = '<td></td>';
       for (var i = 1; i <= n; i++) head += th(i);
-      head += '<td style="padding:1px 5px;text-align:center;color:#7ec3ff;border-left:1px solid #2a4357;">R</td>' + th('H') + th('E');
+      head += '<td class="rhd">R</td>' + th('H') + th('E');
       var rowOf = function (name, arr, rhe) {
-        var tds = '<td style="padding:1px 5px;color:#9fb6c9;white-space:nowrap;">' + esc(name) + '</td>';
+        var tds = '<td class="nm">' + esc(name) + '</td>';
         for (var i = 0; i < n; i++) tds += cell(arr[i]);
         var R = rhe ? num0(rhe.r) : '', H = rhe ? num0(rhe.h) : '', E = rhe ? num0(rhe.e) : '';
-        tds += '<td style="padding:1px 5px;text-align:center;color:#e7f1fb;font-weight:700;border-left:1px solid #2a4357;">' + R + '</td>'
-             + '<td style="padding:1px 4px;text-align:center;color:#9fb6c9;">' + H + '</td>'
-             + '<td style="padding:1px 4px;text-align:center;color:#9fb6c9;">' + E + '</td>';
+        tds += '<td class="rcol">' + R + '</td><td>' + H + '</td><td>' + E + '</td>';
         return '<tr>' + tds + '</tr>';
       };
-      return '<table style="border-collapse:collapse;font-size:11px;margin:2px 0 3px;">'
+      return '<table>'
         + '<tr>' + head + '</tr>' + rowOf(g.awayTeam, ls.away, ls.awayRHE) + rowOf(g.homeTeam, ls.home, ls.homeRHE) + '</table>';
     }
     function psRowHtml(g) {
@@ -210,17 +208,16 @@
       var as = g.awayScore == null ? '–' : g.awayScore;
       var hs = g.homeScore == null ? '–' : g.homeScore;
       var chip = fin ? '結束' : (g.inning || '進行中');
-      var chipBg = fin ? '#37475a' : '#1f6f4a', chipFg = fin ? '#b9c9d6' : '#7df0b0';
       // ✕ 每一列都有（不只已結束）→ 卡住的延期場也能手動移除
-      var x = '<span class="ps-x" data-oid="' + esc(g.officialId) + '" title="從面板移除" style="margin-left:5px;color:#7d92a3;cursor:pointer;font-weight:700;padding:0 3px;">✕</span>';
+      var x = '<span class="ps-x" data-oid="' + esc(g.officialId) + '" title="從面板移除">✕</span>';
       var head =
-        '<div class="ps-row" data-oid="' + esc(g.officialId) + '" style="display:flex;align-items:center;gap:6px;padding:5px 8px;cursor:pointer;border-top:1px solid #1b2c3a;">'
-        +   '<span style="flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#dcebf8;font-size:12.5px;">'
-        +     esc(g.awayTeam) + ' <b style="color:#fff;">' + as + '</b> <span style="color:#5f7587;">:</span> <b style="color:#fff;">' + hs + '</b> ' + esc(g.homeTeam)
+        '<div class="ps-row" data-oid="' + esc(g.officialId) + '">'
+        +   '<span class="ps-teams">'
+        +     esc(g.awayTeam) + ' <b>' + as + '</b> <span class="sep">:</span> <b>' + hs + '</b> ' + esc(g.homeTeam)
         +   '</span>'
-        +   '<span style="font-size:10.5px;padding:1px 6px;border-radius:8px;background:' + chipBg + ';color:' + chipFg + ';white-space:nowrap;">' + esc(chip) + '</span>' + x
+        +   '<span class="ps-chip ' + (fin ? 'fin' : 'live') + '">' + esc(chip) + '</span>' + x
         + '</div>';
-      var detail = psExpanded[g.officialId] ? '<div style="padding:0 8px 5px;overflow-x:auto;">' + psLineTable(g) + '</div>' : '';
+      var detail = psExpanded[g.officialId] ? '<div class="ps-line">' + psLineTable(g) + '</div>' : '';
       return head + detail;
     }
     // ---- 最小化：收進快捷鍵的「比分」鈕 ----
@@ -228,7 +225,7 @@
       var b = document.getElementById('ps-launcher');
       if (b) return b;
       b = document.createElement('button');
-      b.id = 'ps-launcher'; b.type = 'button'; b.title = '展開即時比分'; b.textContent = '比分';
+      b.id = 'ps-launcher'; b.type = 'button'; b.title = '展開即時比分'; b.innerHTML = '比分<span class="usc" style="display:none"></span>';
       b.addEventListener('click', function (e) { e.preventDefault(); e.stopPropagation(); psMin = false; psUI.min = false; psSaveUI(); renderPanel(); });
       var bar = document.getElementById('zoomctlBtns');               // 真的收進快捷鍵那一排（沿用快捷鍵按鈕樣式）
       if (bar) { b.className = 'fit'; bar.insertBefore(b, bar.firstChild); }
@@ -241,15 +238,60 @@
     function psShowLauncher(list) {
       var b = psEnsureLauncher();
       var liveN = list.filter(function (g) { return g.status === 'inprogress'; }).length;
-      b.textContent = '比分' + (liveN ? ' ' + liveN : '');
+      var bd = b.querySelector('.usc');
+      if (bd) { if (liveN) { bd.textContent = liveN; bd.style.display = ''; } else bd.style.display = 'none'; }
       b.style.display = '';
     }
     function psHideLauncher() { var b = document.getElementById('ps-launcher'); if (b) b.style.display = 'none'; }
 
+    function psEnsureStyle() {
+      if (document.getElementById('ps-style')) return;
+      var s = document.createElement('style');
+      s.id = 'ps-style';
+      s.textContent = [
+        '#ps-live-panel{background:var(--panel,#151a22);border:1px solid var(--line,#2a3340);border-radius:12px;box-shadow:0 12px 30px rgba(0,0,0,.5);color:var(--ink,#e9eef5);font-family:"Noto Sans TC",sans-serif;font-variant-numeric:tabular-nums;}',
+        '#ps-live-panel .ps-head{display:flex;align-items:center;gap:8px;padding:10px 12px;cursor:move;background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);border-bottom:1px solid var(--line,#2a3340);user-select:none;touch-action:none;}',
+        '#ps-live-panel .ps-title{display:flex;align-items:center;gap:7px;font-family:"Oswald",sans-serif;font-weight:600;letter-spacing:.06em;font-size:14px;text-transform:uppercase;color:var(--ink,#e9eef5);}',
+        '#ps-live-panel .ps-title .dot{width:9px;height:9px;border-radius:50%;background:var(--mlb,#28c76f);box-shadow:0 0 8px rgba(40,199,111,.6);}',
+        '#ps-live-panel .ps-count{margin-left:auto;color:var(--ink-dim,#8a96a6);font-size:12px;}',
+        '#ps-live-panel .ps-min{display:flex;align-items:center;justify-content:center;width:30px;height:30px;border-radius:8px;cursor:pointer;color:var(--ink-dim,#8a96a6);font-size:18px;line-height:1;}',
+        '#ps-live-panel .ps-min:hover{color:var(--ink,#e9eef5);background:rgba(255,255,255,.06);}',
+        '#ps-live-panel .ps-body{overflow-y:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;}',
+        '#ps-live-panel .ps-row{display:flex;align-items:center;gap:7px;padding:9px 11px;cursor:pointer;border-top:1px solid var(--line,#2a3340);}',
+        '#ps-live-panel .ps-row:hover{background:rgba(255,255,255,.03);}',
+        '#ps-live-panel .ps-teams{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:14px;color:var(--ink,#e9eef5);}',
+        '#ps-live-panel .ps-teams b{font-weight:800;color:var(--ink,#e9eef5);}',
+        '#ps-live-panel .ps-teams .sep{color:var(--ink-dim,#8a96a6);margin:0 2px;}',
+        '#ps-live-panel .ps-chip{font-size:11.5px;font-weight:700;padding:3px 9px;border-radius:9px;white-space:nowrap;}',
+        '#ps-live-panel .ps-chip.live{background:rgba(40,199,111,.16);color:var(--mlb,#28c76f);}',
+        '#ps-live-panel .ps-chip.fin{background:rgba(138,150,166,.16);color:var(--ink-dim,#8a96a6);}',
+        '#ps-live-panel .ps-x{display:flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:8px;flex:0 0 auto;cursor:pointer;color:var(--ink-dim,#8a96a6);font-weight:700;font-size:14px;}',
+        '#ps-live-panel .ps-x:hover{color:var(--danger,#ff5b6e);background:rgba(255,91,110,.12);}',
+        '#ps-live-panel .ps-line{padding:0 11px 7px;overflow-x:auto;}',
+        '#ps-live-panel .ps-line table{border-collapse:collapse;font-size:12px;font-variant-numeric:tabular-nums;margin:2px 0 3px;}',
+        '#ps-live-panel .ps-line td{padding:2px 5px;text-align:center;color:var(--ink,#e9eef5);}',
+        '#ps-live-panel .ps-line .nm{text-align:left;white-space:nowrap;color:var(--ink-dim,#8a96a6);}',
+        '#ps-live-panel .ps-line .hd{color:var(--ink-dim,#8a96a6);}',
+        '#ps-live-panel .ps-line .rcol{font-weight:700;border-left:1px solid var(--line,#2a3340);}',
+        '#ps-live-panel .ps-line .rhd{color:var(--kbo,#3d8bfd);border-left:1px solid var(--line,#2a3340);}',
+        '#ps-live-panel .ps-line .empty{color:var(--ink-dim,#8a96a6);padding:3px 2px;}',
+        '#ps-live-panel .ps-resize{position:absolute;right:0;bottom:0;width:20px;height:20px;cursor:nwse-resize;opacity:.5;touch-action:none;background:linear-gradient(135deg,transparent 50%,var(--ink-dim,#8a96a6) 50%);border-bottom-right-radius:12px;}',
+        '@media (pointer:coarse){',
+        '#ps-live-panel .ps-row{padding:12px 11px;}',
+        '#ps-live-panel .ps-teams{font-size:15px;}',
+        '#ps-live-panel .ps-x{width:36px;height:36px;font-size:16px;}',
+        '#ps-live-panel .ps-min{width:36px;height:36px;font-size:20px;}',
+        '#ps-live-panel .ps-resize{width:30px;height:30px;}',
+        '#ps-live-panel .ps-line table{font-size:13px;}',
+        '}'
+      ].join('');
+      (document.head || document.documentElement).appendChild(s);
+    }
     function psCreateShell() {
+      psEnsureStyle();
       var p = document.createElement('div');
       p.id = 'ps-live-panel';
-      p.style.cssText = 'position:fixed;width:236px;max-height:62vh;display:flex;flex-direction:column;z-index:9998;background:#101c27;border:1px solid rgba(33,66,85,.6);border-radius:10px;box-shadow:0 6px 22px rgba(0,0,0,.45);font-family:inherit;overflow:hidden;';
+      p.style.cssText = 'position:fixed;width:236px;max-height:62vh;display:flex;flex-direction:column;z-index:9998;overflow:hidden;';
       var vw = (typeof window !== 'undefined' && window.innerWidth) || 1024;
       var vh = (typeof window !== 'undefined' && window.innerHeight) || 768;
       p.style.top = Math.max(0, Math.min(vh - 60, psUI.top != null ? psUI.top : 66)) + 'px';
@@ -257,13 +299,13 @@
       else { p.style.right = '14px'; }
       if (psUI.w) p.style.width = psUI.w + 'px';
       p.innerHTML =
-        '<div class="ps-head" style="display:flex;align-items:center;gap:6px;padding:7px 10px;cursor:move;background:#13202c;border-bottom:1px solid rgba(33,66,85,.4);user-select:none;touch-action:none;">'
-        +   '<span style="font-weight:700;color:#7ec3ff;font-size:12.5px;">即時比分</span>'
-        +   '<span class="ps-count" style="color:#8aa0b4;font-size:11.5px;flex:1;"></span>'
-        +   '<span class="ps-min" title="最小化（收進快捷鍵）" style="cursor:pointer;color:#9fb6c9;font-size:15px;line-height:1;padding:0 4px;">▁</span>'
+        '<div class="ps-head">'
+        +   '<span class="ps-title"><span class="dot"></span>即時比分</span>'
+        +   '<span class="ps-count"></span>'
+        +   '<span class="ps-min" title="最小化（收進快捷鍵）">▁</span>'
         + '</div>'
-        + '<div class="ps-body" style="overflow-y:auto;"></div>'
-        + '<div class="ps-resize" title="拖曳調整大小" style="position:absolute;right:0;bottom:0;width:18px;height:18px;cursor:nwse-resize;opacity:.5;touch-action:none;background:linear-gradient(135deg,transparent 50%,#5f7587 50%);border-bottom-right-radius:10px;"></div>';
+        + '<div class="ps-body"></div>'
+        + '<div class="ps-resize" title="拖曳調整大小"></div>';
       document.body.appendChild(p);
       if (psUI.bodyH) p.querySelector('.ps-body').style.maxHeight = psUI.bodyH + 'px';
       p.querySelector('.ps-head').addEventListener('pointerdown', psStartDrag);

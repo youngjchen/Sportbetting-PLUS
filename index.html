@@ -46,7 +46,7 @@
   /* form controls don't inherit numeric figures by UA default — opt them in so
      odds/handicap inputs and date counts get the same aligned tabular digits. */
   button,input,select,textarea{font-variant-numeric:inherit;font-feature-settings:inherit;}
-  html,body{margin:0;height:100%;height:100dvh;}
+  html,body{margin:0;height:100%;height:100dvh;overscroll-behavior:none;}
   body{
     background:
       radial-gradient(1200px 500px at 50% -10%, #18202b 0%, transparent 60%),
@@ -125,6 +125,7 @@
   #zoomctl.collapsed #zoomctlBtns{display:none;}
   #zoomctlToggle{align-self:flex-end;}
   #zoomctl button{
+    position:relative;
     width:42px;height:42px;border-radius:11px;border:1px solid var(--line);
     background:rgba(21,26,34,.92);color:var(--ink);font-size:21px;font-weight:700;line-height:1;
     cursor:pointer;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(0,0,0,.4);
@@ -132,8 +133,12 @@
   }
   #zoomctl button:hover{border-color:#3a4756;background:rgba(34,42,54,.95);}
   #zoomctl button.fit{font-size:15px;}
-  #zoomctl button#batchSettleBtn{font-size:14px;font-weight:700;font-family:"Noto Sans TC";position:relative;}
-  #zoomctl button#batchSettleBtn .usc{
+  /* 結算 / 比分 / 總結 — identical labelled buttons (same size/font, never wrap to vertical) */
+  #zoomctl button#batchSettleBtn,
+  #zoomctl button#ps-launcher,
+  #zoomctl button#sumLauncher{font-size:14px;font-weight:700;font-family:"Noto Sans TC";white-space:nowrap;}
+  /* unified count badge for 結算 / 比分 / 總結 (top-right corner, same look) */
+  #zoomctl button .usc{
     position:absolute;top:-5px;right:-5px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;
     background:var(--hot);color:#1a1205;font-size:11px;font-weight:800;display:grid;place-items:center;font-family:"Oswald";
   }
@@ -326,8 +331,7 @@
   }
   #summary .sumhead .dot{width:9px;height:9px;border-radius:50%;background:var(--hot);box-shadow:0 0 8px var(--hot-glow);}
   #summary .sumhead .count{margin-left:auto;color:var(--ink-dim);font-family:"Noto Sans TC";font-weight:700;font-size:12px;letter-spacing:0;}
-  #summary .sumhead .sumtoggle{margin-left:8px;color:var(--ink-dim);font-size:13px;cursor:pointer;padding:2px 4px;border-radius:6px;}
-  #summary .sumhead .sumtoggle:hover{color:var(--ink);background:rgba(255,255,255,.06);}
+  /* (removed dead .sumtoggle rules — element is now .summin) */
   #summary.mini{width:auto;}
   #summary.mini .sumhead{border-bottom:none;}
   #summary .sumbody{padding:8px 0;max-height:46vh;overflow:auto;}
@@ -2307,14 +2311,14 @@ function ensureSummaryLauncher(){
   let b = document.getElementById("sumLauncher");
   if(b) return b;
   b = document.createElement("button");
-  b.id="sumLauncher"; b.type="button"; b.className="fit"; b.title="展開重點總結"; b.textContent="總結";
+  b.id="sumLauncher"; b.type="button"; b.className="fit"; b.title="展開重點總結"; b.innerHTML='總結<span class="usc" style="display:none"></span>';
   b.style.display="none";
   b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); doc.summaryMin=false; save(); render(); });
   const bar = document.getElementById("zoomctlBtns");
   if(bar) bar.insertBefore(b, bar.firstChild); else document.body.appendChild(b);
   return b;
 }
-function showSummaryLauncher(n){ const b=ensureSummaryLauncher(); b.textContent="總結"+(n?` ${n}`:""); b.style.display=""; }
+function showSummaryLauncher(n){ const b=ensureSummaryLauncher(); const bd=b.querySelector(".usc"); if(bd){ if(n){ bd.textContent=n; bd.style.display=""; } else bd.style.display="none"; } b.style.display=""; }
 function hideSummaryLauncher(){ const b=document.getElementById("sumLauncher"); if(b) b.style.display="none"; }
 let sumRz = null;
 function startSummaryResize(e, box, body){
@@ -2576,7 +2580,9 @@ window.addEventListener("pointercancel", e=>{
 /* ---------------- canvas gestures: pan (1 finger) + pinch zoom (2 fingers) ---------------- */
 const gesture = { pointers:new Map(), mode:null, startX:0, startY:0, startView:null, pinch:null, lastTap:0,
                   // velocity tracking for inertia
-                  velSamples:[], lastX:0, lastY:0, lastT:0 };
+                  velSamples:[], lastX:0, lastY:0, lastT:0,
+                  // touch axis-lock: a vertical swipe stays vertical (no sideways drift)
+                  axis:null, lockAxis:false };
 // inertia animation state
 let inertia = null; // {vx, vy, raf}
 function stopInertia(){
@@ -2626,6 +2632,8 @@ canvas.addEventListener("pointerdown", e=>{
     gesture.startView = {...view};
     gesture.velSamples.length=0;
     gesture.lastX = e.clientX; gesture.lastY = e.clientY; gesture.lastT = performance.now();
+    // touch panning locks to the dominant axis; mouse/trackpad keeps free 2D pan
+    gesture.axis = null; gesture.lockAxis = (e.pointerType === "touch");
     canvas.classList.add("panning");
   } else if(gesture.pointers.size===2){
     gesture.mode = "pinch";
@@ -2644,8 +2652,16 @@ canvas.addEventListener("pointermove", e=>{
   if(e.cancelable) e.preventDefault();
 
   if(gesture.mode==="pan" && gesture.pointers.size===1){
-    view.x = gesture.startView.x + (e.clientX - gesture.startX);
-    view.y = gesture.startView.y + (e.clientY - gesture.startY);
+    const dx = e.clientX - gesture.startX, dy = e.clientY - gesture.startY;
+    if(gesture.lockAxis){
+      // pick the dominant axis once the finger has clearly moved, then hold it
+      if(!gesture.axis && Math.hypot(dx,dy) > 8) gesture.axis = Math.abs(dx) > Math.abs(dy) ? "x" : "y";
+      view.x = gesture.startView.x + (gesture.axis==="y" ? 0 : dx);
+      view.y = gesture.startView.y + (gesture.axis==="x" ? 0 : dy);
+    } else {
+      view.x = gesture.startView.x + dx;
+      view.y = gesture.startView.y + dy;
+    }
     applyView();
     // record velocity sample (px per ms)
     const now = performance.now();
@@ -2690,7 +2706,10 @@ function endGesturePointer(e){
         const recent = gesture.velSamples.filter(s=> performance.now()-s.t < 80);
         if(recent.length){
           let vx=0, vy=0; recent.forEach(s=>{vx+=s.vx; vy+=s.vy;});
-          startInertia(vx/recent.length, vy/recent.length);
+          vx/=recent.length; vy/=recent.length;
+          // keep coasting on the locked axis so inertia doesn't drift sideways
+          if(gesture.axis==="y") vx=0; else if(gesture.axis==="x") vy=0;
+          startInertia(vx, vy);
         }
       }
     }
@@ -2701,6 +2720,7 @@ function endGesturePointer(e){
     const p=[...gesture.pointers.values()][0];
     gesture.mode="pan"; gesture.startX=p.x; gesture.startY=p.y; gesture.startView={...view};
     gesture.velSamples.length=0; gesture.lastX=p.x; gesture.lastY=p.y; gesture.lastT=performance.now();
+    gesture.axis=null; gesture.lockAxis=true;   // coming off a pinch = touch, so lock
   }
 }
 canvas.addEventListener("pointerup", endGesturePointer);
