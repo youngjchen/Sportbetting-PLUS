@@ -966,7 +966,7 @@
   <div id="datebar"></div>
 
   <div id="canvas">
-    <div id="empty">把下方的隊伍標籤<b>拖上來</b>，<br>再把兩隊<b>疊在一起</b>就會吸成一場對戰<br><span style="font-size:13px">單指拖空白＝移動畫面　·　兩指＝縮放</span></div>
+    <div id="empty">今天還沒有比賽。<br>從上方「<b>⋯ 更多</b>」選單<b>匯入比賽資料</b>，<br>或用「<b>⚡ 用賠率自動排今天的盤</b>」帶入。</div>
     <div id="world"></div>
     <div id="saveBadge"></div>
     <div id="zoomctl">
@@ -1138,6 +1138,161 @@
     </div>
   </div>
 
+<style id="bver">
+/* ============================================================
+   B 版版面：放棄自由畫布，改乾淨響應式（電腦橫排卡 / 手機豎排）
+   ============================================================ */
+#canvas{ overflow:auto !important; cursor:default !important; background-image:none !important; touch-action:auto !important; -webkit-user-select:auto; user-select:auto; }
+#canvas.panning{ cursor:default !important; }
+#empty{ pointer-events:none; }
+/* 放棄自由畫布後，底部隊伍拖曳盤不再使用（改用 ⚡自動排盤 / 匯入） */
+#tray{ display:none !important; }
+#world{
+  position:static !important; transform:none !important; width:auto !important; height:auto !important;
+  will-change:auto !important;
+  display:flex; flex-direction:column; align-items:center; gap:14px;
+  padding:16px 14px 150px; box-sizing:border-box;
+}
+
+/* ---- 兩區式比賽卡 ---- */
+.card.bcard{
+  position:static !important; transform:none !important;
+  width:100%; max-width:960px; overflow:visible;
+  background:linear-gradient(180deg,var(--panel),var(--panel-2));
+  border:1px solid var(--line); border-radius:16px;
+  box-shadow:0 10px 26px rgba(0,0,0,.45); touch-action:auto;
+}
+.card.bcard.has-strong{ border-color:rgba(255,176,46,.55); box-shadow:0 0 0 1px rgba(255,176,46,.22),0 10px 26px rgba(0,0,0,.5); }
+.card.bcard.has-strong-dim{ border-color:rgba(255,176,46,.28); }
+.card.bcard.has-conflict{ border-color:var(--conflict); }
+.card.bcard.has-cross{ border-color:var(--cross); }
+
+.bhead{ display:flex; align-items:center; gap:8px; padding:11px 16px 9px; border-bottom:1px solid rgba(255,255,255,.06); flex-wrap:wrap; }
+.btime{ font-family:"Oswald"; font-size:13px; letter-spacing:.04em; color:var(--ink-dim); }
+.bhead-sp{ flex:1 1 auto; }
+.bwarn{ font-size:12px; font-weight:700; padding:3px 9px; border-radius:7px; white-space:nowrap; cursor:help; }
+.bwarn.avoid{ color:#ff6b6b; background:rgba(255,59,92,.12); border:1px solid rgba(255,59,92,.5); }
+.bwarn.ok{ color:#2ee07f; background:rgba(40,199,111,.10); border:1px solid rgba(40,199,111,.45); }
+.bwarn.note{ color:#ffb02e; background:rgba(255,176,46,.10); border:1px solid rgba(255,176,46,.4); }
+.bbadge{
+  font-family:"Noto Sans TC"; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;
+  color:#ffb24d; background:rgba(255,150,40,.10); border:1px solid rgba(255,150,40,.5);
+  border-radius:8px; padding:4px 10px; transition:.12s;
+}
+.bbadge:hover{ background:rgba(255,150,40,.22); }
+.bbadge.on{ color:#1a1205; background:#ff9f43; border-color:#ff9f43; }
+.bbadge.done{ color:#2ee07f; background:rgba(40,199,111,.10); border-color:rgba(40,199,111,.5); }
+.bico{ width:26px; height:26px; display:grid; place-items:center; border-radius:7px; cursor:pointer; color:var(--ink-dim); font-size:14px; flex:0 0 auto; }
+.bico:hover{ background:#222a36; color:var(--ink); }
+.bico.bdel:hover{ color:var(--danger); }
+
+.bbody{ display:grid; grid-template-columns:224px 1fr; align-items:stretch; }
+.bscore{ display:flex; flex-direction:column; align-items:stretch; justify-content:center; gap:7px; padding:14px 12px; border-right:1px solid rgba(255,255,255,.07); }
+.bana{ padding:10px 16px 14px; min-width:0; }
+
+.bteam{ display:flex; align-items:center; gap:10px; width:100%; }
+.blogo{ width:46px; height:46px; border-radius:50%; background:#fff; display:grid; place-items:center; flex:0 0 auto; box-shadow:0 2px 8px rgba(0,0,0,.4); overflow:hidden; }
+.blogo img.tlogo{ width:38px; height:38px; object-fit:contain; }
+.blogo .bfallback{ font-weight:900; font-size:18px; color:#1a2230; font-family:"Noto Sans TC"; }
+.bteam-main{ flex:1 1 auto; min-width:0; }
+.bteam-nm{ font-weight:900; font-size:17px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:5px; }
+.bteam-pcts{ display:flex; flex-direction:column; margin-top:2px; font-family:"Oswald"; font-size:11px; line-height:1.55; }
+.bteam-pcts .pm{ color:#9fb0c4; } .bteam-pcts .pm b{ color:#d8e6f5; font-weight:700; }
+.bteam-pcts .pi{ color:#8a97a8; } .bteam-pcts .pi b{ color:#bcd0e4; font-weight:700; }
+.bteam-pcts .l{ color:var(--ink-dim); letter-spacing:.03em; margin-right:3px; }
+.bteam-sc{ font-family:"Oswald"; font-weight:700; font-size:30px; color:var(--ink); flex:0 0 auto; min-width:26px; text-align:center; }
+.bteam.win .bteam-sc{ color:#2ee07f; }
+.bvs{ font-family:"Oswald"; font-size:12px; letter-spacing:.12em; color:var(--ink-dim); align-self:center; padding:1px 0; }
+
+.binfo{ display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; border:1px solid var(--ink-dim); color:var(--ink-dim); font-size:10px; font-weight:700; font-family:Georgia,serif; font-style:italic; cursor:pointer; flex:0 0 auto; user-select:none; }
+.binfo:hover{ border-color:var(--lit); color:var(--lit); }
+.bpop{ position:fixed; z-index:6000; min-width:210px; max-width:320px; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.6); padding:11px 13px; font-size:12px; line-height:1.75; color:var(--ink); }
+.bpop .ph{ font-family:"Oswald"; font-size:10px; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:5px; }
+.bpop .boxes{ display:flex; gap:4px; flex-wrap:wrap; margin-top:3px; }
+.bpop .bx{ width:18px; height:18px; border-radius:5px; display:grid; place-items:center; font-size:10px; font-weight:700; font-family:"Oswald"; }
+.bpop .bx.w{ background:rgba(40,199,111,.16); color:#2ee07f; border:1px solid rgba(40,199,111,.45); }
+.bpop .bx.l{ background:rgba(255,92,92,.10); color:#ff7a7a; border:1px solid rgba(255,92,92,.4); }
+.bpop .bx.t{ background:rgba(255,255,255,.05); color:#8a97a8; border:1px solid var(--line); }
+
+.bana-head{ display:flex; align-items:center; gap:8px; padding:0 0 6px; }
+.bana-lbl{ font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); }
+.bvenue{ display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
+.bvenue button{ font-size:11px; padding:2px 10px; border:none; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
+.bvenue button.on{ background:#28c76f; color:#06210f; font-weight:700; }
+.bana-sp{ flex:1 1 auto; }
+
+.bmkt-sec{ display:flex; align-items:center; gap:8px; padding:7px 0 3px; font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); border-top:1px solid rgba(255,255,255,.06); }
+.bmkt:first-child .bmkt-sec{ border-top:none; }
+.bmkt-sec .mname{ color:#cdd8e6; font-size:12px; letter-spacing:.06em; flex:0 0 auto; }
+.bmkt-sec.conflict .mname{ color:var(--conflict); }
+.bmkt-sec .bswap{ cursor:pointer; color:#ff9f43; font-size:14px; line-height:1; }
+.bmkt-sec .flaghint{ color:#ffb02e; font-size:11px; letter-spacing:0; cursor:help; }
+.bmkt-sec .basis{ display:inline-flex; align-items:center; gap:4px; font-size:11px; letter-spacing:0; color:var(--ink-dim); }
+.bmkt-sec .basis input{ width:44px; background:#0c0f14; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:12px; font-weight:700; text-align:center; padding:2px; font-family:"Oswald"; outline:none; }
+.bmkt-sec .basis input:focus{ border-color:var(--lit); }
+.bmkt-sec .mksp{ flex:1 1 auto; }
+.bmkt-sec .bcmt{ font-size:11px; letter-spacing:0; color:#9fb0c4; white-space:nowrap; font-family:"Noto Sans TC"; text-align:right; }
+.bmkt-sec .bcmt .l{ color:var(--ink-dim); font-family:"Oswald"; font-size:10px; letter-spacing:.05em; margin-right:3px; }
+.bmkt-sec .bcmt .tm{ color:#9bd5ff; font-weight:600; }
+.bmkt-sec .bcmt.flat{ color:var(--ink-dim); }
+.bmkt-sec .bcmt.strong .tm{ color:#ffd27f; }
+.bmkt-sec .binfo{ margin-left:1px; }
+
+.bmkt-row{ display:flex; align-items:center; gap:9px; padding:4px 0; }
+.bmkt-row .bside{ font-family:"Oswald"; font-size:10px; color:#0c0f14; background:var(--ink-dim); border-radius:5px; padding:2px 6px; font-weight:700; flex:0 0 auto; }
+.bmkt-row .bside.give{ background:var(--lit); }
+.bmkt-row .bside.recv{ background:#5b6b80; color:#dfe6ef; }
+.bmkt-row .bnm{ font-weight:700; font-size:14px; color:var(--ink); flex:0 0 auto; cursor:pointer; white-space:nowrap; user-select:none; }
+.bmkt-row .bnm .hv{ color:var(--ink-dim); font-family:"Oswald"; font-weight:700; margin-left:3px; }
+.blights{ display:flex; align-items:center; gap:5px; flex:0 0 auto; cursor:pointer; }
+.blights .lt{ width:15px; height:15px; border-radius:50%; flex:0 0 auto; box-sizing:border-box; transition:.1s; }
+.blights .lt.off{ border:1.5px solid #3a4756; background:transparent; }
+.blights .lt.amber{ background:radial-gradient(circle at 35% 30%, #ffe39a, var(--lit) 70%); box-shadow:0 0 7px var(--lit-glow); }
+.blights .lt.red{ background:radial-gradient(circle at 35% 30%, #ffc2a0, var(--hot) 72%); box-shadow:0 0 8px var(--hot-glow); }
+.blights .lt.purple{ background:radial-gradient(circle at 35% 30%, #e6c2ff, #a05aff 72%); box-shadow:0 0 8px rgba(160,90,255,.55); }
+.bmkt-row .bmksp{ flex:1 1 auto; }
+.bmkt-row .bcover{ font-family:"Oswald"; font-weight:700; font-size:14px; color:#aeb9c8; flex:0 0 auto; min-width:40px; text-align:right; }
+.bmkt-row .bcover.hi{ color:#28c76f; } .bmkt-row .bcover.lo{ color:var(--conflict); } .bmkt-row .bcover.ls{ color:#5b6b80; }
+.bmkt-row .bcover .ss{ font-size:9px; color:#5b6b80; }
+.bmkt-row.conflict .bnm{ color:var(--conflict); }
+
+.bsettled{ display:flex; flex-wrap:wrap; gap:6px; padding:8px 16px 12px; border-top:1px solid rgba(255,255,255,.06); }
+.bpill{ font-size:12px; font-weight:700; padding:3px 9px; border-radius:7px; border:1px solid var(--line); color:var(--ink-dim); }
+.bpill.hit{ color:#2ee07f; border-color:rgba(40,199,111,.5); background:rgba(40,199,111,.08); }
+.bpill.miss{ color:#ff6b6b; border-color:rgba(255,59,92,.5); background:rgba(255,59,92,.08); }
+.bpill.void{ color:#9fb0c4; }
+.bpill.sc{ color:var(--ink); border-color:var(--lit); background:rgba(255,176,46,.06); }
+
+@media (max-width:680px){
+  #world{ padding:10px 8px 150px; gap:10px; }
+  .bbody{ grid-template-columns:1fr; }
+  .bscore{ flex-direction:row; justify-content:space-between; align-items:flex-start; gap:8px; border-right:none; border-bottom:1px solid rgba(255,255,255,.07); padding:12px; }
+  .bteam{ flex-direction:column; gap:4px; text-align:center; width:auto; flex:1 1 0; min-width:0; }
+  .bteam .blogo{ margin:0 auto; }
+  .bteam-main{ text-align:center; width:100%; }
+  .bteam-nm{ justify-content:center; }
+  .bteam-pcts{ align-items:center; }
+  .bteam-sc{ font-size:24px; }
+  .bana{ padding:8px 12px 12px; }
+  .bmkt-sec .bcmt{ font-size:10px; }
+}
+
+/* ---- 戰 / 重 浮動面板 tab ---- */
+#summary .sumtabs{ display:flex; gap:6px; margin-right:6px; }
+#summary .sumtab{ font-size:12px; font-weight:700; padding:3px 12px; border-radius:8px; border:1px solid var(--line); background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
+#summary .sumtab.on{ background:#28c76f; color:#06210f; border-color:#28c76f; }
+.zhanrow{ display:flex; align-items:center; gap:10px; padding:10px 14px; font-size:14px; }
+.zhanrow .zlbl{ font-family:"Oswald"; letter-spacing:.06em; color:#cdd8e6; flex:0 0 auto; }
+.zhanrow .zsp{ flex:1 1 auto; }
+.zhanrow .zhit{ font-family:"Oswald"; font-weight:700; color:#2ee07f; font-size:17px; }
+.zhanrow .zslash{ color:var(--ink-dim); }
+.zhanrow .zmiss{ font-family:"Oswald"; font-weight:700; color:#ff6b6b; font-size:17px; }
+.zhanrow .zrate{ font-family:"Oswald"; font-weight:700; color:var(--ink); font-size:16px; min-width:48px; text-align:right; }
+.zhanempty{ padding:16px 14px; color:var(--ink-dim); font-size:12px; line-height:1.7; }
+.zhanhint{ padding:2px 14px 12px; color:var(--ink-dim); font-size:11px; line-height:1.5; }
+</style>
+
+<script src="./logo-map.js"></script>
 <script>
 const LEAGUES = {
   mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
@@ -1210,6 +1365,8 @@ const canvas = $("#canvas"), ghost = $("#ghost"), emptyMsg = $("#empty");
 const world = $("#world");
 
 /* ---------------- viewport (pan + zoom) ---------------- */
+// B 版：放棄自由畫布，改響應式捲動版面。RESPONSIVE=true 時關閉拖曳/平移/縮放。
+let RESPONSIVE = true;
 // view stored per-board in state.view = {x,y,k}
 let view = { x:0, y:0, k:1 };
 const ZMIN = 0.3, ZMAX = 2.5;
@@ -1755,9 +1912,20 @@ function usedTeams(){
 
 /* ---------------- rendering items ---------------- */
 function render(){
+  if(typeof closeBPop==="function") closeBPop();
   [...world.querySelectorAll(".token,.card")].forEach(n=>n.remove());
   emptyMsg.style.display = state.items.length ? "none" : "flex";
-  state.items.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
+  let list = state.items;
+  if(RESPONSIVE){
+    // flow 版面：DOM 順序 = 視覺順序，依聯盟分組、組內保留原本順序
+    const ord = { mlb:0, npb:1, kbo:2, cpbl:3, zz:4 };
+    list = state.items.map((it,i)=>({it,i})).sort((a,b)=>{
+      const la = a.it.type==="match" ? (ord[leagueOf(a.it)] ?? 4) : 5;
+      const lb = b.it.type==="match" ? (ord[leagueOf(b.it)] ?? 4) : 5;
+      return (la-lb) || (a.i-b.i);
+    }).map(o=>o.it);
+  }
+  list.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
   renderSummary();
   buildTray();
   if(typeof refreshLeagueJumpBtns==="function") refreshLeagueJumpBtns();
@@ -1789,6 +1957,7 @@ function normMatch(it){
 }
 
 function renderCard(it){
+  if(RESPONSIVE){ normMatch(it); return renderCardB(it); }   // B 版兩區式卡
   normMatch(it);
   const el = document.createElement("div");
   el.className = "card"; el.dataset.id = it.id;
@@ -2153,6 +2322,330 @@ function mkTeam(it,side){
   return s;
 }
 
+/* ============================================================
+   B 版：兩區式比賽卡（電腦橫排 / 手機豎排）
+   - 左計分板：隊徽白圓底 + 隊名 + 比分；隊名旁 模型%/盤口%；近況用 ⓘ 圓鈕彈窗
+   - 右分析：過盤率[主客|綜] 切換；獨贏/讓分/大小 各兩邊：5槽燈號 + 過盤率% + 賠率動向評語
+   - 標頭：日期 + 顛倒▸輸入 / 賽前▸輸入（開結算）；填完賠率觸發的「差X/避開」顯示於此
+   - 獨贏的 ⓘ = STAKE 賠率評語（結算畫面那組盤口隱含/市場/模型）
+   ============================================================ */
+let _bpop = null;
+function closeBPop(){ if(_bpop){ _bpop.remove(); _bpop=null; } }
+document.addEventListener("pointerdown", (e)=>{
+  if(_bpop && !e.target.closest(".bpop") && !e.target.closest(".binfo") && !e.target.closest(".bwarn")) closeBPop();
+}, true);
+function bTogglePop(anchorEl, html){
+  if(_bpop && _bpop.__anchor===anchorEl){ closeBPop(); return; }
+  closeBPop();
+  const p = document.createElement("div"); p.className="bpop"; p.innerHTML=html; p.__anchor=anchorEl;
+  document.body.appendChild(p);
+  const r = anchorEl.getBoundingClientRect();
+  const pw = p.offsetWidth, ph = p.offsetHeight, vw = window.innerWidth, vh = window.innerHeight;
+  let left = r.left, top = r.bottom + 6;
+  if(left + pw > vw - 8) left = vw - 8 - pw;
+  if(left < 8) left = 8;
+  if(top + ph > vh - 8) top = Math.max(8, r.top - 6 - ph);
+  p.style.left = left+"px"; p.style.top = top+"px";
+  _bpop = p;
+}
+
+// 固定 5 槽：1-5 琥珀；溢出(6-10)從左變紅；11-12 最左變紫。永不換行。
+function bLightSlots(n){
+  n = Math.max(0, Math.min(12, n|0));
+  const out = [], overflow = Math.max(0, n-5), esc = Math.min(overflow, 5), purple = Math.max(0, n-10);
+  for(let i=0;i<5;i++){
+    if(n<=5) out.push(i<n ? "amber" : "off");
+    else if(i<purple) out.push("purple");
+    else if(i<esc) out.push("red");
+    else out.push("amber");
+  }
+  return out;
+}
+function bLightsEl(obj){
+  const wrap = document.createElement("div"); wrap.className="blights"; wrap.title="點燈條＝加一盞（長按整排清零）";
+  bLightSlots(obj.lights).forEach(c=>{ const d=document.createElement("div"); d.className="lt "+c; wrap.appendChild(d); });
+  let lpTimer=null, lpFired=false;
+  wrap.addEventListener("pointerdown", ()=>{ lpFired=false; lpTimer=setTimeout(()=>{ lpFired=true; if(obj.lights>0){ snapshot(); obj.lights=0; save(); render(); } }, 550); });
+  const cancel=()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } };
+  wrap.addEventListener("pointerup", cancel); wrap.addEventListener("pointerleave", cancel); wrap.addEventListener("pointercancel", cancel);
+  wrap.addEventListener("click", ()=>{ if(lpFired){ lpFired=false; return; } if(obj.lights<12){ snapshot(); obj.lights++; save(); render(); } });
+  return wrap;
+}
+
+// 模型勝率(log5) / 盤口隱含勝率(STAKE 賠率去水)：回傳 {mdlA,mdlH,impA,impH,mp,pH}
+function bWinProbs(it){
+  let mdlA=null, mdlH=null, pH=null;
+  try{
+    const season=seasonOf(doc.activeDate), A=pythRead(season,it.away), H=pythRead(season,it.home);
+    if(A&&H&&A.g>=20&&H.g>=20){ pH=log5Home(H.pyth,A.pyth,leagueHomeRate(season,leagueOf(it)));
+      if(pH!=null){ mdlH=Math.round(pH*100); mdlA=Math.round((1-pH)*100); } }
+  }catch(_){}
+  let impA=null, impH=null;
+  const mp = impliedAway(parseFloat(it.flipOddsAway), parseFloat(it.flipOddsHome));
+  if(mp!=null){ impA=Math.round(mp*100); impH=Math.round((1-mp)*100); }
+  return { mdlA, mdlH, impA, impH, mp, pH };
+}
+// 「差X / 避開」：只在填了 STAKE 賠率且有模型時計算
+function bGapInfo(it){
+  const wp = bWinProbs(it);
+  if(wp.mp==null || wp.pH==null) return null;
+  const gap = Math.round(Math.abs((1-wp.pH)-wp.mp)*100);
+  if(gap < GAP_WARN) return { cls:"ok", txt:`差 ${gap}`, title:`模型與盤口差 ${gap}pp，正常範圍` };
+  const ea=parseFloat(it.eraAway), eh=parseFloat(it.eraHome);
+  if(!isNaN(ea)&&!isNaN(eh)){
+    const adj=Math.abs((1-eraAdjustedHome(wp.pH,ea,eh))-wp.mp)*100;
+    return (adj<GAP_WARN)
+      ? { cls:"ok", txt:`差 ${gap} ✓`, title:`差 ${gap}，先發 ERA（客 ${ea}／主 ${eh}）可解釋，修正後差 ${adj.toFixed(0)} — 正常場` }
+      : { cls:"avoid", txt:`⚠ 避開`, title:`差 ${gap}，先發 ERA 修正後仍差 ${adj.toFixed(0)} — 無法解釋，建議避開` };
+  }
+  return { cls:"note", txt:`差 ${gap} ⚠`, title:`模型與盤口差 ${gap}pp：到結算視窗輸入兩隊先發 ERA 驗證` };
+}
+// 獨贏 ⓘ：STAKE 賠率評語（同結算畫面）
+function bStakeReadHTML(it){
+  const wp = bWinProbs(it);
+  if(wp.mp==null) return "<div class='ph'>STAKE 賠率動向</div>尚未填 STAKE 獨贏賠率。<br>點上方「賽前▸輸入」徽章開結算視窗輸入下注/初盤賠率後即可判讀。";
+  let html = "<div class='ph'>STAKE 賠率動向</div>";
+  html += `盤口隱含：${esc(it.away)} <b>${(wp.mp*100).toFixed(1)}%</b> ／ ${esc(it.home)} <b>${((1-wp.mp)*100).toFixed(1)}%</b>`;
+  const mp0 = impliedAway(parseFloat(it.openOddsAway), parseFloat(it.openOddsHome));
+  if(mp0!=null){
+    const mv=(wp.mp-mp0)*100;
+    if(Math.abs(mv)>=1.0){ const team=mv>0?it.away:it.home, strong=Math.abs(mv)>=2.5;
+      html += `<br><span style="color:#ffb02e;font-weight:700">市場${strong?"大幅":"逐漸"}轉向看好 ${esc(team)}</span>（+${Math.abs(mv).toFixed(1)}pp）`;
+    } else html += `<br>市場態度：初盤至今幾乎沒動`;
+  }
+  if(wp.pH!=null){
+    const gap=Math.round(Math.abs((1-wp.pH)-wp.mp)*100);
+    html += `<br>模型：${esc(it.away)} ${wp.mdlA}% ／ ${esc(it.home)} ${wp.mdlH}%　差 ${gap}`;
+  }
+  return html;
+}
+// 近況 ⓘ：最近 10 場勝負格
+function bFormHTML(it, side){
+  const team=it[side], season=seasonOf(doc.activeDate);
+  let res=[]; try{ res = recentResults(season, team, 10) || []; }catch(_){}
+  if(!res.length) return `<div class='ph'>近況</div>${esc(team)}：尚無比賽資料`;
+  let boxes="";
+  res.forEach(e=>{ const c=e.r==="w"?"w":(e.r==="l"?"l":"t"), word=e.r==="w"?"勝":(e.r==="l"?"敗":"和"), md=e.date.slice(5).replace("-","/");
+    boxes += `<span class="bx ${c}" title="${md} ${e.venue==="away"?"客":"主"} vs ${esc(e.opp)} ${e.my}:${e.op} ${word}">${c.toUpperCase()}</span>`; });
+  let py=""; try{ const p=pythRead(season,team);
+    if(p&&p.g>=20&&p.gap!=null){ const gp=p.gap*100;
+      if(gp>=4) py=`<br><span style="color:#ffb02e">虛 +${gp.toFixed(0)}（戰績優於實力，回歸風險）</span>`;
+      else if(gp<=-4) py=`<br><span style="color:#2ee07f">實 ${gp.toFixed(0)}（戰績低於實力，被低估）</span>`;
+    } }catch(_){}
+  return `<div class='ph'>${esc(team)}　近${res.length}場（左舊右新）</div><div class="boxes">${boxes}</div>${py}`;
+}
+// 一塊過盤率%（pctInfo）
+function bCoverHTML(team, market, venue){
+  const info = pctInfo(team, market, venue);
+  if(!info) return `<span class="bcover ls">—</span>`;
+  const cls = info.lowSample ? "ls" : info.cls;
+  const ss = info.lowSample ? `<span class="ss">(${info.sample})</span>` : "";
+  return `<span class="bcover ${cls}">${info.pct}${ss}</span>`;
+}
+function _firstEl(htmlStr){ const t=document.createElement("span"); t.innerHTML=htmlStr; return t.firstElementChild || t; }
+
+function renderCardB(it){
+  const el = document.createElement("div");
+  el.className = "card bcard"; el.dataset.id = it.id;
+
+  // ---- conflict / strong flags (沿用畫布版邏輯) ----
+  const mlConflict  = it.mlAway.lights>0 && it.mlHome.lights>0;
+  const hdConflict  = it.hdGive.lights>0 && it.hdRecv.lights>0;
+  const totConflict = it.over.lights>0  && it.under.lights>0;
+  const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
+  const oppML = (undSide==="away") ? it.mlAway.lights : it.mlHome.lights;
+  const crossConflict = it.hdGive.lights>0 && oppML>0;
+  const strongSignal = !crossConflict && (
+    (!mlConflict  && (it.mlAway.lights>=3 || it.mlHome.lights>=3)) ||
+    (!hdConflict  && (it.hdGive.lights>=3 || it.hdRecv.lights>=3)) ||
+    (!totConflict && (it.over.lights>=3  || it.under.lights>=3)) );
+  if(mlConflict||hdConflict||totConflict) el.classList.add("has-conflict");
+  else if(crossConflict) el.classList.add("has-cross");
+  else if(strongSignal && !strongShouldBeDampened(it)) el.classList.add("has-strong");
+  else if(strongSignal && strongShouldBeDampened(it)) el.classList.add("has-strong-dim");
+  if(it.settled) el.classList.add("settled");
+
+  const venue = (venueMode==="combined") ? null : "venue";
+  const awayV = (venueMode==="combined") ? null : "away";
+  const homeV = (venueMode==="combined") ? null : "home";
+  const favV  = (venueMode==="combined") ? null : (favSide==="away"?"away":"home");
+  const undV  = (venueMode==="combined") ? null : (undSide==="away"?"away":"home");
+  const wp = bWinProbs(it);
+
+  /* ---------- 標頭 ---------- */
+  const head = document.createElement("div"); head.className="bhead";
+  const time = document.createElement("span"); time.className="btime";
+  time.textContent = (it.time ? it.time+"　" : "") + fmtDate(doc.activeDate);
+  const hsp = document.createElement("span"); hsp.className="bhead-sp";
+  head.append(time, hsp);
+  // 差X / 避開（填完賠率才出現）
+  const gap = bGapInfo(it);
+  if(gap){ const g=document.createElement("span"); g.className="bwarn "+gap.cls; g.textContent=gap.txt; g.title=gap.title; head.appendChild(g); }
+  if(it.settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改 / 取消結算"; sm.onclick=()=>openSettleModal(it); head.appendChild(sm); }
+  // 顛倒▸輸入
+  const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"顛倒 ✓":"顛倒▸輸入"; flipB.title="標記平台顛倒 / 開結算視窗"; flipB.onclick=()=>openSettleModal(it);
+  // 賽前▸輸入
+  const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
+  const preB = document.createElement("button"); preB.className="bbadge"+(hasOdds?" done":""); preB.textContent = hasOdds?"賽前 ✓":"賽前▸輸入"; preB.title="輸入賽前賠率 / 開結算視窗"; preB.onclick=()=>openSettleModal(it);
+  // collapse + delete
+  const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
+  const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除"; delB.onclick=()=>{ snapshot(); state.items=state.items.filter(x=>x.id!==it.id); save(); render(); };
+  head.append(flipB, preB, colB, delB);
+  el.appendChild(head);
+
+  if(!it.collapsed){
+    /* ---------- 兩區式本體 ---------- */
+    const body = document.createElement("div"); body.className="bbody";
+
+    // 左：計分板
+    const score = document.createElement("div"); score.className="bscore";
+    function teamBlock(side){
+      const team = it[side];
+      const wrap = document.createElement("div"); wrap.className="bteam "+side;
+      const logo = document.createElement("div"); logo.className="blogo";
+      const img = (typeof teamLogoEl==="function") ? teamLogoEl(team) : null;
+      if(img) logo.appendChild(img);
+      else { const fb=document.createElement("span"); fb.className="bfallback"; fb.textContent=(team||"?").charAt(0); logo.appendChild(fb); }
+      const main = document.createElement("div"); main.className="bteam-main";
+      const nm = document.createElement("div"); nm.className="bteam-nm";
+      nm.appendChild(document.createTextNode(team));
+      const info = document.createElement("span"); info.className="binfo"; info.textContent="i"; info.title="近況勝負";
+      info.onclick=(e)=>{ e.stopPropagation(); bTogglePop(info, bFormHTML(it, side)); };
+      nm.appendChild(info);
+      main.appendChild(nm);
+      const mdl = side==="away"?wp.mdlA:wp.mdlH, imp = side==="away"?wp.impA:wp.impH;
+      if(mdl!=null || imp!=null){
+        const pc = document.createElement("div"); pc.className="bteam-pcts";
+        pc.innerHTML = `<span class="pm"><span class="l">模型</span>${mdl!=null?`<b>${mdl}%</b>`:"—"}</span>`
+                     + `<span class="pi"><span class="l">盤口</span>${imp!=null?`<b>${imp}%</b>`:"—"}</span>`;
+        main.appendChild(pc);
+      }
+      const sc = document.createElement("div"); sc.className="bteam-sc";
+      const s = it.settled, myK=side+"Score", opK=(side==="away"?"home":"away")+"Score";
+      if(s && s[myK]!=null){ sc.textContent = s[myK];
+        if(s[opK]!=null && (+s[myK])>(+s[opK])) wrap.classList.add("win"); }
+      wrap.append(logo, main, sc);
+      return wrap;
+    }
+    const vsEl = document.createElement("div"); vsEl.className="bvs"; vsEl.textContent="VS";
+    score.append(teamBlock("away"), vsEl, teamBlock("home"));
+    body.appendChild(score);
+
+    // 右：分析區
+    const ana = document.createElement("div"); ana.className="bana";
+    const ahead = document.createElement("div"); ahead.className="bana-head";
+    const albl = document.createElement("span"); albl.className="bana-lbl"; albl.textContent="過盤率";
+    const venueTog = document.createElement("span"); venueTog.className="bvenue";
+    [["split","主客"],["combined","綜"]].forEach(([v,lab])=>{
+      const b=document.createElement("button"); b.textContent=lab; if(venueMode===v) b.classList.add("on");
+      b.onclick=()=>{ venueMode=v; if(typeof refreshVenueBtns==="function") refreshVenueBtns(); save(); render(); };
+      venueTog.appendChild(b);
+    });
+    ahead.append(albl, venueTog);
+    ana.appendChild(ahead);
+
+    // 一個市場區塊
+    function mktRow(badge, badgeCls, name, hv, lightObj, coverHTML, conflict){
+      const row=document.createElement("div"); row.className="bmkt-row"+(conflict?" conflict":"");
+      const b=document.createElement("span"); b.className="bside "+(badgeCls||""); b.textContent=badge;
+      const nm=document.createElement("span"); nm.className="bnm"; nm.title="點隊名／標籤＝減一盞燈";
+      nm.innerHTML = esc(name)+(hv?` <span class="hv">${esc(hv)}</span>`:"");
+      nm.onclick=()=>{ if(lightObj.lights>0){ snapshot(); lightObj.lights--; save(); render(); } };
+      const sp=document.createElement("span"); sp.className="bmksp";
+      row.append(b, nm, sp, bLightsEl(lightObj), _firstEl(coverHTML));
+      return row;
+    }
+    function mktSecHead(label, conflict, extras, cmtKey){
+      const sec=document.createElement("div"); sec.className="bmkt-sec"+(conflict?" conflict":"");
+      const mn=document.createElement("span"); mn.className="mname"; mn.textContent=label; sec.appendChild(mn);
+      (extras||[]).forEach(x=> x && sec.appendChild(x));
+      const sp=document.createElement("span"); sp.className="mksp"; sec.appendChild(sp);
+      const cmt=document.createElement("span"); cmt.className="bcmt"; cmt.dataset.cmt=cmtKey; sec.appendChild(cmt);
+      return { sec, cmt };
+    }
+
+    // 獨贏
+    const mlWrap=document.createElement("div"); mlWrap.className="bmkt";
+    const mlStakeInfo=document.createElement("span"); mlStakeInfo.className="binfo"; mlStakeInfo.textContent="i"; mlStakeInfo.title="STAKE 賠率評語";
+    mlStakeInfo.onclick=(e)=>{ e.stopPropagation(); bTogglePop(mlStakeInfo, bStakeReadHTML(it)); };
+    const mlH=mktSecHead("獨贏", mlConflict, [mlStakeInfo], "ml");
+    mlWrap.append(mlH.sec,
+      mktRow("客","", it.away, "", it.mlAway, bCoverHTML(it.away,"ml",awayV), mlConflict),
+      mktRow("主","", it.home, "", it.mlHome, bCoverHTML(it.home,"ml",homeV), mlConflict));
+    ana.appendChild(mlWrap);
+
+    // 讓分
+    const hdWrap=document.createElement("div"); hdWrap.className="bmkt";
+    const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方";
+    swap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
+    let flipHint=null;
+    const feedFlip = !!it.autoHdFlip;
+    if(feedFlip){ flipHint=document.createElement("span"); flipHint.className="flaghint"; flipHint.textContent="疑顛倒場"; flipHint.title="工作流抓到的讓分熱門與此盤讓分方相反"; }
+    const hv = it.hdVal || "1.5";
+    const hdH=mktSecHead("讓分", hdConflict, [swap, flipHint], "hd");
+    hdWrap.append(hdH.sec,
+      mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
+      mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
+    ana.appendChild(hdWrap);
+
+    // 大小
+    const totWrap=document.createElement("div"); totWrap.className="bmkt";
+    const basis=document.createElement("span"); basis.className="basis";
+    const tv = (it.totVal!=null && it.totVal!=="") ? it.totVal : "8.5";
+    basis.innerHTML="基準 ";
+    const tinp=document.createElement("input"); tinp.type="text"; tinp.inputMode="decimal"; tinp.value=tv;
+    tinp.onclick=(e)=>e.stopPropagation();
+    tinp.onchange=()=>{ it.totVal = tinp.value.trim(); save(); };
+    basis.appendChild(tinp);
+    const totH=mktSecHead("大小", totConflict, [basis], "tot");
+    // 大/小 過盤率：兩隊大分率平均；小=100-大
+    const aT=pctInfo(it.away,"tot",awayV), hT=pctInfo(it.home,"tot",homeV);
+    let overPct=null, lowS=false, samp=0;
+    if(aT||hT){ const arr=[aT,hT].filter(Boolean); overPct=arr.reduce((s,x)=>s+x.pn,0)/arr.length; lowS=arr.some(x=>x.lowSample); samp=Math.min.apply(null,arr.map(x=>x.sample)); }
+    function totCover(isOver){
+      if(overPct==null) return `<span class="bcover ls">—</span>`;
+      const pn = isOver ? overPct : (1-overPct);
+      const cls = lowS ? "ls" : (pn>=0.55?"hi":(pn<0.40?"lo":""));
+      const ss = lowS ? `<span class="ss">(${samp})</span>` : "";
+      return `<span class="bcover ${cls}">${Math.round(pn*100)}%${ss}</span>`;
+    }
+    totWrap.append(totH.sec,
+      mktRow("大","", "大", tv, it.over, totCover(true), totConflict),
+      mktRow("小","", "小", tv, it.under, totCover(false), totConflict));
+    ana.appendChild(totWrap);
+
+    body.appendChild(ana);
+    el.appendChild(body);
+  }
+
+  /* ---------- 已結算結果 pills ---------- */
+  if(it.settled){
+    const s=it.settled;
+    const bs=document.createElement("div"); bs.className="bsettled";
+    if(s.awayScore!=null && s.homeScore!=null){
+      const sp=document.createElement("span"); sp.className="bpill sc"; sp.textContent=`${it.away} ${s.awayScore} : ${s.homeScore} ${it.home}`; bs.appendChild(sp);
+    }
+    const out=(market,side)=>{
+      if(market==="ml"){ if(s.ml==="tie") return "void"; return s.ml===side?"hit":"miss"; }
+      if(market==="hd"){ const cov=(s.hd==="cover"); return side==="give"?(cov?"hit":"miss"):(cov?"miss":"hit"); }
+      if(market==="tot"){ if(s.tot==="push") return "void"; return s.tot===side?"hit":"miss"; }
+      return null;
+    };
+    const mark=o=> o==="hit"?"✓":(o==="miss"?"✗":"－");
+    const pill=(txt,n,o)=>{ const p=document.createElement("span"); p.className="bpill "+(o||""); p.textContent=`${mark(o)} ${txt} ●${n}`; bs.appendChild(p); };
+    const fS=it.hdFav, uS=it.hdFav==="away"?"home":"away";
+    if(it.mlAway.lights>=3) pill(it.away, it.mlAway.lights, out("ml","away"));
+    if(it.mlHome.lights>=3) pill(it.home, it.mlHome.lights, out("ml","home"));
+    if(it.hdGive.lights>=3) pill(`${it[fS]}讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdGive.lights, out("hd","give"));
+    if(it.hdRecv.lights>=3) pill(`${it[uS]}受讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdRecv.lights, out("hd","recv"));
+    if(it.over.lights>=3)   pill(`大${it.totVal?` ${it.totVal}`:""}`, it.over.lights, out("tot","over"));
+    if(it.under.lights>=3)  pill(`小${it.totVal?` ${it.totVal}`:""}`, it.under.lights, out("tot","under"));
+    if(bs.children.length) el.appendChild(bs);
+  }
+
+  world.appendChild(el);
+}
+
 function mkLights(obj){
   const wrap = document.createElement("div"); wrap.className="lights no-drag";
   if(obj.lights>3) wrap.classList.add("hot");
@@ -2214,17 +2707,51 @@ function collectSummary(){
   return {strong, conflicts};
 }
 
+// 今日下注命中率（只看當天板上已結算、且該選項點 ≥3 燈的）。tie / push / 未決定 不列入。
+function todayHitRate(){
+  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, any:0 };
+  state.items.forEach(it=>{
+    if(it.type!=="match" || !it.settled) return;
+    const s = it.settled;
+    // 獨贏
+    if(s.ml==="away"||s.ml==="home"){
+      if(it.mlAway.lights>=3){ r.any++; (s.ml==="away"?r.ml.hit++:r.ml.miss++); }
+      if(it.mlHome.lights>=3){ r.any++; (s.ml==="home"?r.ml.hit++:r.ml.miss++); }
+    }
+    // 讓分（過盤/沒過，無走盤）
+    if(s.hd==="cover"||s.hd==="nocover"){
+      const cov = (s.hd==="cover");
+      if(it.hdGive.lights>=3){ r.any++; (cov?r.hd.hit++:r.hd.miss++); }
+      if(it.hdRecv.lights>=3){ r.any++; (cov?r.hd.miss++:r.hd.hit++); }
+    }
+    // 大小（push 不列入）
+    if(s.tot==="over"||s.tot==="under"){
+      if(it.over.lights>=3){ r.any++; (s.tot==="over"?r.tot.hit++:r.tot.miss++); }
+      if(it.under.lights>=3){ r.any++; (s.tot==="under"?r.tot.hit++:r.tot.miss++); }
+    }
+  });
+  return r;
+}
+
 function renderSummary(){
   const old = canvas.querySelector("#summary"); if(old) old.remove();
   if(!state.items.some(i=>i.type==="match")){ hideSummaryLauncher(); return; }
   const {strong, conflicts} = collectSummary();
-  if(strong.length===0 && conflicts.length===0){ hideSummaryLauncher(); return; }
+  const zhan = todayHitRate();
+  const hasZhan  = zhan.any > 0;
+  const hasZhong = strong.length>0 || conflicts.length>0;
+  if(!hasZhan && !hasZhong){ hideSummaryLauncher(); return; }
 
   // 最小化 → 不畫面板，只在快捷鍵留一顆「總結」鈕
   if(doc.summaryMin){ showSummaryLauncher(strong.length); return; }
   hideSummaryLauncher();
 
-  // 聯盟篩選
+  // 戰 / 重 分頁
+  let tab = doc.panelTab || "重";
+  if(tab==="重" && !hasZhong && hasZhan) tab="戰";
+  if(tab==="戰" && !hasZhan && hasZhong) tab="重";
+
+  // 聯盟篩選（只在「重」用）
   const LG_ORDER = ["mlb","npb","kbo","cpbl","zz"];
   const LG_LABEL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   const present = LG_ORDER.filter(k => strong.some(s=>s.league===k) || conflicts.some(c=>c.league===k));
@@ -2240,13 +2767,49 @@ function renderSummary(){
   if(doc.summarySize && doc.summarySize.w) box.style.width = doc.summarySize.w+"px";
 
   const head = document.createElement("div"); head.className="sumhead";
-  head.innerHTML = `<span class="dot"></span>重點總結<span class="count">${fStrong.length} 個強訊號</span>`+
-                   `<span class="summin no-drag" title="最小化（收進快捷鍵）" style="cursor:pointer;margin-left:6px;font-size:15px;line-height:1;color:#9fb6c9;">▁</span>`;
+  const dot = document.createElement("span"); dot.className="dot";
+  const tabsWrap = document.createElement("span"); tabsWrap.className="sumtabs no-drag";
+  [["戰","戰"],["重","重"]].forEach(([key,lab])=>{
+    const b=document.createElement("button"); b.className="sumtab"+(tab===key?" on":""); b.textContent=lab;
+    b.addEventListener("pointerdown",(e)=>e.stopPropagation());
+    b.addEventListener("click",(e)=>{ e.stopPropagation(); doc.panelTab=key; save(); render(); });
+    tabsWrap.appendChild(b);
+  });
+  const cnt = document.createElement("span"); cnt.className="count";
+  cnt.textContent = (tab==="重") ? `${fStrong.length} 強訊號` : `今日 ${zhan.any} 注`;
+  const mn = document.createElement("span"); mn.className="summin no-drag"; mn.title="最小化（收進快捷鍵）"; mn.textContent="▁";
+  mn.style.cssText="cursor:pointer;margin-left:6px;font-size:15px;line-height:1;color:#9fb6c9;";
+  head.append(dot, tabsWrap, cnt, mn);
   head.addEventListener("pointerdown", startSummaryDrag);
-  const mn = head.querySelector(".summin");
   mn.addEventListener("pointerdown", (e)=>{ e.stopPropagation(); });          // 別觸發拖曳
   mn.addEventListener("click", (e)=>{ e.stopPropagation(); doc.summaryMin=true; save(); render(); });
   box.appendChild(head);
+
+  /* ===== 戰：今日下注命中率 ===== */
+  if(tab==="戰"){
+    const body = document.createElement("div"); body.className="sumbody";
+    const rowFor = (label, m)=>{
+      const tot = m.hit + m.miss; if(tot===0) return null;
+      const rate = Math.round(m.hit/tot*100);
+      const r = document.createElement("div"); r.className="zhanrow";
+      r.innerHTML = `<span class="zlbl">${label}</span><span class="zsp"></span>`+
+                    `<span class="zhit">${m.hit}</span><span class="zslash">/</span><span class="zmiss">${m.miss}</span>`+
+                    `<span class="zrate">${rate}%</span>`;
+      return r;
+    };
+    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml]].forEach(([lab,m])=>{ const r=rowFor(lab,m); if(r) body.appendChild(r); });
+    if(!body.children.length){ const e=document.createElement("div"); e.className="zhanempty"; e.textContent="今天還沒有已結算、且點 ≥3 燈的下注。"; body.appendChild(e); }
+    const hint = document.createElement("div"); hint.className="zhanhint"; hint.textContent="只統計今天板上已結算、點 ≥3 燈的選項（和局／走盤不列入）。全季統計請看數據回顧。";
+    body.appendChild(hint);
+    if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
+    box.appendChild(body);
+    const rz = document.createElement("div"); rz.className="sum-resize no-drag"; rz.title="拖曳調整大小";
+    rz.addEventListener("pointerdown", e=> startSummaryResize(e, box, body));
+    box.appendChild(rz);
+    canvas.appendChild(box);
+    applySummaryScale();
+    return;
+  }
 
   // 聯盟分頁（只有兩個以上聯盟才出現；單一聯盟沒必要篩）
   if(present.length >= 2){
@@ -2620,6 +3183,7 @@ function isInteractive(target){
   return !!(target.closest(".grip,.no-drag,#summary,#zoomctl,.token"));
 }
 canvas.addEventListener("pointerdown", e=>{
+  if(RESPONSIVE) return;   // 響應式版面：用瀏覽器原生捲動，不平移畫布
   // ignore presses that begin on a card/token/summary/zoom — those have their own handlers
   if(isInteractive(e.target)) return;
   stopInertia(); // any new press cancels coasting
@@ -2728,6 +3292,7 @@ canvas.addEventListener("pointerup", endGesturePointer);
 window.addEventListener("pointerdown", ()=>{ if(inertia) stopInertia(); }, true);
 // desktop wheel / trackpad zoom
 canvas.addEventListener("wheel", e=>{
+  if(RESPONSIVE) return;   // 響應式版面：滾輪 = 原生上下捲動，不縮放
   if(isInteractive(e.target)) return;
   e.preventDefault();
   const factor = e.deltaY<0 ? 1.12 : 1/1.12;
@@ -2894,6 +3459,7 @@ function placeRows(list, cols, cursorY){
   return cursorY;
 }
 function autoLayout(){
+  if(RESPONSIVE){ render(); return; }   // 響應式：版面由 CSS flow + render() 依聯盟排序處理
   snapshot();
   const order = ["mlb","npb","kbo","cpbl","zz"];
   const groups = {}; order.forEach(k=>groups[k]=[]);
@@ -2996,6 +3562,7 @@ document.querySelectorAll("#moreMenu .leaguecolbtn").forEach(b=>{
    but does NOT force-expand cards. Used after any collapse/expand change so the
    whole board re-packs and stays aligned (no overlap, no gaps, rows level). ---- */
 function relayoutPreservingState(doSave){
+  if(RESPONSIVE){ render(); if(doSave!==false) save(); return; }
   const order = ["mlb","npb","kbo","cpbl","zz"];
   const groups = {}; order.forEach(k=>groups[k]=[]);
   // preserve each league's current visual order (top→bottom, left→right)
@@ -3260,6 +3827,14 @@ $("#fitBtn2") && ($("#fitBtn2").onclick = doFit);
 function jumpToLeague(lg){
   const cards = state.items.filter(i=>i.type==="match" && leagueOf(i)===lg);
   if(!cards.length) return;
+  if(RESPONSIVE){
+    // flow 版面：捲到該聯盟第一張卡（DOM 已依聯盟排序）
+    const ids = cards.map(c=>c.id);
+    let firstEl=null;
+    world.querySelectorAll(".card").forEach(el=>{ if(firstEl) return; if(ids.indexOf(+el.dataset.id)>=0) firstEl=el; });
+    if(firstEl) firstEl.scrollIntoView({behavior:"smooth", block:"start"});
+    return;
+  }
   // top-left card = smallest y, then smallest x
   const target = cards.slice().sort((a,b)=> (a.y-b.y) || (a.x-b.x))[0];
   const cr = canvas.getBoundingClientRect();

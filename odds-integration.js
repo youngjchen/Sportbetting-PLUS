@@ -267,6 +267,43 @@
     }
   }
 
+  /* ---- 填入卡片每個市場的「賠率動向」評語（B 版兩區式卡：.bcmt[data-cmt]） ---- */
+  function setCmt(cardEl, key, html, cls) {
+    var sp = cardEl.querySelector('.bcmt[data-cmt="' + key + '"]');
+    if (!sp) return;
+    sp.className = "bcmt" + (cls ? (" " + cls) : "");
+    sp.innerHTML = html;
+  }
+  function L(t) { return "<span class='l'>賠率</span>" + t; }
+  function fillCmt(cardEl, it, g) {
+    // 獨贏
+    var ml = mlSentiment(g);
+    if (ml) {
+      var a1 = Math.abs(ml.mvpp);
+      if (a1 < T1) setCmt(cardEl, "ml", L("持平"), "flat");
+      else {
+        var team = ml.towardAway ? g.awayTeam : g.homeTeam;
+        setCmt(cardEl, "ml", L(tierOf(a1) + " <span class='tm'>" + safeEsc(team) + "</span>" + (ml.split ? " · 分歧" : "")), a1 >= T2 ? "strong" : "");
+      }
+    }
+    // 讓分
+    var hd = hdSentiment(g);
+    if (hd) {
+      if (hd.lean && !hd.lean.flat) {
+        var a2 = Math.abs(hd.lean.mvpp);
+        setCmt(cardEl, "hd", L(tierOf(a2) + " <span class='tm'>" + safeEsc(hd.lean.team) + hd.lean.suffix + "</span>"), a2 >= T2 ? "strong" : "");
+      } else setCmt(cardEl, "hd", L("持平"), "flat");
+    }
+    // 大小
+    var ou = ouSentiment(g);
+    if (ou) {
+      if (ou.lean && !ou.lean.flat) {
+        var a3 = Math.abs(ou.lean.mvpp);
+        setCmt(cardEl, "tot", L(tierOf(a3) + " <span class='tm'>" + ou.lean.side + "</span>"), a3 >= T2 ? "strong" : "");
+      } else setCmt(cardEl, "tot", L("持平"), "flat");
+    }
+  }
+
   /* ---- 包住 renderCard ---- */
   if (typeof renderCard === "function") {
     var _origRenderCard = renderCard;
@@ -275,16 +312,14 @@
       try {
         var cardEl = world.querySelector('.card[data-id="' + it.id + '"]');
         if (!cardEl) return;
-        reframeStakeRow(cardEl, it);
-        var g = feedGameFor(it), block = null;
-        if (g) block = buildFlowBlock(it, g);
+        var g = feedGameFor(it);
+        if (g) fillCmt(cardEl, it, g);
         else {
+          // 對不到比賽且該聯盟有在抓 → 淡淡標一下
           var lg = (typeof leagueOf === "function") ? leagueOf(it) : null;
-          if (lg && feedLeagues()[lg]) block = buildNoMatchBlock();
-        }
-        if (block) {
-          var anchor = cardEl.querySelector(".summary-line");
-          if (anchor) cardEl.insertBefore(block, anchor); else cardEl.appendChild(block);
+          if (lg && feedLeagues()[lg]) {
+            ["ml", "hd", "tot"].forEach(function (k) { setCmt(cardEl, k, "<span class='l'>賠率</span>無盤口", "flat"); });
+          }
         }
       } catch (e) { /* 永遠不讓 add-on 弄壞排盤板 */ }
     };
