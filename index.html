@@ -2794,6 +2794,7 @@ canvas.addEventListener("pointerup", endGesturePointer);
 window.addEventListener("pointerdown", ()=>{ if(inertia) stopInertia(); }, true);
 // desktop wheel / trackpad zoom
 canvas.addEventListener("wheel", e=>{
+  if(doc.listMode) return;   // 清單模式：用原生上下捲動，不縮放
   if(isInteractive(e.target)) return;
   e.preventDefault();
   const factor = e.deltaY<0 ? 1.12 : 1/1.12;
