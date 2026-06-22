@@ -117,10 +117,20 @@
   }
   #empty b{color:#aeb9c8;font-weight:700;}
 
-  /* ---------- list mode：乾淨流式清單（取代自由畫布；預設關，切換鈕在「更多」選單） ---------- */
+  /* ---------- list mode：乾淨響應式清單 + 兩區式卡片（取代自由畫布；預設關，切換鈕在「更多」選單） ---------- */
   #canvas.listmode{overflow-y:auto;overflow-x:hidden;background-image:none;touch-action:pan-y;}
-  #canvas.listmode #world{transform:none!important;position:static;display:grid;grid-template-columns:repeat(auto-fill,230px);justify-content:center;align-content:start;gap:16px;padding:18px 16px;width:auto;max-width:1180px;margin-inline:auto;height:auto;min-height:100%;}
-  #canvas.listmode .card{position:static;touch-action:pan-y;}
+  #canvas.listmode #world{transform:none!important;position:static;display:flex;flex-direction:column;align-items:center;gap:12px;padding:16px 12px;width:auto;max-width:none;margin:0;height:auto;min-height:100%;}
+  #canvas.listmode .card{position:static;touch-action:pan-y;width:100%;max-width:720px;display:grid;grid-template-columns:188px 1fr;align-items:stretch;}
+  #canvas.listmode .card .grip{border-right:1px solid var(--line);}
+  #canvas.listmode .card .vs{flex-direction:column;align-items:flex-start;gap:5px;}
+  #canvas.listmode .card .vs .slash{display:none;}
+  #canvas.listmode .card .analysis{min-width:0;}
+  @media(max-width:620px){
+    #canvas.listmode .card{grid-template-columns:1fr;}
+    #canvas.listmode .card .grip{border-right:none;border-bottom:1px solid var(--line);}
+    #canvas.listmode .card .vs{flex-direction:row;align-items:center;gap:8px;}
+    #canvas.listmode .card .vs .slash{display:inline;}
+  }
 
   /* zoom controls (bottom-right of canvas) */
   #zoomctl{
@@ -2162,6 +2172,15 @@ function renderCard(it){
   rz.addEventListener("pointerdown", e=> startResize(e, it, el));
   el.appendChild(rz);
 
+  // 兩區式：把標頭(.grip)以後的市場/近況/趨勢包進右側 .analysis 欄。
+  // 清單模式用 CSS 切成左右兩區；畫布模式下 .analysis 只是普通區塊、外觀不變。
+  {
+    const an = document.createElement("div"); an.className = "analysis";
+    [].slice.call(el.children).forEach(function(node){
+      if(node !== grip && node !== rz) an.appendChild(node);
+    });
+    el.insertBefore(an, rz);
+  }
   world.appendChild(el);
   fitTeamRow(vs);
 }
