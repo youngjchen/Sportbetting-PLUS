@@ -1898,13 +1898,17 @@ function renderCard(it){
   const teamColor = side => side==="away"?it.awayColor:it.homeColor;
   function optRow(badge, badgeClass, name, color, obj, conflict){
     const row = document.createElement("div"); row.className="row opt"+(conflict?" conflict":"");
-    const b = document.createElement("div"); b.className="side no-drag "+badgeClass; b.textContent=badge;
-    const nm = document.createElement("div"); nm.className="nm no-drag"; nm.textContent=name; if(color) nm.style.color=color;
     // 點隊名/標籤側＝減燈（與燈條加燈分開，點擊區塊更分明、好按）
     const dec = ()=>{ if(obj.lights>0){ snapshot(); obj.lights--; save(); render(); repackColumns(); } };
-    b.style.cursor="pointer"; b.title="點此減燈"; b.onclick=dec;
+    const nm = document.createElement("div"); nm.className="nm no-drag"; nm.textContent=name; if(color) nm.style.color=color;
     nm.style.cursor="pointer"; nm.title="點此減燈"; nm.onclick=dec;
-    row.append(b, nm, mkLights(obj));
+    if(badge){
+      const b = document.createElement("div"); b.className="side no-drag "+badgeClass; b.textContent=badge;
+      b.style.cursor="pointer"; b.title="點此減燈"; b.onclick=dec;
+      row.append(b, nm, mkLights(obj));
+    } else {
+      row.append(nm, mkLights(obj));
+    }
     return row;
   }
   function sec(label, extraIco, conflict, crossWarn){
@@ -1977,8 +1981,8 @@ function renderCard(it){
   // ---- 獨贏 ----
   el.appendChild(sec("獨贏", null, mlConflict, crossConflict?"⚠ 與讓分矛盾":null));
   { const r = pctRow(sectionPctHTML(it,"ml")); if(r) el.appendChild(r); }
-  el.appendChild(optRow("客", "", it.away, teamColor("away"), it.mlAway, mlConflict));
-  el.appendChild(optRow("主", "", it.home, teamColor("home"), it.mlHome, mlConflict));
+  el.appendChild(optRow("", "", it.away, teamColor("away"), it.mlAway, mlConflict));
+  el.appendChild(optRow("", "", it.home, teamColor("home"), it.mlHome, mlConflict));
 
   // ---- 讓分 / 受讓 ----
   const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
