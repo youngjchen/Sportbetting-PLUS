@@ -1996,8 +1996,9 @@ function renderCard(it){
   // ---- 大小分 ----
   el.appendChild(sec("大小分", null, totConflict, null));
   { const r = pctRow(sectionPctHTML(it,"tot")); if(r) el.appendChild(r); }
-  el.appendChild(optRow("大", "", "大分", null, it.over, totConflict));
-  el.appendChild(optRow("小", "", "小分", null, it.under, totConflict));
+  const tov = (it.totVal!=="" && it.totVal!=null) ? it.totVal : "8.5";
+  el.appendChild(optRow("", "", `大 ${tov}`, null, it.over, totConflict));
+  el.appendChild(optRow("", "", `小 ${tov}`, null, it.under, totConflict));
 
   // ---- 近況 (隊伍場均得失分 + 最近 5/10 場勝負格，點擊切換) ----
   {
