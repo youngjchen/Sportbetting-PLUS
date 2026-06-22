@@ -296,7 +296,7 @@
   .opt .side.recv{background:#5b6b80;color:#dfe6ef;}
   /* fixed-width name column: never shrinks, never forces a wrap of its own text */
   .opt .nm{
-    font-weight:700;font-size:14px;flex:0 0 5.2em;width:5.2em;
+    font-weight:700;font-size:14px;flex:0 0 6.8em;width:6.8em;
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;
   }
   /* lights take the rest and wrap onto new lines when they overflow */
@@ -1990,8 +1990,9 @@ function renderCard(it){
   el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null));
   { const r = pctRow(sectionPctHTML(it,"hd")); if(r) el.appendChild(r); }
   const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
-  el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
-  el.appendChild(optRow("受讓", "recv", it[undSide], teamColor(undSide), it.hdRecv, hdConflict));
+  const hdv = (it.hdVal!=="" && it.hdVal!=null) ? it.hdVal : "1.5";
+  el.appendChild(optRow("", "give", `${it[favSide]} -${hdv}`, teamColor(favSide), it.hdGive, hdConflict));
+  el.appendChild(optRow("", "recv", `${it[undSide]} +${hdv}`, teamColor(undSide), it.hdRecv, hdConflict));
 
   // ---- 大小分 ----
   el.appendChild(sec("大小分", null, totConflict, null));
