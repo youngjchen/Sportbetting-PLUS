@@ -262,6 +262,17 @@
   }
   .light.add:hover{border-color:var(--lit);color:var(--lit);}
 
+  /* 5-slot light meter: fixed footprint; colour overlays past 5 (amber→hot→cross) */
+  .lights{cursor:pointer;}
+  .lslot{width:14px;height:14px;border-radius:50%;flex:0 0 auto;transition:.12s;}
+  .lslot.e{border:1.5px solid #2a3340;box-sizing:border-box;}
+  .lslot.t1{background:radial-gradient(circle at 35% 30%,#ffe39a,var(--lit) 70%);box-shadow:0 0 8px var(--lit-glow);}
+  .lslot.t2{background:radial-gradient(circle at 35% 30%,#ffd0a0,var(--hot) 72%);box-shadow:0 0 9px var(--hot-glow);}
+  .lslot.t3{background:radial-gradient(circle at 35% 30%,#e6c2ff,var(--cross) 72%);box-shadow:0 0 9px var(--cross-glow);}
+  @media (pointer:coarse){ .lslot{width:17px;height:17px;} }
+  .vs .teamwrap{display:inline-flex;align-items:center;gap:5px;min-width:0;}
+  .vs .teamwrap .team-logo{flex:0 0 auto;}
+
   /* market sections + independent option rows */
   .sec{
     display:flex;align-items:center;gap:8px;padding:9px 12px 2px;
@@ -1138,6 +1149,7 @@
     </div>
   </div>
 
+<script src="./logo-map.js"></script>
 <script>
 const LEAGUES = {
   mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
@@ -1799,7 +1811,7 @@ function renderCard(it){
   const grip = document.createElement("div"); grip.className="grip";
   const vs = document.createElement("div"); vs.className="vs";
   const slash = document.createElement("span"); slash.className="slash"; slash.textContent="/";
-  vs.append(mkTeam(it,"away"), slash, mkTeam(it,"home"));
+  vs.append(teamWithLogo(it,"away"), slash, teamWithLogo(it,"home"));
   const bar = document.createElement("div"); bar.className="gripbar";
   // settled mark (click to revise; clicking should NOT start drag)
   if(it.settled){
@@ -2153,27 +2165,44 @@ function mkTeam(it,side){
   return s;
 }
 
+// 隊伍標頭：白圓底座隊徽 + 可編輯隊名（logo-map.js 未載入時優雅退回純隊名）
+function teamWithLogo(it, side){
+  const nm = mkTeam(it, side);
+  if(typeof teamLogoEl !== "function") return nm;
+  const w = document.createElement("span"); w.className = "teamwrap";
+  w.appendChild(teamLogoEl(it[side], 18));
+  w.appendChild(nm);
+  return w;
+}
+
 function mkLights(obj){
+  // 固定 5 槽燈條：1–5 琥珀、6–10 紅色覆蓋、11–12 紫色覆蓋 — footprint 永不變大、不換行。
+  // 整條左半=減燈、右半=加燈（無 +/− 圈鈕）；長按整排清零。上限 12。
+  const N = Math.max(0, Math.min(12, obj.lights|0));
+  const SLOTS = 5;
   const wrap = document.createElement("div"); wrap.className="lights no-drag";
-  if(obj.lights>3) wrap.classList.add("hot");
-  // long-press anywhere on the light cluster clears it to zero
   let lpTimer=null, lpFired=false;
   const startLP = ()=>{ lpFired=false; lpTimer=setTimeout(()=>{ lpFired=true; if(obj.lights>0){ snapshot(); obj.lights=0; save(); render(); repackColumns(); } }, 550); };
   const cancelLP = ()=>{ if(lpTimer){ clearTimeout(lpTimer); lpTimer=null; } };
+  for(let i=0;i<SLOTS;i++){
+    const d = document.createElement("div");
+    if(i < N){ const tier = Math.min(3, Math.floor((N-1-i)/SLOTS)+1); d.className = "lslot t"+tier; }
+    else d.className = "lslot e";
+    wrap.appendChild(d);
+  }
   wrap.addEventListener("pointerdown", startLP);
   wrap.addEventListener("pointerup", cancelLP);
   wrap.addEventListener("pointerleave", cancelLP);
   wrap.addEventListener("pointercancel", cancelLP);
-  for(let i=0;i<obj.lights;i++){
-    const d = document.createElement("div"); d.className="light on";
-    d.title="點掉減少（長按整排清零）"; d.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights=Math.max(0,obj.lights-1); save(); render(); repackColumns(); };
-    wrap.appendChild(d);
-  }
-  if(obj.lights<12){
-    const add = document.createElement("div"); add.className="light add"; add.textContent="+";
-    add.title="點亮一個"; add.onclick=()=>{ if(lpFired){lpFired=false;return;} snapshot(); obj.lights++; save(); render(); repackColumns(); };
-    wrap.appendChild(add);
-  }
+  wrap.addEventListener("click", e=>{
+    if(lpFired){ lpFired=false; return; }
+    const r = wrap.getBoundingClientRect();
+    const leftHalf = (e.clientX - r.left) < r.width/2;
+    snapshot();
+    obj.lights = leftHalf ? Math.max(0, N-1) : Math.min(12, N+1);
+    save(); render(); repackColumns();
+  });
+  wrap.title = "點右半加燈、左半減燈（長按整排清零）";
   return wrap;
 }
 
