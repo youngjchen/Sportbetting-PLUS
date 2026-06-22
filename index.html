@@ -117,6 +117,11 @@
   }
   #empty b{color:#aeb9c8;font-weight:700;}
 
+  /* ---------- list mode：乾淨流式清單（取代自由畫布；預設關，切換鈕在「更多」選單） ---------- */
+  #canvas.listmode{overflow-y:auto;overflow-x:hidden;background-image:none;touch-action:pan-y;}
+  #canvas.listmode #world{transform:none!important;position:static;display:grid;grid-template-columns:repeat(auto-fill,230px);justify-content:center;align-content:start;gap:14px;padding:16px;width:auto;height:auto;min-height:100%;}
+  #canvas.listmode .card{position:static;touch-action:pan-y;}
+
   /* zoom controls (bottom-right of canvas) */
   #zoomctl{
     position:absolute;right:12px;bottom:12px;z-index:200;display:flex;flex-direction:column;gap:6px;align-items:flex-end;
@@ -921,6 +926,7 @@
           <button class="sortbtn" data-sort="tot">大小分</button>
         </div>
         <button id="layoutBtn">⊞ 依聯盟排版</button>
+        <button id="listModeBtn">☰ 清單／畫布</button>
         <button id="collapseAllBtn">⊟ 收合／展開全部</button>
         <div class="colrow">
           <span class="collabel">收合聯盟</span>
@@ -1767,6 +1773,7 @@ function usedTeams(){
 
 /* ---------------- rendering items ---------------- */
 function render(){
+  canvas.classList.toggle("listmode", !!doc.listMode);
   [...world.querySelectorAll(".token,.card")].forEach(n=>n.remove());
   emptyMsg.style.display = state.items.length ? "none" : "flex";
   state.items.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
@@ -1804,8 +1811,10 @@ function renderCard(it){
   normMatch(it);
   const el = document.createElement("div");
   el.className = "card"; el.dataset.id = it.id;
-  el.style.left = it.x+"px"; el.style.top = it.y+"px";
-  if(it.scale && it.scale!==1) el.style.transform = "scale("+it.scale+")";
+  if(!doc.listMode){
+    el.style.left = it.x+"px"; el.style.top = it.y+"px";
+    if(it.scale && it.scale!==1) el.style.transform = "scale("+it.scale+")";
+  }
 
   // ---- header (row 1: team names / row 2: settled-mark + action icons) ----
   const grip = document.createElement("div"); grip.className="grip";
@@ -2658,6 +2667,7 @@ function isInteractive(target){
 }
 canvas.addEventListener("pointerdown", e=>{
   // ignore presses that begin on a card/token/summary/zoom — those have their own handlers
+  if(doc.listMode) return;   // 清單模式：用原生捲動，不平移畫布
   if(isInteractive(e.target)) return;
   stopInertia(); // any new press cancels coasting
   gesture.pointers.set(e.pointerId, {x:e.clientX, y:e.clientY});
@@ -2947,6 +2957,7 @@ function autoLayout(){
   save(); render(); fitView();
 }
 $("#layoutBtn").onclick = ()=>{ closeMore(); autoLayout(); };
+$("#listModeBtn") && ($("#listModeBtn").onclick = ()=>{ closeMore(); doc.listMode=!doc.listMode; save(); render(); if(!doc.listMode){ applyView(); } else { canvas.scrollTop=0; } });
 $("#copyDayBtn").onclick = copyMatchupsFromDay;
 
 /* ---- sort by a chosen market block, conflicts sink to the bottom ---- */
