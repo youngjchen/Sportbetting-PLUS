@@ -33,18 +33,15 @@ ok('N=11 → 紫1+紅4', tiers(11).join() === 't3,t2,t2,t2,t2', tiers(11));
 ok('N=12 → 紫2+紅3', tiers(12).join() === 't3,t3,t2,t2,t2', tiers(12));
 ok('永遠 5 槽 (N=12)', tiers(12).length === 5, tiers(12).length);
 
-console.log('\n=== 左半減、右半加 ===');
-function clickAt(N, x) {
+console.log('\n=== 點燈條 = 加燈（減燈已移到隊名，於 optRow 處理）===');
+function clickInc(N) {
   const obj = { lights: N };
   const el = mkLights(obj);
-  el.getBoundingClientRect = () => ({ left: 0, width: 100, top: 0, height: 14, right: 100, bottom: 14 });
-  el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true, clientX: x }));
+  el.dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
   return obj.lights;
 }
-ok('點右半 → +1', clickAt(3, 80) === 4, clickAt(3, 80));
-ok('點左半 → −1', clickAt(3, 20) === 2, clickAt(3, 20));
-ok('右半到上限 12 不超過', clickAt(12, 80) === 12, clickAt(12, 80));
-ok('左半到 0 不為負', clickAt(0, 20) === 0, clickAt(0, 20));
+ok('點一下 → +1', clickInc(3) === 4, clickInc(3));
+ok('加到上限 12 不超過', clickInc(12) === 12, clickInc(12));
 ok('點擊有觸發 save', saved > 0, saved);
 
 console.log('\n結果：' + pass + ' 過 / ' + fail + ' 失敗');

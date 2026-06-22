@@ -1898,8 +1898,12 @@ function renderCard(it){
   const teamColor = side => side==="away"?it.awayColor:it.homeColor;
   function optRow(badge, badgeClass, name, color, obj, conflict){
     const row = document.createElement("div"); row.className="row opt"+(conflict?" conflict":"");
-    const b = document.createElement("div"); b.className="side "+badgeClass; b.textContent=badge;
-    const nm = document.createElement("div"); nm.className="nm"; nm.textContent=name; if(color) nm.style.color=color;
+    const b = document.createElement("div"); b.className="side no-drag "+badgeClass; b.textContent=badge;
+    const nm = document.createElement("div"); nm.className="nm no-drag"; nm.textContent=name; if(color) nm.style.color=color;
+    // 點隊名/標籤側＝減燈（與燈條加燈分開，點擊區塊更分明、好按）
+    const dec = ()=>{ if(obj.lights>0){ snapshot(); obj.lights--; save(); render(); repackColumns(); } };
+    b.style.cursor="pointer"; b.title="點此減燈"; b.onclick=dec;
+    nm.style.cursor="pointer"; nm.title="點此減燈"; nm.onclick=dec;
     row.append(b, nm, mkLights(obj));
     return row;
   }
@@ -2196,13 +2200,11 @@ function mkLights(obj){
   wrap.addEventListener("pointercancel", cancelLP);
   wrap.addEventListener("click", e=>{
     if(lpFired){ lpFired=false; return; }
-    const r = wrap.getBoundingClientRect();
-    const leftHalf = (e.clientX - r.left) < r.width/2;
     snapshot();
-    obj.lights = leftHalf ? Math.max(0, N-1) : Math.min(12, N+1);
+    obj.lights = Math.min(12, N+1);
     save(); render(); repackColumns();
   });
-  wrap.title = "點右半加燈、左半減燈（長按整排清零）";
+  wrap.title = "點一下加燈（點隊名減燈、長按整排清零）";
   return wrap;
 }
 
