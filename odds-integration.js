@@ -332,6 +332,11 @@
     state.items.forEach(function (it) {
       if (it.type !== "match") return;
       var g = feedGameFor(it); if (!g) return;
+      // 開球時間：startISO 取 HH:MM（fallback g.time 末段），存到卡片給標頭顯示
+      var t = null;
+      if (g.startISO && g.startISO.length >= 16) t = g.startISO.slice(11, 16);
+      else if (g.time && /\d{1,2}:\d{2}/.test(g.time)) t = g.time.match(/\d{1,2}:\d{2}/)[0];
+      if (t && it.gameTime !== t) { it.gameTime = t; changed = true; }
       var fav = feedFavTeam(g), cardFav = it[it.hdFav];
       // 記錄工作流判定的讓分熱門隊，讓卡片可即時比對（切換讓分方後提示會即時更新）
       if (it.feedFavTeam !== (fav || null)) { it.feedFavTeam = fav || null; changed = true; }

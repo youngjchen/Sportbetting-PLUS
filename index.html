@@ -975,6 +975,7 @@
   <div id="canvas">
     <div id="empty">今天還沒有比賽。<br>從上方「<b>⋯ 更多</b>」選單<b>匯入比賽資料</b>，<br>或用「<b>⚡ 用賠率自動排今天的盤</b>」帶入。</div>
     <div id="world"></div>
+    <div id="matchnav"></div>
     <div id="saveBadge"></div>
     <div id="zoomctl">
       <div id="zoomctlBtns">
@@ -1276,11 +1277,29 @@
 
 /* ---- 電腦版：比賽卡靠左、右側留給戰/重面板（不再死置中） ---- */
 @media (min-width:1180px){
-  #world{ align-items:flex-start; padding-left:clamp(20px,4vw,64px); padding-right:380px; }
-  .card.bcard{ max-width:616px; }
+  #world{ align-items:flex-start; padding-left:clamp(16px,3vw,48px); padding-right:480px; }
+  .card.bcard{ max-width:616px; zoom:1.4; }   /* 卡片放大約 1.4×：100% 看起來就像 150% */
+  #summary{ width:320px !important; }
+  #matchnav{ display:flex; }
 }
 #summary{ position:fixed !important; }
 #zoomctl{ position:fixed !important; }   /* 快捷鍵隨螢幕固定，不隨內容捲走 */
+
+/* ① 對戰導覽列（固定欄、滑鼠移過放大、點擊捲到該場卡片） */
+#matchnav{ display:none; position:fixed; z-index:140; flex-direction:column;
+  width:118px; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96));
+  border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
+#matchnav .nvhead{ display:flex; gap:4px; padding:7px 7px 6px; border-bottom:1px solid var(--line); }
+#matchnav .nvhead button{ flex:1; font-size:11px; padding:3px 0; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
+#matchnav .nvhead button.on{ background:#28c76f; color:#06210f; font-weight:700; border-color:#28c76f; }
+#matchnav .nvbody{ overflow-y:auto; overscroll-behavior:contain; padding:5px 0 7px; }
+#matchnav .nvsec{ font-family:"Oswald"; font-size:10px; letter-spacing:.1em; color:var(--ink-dim); padding:6px 10px 2px; }
+#matchnav .nvtag{ display:block; transform-origin:left center; transition:transform .11s ease-out,color .11s,background .11s,border-color .11s;
+  margin:2px 8px; padding:3px 8px; border-radius:6px; background:#1b2430; border:1px solid var(--line);
+  font-size:11px; color:#cdd8e6; white-space:nowrap; cursor:pointer; }
+#matchnav .nvtag:hover{ color:#ffe39a; }
+#matchnav .nvtag.flash{ background:rgba(255,176,46,.2); border-color:var(--lit); }
+.card.bcard.navflash{ box-shadow:0 0 0 2px var(--lit),0 10px 26px rgba(0,0,0,.5); transition:box-shadow .2s; }
 
 /* ---- 手機版 ---- */
 @media (max-width:680px){
@@ -1950,6 +1969,7 @@ function usedTeams(){
 /* ---------------- rendering items ---------------- */
 function render(){
   if(typeof closeBPop==="function") closeBPop();
+  const _scroll = canvas ? canvas.scrollTop : 0;   // 保留捲動位置，重畫後不彈回頂端
   [...world.querySelectorAll(".token,.card")].forEach(n=>n.remove());
   emptyMsg.style.display = state.items.length ? "none" : "flex";
   let list = state.items;
@@ -1964,9 +1984,11 @@ function render(){
   }
   list.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
   renderSummary();
+  if(typeof renderMatchNav==="function") renderMatchNav();
   buildTray();
   if(typeof refreshLeagueJumpBtns==="function") refreshLeagueJumpBtns();
   if(typeof refreshUnsettledCount==="function") refreshUnsettledCount();
+  if(canvas && _scroll) canvas.scrollTop = _scroll;   // 還原捲動位置
 }
 
 function renderToken(it){
@@ -2513,7 +2535,7 @@ function renderCardB(it){
   /* ---------- 標頭 ---------- */
   const head = document.createElement("div"); head.className="bhead";
   const time = document.createElement("span"); time.className="btime";
-  time.textContent = (it.time ? it.time+"　" : "") + fmtDate(doc.activeDate);
+  time.textContent = fmtDate(doc.activeDate) + (it.gameTime ? " "+it.gameTime : "");   // 日期 + 開球時間（工作流盤口）
   const hsp = document.createElement("span"); hsp.className="bhead-sp";
   head.append(time, hsp);
   // 差X / 避開（填完賠率才出現）
@@ -2804,7 +2826,8 @@ function renderSummary(){
   const zhan = todayHitRate();
   const hasZhan  = zhan.any > 0;
   const hasZhong = strong.length>0 || conflicts.length>0;
-  if(!hasZhan && !hasZhong){ hideSummaryLauncher(); return; }
+  const wideFixed = window.innerWidth >= 1180;   // 寬螢幕：面板固定顯示，空的也照顯示
+  if(!hasZhan && !hasZhong && !wideFixed){ hideSummaryLauncher(); return; }
 
   // 最小化 → 不畫面板，只在快捷鍵留一顆「總結」鈕
   if(doc.summaryMin){ showSummaryLauncher(strong.length); return; }
@@ -2924,6 +2947,10 @@ function renderSummary(){
       });
     }
   }
+  if(!fStrong.length && !fConflict.length){
+    const e = document.createElement("div"); e.className="sumempty"; e.textContent="目前沒有 3 燈以上的強訊號。";
+    body.appendChild(e);
+  }
   box.appendChild(body);
   // 已存的高度 + 縮放把手
   if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
@@ -2933,6 +2960,67 @@ function renderSummary(){
   canvas.appendChild(box);
   applySummaryScale();
 }
+/* ① 對戰導覽列：列出當天所有對戰標籤（全部／分組），滑過放大、點擊平滑捲到該場卡片 */
+function renderMatchNav(){
+  const el = document.getElementById("matchnav"); if(!el) return;
+  const matches = state.items.filter(i=>i.type==="match");
+  if(!matches.length || window.innerWidth < 1180){ el.style.display="none"; if(world) world.style.paddingRight=""; return; }
+  el.style.display="flex";
+  const top = (typeof summaryTopPad==="function") ? summaryTopPad() : 120;
+  el.style.top = top+"px";
+  // 釘在面板左側（依面板實際位置，避免被 uiScale 放大後重疊）
+  const panel = document.getElementById("summary");
+  let navRight = 14 + 320 + 12;
+  if(panel){ const pr = panel.getBoundingClientRect(); if(pr.width > 0) navRight = Math.round(window.innerWidth - pr.left) + 12; }
+  el.style.right = navRight + "px";
+  el.style.maxHeight = (window.innerHeight - top - 16) + "px";
+  // 預留卡片右側空間，卡片永遠不會滑到導覽列底下
+  if(canvas) world.style.paddingRight = (navRight + el.offsetWidth + 16) + "px";
+  const grouped = (doc.navGrouped !== false);
+  const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
+  el.innerHTML = "";
+  const head = document.createElement("div"); head.className="nvhead";
+  [["all","全部",false],["grp","分組",true]].forEach(([k,lab,gv])=>{
+    const b=document.createElement("button"); b.textContent=lab; if(grouped===gv) b.classList.add("on");
+    b.onclick=()=>{ doc.navGrouped=gv; save(); renderMatchNav(); };
+    head.appendChild(b);
+  });
+  el.appendChild(head);
+  const body = document.createElement("div"); body.className="nvbody";
+  function tag(it){
+    const t=document.createElement("div"); t.className="nvtag";
+    t.textContent = it.away+" / "+it.home;
+    t.title = it.away+" / "+it.home + (it.gameTime?("　"+it.gameTime):"");
+    t.onclick=()=>{
+      const card = world.querySelector('.card[data-id="'+it.id+'"]');
+      if(card){ card.scrollIntoView({behavior:"smooth", block:"start"});
+        t.classList.add("flash"); card.classList.add("navflash");
+        setTimeout(()=>{ t.classList.remove("flash"); card.classList.remove("navflash"); }, 1200); }
+    };
+    return t;
+  }
+  if(grouped){
+    LGO.forEach(k=>{
+      const list = matches.filter(it=>leagueOf(it)===k); if(!list.length) return;
+      const s=document.createElement("div"); s.className="nvsec"; s.textContent=LGL[k]; body.appendChild(s);
+      list.forEach(it=>body.appendChild(tag(it)));
+    });
+  } else {
+    matches.slice().sort((a,b)=> LGO.indexOf(leagueOf(a))-LGO.indexOf(leagueOf(b)))
+           .forEach(it=>body.appendChild(tag(it)));
+  }
+  el.appendChild(body);
+  // dock 放大：游標靠近哪個標籤就放大，鄰居依距離微放大（波浪感）
+  const tags = [].slice.call(body.querySelectorAll(".nvtag"));
+  const RANGE=46, MAX=1.7;
+  body.onmousemove = (e)=>{
+    const y=e.clientY;
+    tags.forEach(t=>{ const r=t.getBoundingClientRect(), c=r.top+r.height/2, d=Math.abs(y-c), f=Math.max(0,1-d/RANGE), s=1+(MAX-1)*f;
+      t.style.transform="scale("+s.toFixed(3)+")"; t.style.zIndex = f>0?String(Math.round(s*10)):""; });
+  };
+  body.onmouseleave = ()=>{ tags.forEach(t=>{ t.style.transform="scale(1)"; t.style.zIndex=""; }); };
+}
+
 // 重點總結「最小化」用的快捷鍵啟動鈕（與比分鈕同一排）
 function ensureSummaryLauncher(){
   let b = document.getElementById("sumLauncher");
@@ -3401,6 +3489,7 @@ function buildDateBar(){
 function switchDate(d){
   if(d===doc.activeDate) return;
   save(); doc.activeDate = d; loadActiveBoard(); save(); render(); buildDateBar();
+  if(canvas) canvas.scrollTop = 0;   // 換日期才回到頂端
 }
 function addDate(){
   const def = todayStr();
