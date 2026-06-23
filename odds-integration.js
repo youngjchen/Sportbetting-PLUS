@@ -333,6 +333,8 @@
       if (it.type !== "match") return;
       var g = feedGameFor(it); if (!g) return;
       var fav = feedFavTeam(g), cardFav = it[it.hdFav];
+      // 記錄工作流判定的讓分熱門隊，讓卡片可即時比對（切換讓分方後提示會即時更新）
+      if (it.feedFavTeam !== (fav || null)) { it.feedFavTeam = fav || null; changed = true; }
       var flip = !!(fav && cardFav && fav !== cardFav);
       if (!!it.autoHdFlip !== flip) { it.autoHdFlip = flip; changed = true; }
     });
@@ -410,6 +412,13 @@
     return fetch(url + "?t=" + Date.now(), { cache: "no-store" })
       .then(function (r) { if (!r.ok) throw new Error("HTTP " + r.status); return r.json(); });
   }
+  // 永遠可見的賠率時間戳記（標頭 #oddsStamp）
+  function updateOddsStamp() {
+    var el = document.getElementById("oddsStamp");
+    if (!el) return;
+    var t = (feed && feed.lastUpdated) ? feed.lastUpdated.slice(5, 16).replace("T", " ") : null;  // MM-DD HH:MM
+    el.textContent = t ? ("賠率更新 " + t) : "賠率：尚未取得";
+  }
   function fetchFeed(force) {
     return getJSON(FEED_URL)
       .catch(function () { return getJSON(FEED_FALLBACK); })   // raw 失敗(如 CORS) → 退回 Pages 相對路徑
@@ -420,6 +429,7 @@
         var flipChanged = syncFlipFlags();
         if (flipChanged && typeof save === "function") save();
         if ((force || ((changed || flipChanged) && !anyModalOpen() && !editingNow())) && typeof render === "function") render();
+        updateOddsStamp();
         return { ok: true, lastUpdated: j.lastUpdated, changed: changed };
       });
   }

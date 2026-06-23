@@ -71,7 +71,7 @@
     "中信兄弟": "Cpbl-stats-chinatrust-brothers.png",
     "統一獅": "Cpbl-stats-uni-president-7-ele.png",
     "樂天桃猿": "Rakuten_Monkeys_logo.png",
-    "富邦悍將": "Fubon_Guardians_logo.png",
+    "富邦悍將": "Fubon_Guardians_logo.svg",
     "味全龍": "Wei_Chuan_Dragons_logo.png",
     "台鋼雄鷹": "台鋼雄鷹.png"
   };

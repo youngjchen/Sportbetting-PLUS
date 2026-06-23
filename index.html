@@ -889,8 +889,15 @@
 </head>
 <body>
   <header>
-    <div class="logo"><span class="dot"></span>排盤板 <small>中職 · 日職 · 韓職 · MLB</small></div>
+    <div class="logo"><span class="dot"></span>排盤板</div>
+    <div class="lgnav" id="lgnav">
+      <button class="leaguejump" data-lg="mlb" title="跳到 MLB"><span class="lgdot" style="background:var(--mlb)"></span>MLB</button>
+      <button class="leaguejump" data-lg="npb" title="跳到 日職"><span class="lgdot" style="background:var(--npb)"></span>日職</button>
+      <button class="leaguejump" data-lg="kbo" title="跳到 韓職"><span class="lgdot" style="background:var(--kbo)"></span>韓職</button>
+      <button class="leaguejump" data-lg="cpbl" title="跳到 中職"><span class="lgdot" style="background:var(--cpbl)"></span>中職</button>
+    </div>
     <div class="spacer"></div>
+    <span class="oddsstamp" id="oddsStamp" title="賠率最後更新時間"></span>
     <div id="moreWrap">
       <button class="btn" id="moreBtn" title="更多">⋯</button>
       <div id="moreMenu">
@@ -971,12 +978,7 @@
     <div id="saveBadge"></div>
     <div id="zoomctl">
       <div id="zoomctlBtns">
-        <button class="leaguejump" data-lg="mlb" title="跳到 MLB"><span class="lgdot" style="background:var(--mlb)"></span>MLB</button>
-        <button class="leaguejump" data-lg="npb" title="跳到 日職"><span class="lgdot" style="background:var(--npb)"></span>日職</button>
-        <button class="leaguejump" data-lg="kbo" title="跳到 韓職"><span class="lgdot" style="background:var(--kbo)"></span>韓職</button>
-        <button class="leaguejump" data-lg="cpbl" title="跳到 中職"><span class="lgdot" style="background:var(--cpbl)"></span>中職</button>
         <button class="fit" id="reviewQuickBtn" title="燈號回顧">🔍</button>
-        <button class="fit" id="batchSettleBtn" title="批次結算今天未結算的比賽">結算<span id="unsettledCount" class="usc" style="display:none"></span></button>
       </div>
       <button class="fit" id="zoomctlToggle" title="收合 / 展開快捷鍵">⋮</button>
     </div>
@@ -1186,25 +1188,38 @@
 .bico:hover{ background:#222a36; color:var(--ink); }
 .bico.bdel:hover{ color:var(--danger); }
 
-.bbody{ display:grid; grid-template-columns:224px 1fr; align-items:stretch; }
-.bscore{ display:flex; flex-direction:column; align-items:stretch; justify-content:center; gap:7px; padding:14px 12px; border-right:1px solid rgba(255,255,255,.07); }
-.bana{ padding:10px 16px 14px; min-width:0; }
+/* 平台顛倒醒目橫幅 */
+.bflipbanner{ display:flex; align-items:center; gap:8px; padding:7px 16px; background:rgba(160,90,255,.16); border-bottom:1px solid rgba(160,90,255,.45); color:#d9b3ff; font-size:12.5px; font-weight:700; letter-spacing:.02em; }
+.bflipbanner .ic{ font-size:15px; }
+.card.bcard.flip{ border-color:rgba(160,90,255,.6); box-shadow:0 0 0 1px rgba(160,90,255,.3),0 10px 26px rgba(0,0,0,.5); }
 
-.bteam{ display:flex; align-items:center; gap:10px; width:100%; }
-.blogo{ width:46px; height:46px; border-radius:50%; background:#fff; display:grid; place-items:center; flex:0 0 auto; box-shadow:0 2px 8px rgba(0,0,0,.4); overflow:hidden; }
-.blogo img.tlogo{ width:38px; height:38px; object-fit:contain; }
-.blogo .bfallback{ font-weight:900; font-size:18px; color:#1a2230; font-family:"Noto Sans TC"; }
+.bbody{ display:grid; grid-template-columns:230px 1fr; align-items:stretch; }
+/* 左計分板：直向、置中、舒展，充分用上垂直空間 */
+.bscore{ display:flex; flex-direction:column; align-items:stretch; justify-content:space-evenly; gap:10px; padding:18px 16px; border-right:1px solid rgba(255,255,255,.07); }
+.bana{ padding:12px 18px 16px; min-width:0; }
+
+.bteam{ display:flex; align-items:center; gap:13px; width:100%; }
+.blogo{ width:54px; height:54px; border-radius:50%; background:#fff; display:grid; place-items:center; flex:0 0 auto; box-shadow:0 2px 8px rgba(0,0,0,.4); overflow:hidden; }
+.blogo img.tlogo{ width:100%; height:100%; object-fit:cover; display:block; }   /* 填滿圓形、去除方形留白 */
+.blogo .bfallback{ font-weight:900; font-size:21px; color:#1a2230; font-family:"Noto Sans TC"; }
 .bteam-main{ flex:1 1 auto; min-width:0; }
-.bteam-nm{ font-weight:900; font-size:17px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:5px; }
-.bteam-pcts{ display:flex; flex-direction:column; margin-top:2px; font-family:"Oswald"; font-size:11px; line-height:1.55; }
+.bteam-nm{ font-weight:900; font-size:18px; color:var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; display:flex; align-items:center; gap:6px; }
+.bteam-pcts{ display:flex; flex-direction:column; margin-top:3px; font-family:"Oswald"; font-size:12px; line-height:1.6; }
 .bteam-pcts .pm{ color:#9fb0c4; } .bteam-pcts .pm b{ color:#d8e6f5; font-weight:700; }
 .bteam-pcts .pi{ color:#8a97a8; } .bteam-pcts .pi b{ color:#bcd0e4; font-weight:700; }
-.bteam-pcts .l{ color:var(--ink-dim); letter-spacing:.03em; margin-right:3px; }
-.bteam-sc{ font-family:"Oswald"; font-weight:700; font-size:30px; color:var(--ink); flex:0 0 auto; min-width:26px; text-align:center; }
+.bteam-pcts .l{ color:var(--ink-dim); letter-spacing:.03em; margin-right:4px; }
+.bteam-sc{ font-family:"Oswald"; font-weight:700; font-size:36px; line-height:1; color:var(--ink); flex:0 0 auto; min-width:30px; text-align:center; }
 .bteam.win .bteam-sc{ color:#2ee07f; }
-.bvs{ font-family:"Oswald"; font-size:12px; letter-spacing:.12em; color:var(--ink-dim); align-self:center; padding:1px 0; }
+.bvs{ font-family:"Oswald"; font-size:12px; letter-spacing:.16em; color:var(--ink-dim); align-self:center; padding:2px 0; }
+/* 中央比分（手機已結算）／勝率比對（手機賽前） */
+.bmid{ display:flex; flex-direction:column; align-items:center; justify-content:center; flex:0 0 auto; }
+.bmid-score{ font-family:"Oswald"; font-weight:700; font-size:34px; line-height:1; color:var(--ink); white-space:nowrap; }
+.bmid-score .c{ color:var(--ink-dim); margin:0 4px; }
+.bmid-cmp{ display:grid; grid-template-columns:auto auto auto; gap:1px 8px; font-family:"Oswald"; font-size:12px; align-items:center; }
+.bmid-cmp .l{ color:var(--ink-dim); font-size:10px; letter-spacing:.04em; }
+.bmid-cmp .va{ color:#9bd5ff; font-weight:700; text-align:right; } .bmid-cmp .vh{ color:#ffd27f; font-weight:700; text-align:left; }
 
-.binfo{ display:inline-grid; place-items:center; width:16px; height:16px; border-radius:50%; border:1px solid var(--ink-dim); color:var(--ink-dim); font-size:10px; font-weight:700; font-family:Georgia,serif; font-style:italic; cursor:pointer; flex:0 0 auto; user-select:none; }
+.binfo{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid var(--ink-dim); color:var(--ink-dim); font-size:11px; font-weight:700; font-family:Georgia,serif; font-style:italic; cursor:pointer; flex:0 0 auto; user-select:none; }
 .binfo:hover{ border-color:var(--lit); color:var(--lit); }
 .bpop{ position:fixed; z-index:6000; min-width:210px; max-width:320px; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.6); padding:11px 13px; font-size:12px; line-height:1.75; color:var(--ink); }
 .bpop .ph{ font-family:"Oswald"; font-size:10px; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:5px; }
@@ -1214,44 +1229,44 @@
 .bpop .bx.l{ background:rgba(255,92,92,.10); color:#ff7a7a; border:1px solid rgba(255,92,92,.4); }
 .bpop .bx.t{ background:rgba(255,255,255,.05); color:#8a97a8; border:1px solid var(--line); }
 
-.bana-head{ display:flex; align-items:center; gap:8px; padding:0 0 6px; }
+.bana-head{ display:flex; align-items:center; gap:8px; padding:0 0 8px; }
 .bana-lbl{ font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); }
 .bvenue{ display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
-.bvenue button{ font-size:11px; padding:2px 10px; border:none; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
+.bvenue button{ font-size:11px; padding:3px 11px; border:none; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
 .bvenue button.on{ background:#28c76f; color:#06210f; font-weight:700; }
 .bana-sp{ flex:1 1 auto; }
 
-.bmkt-sec{ display:flex; align-items:center; gap:8px; padding:7px 0 3px; font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); border-top:1px solid rgba(255,255,255,.06); }
+.bmkt-sec{ display:flex; align-items:center; gap:8px; padding:8px 0 4px; font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); border-top:1px solid rgba(255,255,255,.06); }
 .bmkt:first-child .bmkt-sec{ border-top:none; }
-.bmkt-sec .mname{ color:#cdd8e6; font-size:12px; letter-spacing:.06em; flex:0 0 auto; }
+.bmkt-sec .mname{ color:#cdd8e6; font-size:12.5px; letter-spacing:.06em; flex:0 0 auto; }
 .bmkt-sec.conflict .mname{ color:var(--conflict); }
-.bmkt-sec .bswap{ cursor:pointer; color:#ff9f43; font-size:14px; line-height:1; }
-.bmkt-sec .flaghint{ color:#ffb02e; font-size:11px; letter-spacing:0; cursor:help; }
+.bmkt-sec .bswap{ cursor:pointer; color:#ff9f43; font-size:15px; line-height:1; }
+.bmkt-sec .flaghint{ color:#ffb02e; font-size:11px; letter-spacing:0; cursor:help; background:rgba(255,176,46,.12); border:1px solid rgba(255,176,46,.4); border-radius:6px; padding:1px 6px; }
 .bmkt-sec .basis{ display:inline-flex; align-items:center; gap:4px; font-size:11px; letter-spacing:0; color:var(--ink-dim); }
-.bmkt-sec .basis input{ width:44px; background:#0c0f14; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:12px; font-weight:700; text-align:center; padding:2px; font-family:"Oswald"; outline:none; }
+.bmkt-sec .basis input{ width:46px; background:#0c0f14; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:13px; font-weight:700; text-align:center; padding:3px; font-family:"Oswald"; outline:none; }
 .bmkt-sec .basis input:focus{ border-color:var(--lit); }
 .bmkt-sec .mksp{ flex:1 1 auto; }
-.bmkt-sec .bcmt{ font-size:11px; letter-spacing:0; color:#9fb0c4; white-space:nowrap; font-family:"Noto Sans TC"; text-align:right; }
+.bmkt-sec .bcmt{ font-size:11.5px; letter-spacing:0; color:#9fb0c4; white-space:nowrap; font-family:"Noto Sans TC"; text-align:right; }
 .bmkt-sec .bcmt .l{ color:var(--ink-dim); font-family:"Oswald"; font-size:10px; letter-spacing:.05em; margin-right:3px; }
 .bmkt-sec .bcmt .tm{ color:#9bd5ff; font-weight:600; }
 .bmkt-sec .bcmt.flat{ color:var(--ink-dim); }
 .bmkt-sec .bcmt.strong .tm{ color:#ffd27f; }
 .bmkt-sec .binfo{ margin-left:1px; }
 
-.bmkt-row{ display:flex; align-items:center; gap:9px; padding:4px 0; }
-.bmkt-row .bside{ font-family:"Oswald"; font-size:10px; color:#0c0f14; background:var(--ink-dim); border-radius:5px; padding:2px 6px; font-weight:700; flex:0 0 auto; }
+/* 固定欄位網格：燈號與過盤率% 永遠對齊，(N) 標註不會把燈號推歪 */
+.bmkt-row{ display:grid; grid-template-columns:34px 108px 1fr 66px; align-items:center; column-gap:12px; padding:6px 0; }
+.bmkt-row .bside{ font-family:"Oswald"; font-size:11px; color:#0c0f14; background:var(--ink-dim); border-radius:5px; padding:3px 7px; font-weight:700; justify-self:start; }
 .bmkt-row .bside.give{ background:var(--lit); }
 .bmkt-row .bside.recv{ background:#5b6b80; color:#dfe6ef; }
-.bmkt-row .bnm{ font-weight:700; font-size:14px; color:var(--ink); flex:0 0 auto; cursor:pointer; white-space:nowrap; user-select:none; }
-.bmkt-row .bnm .hv{ color:var(--ink-dim); font-family:"Oswald"; font-weight:700; margin-left:3px; }
-.blights{ display:flex; align-items:center; gap:5px; flex:0 0 auto; cursor:pointer; }
-.blights .lt{ width:15px; height:15px; border-radius:50%; flex:0 0 auto; box-sizing:border-box; transition:.1s; }
-.blights .lt.off{ border:1.5px solid #3a4756; background:transparent; }
-.blights .lt.amber{ background:radial-gradient(circle at 35% 30%, #ffe39a, var(--lit) 70%); box-shadow:0 0 7px var(--lit-glow); }
-.blights .lt.red{ background:radial-gradient(circle at 35% 30%, #ffc2a0, var(--hot) 72%); box-shadow:0 0 8px var(--hot-glow); }
-.blights .lt.purple{ background:radial-gradient(circle at 35% 30%, #e6c2ff, #a05aff 72%); box-shadow:0 0 8px rgba(160,90,255,.55); }
-.bmkt-row .bmksp{ flex:1 1 auto; }
-.bmkt-row .bcover{ font-family:"Oswald"; font-weight:700; font-size:14px; color:#aeb9c8; flex:0 0 auto; min-width:40px; text-align:right; }
+.bmkt-row .bnm{ font-weight:700; font-size:15px; color:var(--ink); cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; user-select:none; }
+.bmkt-row .bnm .hv{ color:var(--ink-dim); font-family:"Oswald"; font-weight:700; margin-left:4px; }
+.blights{ display:flex; align-items:center; gap:7px; cursor:pointer; justify-self:end; padding:3px 0; }
+.blights .lt{ width:19px; height:19px; border-radius:50%; flex:0 0 auto; box-sizing:border-box; transition:.1s; }
+.blights .lt.off{ border:1.5px solid #44556a; background:transparent; }
+.blights .lt.amber{ background:radial-gradient(circle at 35% 30%, #ffe39a, var(--lit) 70%); box-shadow:0 0 8px var(--lit-glow); }
+.blights .lt.red{ background:radial-gradient(circle at 35% 30%, #ffc2a0, var(--hot) 72%); box-shadow:0 0 9px var(--hot-glow); }
+.blights .lt.purple{ background:radial-gradient(circle at 35% 30%, #e6c2ff, #a05aff 72%); box-shadow:0 0 9px rgba(160,90,255,.55); }
+.bmkt-row .bcover{ font-family:"Oswald"; font-weight:700; font-size:15px; color:#aeb9c8; justify-self:end; white-space:nowrap; }
 .bmkt-row .bcover.hi{ color:#28c76f; } .bmkt-row .bcover.lo{ color:var(--conflict); } .bmkt-row .bcover.ls{ color:#5b6b80; }
 .bmkt-row .bcover .ss{ font-size:9px; color:#5b6b80; }
 .bmkt-row.conflict .bnm{ color:var(--conflict); }
@@ -1263,19 +1278,45 @@
 .bpill.void{ color:#9fb0c4; }
 .bpill.sc{ color:var(--ink); border-color:var(--lit); background:rgba(255,176,46,.06); }
 
+/* ---- 電腦版：比賽卡靠左、右側留給戰/重面板（不再死置中） ---- */
+@media (min-width:1180px){
+  #world{ align-items:flex-start; max-width:1300px; margin:0 auto; padding-left:clamp(20px,4vw,56px); padding-right:392px; }
+  .card.bcard{ max-width:none; }
+}
+#summary{ position:fixed !important; }
+#zoomctl{ position:fixed !important; }   /* 快捷鍵隨螢幕固定，不隨內容捲走 */
+
+/* ---- 手機版 ---- */
 @media (max-width:680px){
   #world{ padding:10px 8px 150px; gap:10px; }
   .bbody{ grid-template-columns:1fr; }
-  .bscore{ flex-direction:row; justify-content:space-between; align-items:flex-start; gap:8px; border-right:none; border-bottom:1px solid rgba(255,255,255,.07); padding:12px; }
-  .bteam{ flex-direction:column; gap:4px; text-align:center; width:auto; flex:1 1 0; min-width:0; }
-  .bteam .blogo{ margin:0 auto; }
+  .bscore{ flex-direction:row; justify-content:space-between; align-items:center; gap:6px; border-right:none; border-bottom:1px solid rgba(255,255,255,.07); padding:14px 12px; }
+  .bteam{ flex-direction:column; gap:5px; text-align:center; width:auto; flex:1 1 0; min-width:0; }
+  .bteam .blogo{ margin:0 auto; width:50px; height:50px; }
   .bteam-main{ text-align:center; width:100%; }
-  .bteam-nm{ justify-content:center; }
+  .bteam-nm{ justify-content:center; font-size:16px; }
   .bteam-pcts{ align-items:center; }
-  .bteam-sc{ font-size:24px; }
-  .bana{ padding:8px 12px 12px; }
-  .bmkt-sec .bcmt{ font-size:10px; }
+  .bteam-sc{ display:none; }                 /* 手機比分移到中央 */
+  .bana{ padding:10px 12px 14px; }
+  .bmkt-row{ grid-template-columns:30px 100px 1fr 52px; column-gap:7px; }
+  .bmkt-row .bnm{ font-size:15px; }
+  .blights{ gap:5px; }
+  .blights .lt{ width:17px; height:17px; }
+  .bmkt-sec .bcmt{ font-size:11px; }
 }
+
+/* ---- 結算視窗：底部按鈕黏底，手機可捲到底 ---- */
+#settleModal .box{ display:flex; flex-direction:column; -webkit-overflow-scrolling:touch; }
+#settleModal #settleBody{ overflow-y:auto; }
+#settleModal .actions{ position:sticky; bottom:0; background:var(--panel); padding-top:12px; margin-top:4px; border-top:1px solid var(--line); display:flex; gap:8px; flex-wrap:wrap; }
+
+/* ---- 上方聯盟切換列（永遠可見，不隨內容捲動） ---- */
+.lgnav{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.lgnav button{ display:flex; align-items:center; gap:6px; font-family:"Noto Sans TC"; font-size:13px; font-weight:700; color:var(--ink); background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:7px 13px; cursor:pointer; transition:.12s; min-height:36px; }
+.lgnav button:hover{ border-color:#3a4756; background:#222a36; }
+.lgnav button .lgdot{ width:9px; height:9px; border-radius:50%; flex:0 0 auto; }
+.lgnav button:disabled{ opacity:.32; cursor:not-allowed; }
+.oddsstamp{ font-family:"Oswald"; font-size:11px; color:var(--ink-dim); letter-spacing:.03em; white-space:nowrap; }
 
 /* ---- 戰 / 重 浮動面板 tab ---- */
 #summary .sumtabs{ display:flex; gap:6px; margin-right:6px; }
@@ -1292,7 +1333,7 @@
 .zhanhint{ padding:2px 14px 12px; color:var(--ink-dim); font-size:11px; line-height:1.5; }
 </style>
 
-<script src="./logo-map.js"></script>
+<script src="./logo-map.js?v=2"></script>
 <script>
 const LEAGUES = {
   mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
@@ -2482,9 +2523,9 @@ function renderCardB(it){
   const gap = bGapInfo(it);
   if(gap){ const g=document.createElement("span"); g.className="bwarn "+gap.cls; g.textContent=gap.txt; g.title=gap.title; head.appendChild(g); }
   if(it.settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改 / 取消結算"; sm.onclick=()=>openSettleModal(it); head.appendChild(sm); }
-  // 顛倒▸輸入
-  const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"顛倒 ✓":"顛倒▸輸入"; flipB.title="標記平台顛倒 / 開結算視窗"; flipB.onclick=()=>openSettleModal(it);
-  // 賽前▸輸入
+  // 顛倒：純標記切換（點一下變亮，不開任何輸入視窗）
+  const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"⇅ 顛倒":"顛倒"; flipB.title="標記平台顛倒（台彩 vs STAKE 受讓方相反）— 點一下切換"; flipB.onclick=()=>{ snapshot(); it.platformFlip=!it.platformFlip; save(); render(); };
+  // 賽前▸輸入：開結算視窗填賠率
   const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
   const preB = document.createElement("button"); preB.className="bbadge"+(hasOdds?" done":""); preB.textContent = hasOdds?"賽前 ✓":"賽前▸輸入"; preB.title="輸入賽前賠率 / 開結算視窗"; preB.onclick=()=>openSettleModal(it);
   // collapse + delete
@@ -2493,11 +2534,21 @@ function renderCardB(it){
   head.append(flipB, preB, colB, delB);
   el.appendChild(head);
 
+  // 平台顛倒 → 醒目橫幅（不只是按鈕變色）
+  if(it.platformFlip){
+    el.classList.add("flip");
+    const bn=document.createElement("div"); bn.className="bflipbanner";
+    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：台彩與 STAKE 受讓方相反";
+    el.appendChild(bn);
+  }
+
   if(!it.collapsed){
     /* ---------- 兩區式本體 ---------- */
     const body = document.createElement("div"); body.className="bbody";
 
-    // 左：計分板
+    // 左：計分板（電腦直排；手機橫排、中央放比分或勝率比對）
+    const mob = (canvas && canvas.clientWidth ? canvas.clientWidth : window.innerWidth) <= 680;
+    const settledScore = !!(it.settled && it.settled.awayScore!=null && it.settled.homeScore!=null);
     const score = document.createElement("div"); score.className="bscore";
     function teamBlock(side){
       const team = it[side];
@@ -2513,22 +2564,36 @@ function renderCardB(it){
       info.onclick=(e)=>{ e.stopPropagation(); bTogglePop(info, bFormHTML(it, side)); };
       nm.appendChild(info);
       main.appendChild(nm);
+      // 勝率：電腦永遠在隊名旁；手機只有「已有比分」時才放隊名下（賽前移到中央比對）
       const mdl = side==="away"?wp.mdlA:wp.mdlH, imp = side==="away"?wp.impA:wp.impH;
-      if(mdl!=null || imp!=null){
+      if((!mob || settledScore) && (mdl!=null || imp!=null)){
         const pc = document.createElement("div"); pc.className="bteam-pcts";
         pc.innerHTML = `<span class="pm"><span class="l">模型</span>${mdl!=null?`<b>${mdl}%</b>`:"—"}</span>`
                      + `<span class="pi"><span class="l">盤口</span>${imp!=null?`<b>${imp}%</b>`:"—"}</span>`;
         main.appendChild(pc);
       }
-      const sc = document.createElement("div"); sc.className="bteam-sc";
-      const s = it.settled, myK=side+"Score", opK=(side==="away"?"home":"away")+"Score";
-      if(s && s[myK]!=null){ sc.textContent = s[myK];
-        if(s[opK]!=null && (+s[myK])>(+s[opK])) wrap.classList.add("win"); }
-      wrap.append(logo, main, sc);
+      wrap.append(logo, main);
+      // 勝負底色
+      if(settledScore){ const my=+it.settled[side+"Score"], op=+it.settled[(side==="away"?"home":"away")+"Score"]; if(my>op) wrap.classList.add("win"); }
+      // 電腦版：比分在隊名旁
+      if(!mob){ const sc=document.createElement("div"); sc.className="bteam-sc"; if(settledScore) sc.textContent=it.settled[side+"Score"]; wrap.append(sc); }
       return wrap;
     }
-    const vsEl = document.createElement("div"); vsEl.className="bvs"; vsEl.textContent="VS";
-    score.append(teamBlock("away"), vsEl, teamBlock("home"));
+    if(!mob){
+      const vsEl = document.createElement("div"); vsEl.className="bvs"; vsEl.textContent="VS";
+      score.append(teamBlock("away"), vsEl, teamBlock("home"));
+    } else {
+      const mid = document.createElement("div"); mid.className="bmid";
+      if(settledScore){
+        mid.innerHTML = `<div class="bmid-score">${it.settled.awayScore}<span class="c">:</span>${it.settled.homeScore}</div>`;
+      } else if(wp.mdlA!=null || wp.impA!=null){
+        mid.innerHTML = `<div class="bmid-cmp">`
+          + `<span class="va">${wp.mdlA!=null?wp.mdlA+'%':'—'}</span><span class="l">模型</span><span class="vh">${wp.mdlH!=null?wp.mdlH+'%':'—'}</span>`
+          + `<span class="va">${wp.impA!=null?wp.impA+'%':'—'}</span><span class="l">盤口</span><span class="vh">${wp.impH!=null?wp.impH+'%':'—'}</span>`
+          + `</div>`;
+      } else { mid.innerHTML = `<div class="bvs">VS</div>`; }
+      score.append(teamBlock("away"), mid, teamBlock("home"));
+    }
     body.appendChild(score);
 
     // 右：分析區
@@ -2551,8 +2616,7 @@ function renderCardB(it){
       const nm=document.createElement("span"); nm.className="bnm"; nm.title="點隊名／標籤＝減一盞燈";
       nm.innerHTML = esc(name)+(hv?` <span class="hv">${esc(hv)}</span>`:"");
       nm.onclick=()=>{ if(lightObj.lights>0){ snapshot(); lightObj.lights--; save(); render(); } };
-      const sp=document.createElement("span"); sp.className="bmksp";
-      row.append(b, nm, sp, bLightsEl(lightObj), _firstEl(coverHTML));
+      row.append(b, nm, bLightsEl(lightObj), _firstEl(coverHTML));  // grid: 燈號/% 永遠對齊
       return row;
     }
     function mktSecHead(label, conflict, extras, cmtKey){
@@ -2579,8 +2643,9 @@ function renderCardB(it){
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方";
     swap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
     let flipHint=null;
-    const feedFlip = !!it.autoHdFlip;
-    if(feedFlip){ flipHint=document.createElement("span"); flipHint.className="flaghint"; flipHint.textContent="疑顛倒場"; flipHint.title="工作流抓到的讓分熱門與此盤讓分方相反"; }
+    // 即時比對：工作流抓到的讓分熱門隊 ≠ 目前讓分方 → 疑顛倒（切換讓分方後會立刻消失）
+    const feedFlip = !!(it.feedFavTeam && it.feedFavTeam !== it[it.hdFav]);
+    if(feedFlip){ flipHint=document.createElement("span"); flipHint.className="flaghint"; flipHint.textContent="⚠ 疑顛倒場"; flipHint.title=`工作流抓到的讓分熱門（${it.feedFavTeam}）與目前讓分方（${it[it.hdFav]}）相反`; }
     const hv = it.hdVal || "1.5";
     const hdH=mktSecHead("讓分", hdConflict, [swap, flipHint], "hd");
     hdWrap.append(hdH.sec,
@@ -2919,38 +2984,47 @@ function startSummaryDrag(e){
 }
 function moveSummaryDrag(e){
   if(!sumDrag) return;
-  const cr = canvas.getBoundingClientRect();
+  // #summary 為 position:fixed，直接用 viewport 座標
   const bw = sumDrag.box.offsetWidth * (uiScale||1);
   const bh = sumDrag.box.offsetHeight * (uiScale||1);
-  const x = Math.max(0, Math.min(cr.width  - bw, e.clientX-cr.left-sumDrag.offX));
-  const y = Math.max(0, Math.min(cr.height - bh, e.clientY-cr.top -sumDrag.offY));
+  const topMin = summaryTopPad();
+  const x = Math.max(8, Math.min(window.innerWidth  - bw - 8, e.clientX - sumDrag.offX));
+  const y = Math.max(topMin, Math.min(window.innerHeight - bh - 8, e.clientY - sumDrag.offY));
   sumDrag.box.style.left = x+"px"; sumDrag.box.style.top = y+"px";
   sumDrag.lastX = x; sumDrag.lastY = y; sumDrag.bw = bw; sumDrag.bh = bh;
 }
 function endSummaryDrag(){
   if(!sumDrag) return;
   const box = sumDrag.box;
-  const cr = canvas.getBoundingClientRect();
   const bw = sumDrag.bw || box.offsetWidth*(uiScale||1);
   const bh = sumDrag.bh || box.offsetHeight*(uiScale||1);
-  // center of the box decides which quadrant → which corner
   const cx = (sumDrag.lastX!=null ? sumDrag.lastX : 0) + bw/2;
   const cy = (sumDrag.lastY!=null ? sumDrag.lastY : 0) + bh/2;
-  const right = cx > cr.width/2;
-  const bottom = cy > cr.height/2;
+  const right = cx > window.innerWidth/2;
+  const bottom = cy > window.innerHeight/2;
   const corner = (bottom?"b":"t") + (right?"r":"l");
   doc.summaryCorner = corner;
   positionSummaryByCorner(box, corner);
   sumDrag=null; save();
 }
-// Anchor the summary box to a screen corner using CSS edge offsets (never goes offscreen).
+// 面板固定時頂部要避開永遠可見的 header + datebar
+function summaryTopPad(){
+  const d = document.querySelector("#datebar") || document.querySelector("header");
+  const b = d ? d.getBoundingClientRect().bottom : 60;
+  return Math.round(b) + 8;
+}
+// Anchor the summary box to a screen corner (position:fixed → viewport edges).
 function positionSummaryByCorner(box, corner){
-  const PAD = 12;
+  const PAD = 14;
   box.style.left = box.style.right = box.style.top = box.style.bottom = "auto";
-  if(corner==="tl"){ box.style.left=PAD+"px";  box.style.top=PAD+"px"; }
-  else if(corner==="tr"){ box.style.right=PAD+"px"; box.style.top=PAD+"px"; }
-  else if(corner==="bl"){ box.style.left=PAD+"px";  box.style.bottom=PAD+"px"; }
-  else { box.style.right=PAD+"px"; box.style.bottom=PAD+"px"; }  // br
+  const wide = window.innerWidth >= 1180;
+  const topPad = summaryTopPad() + "px";
+  // 寬螢幕：版面把右側留給面板，永遠靠右（對齊置中內容帶 max 1300 的右緣），避免壓到靠左的卡片
+  const rightVal = wide ? "max(14px, calc((100vw - 1300px)/2 + 14px))" : PAD+"px";
+  const onRight = wide ? true : (corner==="tr" || corner==="br");
+  const onBottom = (corner==="bl" || corner==="br");
+  if(onRight) box.style.right = rightVal; else box.style.left = PAD+"px";
+  if(onBottom && !wide) box.style.bottom = PAD+"px"; else box.style.top = topPad;
 }
 
 /* ---------------- snapping (all in WORLD coords) ---------------- */
@@ -3845,15 +3919,17 @@ function jumpToLeague(lg){
   applyView(); saveViewSoon();
 }
 function refreshLeagueJumpBtns(){
-  document.querySelectorAll("#zoomctl .leaguejump").forEach(b=>{
+  document.querySelectorAll(".leaguejump").forEach(b=>{
     const lg = b.dataset.lg;
     const has = state.items.some(i=>i.type==="match" && leagueOf(i)===lg);
     b.disabled = !has;
   });
 }
-document.querySelectorAll("#zoomctl .leaguejump").forEach(b=>{
+document.querySelectorAll(".leaguejump").forEach(b=>{
   b.onclick = ()=>{ if(!b.disabled) jumpToLeague(b.dataset.lg); };
 });
+// 響應式：視窗大小改變（含跨越手機斷點）後重畫，讓兩區式/計分板與面板位置跟著重排
+window.addEventListener("resize", ()=>{ clearTimeout(window.__bResizeT); window.__bResizeT=setTimeout(()=>{ if(typeof render==="function") render(); }, 160); });
 function applyZoomctlCollapsed(){
   const z = $("#zoomctl"); if(!z) return;
   z.classList.toggle("collapsed", !!doc.zoomctlCollapsed);
