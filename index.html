@@ -1277,26 +1277,41 @@
 
 /* ---- 電腦版：比賽卡靠左、右側留給戰/重面板（不再死置中） ---- */
 @media (min-width:1180px){
-  #world{ align-items:flex-start; padding-left:clamp(16px,3vw,48px); padding-right:480px; }
+  #world{ align-items:flex-start; padding-left:clamp(16px,3vw,48px); padding-right:24px; }
   .card.bcard{ max-width:616px; zoom:1.4; }   /* 卡片放大約 1.4×：100% 看起來就像 150% */
-  #summary{ width:320px !important; }
   #matchnav{ display:flex; }
+  /* 戰/重面板：填滿剩餘寬度、字放大、不用 uiScale 變形 */
+  #summary{ transform:none !important; }
+  #summary .sumhead{ padding:13px 16px; font-size:14px; }
+  #summary .sumtab{ font-size:14px; padding:5px 15px; }
+  #summary .sumbody{ max-height:none; }
+  #summary .sumrow{ font-size:15px; padding:8px 16px; }
+  #summary .sumrow .mt{ font-size:13px; flex-basis:84px; }
+  #summary .sumrow .n{ font-size:17px; }
+  #summary .sumsec{ font-size:11px; }
+  #summary .zhanrow{ font-size:17px; padding:13px 18px; }
+  #summary .zhanrow .zhit,#summary .zhanrow .zmiss{ font-size:21px; }
+  #summary .zhanrow .zrate{ font-size:20px; min-width:56px; }
+  #summary .zhanhint,#summary .sumempty,#summary .zhanempty{ font-size:13px; }
+}
+@media (min-width:1180px) and (max-width:1439px){
+  .card.bcard{ zoom:1.2; }   /* 中尺寸桌機：卡片略縮，騰出空間給導覽列＋面板 */
 }
 #summary{ position:fixed !important; }
 #zoomctl{ position:fixed !important; }   /* 快捷鍵隨螢幕固定，不隨內容捲走 */
 
-/* ① 對戰導覽列（固定欄、滑鼠移過放大、點擊捲到該場卡片） */
+/* ① 對戰導覽列（固定欄、貼著卡片、滑鼠移過放大、點擊捲到該場卡片） */
 #matchnav{ display:none; position:fixed; z-index:140; flex-direction:column;
-  width:118px; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96));
+  width:256px; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96));
   border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
-#matchnav .nvhead{ display:flex; gap:4px; padding:7px 7px 6px; border-bottom:1px solid var(--line); }
-#matchnav .nvhead button{ flex:1; font-size:11px; padding:3px 0; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
+#matchnav .nvhead{ display:flex; gap:5px; padding:9px 9px 7px; border-bottom:1px solid var(--line); }
+#matchnav .nvhead button{ flex:1; font-size:13px; padding:5px 0; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
 #matchnav .nvhead button.on{ background:#28c76f; color:#06210f; font-weight:700; border-color:#28c76f; }
-#matchnav .nvbody{ overflow-y:auto; overscroll-behavior:contain; padding:5px 0 7px; }
-#matchnav .nvsec{ font-family:"Oswald"; font-size:10px; letter-spacing:.1em; color:var(--ink-dim); padding:6px 10px 2px; }
+#matchnav .nvbody{ overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding:6px 0 8px; }
+#matchnav .nvsec{ font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); padding:7px 12px 3px; }
 #matchnav .nvtag{ display:block; transform-origin:left center; transition:transform .11s ease-out,color .11s,background .11s,border-color .11s;
-  margin:2px 8px; padding:3px 8px; border-radius:6px; background:#1b2430; border:1px solid var(--line);
-  font-size:11px; color:#cdd8e6; white-space:nowrap; cursor:pointer; }
+  margin:3px 9px; padding:5px 11px; border-radius:7px; background:#1b2430; border:1px solid var(--line);
+  font-size:14px; color:#cdd8e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
 #matchnav .nvtag:hover{ color:#ffe39a; }
 #matchnav .nvtag.flash{ background:rgba(255,176,46,.2); border-color:var(--lit); }
 .card.bcard.navflash{ box-shadow:0 0 0 2px var(--lit),0 10px 26px rgba(0,0,0,.5); transition:box-shadow .2s; }
@@ -1985,6 +2000,7 @@ function render(){
   list.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
   renderSummary();
   if(typeof renderMatchNav==="function") renderMatchNav();
+  if(typeof layoutRightColumns==="function") layoutRightColumns();
   buildTray();
   if(typeof refreshLeagueJumpBtns==="function") refreshLeagueJumpBtns();
   if(typeof refreshUnsettledCount==="function") refreshUnsettledCount();
@@ -2964,18 +2980,9 @@ function renderSummary(){
 function renderMatchNav(){
   const el = document.getElementById("matchnav"); if(!el) return;
   const matches = state.items.filter(i=>i.type==="match");
-  if(!matches.length || window.innerWidth < 1180){ el.style.display="none"; if(world) world.style.paddingRight=""; return; }
+  if(!matches.length || window.innerWidth < 1180){ el.style.display="none"; return; }
   el.style.display="flex";
-  const top = (typeof summaryTopPad==="function") ? summaryTopPad() : 120;
-  el.style.top = top+"px";
-  // 釘在面板左側（依面板實際位置，避免被 uiScale 放大後重疊）
-  const panel = document.getElementById("summary");
-  let navRight = 14 + 320 + 12;
-  if(panel){ const pr = panel.getBoundingClientRect(); if(pr.width > 0) navRight = Math.round(window.innerWidth - pr.left) + 12; }
-  el.style.right = navRight + "px";
-  el.style.maxHeight = (window.innerHeight - top - 16) + "px";
-  // 預留卡片右側空間，卡片永遠不會滑到導覽列底下
-  if(canvas) world.style.paddingRight = (navRight + el.offsetWidth + 16) + "px";
+  // 位置交給 layoutRightColumns() 統一處理（導覽列貼著卡片、面板填滿到右緣）
   const grouped = (doc.navGrouped !== false);
   const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   el.innerHTML = "";
@@ -3019,6 +3026,30 @@ function renderMatchNav(){
       t.style.transform="scale("+s.toFixed(3)+")"; t.style.zIndex = f>0?String(Math.round(s*10)):""; });
   };
   body.onmouseleave = ()=>{ tags.forEach(t=>{ t.style.transform="scale(1)"; t.style.zIndex=""; }); };
+}
+
+/* 統一定位右側：導覽列貼著卡片右緣、戰/重面板再往右填滿到螢幕右緣（電腦版） */
+function layoutRightColumns(){
+  const nav = document.getElementById("matchnav");
+  const panel = document.getElementById("summary");
+  if(window.innerWidth < 1180){ return; }   // 窄螢幕：各自的預設定位
+  const firstCard = world && world.querySelector(".card.bcard");
+  const cardRight = firstCard ? Math.round(firstCard.getBoundingClientRect().right) : 900;
+  const top = (typeof summaryTopPad==="function") ? summaryTopPad() : 120;
+  const NAVW = 256, GAP = 20, PGAP = 14, EDGE = 14;
+  let navRightEdge = cardRight + GAP;
+  if(nav && nav.style.display !== "none"){
+    nav.style.left = (cardRight + GAP) + "px"; nav.style.right = "auto";
+    nav.style.top = top + "px"; nav.style.maxHeight = (window.innerHeight - top - 16) + "px";
+    navRightEdge = cardRight + GAP + (nav.offsetWidth || NAVW);
+  } else { navRightEdge = cardRight + GAP - GAP; }
+  if(panel){
+    panel.style.transform = "none"; panel.style.zoom = "1";   // 取消 uiScale 縮放，改用實際大小（zoom 會破壞 left/right 定位）
+    panel.style.left = (navRightEdge + PGAP) + "px";
+    panel.style.right = EDGE + "px"; panel.style.width = "auto";
+    panel.style.top = top + "px"; panel.style.bottom = EDGE + "px";
+    const body = panel.querySelector(".sumbody"); if(body) body.style.maxHeight = "none";
+  }
 }
 
 // 重點總結「最小化」用的快捷鍵啟動鈕（與比分鈕同一排）
