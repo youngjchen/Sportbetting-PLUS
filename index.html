@@ -1319,6 +1319,7 @@
 #matchnav .nvtag.st-partial{ color:#ffce7a; border-color:rgba(255,176,46,.55); background:rgba(255,176,46,.12); }
 #matchnav .nvtag.st-full{ color:#5fd79e; border-color:rgba(40,199,111,.5); background:rgba(40,199,111,.12); }
 #matchnav .nvtag.st-flip{ color:#cda4ff; border-color:#b96bff; background:rgba(185,107,255,.18); }
+#matchnav .nvtag.dragging{ opacity:.45; }
 #matchnav .nvsec.flipsec{ color:#cda4ff; }
 #matchnav .nvtag:hover{ color:#ffe39a; }
 #matchnav .nvtag.flash{ background:rgba(255,176,46,.2); border-color:var(--lit); }
@@ -1997,12 +1998,14 @@ function render(){
   emptyMsg.style.display = state.items.length ? "none" : "flex";
   let list = state.items;
   if(RESPONSIVE){
-    // flow 版面：DOM 順序 = 視覺順序，依聯盟分組、組內保留原本順序
+    // flow 版面：DOM 順序 = 視覺順序，依聯盟分組、組內依開球時間(同時間再依手動 seq)
     const ord = { mlb:0, npb:1, kbo:2, cpbl:3, zz:4 };
     list = state.items.map((it,i)=>({it,i})).sort((a,b)=>{
       const la = a.it.type==="match" ? (ord[leagueOf(a.it)] ?? 4) : 5;
       const lb = b.it.type==="match" ? (ord[leagueOf(b.it)] ?? 4) : 5;
-      return (la-lb) || (a.i-b.i);
+      if(la!==lb) return la-lb;
+      if(a.it.type==="match" && b.it.type==="match"){ const c=cmpMatch(a.it,b.it); if(c) return c; }
+      return a.i-b.i;
     }).map(o=>o.it);
   }
   list.forEach(it=> it.type==="single" ? renderToken(it) : renderCard(it));
@@ -2984,7 +2987,10 @@ function renderSummary(){
   canvas.appendChild(box);
   applySummaryScale();
 }
-/* ① 對戰導覽列：列出當天所有對戰標籤（全部／分組），滑過放大、點擊平滑捲到該場卡片 */
+/* ① 對戰導覽列：列出當天所有對戰標籤（分組），滑過放大、點擊平滑捲到該場卡片、拖曳改順序 */
+let _navDrag=null;                                       // 拖曳中的標籤 it.id
+function gtMins(it){ const m=/(\d{1,2}):(\d{2})/.exec((it&&it.gameTime)||""); return m?(+m[1])*60+(+m[2]):1e9; }
+function cmpMatch(a,b){ return (gtMins(a)-gtMins(b)) || ((a.seq==null?1e9:a.seq)-(b.seq==null?1e9:b.seq)); }  // 組內：開球時間→手動 seq（時間優先，晚場不會排到早場前）
 function navMatchState(it){
   if(it.platformFlip) return "st-flip";                  // 顛倒場優先(覆蓋完整度)
   if(it.settled) return "st-full";                       // 已結算＝資料齊全
@@ -3016,25 +3022,40 @@ function renderMatchNav(){
     const t=document.createElement("div"); t.className="nvtag "+navMatchState(it);
     t.textContent = it.away+" / "+it.home + (it.gameTime?("　"+it.gameTime):"");
     t.title = it.away+" / "+it.home + (it.gameTime?("　"+it.gameTime):"");
+    t.draggable = true; t.dataset.itid = String(it.id);
     t.onclick=()=>{
       const card = world.querySelector('.card[data-id="'+it.id+'"]');
       if(card){ card.scrollIntoView({behavior:"smooth", block:"start"});
         t.classList.add("flash"); card.classList.add("navflash");
         setTimeout(()=>{ t.classList.remove("flash"); card.classList.remove("navflash"); }, 1200); }
     };
+    t.addEventListener("dragstart", e=>{ _navDrag=it.id; t.classList.add("dragging");
+      try{ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain", String(it.id)); }catch(_){} });
+    t.addEventListener("dragover", e=>{ if(_navDrag==null) return; e.preventDefault();
+      const d=body.querySelector(".nvtag.dragging"); if(!d || d===t) return;
+      const r=t.getBoundingClientRect(); body.insertBefore(d, (e.clientY-r.top)>r.height/2 ? t.nextSibling : t); });
+    t.addEventListener("dragend", ()=>{ t.classList.remove("dragging"); if(_navDrag!=null){ _navDrag=null; commitNavOrder(); } });
     return t;
   }
   function sec(label, extraCls){ const s=document.createElement("div"); s.className="nvsec"+(extraCls?(" "+extraCls):""); s.textContent=label; body.appendChild(s); }
+  function commitNavOrder(){                              // 依目前 nav DOM 順序，組內(同聯盟)重編 seq → 持久化；render 仍以「時間→seq」排序，晚場不會被拉到早場前
+    const seen={};
+    [].slice.call(body.querySelectorAll(".nvtag")).forEach(el=>{
+      const id=+el.dataset.itid, it=state.items.find(x=>x.id===id); if(!it) return;
+      const lg=leagueOf(it); seen[lg]=(seen[lg]||0); it.seq=seen[lg]++;
+    });
+    save(); render();
+  }
   if(flipTop){                                            // 顛倒場拉到最上面一區，其餘照聯盟分組(排除已列出的顛倒場)
-    const flips = matches.filter(isFlip);
+    const flips = matches.filter(isFlip).sort(cmpMatch);
     if(flips.length){ sec("顛倒場","flipsec"); flips.forEach(it=>body.appendChild(tag(it))); }
     LGO.forEach(k=>{
-      const list = matches.filter(it=>leagueOf(it)===k && !isFlip(it)); if(!list.length) return;
+      const list = matches.filter(it=>leagueOf(it)===k && !isFlip(it)).sort(cmpMatch); if(!list.length) return;
       sec(LGL[k]); list.forEach(it=>body.appendChild(tag(it)));
     });
   } else {                                                // 預設：照聯盟分組(顛倒場以紫色就地標示)
     LGO.forEach(k=>{
-      const list = matches.filter(it=>leagueOf(it)===k); if(!list.length) return;
+      const list = matches.filter(it=>leagueOf(it)===k).sort(cmpMatch); if(!list.length) return;
       sec(LGL[k]); list.forEach(it=>body.appendChild(tag(it)));
     });
   }
@@ -3044,6 +3065,7 @@ function renderMatchNav(){
   const tags = [].slice.call(body.querySelectorAll(".nvtag"));
   const RANGE=46, MAX=1.7;
   body.onmousemove = (e)=>{
+    if(_navDrag!=null) return;
     const y=e.clientY;
     tags.forEach(t=>{ const r=t.getBoundingClientRect(), c=r.top+r.height/2, d=Math.abs(y-c), f=Math.max(0,1-d/RANGE), s=1+(MAX-1)*f;
       t.style.transform="scale("+s.toFixed(3)+")"; t.style.zIndex = f>0?String(Math.round(s*10)):""; });
