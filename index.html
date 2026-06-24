@@ -354,7 +354,7 @@
 
   /* ---------- stats page (full-screen overlay over canvas) ---------- */
   #statspage{
-    position:absolute;inset:0;z-index:120;background:var(--bg);
+    position:absolute;inset:0;z-index:160;background:var(--bg);
     display:none;flex-direction:column;overflow:hidden;
   }
   #statspage.show{display:flex;}
@@ -918,7 +918,6 @@
           <button class="sortbtn" data-sort="hd">讓分</button>
           <button class="sortbtn" data-sort="tot">大小分</button>
         </div>
-        <button id="layoutBtn">⊞ 依聯盟排版</button>
         <button id="collapseAllBtn">⊟ 收合／展開全部</button>
         <div class="colrow">
           <span class="collabel">收合聯盟</span>
@@ -956,10 +955,6 @@
         <!-- 中頻：檢視與資料進出 -->
         <button id="statsBtn">📊 隊伍統計</button>
         <button id="reviewBtn">🔍 燈號回顧</button>
-        <button id="copyDayBtn">📋 複製某天到今天</button>
-        <button id="importGamesBtn">📥 匯入比賽資料（純文字）</button>
-        <button id="exportBtn">⎘ 匯出文字</button>
-        <button id="pngBtn">⤓ 存成圖片</button>
         <div class="sep"></div>
         <!-- 很少使用：備份與清理 -->
         <button id="exportDataBtn">💾 匯出備份檔</button>
@@ -975,7 +970,7 @@
   <div id="datebar"></div>
 
   <div id="canvas">
-    <div id="empty">今天還沒有比賽。<br>從上方「<b>⋯ 更多</b>」選單<b>匯入比賽資料</b>，<br>或用「<b>⚡ 用賠率自動排今天的盤</b>」帶入。</div>
+    <div id="empty">今天還沒有比賽。<br>用上方「<b>⋯ 更多</b>」選單裡的<br>「<b>⚡ 用賠率自動排今天的盤</b>」帶入。</div>
     <div id="world"></div>
     <div id="matchnav"></div>
     <div id="saveBadge"></div>
@@ -1340,14 +1335,17 @@
   .blights .lt{ width:18px; height:18px; }
   .bmkt-sec .bcmt{ font-size:11px; }
   /* ⋯ 選單：限制在螢幕內、可上下捲，不再跑出畫面 */
-  #moreMenu{ right:6px; left:auto; max-width:calc(100vw - 16px); }
+  #moreMenu{ position:fixed; top:54px; right:8px; left:auto; max-width:calc(100vw - 16px); max-height:calc(100dvh - 66px); }
   #moreMenu .colrow{ flex-wrap:wrap; }
+  /* 結算視窗手機版：貼合可視高度，本體可捲、底部按鈕永遠可見 */
+  #settleModal{ padding:8px; }
+  #settleModal .box{ width:100%; max-height:90vh; max-height:92dvh; }
 }
 
 /* ---- 結算視窗：底部按鈕黏底，手機可捲到底 ---- */
-#settleModal .box{ display:flex; flex-direction:column; -webkit-overflow-scrolling:touch; }
-#settleModal #settleBody{ overflow-y:auto; }
-#settleModal .actions{ position:sticky; bottom:0; background:var(--panel); padding-top:12px; margin-top:4px; border-top:1px solid var(--line); display:flex; gap:8px; flex-wrap:wrap; }
+#settleModal .box{ display:flex; flex-direction:column; overflow:hidden; -webkit-overflow-scrolling:touch; }
+#settleModal #settleBody{ flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+#settleModal .actions{ flex:0 0 auto; background:var(--panel); padding-top:12px; margin-top:4px; border-top:1px solid var(--line); display:flex; gap:8px; flex-wrap:wrap; }
 
 /* ---- 上方聯盟切換列（永遠可見，不隨內容捲動） ---- */
 .lgnav{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
@@ -3649,7 +3647,6 @@ function openExport(){
   $("#modalText").value = buildExportText();
   $("#modal").classList.add("show");
 }
-$("#exportBtn").onclick = openExport;
 $("#modalClose").onclick = ()=> $("#modal").classList.remove("show");
 $("#modal").addEventListener("click", e=>{ if(e.target.id==="modal") $("#modal").classList.remove("show"); });
 $("#copyBtn").onclick = async ()=>{
@@ -3713,8 +3710,6 @@ function autoLayout(){
   });
   save(); render(); fitView();
 }
-$("#layoutBtn").onclick = ()=>{ closeMore(); autoLayout(); };
-$("#copyDayBtn").onclick = copyMatchupsFromDay;
 
 /* ---- sort by a chosen market block, conflicts sink to the bottom ---- */
 function blockValue(it, which){
@@ -3906,7 +3901,6 @@ function wrapForeign(node, W, H){
   wrap.appendChild(node); fo.appendChild(wrap); svg.appendChild(fo);
   return svg;
 }
-$("#pngBtn").onclick = ()=>{ closeMore(); exportPNG(); };
 
 /* ---------------- data backup (export / import a file) ---------------- */
 function exportData(){
@@ -4054,7 +4048,6 @@ $("#clearRecent") && ($("#clearRecent").onclick = ()=>{
   save(); render();
   alert("已清除全部比賽紀錄。可以匯入新資料了。");
 });
-$("#exportBtn").onclick = ()=>{ closeMore(); openExport(); };
 
 /* zoom: wheel/pinch only now; buttons removed. doFit kept for internal use. */
 const doFit = ()=> fitView();
@@ -4285,9 +4278,13 @@ function openStatsPage(){
   state.items.forEach(it=>{ if(it.type==="match"){ todayLeagues.add(leagueOf(it)); } });
   if(todayLeagues.size===1) lg.value = [...todayLeagues][0];
   sp.classList.add("show");
+  if(typeof renderMatchNav==="function") renderMatchNav();   // 隱藏對戰導覽列(統計頁開啟時)
   renderStatsPage();
 }
-function closeStatsPage(){ const sp=$("#statspage"); if(sp) sp.classList.remove("show"); }
+function closeStatsPage(){ const sp=$("#statspage"); if(sp) sp.classList.remove("show");
+  if(typeof renderMatchNav==="function") renderMatchNav();    // 還原導覽列
+  if(typeof layoutRightColumns==="function") layoutRightColumns();
+}
 $("#statsBtn") && ($("#statsBtn").onclick = openStatsPage);
 $("#statsClose") && ($("#statsClose").onclick = closeStatsPage);
 
@@ -6302,6 +6299,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   setInterval(autoBackupSnapshot, 5*60*1000);
   setTimeout(checkBackupReminder, 1200);
 })();
-</script><script src="./odds-integration.js?v=20260625dh2"></script><script src="./pregame-integration.js?v=20260625dh"></script>
+</script><script src="./odds-integration.js?v=20260625dh3"></script><script src="./pregame-integration.js?v=20260625dh"></script>
 </body>
 </html>

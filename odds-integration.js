@@ -490,10 +490,10 @@
   function injectButtons() {
     var menu = document.getElementById("moreMenu");
     if (menu && !document.getElementById("autoArrangeBtn")) {
-      var sep = document.createElement("div"); sep.className = "sep";
       var b1 = document.createElement("button"); b1.id = "autoArrangeBtn"; b1.textContent = "⚡ 用賠率自動排今天的盤";
       b1.onclick = function (e) { e.stopPropagation(); autoArrangeFromFeed(); };
-      menu.appendChild(sep); menu.appendChild(b1);
+      var anchor = document.getElementById("collapseAllBtn");   // 放到原「依聯盟排版」的位置(收合/展開全部 之前)
+      if (anchor) menu.insertBefore(b1, anchor); else menu.appendChild(b1);
     }
     var qb = document.getElementById("zoomctlBtns");
     if (qb && !document.getElementById("refreshOddsQuickBtn")) {
