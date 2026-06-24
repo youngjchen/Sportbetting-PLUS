@@ -4718,6 +4718,66 @@ $("#reviewClose") && ($("#reviewClose").onclick = closeReviewPage);
   const el = $("#"+id); if(el) el.onchange = renderReviewPage;
 });
 
+// 賽前換邊訊號 → 押主場ML 的命中追蹤（資料來自 doc.games，每次結算自動累積）
+function swapSignalAgg(flagKey, leagueF){
+  let n=0, home=0;
+  (doc.games||[]).forEach(g=>{
+    if(!g || g[flagKey]!==true) return;
+    if(g.mlResult!=="away" && g.mlResult!=="home") return;
+    if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
+    n++; if(g.mlResult==="home") home++;
+  });
+  return {n, home, pct: n ? home/n : null};
+}
+function baseHomeRate(leagueF){
+  let n=0, home=0;
+  (doc.games||[]).forEach(g=>{
+    if(g.mlResult!=="away" && g.mlResult!=="home") return;
+    if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
+    n++; if(g.mlResult==="home") home++;
+  });
+  return n ? home/n : null;
+}
+const SWAP_TRACK_TARGET = 100;   // 累積到這個樣本數才下定論
+function renderSwapTracker(leagueF){
+  const rows = [
+    {key:"preGameSwap",  label:"賽前讓分方曾對調", track:true},
+    {key:"flipVanished", label:"收盤前變一致",     track:false},
+    {key:"platformFlip", label:"平台顛倒",         track:false}
+  ];
+  if(!rows.some(r=>swapSignalAgg(r.key,leagueF).n>0)) return "";
+  const base = baseHomeRate(leagueF);
+  const baseTxt = base!=null ? Math.round(base*100)+"%" : "—";
+  let h = `<div class="rv-section">`;
+  h += `<div class="rv-head">⓪ 賽前換邊訊號 → 押主場ML `+
+       `<span class="rv-sub">追蹤中的假設（主場基準 ${baseTxt}；★ 為重點追蹤，累積 ${SWAP_TRACK_TARGET} 場再定論。本區不受上方範圍/市場篩選影響）</span></div>`;
+  h += `<table class="rv-table"><thead><tr><th class="lbl">訊號</th><th>主場勝率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
+  rows.forEach(r=>{
+    const a = swapSignalAgg(r.key, leagueF);
+    if(a.n===0) return;
+    const pct = a.pct!=null ? Math.round(a.pct*100) : null;
+    const lift = (base!=null && a.pct!=null) ? (a.pct-base) : null;
+    const liftColor = lift!=null ? (lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink-dim)")) : "var(--ink-dim)";
+    let verdict;
+    if(r.track){
+      if(a.n<SWAP_TRACK_TARGET) verdict = `累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`;
+      else if(a.pct>=0.60) verdict = `維持高檔 ✓ 訊號可能成立`;
+      else verdict = `已回落至基準，視為雜訊`;
+    }else{
+      verdict = (lift!=null && lift>0.05) ? "略高於基準" : "無明顯優勢";
+    }
+    const prog = r.track ? Math.min(100, Math.round(a.n/SWAP_TRACK_TARGET*100)) : null;
+    h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}"${r.track?' style="background:rgba(255,176,46,.07)"':''}>`+
+         `<td class="lbl">${esc(r.label)}${r.track?" ★":""}</td>`+
+         `<td><b style="color:${liftColor}">${pct!=null?pct+"%":"—"}</b>`+
+         `${lift!=null?` <span style="font-size:11px;color:${liftColor}">(${lift>0?"+":""}${Math.round(lift*100)}pp)</span>`:""}</td>`+
+         `<td><span class="rv-samp">${a.home} / ${a.n}</span>${prog!=null?` <span style="font-size:11px;color:var(--ink-dim)">·進度 ${prog}%</span>`:""}</td>`+
+         `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td>`+
+         `</tr>`;
+  });
+  h += `</tbody></table></div>`;
+  return h;
+}
 function renderReviewPage(){
   const body = $("#reviewBody"); if(!body) return;
   const scope = parseInt($("#reviewScope").value,10) || 3;
@@ -4750,6 +4810,9 @@ function renderReviewPage(){
             `<div class="k">歷史過盤率方向命中（≥${Math.round(trendThreshold*100)}%）（${trendAgg.hit}/${trendAgg.total}）</div></div>`;
   }
   html += `</div></div>`;
+
+  // ---- ⓪ 賽前換邊訊號追蹤（放在最前面，是主動追蹤的假設） ----
+  html += renderSwapTracker(leagueF);
 
   // ---- 回顧一: by light count bucket ----
   html += `<div class="rv-section">`;
@@ -5543,6 +5606,35 @@ function openSettleModal(it){
   // focus the away-score for fast keyboard entry
   setTimeout(()=>{ const el = $("#settleAwayScore"); if(el && !prior.awayScore) el.focus(); }, 50);
 }
+// 賠率防呆：十進位賠率合理範圍 1.01~50，超出多半是漏打小數點等輸入錯誤，擋下不存
+const ODDS_MIN = 1.01, ODDS_MAX = 50;
+function validateSettleOdds(){
+  const fields = [
+    ["flipOddsAway","下注賠率（客）"],["flipOddsHome","下注賠率（主）"],
+    ["openOddsAway","初盤（客）"],["openOddsHome","初盤（主）"],
+    ["closeOddsAway","收盤（客）"],["closeOddsHome","收盤（主）"]
+  ];
+  const bad = []; let firstBad = null;
+  for(const [id,label] of fields){
+    const el = $("#"+id); if(!el) continue;
+    el.style.borderColor = "";   // 先清掉上次的紅框
+    const raw = el.value;
+    if(raw==="" || raw==null) continue;
+    const v = parseFloat(raw);
+    if(isNaN(v)) continue;
+    if(v < ODDS_MIN || v > ODDS_MAX){
+      bad.push(`${label} = ${raw}`);
+      el.style.borderColor = "#ff5d5d";
+      if(!firstBad) firstBad = el;
+    }
+  }
+  if(bad.length){
+    alert("以下賠率超出合理範圍（1.01～50），可能漏打小數點，請修正後再存：\n\n・" + bad.join("\n・"));
+    if(firstBad) firstBad.focus();
+    return false;
+  }
+  return true;
+}
 $("#settleCancel") && ($("#settleCancel").onclick = ()=>{ $("#settleModal").classList.remove("show"); settleTarget=null; batchQueue=null; });
 $("#settleSkip") && ($("#settleSkip").onclick = ()=>{
   $("#settleModal").classList.remove("show"); settleTarget=null;
@@ -5550,6 +5642,7 @@ $("#settleSkip") && ($("#settleSkip").onclick = ()=>{
 });
 $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   if(!settleTarget) return;
+  if(!validateSettleOdds()) return;
   const it = settleTarget;
   // store odds + flip mark onto the card WITHOUT requiring score / settling
   const flipChecked = !!($("#settleFlip") && $("#settleFlip").checked);
@@ -5583,6 +5676,7 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
 });
 $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   if(!settleTarget) return;
+  if(!validateSettleOdds()) return;
   const it = settleTarget;
   const m = $("#settleModal");
   // collect picks
