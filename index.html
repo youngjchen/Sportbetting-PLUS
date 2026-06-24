@@ -1314,6 +1314,12 @@
 #matchnav .nvtag{ display:block; transform-origin:left center; transition:transform .11s ease-out,color .11s,background .11s,border-color .11s;
   margin:3px 9px; padding:5px 11px; border-radius:7px; background:#1b2430; border:1px solid var(--line);
   font-size:14px; color:#cdd8e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
+/* 標籤狀態色：無資料(灰)／部分(琥珀)／全部(綠)／顛倒場(紫,最高優先) */
+#matchnav .nvtag.st-empty{ color:#8a96a6; }
+#matchnav .nvtag.st-partial{ color:#ffce7a; border-color:rgba(255,176,46,.55); background:rgba(255,176,46,.12); }
+#matchnav .nvtag.st-full{ color:#5fd79e; border-color:rgba(40,199,111,.5); background:rgba(40,199,111,.12); }
+#matchnav .nvtag.st-flip{ color:#cda4ff; border-color:#b96bff; background:rgba(185,107,255,.18); }
+#matchnav .nvsec.flipsec{ color:#cda4ff; }
 #matchnav .nvtag:hover{ color:#ffe39a; }
 #matchnav .nvtag.flash{ background:rgba(255,176,46,.2); border-color:var(--lit); }
 .card.bcard.navflash{ box-shadow:0 0 0 2px var(--lit),0 10px 26px rgba(0,0,0,.5); transition:box-shadow .2s; }
@@ -2979,6 +2985,13 @@ function renderSummary(){
   applySummaryScale();
 }
 /* ① 對戰導覽列：列出當天所有對戰標籤（全部／分組），滑過放大、點擊平滑捲到該場卡片 */
+function navMatchState(it){
+  if(it.platformFlip) return "st-flip";                  // 顛倒場優先(覆蓋完整度)
+  if(it.settled) return "st-full";                       // 已結算＝資料齊全
+  const hasLine = (it.hdVal!=null && it.hdVal!=="") || (it.totVal!=null && it.totVal!=="");
+  const hasLight = ["mlAway","mlHome","hdGive","hdRecv","over","under"].some(k=>it[k] && it[k].lights>0);
+  return (hasLine||hasLight) ? "st-partial" : "st-empty";
+}
 function renderMatchNav(){
   const el = document.getElementById("matchnav"); if(!el) return;
   if(document.querySelector("#reviewpage.show, #statspage.show")){ el.style.display="none"; return; }  // 回顧/統計頁開啟時隱藏導覽列
@@ -2986,20 +2999,22 @@ function renderMatchNav(){
   if(!matches.length || window.innerWidth < 1180){ el.style.display="none"; return; }
   el.style.display="flex";
   // 位置交給 layoutRightColumns() 統一處理（導覽列貼著卡片、面板填滿到右緣）
-  const grouped = (doc.navGrouped !== false);
+  const prevBody = el.querySelector(".nvbody");           // 保存捲動位置(修：點標籤編輯後跳回頂部)
+  const savedScroll = prevBody ? prevBody.scrollTop : 0;
+  const flipTop = !!doc.navFlipTop;
+  const isFlip = it => !!it.platformFlip;
   const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   el.innerHTML = "";
   const head = document.createElement("div"); head.className="nvhead";
-  [["all","全部",false],["grp","分組",true]].forEach(([k,lab,gv])=>{
-    const b=document.createElement("button"); b.textContent=lab; if(grouped===gv) b.classList.add("on");
-    b.onclick=()=>{ doc.navGrouped=gv; save(); renderMatchNav(); };
-    head.appendChild(b);
-  });
+  { const b=document.createElement("button"); b.textContent="顛倒置頂"; if(flipTop) b.classList.add("on");
+    b.title="把所有顛倒場標籤移到最上面";
+    b.onclick=()=>{ doc.navFlipTop=!doc.navFlipTop; save(); renderMatchNav(); };
+    head.appendChild(b); }
   el.appendChild(head);
   const body = document.createElement("div"); body.className="nvbody";
   function tag(it){
-    const t=document.createElement("div"); t.className="nvtag";
-    t.textContent = it.away+" / "+it.home;
+    const t=document.createElement("div"); t.className="nvtag "+navMatchState(it);
+    t.textContent = it.away+" / "+it.home + (it.gameTime?("　"+it.gameTime):"");
     t.title = it.away+" / "+it.home + (it.gameTime?("　"+it.gameTime):"");
     t.onclick=()=>{
       const card = world.querySelector('.card[data-id="'+it.id+'"]');
@@ -3009,17 +3024,22 @@ function renderMatchNav(){
     };
     return t;
   }
-  if(grouped){
+  function sec(label, extraCls){ const s=document.createElement("div"); s.className="nvsec"+(extraCls?(" "+extraCls):""); s.textContent=label; body.appendChild(s); }
+  if(flipTop){                                            // 顛倒場拉到最上面一區，其餘照聯盟分組(排除已列出的顛倒場)
+    const flips = matches.filter(isFlip);
+    if(flips.length){ sec("顛倒場","flipsec"); flips.forEach(it=>body.appendChild(tag(it))); }
+    LGO.forEach(k=>{
+      const list = matches.filter(it=>leagueOf(it)===k && !isFlip(it)); if(!list.length) return;
+      sec(LGL[k]); list.forEach(it=>body.appendChild(tag(it)));
+    });
+  } else {                                                // 預設：照聯盟分組(顛倒場以紫色就地標示)
     LGO.forEach(k=>{
       const list = matches.filter(it=>leagueOf(it)===k); if(!list.length) return;
-      const s=document.createElement("div"); s.className="nvsec"; s.textContent=LGL[k]; body.appendChild(s);
-      list.forEach(it=>body.appendChild(tag(it)));
+      sec(LGL[k]); list.forEach(it=>body.appendChild(tag(it)));
     });
-  } else {
-    matches.slice().sort((a,b)=> LGO.indexOf(leagueOf(a))-LGO.indexOf(leagueOf(b)))
-           .forEach(it=>body.appendChild(tag(it)));
   }
   el.appendChild(body);
+  body.scrollTop = savedScroll;                           // 還原捲動位置
   // dock 放大：游標靠近哪個標籤就放大，鄰居依距離微放大（波浪感）
   const tags = [].slice.call(body.querySelectorAll(".nvtag"));
   const RANGE=46, MAX=1.7;
