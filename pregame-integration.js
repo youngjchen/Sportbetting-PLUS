@@ -32,14 +32,30 @@
     d1 = norm(d1).slice(0, 10); d2 = norm(d2).slice(0, 10);
     return !!d1 && !!d2 && d1 === d2;
   }
+  // 開球時間(台灣 HH:MM)→分鐘；雙重賽(同日同對戰兩場)用它把卡片配到正確那一場
+  function hhmmToMin(s) { var m = /(\d{1,2}):(\d{2})/.exec(s == null ? '' : String(s)); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+  function gameHHMM(g) {                                         // 玩運彩場次的開球時間：優先 time(HH:MM)，退回 startISO
+    if (g && g.time && /\d{1,2}:\d{2}/.test(g.time)) return g.time.match(/\d{1,2}:\d{2}/)[0];
+    return (g && g.startISO) ? String(g.startISO).slice(11, 16) : '';
+  }
   function findGame(data, it, activeDate) {                     // 不限狀態：未開賽場才有 ERA，要能撈到
     if (!Array.isArray(data) || !it) return null;
+    var cands = [];
     for (var i = 0; i < data.length; i++) {
       var g = data[i];
       if (!dateEq(activeDate, g.date)) continue;
-      if (teamMatch(it.away, g.awayTeam) && teamMatch(it.home, g.homeTeam)) return g;
+      if (teamMatch(it.away, g.awayTeam) && teamMatch(it.home, g.homeTeam)) cands.push(g);
     }
-    return null;
+    if (cands.length <= 1) return cands[0] || null;            // 非雙重賽：行為與舊版完全相同
+    // 雙重賽：同日同對戰多場 → 用卡片開球時間(it.gameTime)挑最接近的那一場
+    var want = hhmmToMin(it.gameTime);
+    if (want == null) return cands[0];                         // 卡片未記開球時間 → 退回第一場(盡力)
+    var best = cands[0], bd = Infinity;
+    for (var j = 0; j < cands.length; j++) {
+      var t = hhmmToMin(gameHHMM(cands[j])); if (t == null) continue;
+      var d = Math.abs(t - want); if (d < bd) { bd = d; best = cands[j]; }
+    }
+    return best;
   }
   // 顛倒提示：比 運彩讓分方(favSide) vs STAKE讓分方(it.hdFav)，皆 'home'/'away'
   // 只認賽前運彩盤口(src='運彩')；賽後 on-box 是「過盤方」不是讓分方，14/14 驗證為誤，絕不拿來判顛倒
@@ -468,6 +484,6 @@
 
   // ---- 測試匯出 ----
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { teamMatch, dateEq, findGame, buildFlipHint, alias };
+    module.exports = { teamMatch, dateEq, findGame, buildFlipHint, alias, gameHHMM, hhmmToMin };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

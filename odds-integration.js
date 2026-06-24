@@ -7,7 +7,7 @@
 
    做的事：
    - 讀 ./data/odds_log.json（scraper commit 進同 repo 的賠率），每 5 分鐘自動再讀
-   - 以「日期＋兩隊」對到卡片（主客顛倒也認得）；用每場的 league 判聯盟
+   - 以「日期＋兩隊＋開球時間」對到卡片（主客顛倒也認得；雙重賽同日同對戰兩場用開球時間區分）；用每場的 league 判聯盟
    - 卡片上長出「📡 盤口動向（自動）」：三家賠率只在背景跑，卡上只出現分析
        三個市場都用同一套 3 段方向評語（逐漸看好 / 看好 / 大幅轉向）＋原始數字：
        · 獨贏：三家去水隱含勝率自初盤到現在的平均移動 → 看好某隊  +X.Xpp
@@ -79,18 +79,62 @@
   function fmtHd(v) { var n = parseFloat(v); if (isNaN(n)) return String(v || "—"); return n > 0 ? "+" + n : "" + n; }
   function fmtOu(v) { var n = parseFloat(v); if (isNaN(n)) return String(v || "—"); return "" + n; }
 
-  /* ---- 對應這張卡的比賽（日期＋兩隊，主客顛倒也認） ---- */
+  /* ---- 開球時間工具：雙重賽(同日同對戰兩場)用開球時間區分 ---- */
+  function hhmmToMin(s) { var m = /(\d{1,2}):(\d{2})/.exec(s == null ? "" : String(s)); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+  function gStartHHMM(g) { return g && g.startISO ? String(g.startISO).slice(11, 16) : (g && g.time ? (String(g.time).match(/\d{1,2}:\d{2}/) || [""])[0] : ""); }
+  // 多個候選(雙重賽)時，用卡片開球時間(it.gameTime)挑最接近的那場；單一候選則照舊回傳
+  function pickByTime(cands, it) {
+    if (cands.length <= 1) return cands[0] || null;
+    var want = hhmmToMin(it && it.gameTime);
+    if (want == null) return cands[0];                       // 卡片未記開球時間 → 退回第一場(盡力)
+    var best = cands[0], bd = Infinity;
+    for (var i = 0; i < cands.length; i++) {
+      var t = hhmmToMin(gStartHHMM(cands[i])); if (t == null) continue;
+      var d = Math.abs(t - want); if (d < bd) { bd = d; best = cands[i]; }
+    }
+    return best;
+  }
+  // 純函式：給「盤面已有卡片」與「當天 feed 的場」，回傳「還要新增哪幾場」(雙重賽會回該對戰缺的每一場)
+  // 唯一鍵＝對戰＋開球時間；盤面舊卡若有 gameTime 依時間扣除，沒 gameTime 的舊卡每場扣一張。
+  function gamesToAdd(existingItems, feedGames) {
+    function pk(a, b) { return [a, b].sort().join("|"); }
+    var byPair = {};
+    (feedGames || []).forEach(function (g) {
+      if (!g || !g.homeTeam || !g.awayTeam) return;
+      var k = pk(g.awayTeam, g.homeTeam);
+      (byPair[k] = byPair[k] || []).push(g);
+    });
+    var out = [];
+    Object.keys(byPair).forEach(function (key) {
+      var games = byPair[key].slice().sort(function (a, b) { return (hhmmToMin(gStartHHMM(a)) || 0) - (hhmmToMin(gStartHHMM(b)) || 0); });
+      var haveTimes = {}, noTime = 0;
+      (existingItems || []).forEach(function (it) {
+        if (!it || it.type !== "match" || pk(it.away, it.home) !== key) return;
+        if (it.gameTime) haveTimes[it.gameTime] = true; else noTime++;
+      });
+      games.forEach(function (g) {
+        var hhmm = gStartHHMM(g);
+        if (hhmm && haveTimes[hhmm]) return;                  // 這場(時間相符)已在盤面
+        if (noTime > 0) { noTime--; return; }                 // 有沒記時間的舊卡 → 視為已涵蓋一場
+        haveTimes[hhmm] = true; out.push(g);
+      });
+    });
+    return out;
+  }
+
+  /* ---- 對應這張卡的比賽（唯一鍵：先認 oddsId，再 日期＋兩隊＋開球時間；主客顛倒也認） ---- */
   function feedGameFor(it) {
     if (!feed || !feed.matches || typeof doc === "undefined" || !doc.activeDate) return null;
-    var dateKey = doc.activeDate, ms = feed.matches;
+    var dateKey = doc.activeDate, ms = feed.matches, cands = [];
     for (var id in ms) {
       var g = ms[id];
       if (!g.homeTeam || !g.awayTeam) continue;
       if ((g.startISO || "").slice(0, 10) !== dateKey) continue;
+      if (it.oddsId != null && String(g.id) === String(it.oddsId)) return g;   // 直配 Titan007 id(最穩)
       if ((g.homeTeam === it.home && g.awayTeam === it.away) ||
-          (g.homeTeam === it.away && g.awayTeam === it.home)) return g;
+          (g.homeTeam === it.away && g.awayTeam === it.home)) cands.push(g);
     }
-    return null;
+    return pickByTime(cands, it);                              // 雙重賽用開球時間區分；單場照舊
   }
 
   /* ---- 資料裡有哪些聯盟（優先用 g.league，隊名沒對上也認得） ---- */
@@ -371,12 +415,9 @@
       target = best;
     }
     if (typeof snapshot === "function") snapshot();
-    var have = {};
-    state.items.forEach(function (it) { if (it.type === "match") have[[it.away, it.home].sort().join("|")] = true; });
+    var toAdd = gamesToAdd(state.items, byDate[target]);   // 雙重賽會回該對戰缺的每一場(含第二場)
     var added = 0;
-    byDate[target].forEach(function (g) {
-      var key = [g.awayTeam, g.homeTeam].sort().join("|");
-      if (have[key]) return;
+    toAdd.forEach(function (g) {
       var lg = g.league || null;
       if (!lg && typeof LEAGUES !== "undefined") for (var k in LEAGUES) { if (LEAGUES[k].teams.indexOf(g.homeTeam) >= 0) { lg = k; break; } }
       var col = (lg && typeof LEAGUES !== "undefined" && LEAGUES[lg]) ? LEAGUES[lg].color : "var(--mlb)";
@@ -384,12 +425,13 @@
       state.items.push({
         id: uid++, type: "match", x: 0, y: 0,
         away: g.awayTeam, home: g.homeTeam, awayColor: col, homeColor: col,
+        gameTime: gStartHHMM(g) || "", oddsId: g.id,         // 唯一鍵：開球時間(配對用) + Titan007 id
         mlAway: { lights: 0 }, mlHome: { lights: 0 },
         hdFav: (fav === g.awayTeam ? "away" : "home"), hdVal: "",
         hdGive: { lights: 0 }, hdRecv: { lights: 0 },
         totVal: "", over: { lights: 0 }, under: { lights: 0 }
       });
-      have[key] = true; added++;
+      added++;
     });
     if (added === 0) { alert("這天的比賽都已經在盤面上了，沒有新增。"); return; }
     if (typeof autoLayout === "function") {
@@ -472,6 +514,6 @@
   else boot();
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3 };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd };
   }
 })();
