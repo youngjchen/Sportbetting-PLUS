@@ -320,6 +320,11 @@
   }
   function L(t) { return "<span class='l'>賠率</span>" + t; }
   function fillCmt(cardEl, it, g) {
+    // 對到比賽但三市場都沒抓到盤口(常見於雙重賽第二場：Titan007 只有賽程、無賠率)→ 明確標「尚無盤口」，不要留白
+    var noOdds = (!g.ml || !Object.keys(g.ml).length)
+      && !(g.hd && g.hd.bet365 && g.hd.bet365.length)
+      && !(g.ou && g.ou.bet365 && g.ou.bet365.length);
+    if (noOdds) { ["ml", "hd", "tot"].forEach(function (k) { setCmt(cardEl, k, L("尚無盤口"), "flat"); }); return; }
     // 獨贏
     var ml = mlSentiment(g);
     if (ml) {
