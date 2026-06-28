@@ -1311,7 +1311,11 @@
   font-size:14px; color:#cdd8e6; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:pointer; }
 /* 標籤狀態色：無資料(灰)／部分(琥珀)／全部(綠)／顛倒場(紫,最高優先) */
 #matchnav .nvtag.st-empty{ color:#8a96a6; }
-#matchnav .nvtag.st-partial{ color:#ffce7a; border-color:rgba(255,176,46,.55); background:rgba(255,176,46,.12); }
+/* 賠率填寫進度：同一黃色，依完成組數(開盤/下注/收盤)加深透明度 */
+#matchnav .nvtag.st-odds1{ color:#bfa15f; border-color:rgba(255,176,46,.28); background:rgba(255,176,46,.06); }
+#matchnav .nvtag.st-odds2{ color:#ffce7a; border-color:rgba(255,176,46,.50); background:rgba(255,176,46,.14); }
+#matchnav .nvtag.st-odds3{ color:#ffd98a; border-color:rgba(255,176,46,.80); background:rgba(255,176,46,.24); }
+#matchnav .nvtag .nvscore{ font-family:"Oswald"; font-weight:700; font-size:1.25em; color:var(--lit); letter-spacing:.02em; }
 #matchnav .nvtag.st-full{ color:#5fd79e; border-color:rgba(40,199,111,.5); background:rgba(40,199,111,.12); }
 #matchnav .nvtag.st-flip{ color:#cda4ff; border-color:#b96bff; background:rgba(185,107,255,.18); }
 #matchnav .nvtag.dragging{ opacity:.45; }
@@ -2991,10 +2995,13 @@ function gtMins(it){ const m=/(\d{1,2}):(\d{2})/.exec((it&&it.gameTime)||""); re
 function cmpMatch(a,b){ return (gtMins(a)-gtMins(b)) || ((a.seq==null?1e9:a.seq)-(b.seq==null?1e9:b.seq)); }  // 組內：開球時間→手動 seq（時間優先，晚場不會排到早場前）
 function navMatchState(it){
   if(it.platformFlip) return "st-flip";                  // 顛倒場優先(覆蓋完整度)
-  if(it.settled) return "st-full";                       // 已結算＝資料齊全
-  const hasLine = (it.hdVal!=null && it.hdVal!=="") || (it.totVal!=null && it.totVal!=="");
-  const hasLight = ["mlAway","mlHome","hdGive","hdRecv","over","under"].some(k=>it[k] && it[k].lights>0);
-  return (hasLine||hasLight) ? "st-partial" : "st-empty";
+  if(it.settled) return "st-full";                       // 已結算＝資料齊全(綠)
+  // 黃色＝賠率填寫進度提醒(不再因燈號變色)：開盤/下注/收盤 三組,填幾組黃色就多深
+  let c=0;
+  if(it.openOddsAway!=null && it.openOddsHome!=null) c++;
+  if(it.flipOddsAway!=null && it.flipOddsHome!=null) c++;
+  if(it.closeOddsAway!=null && it.closeOddsHome!=null) c++;
+  return c<=0 ? "st-empty" : ("st-odds"+c);
 }
 function renderMatchNav(){
   const el = document.getElementById("matchnav"); if(!el) return;
@@ -3023,11 +3030,16 @@ function renderMatchNav(){
   const body = document.createElement("div"); body.className="nvbody";
   function tag(it){
     const t=document.createElement("div"); t.className="nvtag "+navMatchState(it);
-    const suffix = showScore
-      ? (it.settled ? "　"+it.settled.awayScore+":"+it.settled.homeScore : (it.gameTime?("　"+it.gameTime):""))
-      : (it.gameTime?("　"+it.gameTime):"");
-    t.textContent = it.away+" / "+it.home + suffix;
-    t.title = it.away+" / "+it.home + suffix;
+    const teams = it.away+" / "+it.home;
+    if(showScore && it.settled){                          // 比分模式＋已結算：比分加粗加大、用卡片分數色
+      const sc = it.settled.awayScore+":"+it.settled.homeScore;
+      t.innerHTML = esc(teams)+'　<span class="nvscore">'+esc(sc)+'</span>';
+      t.title = teams+"　"+sc;
+    } else {
+      const suffix = it.gameTime?("　"+it.gameTime):"";
+      t.textContent = teams + suffix;
+      t.title = teams + suffix;
+    }
     t.draggable = true; t.dataset.itid = String(it.id);
     t.oncontextmenu=(e)=>{ e.preventDefault(); openSettleModal(it); };   // 右鍵標籤＝開結算
     t.onclick=()=>{
