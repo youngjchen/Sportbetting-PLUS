@@ -3006,6 +3006,7 @@ function renderMatchNav(){
   const prevBody = el.querySelector(".nvbody");           // 保存捲動位置(修：點標籤編輯後跳回頂部)
   const savedScroll = prevBody ? prevBody.scrollTop : 0;
   const flipTop = !!doc.navFlipTop;
+  const showScore = !!doc.navShowScore;
   const isFlip = it => !!it.platformFlip;
   const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   el.innerHTML = "";
@@ -3014,13 +3015,21 @@ function renderMatchNav(){
     b.title="把所有顛倒場標籤移到最上面";
     b.onclick=()=>{ doc.navFlipTop=!doc.navFlipTop; save(); renderMatchNav(); };
     head.appendChild(b); }
+  { const b2=document.createElement("button"); b2.textContent=showScore?"比分":"時間"; if(showScore) b2.classList.add("on");
+    b2.title=showScore?"標籤顯示比分（點擊改回開球時間）":"標籤顯示開球時間（點擊改成比分）";
+    b2.onclick=()=>{ doc.navShowScore=!doc.navShowScore; save(); renderMatchNav(); };
+    head.appendChild(b2); }
   el.appendChild(head);
   const body = document.createElement("div"); body.className="nvbody";
   function tag(it){
     const t=document.createElement("div"); t.className="nvtag "+navMatchState(it);
-    t.textContent = it.away+" / "+it.home + (it.gameTime?("　"+it.gameTime):"");
-    t.title = it.away+" / "+it.home + (it.gameTime?("　"+it.gameTime):"");
+    const suffix = showScore
+      ? (it.settled ? "　"+it.settled.awayScore+":"+it.settled.homeScore : (it.gameTime?("　"+it.gameTime):""))
+      : (it.gameTime?("　"+it.gameTime):"");
+    t.textContent = it.away+" / "+it.home + suffix;
+    t.title = it.away+" / "+it.home + suffix;
     t.draggable = true; t.dataset.itid = String(it.id);
+    t.oncontextmenu=(e)=>{ e.preventDefault(); openSettleModal(it); };   // 右鍵標籤＝開結算
     t.onclick=()=>{
       const card = world.querySelector('.card[data-id="'+it.id+'"]');
       if(card){ card.scrollIntoView({behavior:"smooth", block:"start"});
@@ -3035,7 +3044,7 @@ function renderMatchNav(){
     t.addEventListener("dragend", ()=>{ t.classList.remove("dragging"); if(_navDrag!=null){ _navDrag=null; commitNavOrder(); } });
     return t;
   }
-  function sec(label, extraCls){ const s=document.createElement("div"); s.className="nvsec"+(extraCls?(" "+extraCls):""); s.textContent=label; body.appendChild(s); }
+  function sec(label, extraCls, lgKey){ const s=document.createElement("div"); s.className="nvsec"+(extraCls?(" "+extraCls):""); s.textContent=label; if(lgKey) s.dataset.lg=lgKey; body.appendChild(s); }
   function commitNavOrder(){                              // 依目前 nav DOM 順序，組內(同聯盟)重編 seq → 持久化；render 仍以「時間→seq」排序，晚場不會被拉到早場前
     const seen={};
     [].slice.call(body.querySelectorAll(".nvtag")).forEach(el=>{
@@ -3049,12 +3058,12 @@ function renderMatchNav(){
     if(flips.length){ sec("顛倒場","flipsec"); flips.forEach(it=>body.appendChild(tag(it))); }
     LGO.forEach(k=>{
       const list = matches.filter(it=>leagueOf(it)===k && !isFlip(it)).sort(cmpMatch); if(!list.length) return;
-      sec(LGL[k]); list.forEach(it=>body.appendChild(tag(it)));
+      sec(LGL[k], null, k); list.forEach(it=>body.appendChild(tag(it)));
     });
   } else {                                                // 預設：照聯盟分組(顛倒場以紫色就地標示)
     LGO.forEach(k=>{
       const list = matches.filter(it=>leagueOf(it)===k).sort(cmpMatch); if(!list.length) return;
-      sec(LGL[k]); list.forEach(it=>body.appendChild(tag(it)));
+      sec(LGL[k], null, k); list.forEach(it=>body.appendChild(tag(it)));
     });
   }
   el.appendChild(body);
@@ -4075,6 +4084,15 @@ function jumpToLeague(lg){
   view.y = PAD - target.y * view.k;
   applyView(); saveViewSoon();
 }
+// 點上方聯盟鈕時，導覽列(標籤列表)也捲到對應聯盟區段
+function scrollNavToLeague(lg){
+  const el=document.getElementById("matchnav"); if(!el || el.style.display==="none") return;
+  const body=el.querySelector(".nvbody"); if(!body) return;
+  const sec=body.querySelector('.nvsec[data-lg="'+lg+'"]'); if(!sec) return;
+  body.scrollTop += sec.getBoundingClientRect().top - body.getBoundingClientRect().top - 6;   // 用實際像素差,offsetTop 受 offsetParent 影響不準
+  const old=sec.style.background; sec.style.transition="background .3s"; sec.style.background="rgba(255,176,46,.28)";
+  setTimeout(()=>{ sec.style.background=old; }, 800);
+}
 function refreshLeagueJumpBtns(){
   document.querySelectorAll(".leaguejump").forEach(b=>{
     const lg = b.dataset.lg;
@@ -4083,7 +4101,7 @@ function refreshLeagueJumpBtns(){
   });
 }
 document.querySelectorAll(".leaguejump").forEach(b=>{
-  b.onclick = ()=>{ if(!b.disabled) jumpToLeague(b.dataset.lg); };
+  b.onclick = ()=>{ if(!b.disabled){ jumpToLeague(b.dataset.lg); scrollNavToLeague(b.dataset.lg); } };
 });
 // 響應式：視窗大小改變（含跨越手機斷點）後重畫，讓兩區式/計分板與面板位置跟著重排
 window.addEventListener("resize", ()=>{ clearTimeout(window.__bResizeT); window.__bResizeT=setTimeout(()=>{ if(typeof render==="function") render(); }, 160); });
@@ -4738,6 +4756,26 @@ function baseHomeRate(leagueF){
   });
   return n ? home/n : null;
 }
+// 讓分線變動(縮/放) → 冷門過盤(fav_nocover)
+function hdMoveAgg(move, leagueF){
+  let n=0, nocov=0;
+  (doc.games||[]).forEach(g=>{
+    if(!g || g.hdLineMove!==move) return;
+    if(g.hdResult!=="fav_cover" && g.hdResult!=="fav_nocover") return;
+    if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
+    n++; if(g.hdResult==="fav_nocover") nocov++;
+  });
+  return {n, nocov, pct: n ? nocov/n : null};
+}
+function baseNocoverRate(leagueF){
+  let n=0, nocov=0;
+  (doc.games||[]).forEach(g=>{
+    if(g.hdResult!=="fav_cover" && g.hdResult!=="fav_nocover") return;
+    if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
+    n++; if(g.hdResult==="fav_nocover") nocov++;
+  });
+  return n ? nocov/n : null;
+}
 const SWAP_TRACK_TARGET = 100;   // 累積到這個樣本數才下定論
 function renderSwapTracker(leagueF){
   const rows = [
@@ -4775,7 +4813,30 @@ function renderSwapTracker(leagueF){
          `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td>`+
          `</tr>`;
   });
-  h += `</tbody></table></div>`;
+  h += `</tbody></table>`;
+  // ⓪b 讓分線變動 → 冷門過盤（fav_nocover）
+  const moveRows=[{key:"shrink",label:"讓分線縮小(熱門讓得少)",track:true},{key:"grow",label:"讓分線放大",track:false}];
+  if(moveRows.some(r=>hdMoveAgg(r.key,leagueF).n>0)){
+    const bn=baseNocoverRate(leagueF); const bnTxt=bn!=null?Math.round(bn*100)+"%":"—";
+    h += `<div class="rv-head" style="margin-top:16px">⓪b 讓分線變動 → 冷門過盤 <span class="rv-sub">縮線是否預示冷門吃讓分（基準不過盤 ${bnTxt}；★累積 ${SWAP_TRACK_TARGET} 場再定論）</span></div>`;
+    h += `<table class="rv-table"><thead><tr><th class="lbl">訊號</th><th>冷門過盤率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
+    moveRows.forEach(r=>{
+      const a=hdMoveAgg(r.key,leagueF); if(a.n===0) return;
+      const pct=a.pct!=null?Math.round(a.pct*100):null;
+      const lift=(bn!=null&&a.pct!=null)?(a.pct-bn):null;
+      const lc=lift!=null?(lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink-dim)")):"var(--ink-dim)";
+      let verdict;
+      if(r.track){ if(a.n<SWAP_TRACK_TARGET) verdict=`累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`; else if(bn!=null && a.pct>=bn+0.05) verdict=`高於基準 ✓ 可能成立`; else verdict=`未明顯高於基準`; }
+      else verdict=(lift!=null&&lift>0.05)?"略高於基準":"無明顯優勢";
+      h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}"${r.track?' style="background:rgba(255,176,46,.07)"':''}>`+
+           `<td class="lbl">${esc(r.label)}${r.track?" ★":""}</td>`+
+           `<td><b style="color:${lc}">${pct!=null?pct+"%":"—"}</b>${lift!=null?` <span style="font-size:11px;color:${lc}">(${lift>0?"+":""}${Math.round(lift*100)}pp)</span>`:""}</td>`+
+           `<td><span class="rv-samp">${a.nocov} / ${a.n}</span></td>`+
+           `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td></tr>`;
+    });
+    h += `</tbody></table>`;
+  }
+  h += `</div>`;
   return h;
 }
 function renderReviewPage(){
@@ -5475,6 +5536,12 @@ function openSettleModal(it){
       <input type="checkbox" id="settlePreSwap" ${it.preGameSwap?"checked":""} style="width:18px;height:18px;cursor:pointer;">
       <span>賽前讓分方曾對調</span>
     </label>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
+      <span style="color:var(--ink-dim);">賽前讓分線變動（有變才填）</span>
+      <input id="settleOpenHd" type="number" inputmode="decimal" step="0.5" placeholder="開盤" style="width:62px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.openHdLine!=null?it.openHdLine:""}">
+      <span style="color:var(--ink-dim);">→</span>
+      <input id="settleCloseHd" type="number" inputmode="decimal" step="0.5" placeholder="收盤" style="width:62px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.closeHdLine!=null?it.closeHdLine:""}">
+    </div>
   `;
   body.appendChild(flipWrap);
   // 即時判讀：盤口隱含、市場方向、模型差距、ERA 驗證
@@ -5640,6 +5707,13 @@ $("#settleSkip") && ($("#settleSkip").onclick = ()=>{
   $("#settleModal").classList.remove("show"); settleTarget=null;
   if(batchQueue){ advanceBatch(); }   // move to next without settling this one
 });
+// 讀「賽前讓分線變動」兩格 → 衍生 縮線(shrink)/放線(grow)/null（縮＝幅度變小，用 abs 比較，正負皆可）
+function readSettleHdMove(it){
+  const o=parseFloat($("#settleOpenHd")?.value), c=parseFloat($("#settleCloseHd")?.value);
+  it.openHdLine = isNaN(o)?null:o; it.closeHdLine = isNaN(c)?null:c;
+  it.hdLineMove = (it.openHdLine!=null && it.closeHdLine!=null && Math.abs(it.closeHdLine)!==Math.abs(it.openHdLine))
+    ? (Math.abs(it.closeHdLine)<Math.abs(it.openHdLine) ? "shrink" : "grow") : null;
+}
 $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   if(!settleTarget) return;
   if(!validateSettleOdds()) return;
@@ -5661,6 +5735,7 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   it.closeOddsHome = isNaN(coh) ? null : coh;
   it.flipVanished = !!($("#settleFlipVanished") && $("#settleFlipVanished").checked);
   it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
+  readSettleHdMove(it);
   const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
   if(_hv!==undefined) it.hdVal = (_hv==="" ? "" : _hv);
   if(_tv!==undefined) it.totVal = (_tv==="" ? "" : _tv);
@@ -5725,6 +5800,8 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     picks.flipVanished = it.flipVanished;
     it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
     picks.preGameSwap = it.preGameSwap;
+    readSettleHdMove(it);
+    picks.openHdLine = it.openHdLine; picks.closeHdLine = it.closeHdLine; picks.hdLineMove = it.hdLineMove;
     const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
     if(_hv!==undefined) it.hdVal = (_hv==="" ? "" : _hv);
     if(_tv!==undefined) it.totVal = (_tv==="" ? "" : _tv);
@@ -5816,6 +5893,9 @@ function applySettlement(it, picks, delta){
     closeOddsHome: (picks.closeOddsHome!=null ? picks.closeOddsHome : null),
     flipVanished: !!picks.flipVanished,
     preGameSwap: !!picks.preGameSwap,
+    openHdLine: (picks.openHdLine!=null ? picks.openHdLine : null),
+    closeHdLine: (picks.closeHdLine!=null ? picks.closeHdLine : null),
+    hdLineMove: (picks.hdLineMove || null),
     lowCoverWarnHd, lowCoverWarnMl, lowCoverWarnTot,
     // store which side was lit for ml so we can judge "did that team lose"
     mlLitSide: ( (it.mlAway.lights>=3 && it.mlHome.lights>=3) ? null
