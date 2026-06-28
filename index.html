@@ -4776,6 +4776,17 @@ function baseNocoverRate(leagueF){
   });
   return n ? nocov/n : null;
 }
+// 顛倒收斂方向(converged_intl/converged_lottery) → 主場勝率
+function flipDirAgg(dir, leagueF){
+  let n=0, home=0;
+  (doc.games||[]).forEach(g=>{
+    if(!g || g.flipState!==dir) return;
+    if(g.mlResult!=="away" && g.mlResult!=="home") return;
+    if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
+    n++; if(g.mlResult==="home") home++;
+  });
+  return {n, home, pct: n ? home/n : null};
+}
 const SWAP_TRACK_TARGET = 100;   // 累積到這個樣本數才下定論
 function renderSwapTracker(leagueF){
   const rows = [
@@ -4832,6 +4843,26 @@ function renderSwapTracker(leagueF){
            `<td class="lbl">${esc(r.label)}${r.track?" ★":""}</td>`+
            `<td><b style="color:${lc}">${pct!=null?pct+"%":"—"}</b>${lift!=null?` <span style="font-size:11px;color:${lc}">(${lift>0?"+":""}${Math.round(lift*100)}pp)</span>`:""}</td>`+
            `<td><span class="rv-samp">${a.nocov} / ${a.n}</span></td>`+
+           `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td></tr>`;
+    });
+    h += `</tbody></table>`;
+  }
+  // ⓪c 顛倒收斂方向 → 押主場ML
+  const dirRows=[{key:"converged_intl",label:"曾顛倒→國際貼回台彩"},{key:"converged_lottery",label:"曾顛倒→台彩貼向國際"}];
+  if(dirRows.some(r=>flipDirAgg(r.key,leagueF).n>0)){
+    h += `<div class="rv-head" style="margin-top:16px">⓪c 顛倒收斂方向 → 押主場ML <span class="rv-sub">誰貼合誰是否預示結果（主場基準 ${baseTxt}；★累積 ${SWAP_TRACK_TARGET} 場再定論）</span></div>`;
+    h += `<table class="rv-table"><thead><tr><th class="lbl">收斂方向</th><th>主場勝率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
+    dirRows.forEach(r=>{
+      const a=flipDirAgg(r.key,leagueF); if(a.n===0) return;
+      const pct=a.pct!=null?Math.round(a.pct*100):null;
+      const lift=(base!=null&&a.pct!=null)?(a.pct-base):null;
+      const lc=lift!=null?(lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink-dim)")):"var(--ink-dim)";
+      let verdict;
+      if(a.n<SWAP_TRACK_TARGET) verdict=`累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`; else if(lift!=null&&Math.abs(lift)>=0.08) verdict=`偏離基準 ✓ 值得注意`; else verdict=`接近基準`;
+      h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}" style="background:rgba(255,176,46,.07)">`+
+           `<td class="lbl">${esc(r.label)} ★</td>`+
+           `<td><b style="color:${lc}">${pct!=null?pct+"%":"—"}</b>${lift!=null?` <span style="font-size:11px;color:${lc}">(${lift>0?"+":""}${Math.round(lift*100)}pp)</span>`:""}</td>`+
+           `<td><span class="rv-samp">${a.home} / ${a.n}</span></td>`+
            `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td></tr>`;
     });
     h += `</tbody></table>`;
@@ -5494,17 +5525,18 @@ function openSettleModal(it){
 
   // ---- platform-flip toggle (defaults to the card's pre-game flip mark) ----
   const flipWrap = document.createElement("div"); flipWrap.className="settle-q";
-  const flipOn = it.platformFlip ? true : false;
+  const fs0 = cardFlipState(it);
+  const _fopt = (v,l)=>`<option value="${v}"${fs0===v?" selected":""}>${l}</option>`;
   flipWrap.innerHTML = `
-    <div style="display:flex;align-items:center;gap:20px;flex-wrap:wrap;">
-      <label class="settle-flip" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="settleFlip" ${flipOn?"checked":""} style="width:18px;height:18px;cursor:pointer;">
-        <span>平台顛倒（台彩 vs STAKE）</span>
-      </label>
-      <label class="settle-flip" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;">
-        <input type="checkbox" id="settleFlipVanished" ${it.flipVanished?"checked":""} style="width:18px;height:18px;cursor:pointer;">
-        <span>收盤前變一致</span>
-      </label>
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;">
+      <span style="color:var(--ink-dim);">顛倒場狀態</span>
+      <select id="settleFlipState" style="padding:6px 8px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:13px;">
+        ${_fopt("none","無顛倒")}
+        ${_fopt("flipped","收盤仍顛倒（國際≠台彩）")}
+        ${_fopt("converged_intl","曾顛倒，收盤一致（國際貼回台彩）")}
+        ${_fopt("converged_lottery","曾顛倒，收盤一致（台彩貼向國際）")}
+        ${_fopt("converged_unknown","曾顛倒，收盤一致（方向未記）")}
+      </select>
     </div>
     <div class="odds-grid">
       <span></span>
@@ -5707,6 +5739,20 @@ $("#settleSkip") && ($("#settleSkip").onclick = ()=>{
   $("#settleModal").classList.remove("show"); settleTarget=null;
   if(batchQueue){ advanceBatch(); }   // move to next without settling this one
 });
+// 顛倒場狀態(單一來源)：none/flipped/converged_intl/converged_lottery/converged_unknown
+// 舊資料(只有 platformFlip/flipVanished 兩布林)→ 推回 flipState 供下拉預選
+function cardFlipState(it){
+  if(it.flipState) return it.flipState;
+  if(it.platformFlip) return "flipped";
+  if(it.flipVanished) return "converged_unknown";
+  return "none";
+}
+// 由 flipState 反寫舊布林(navMatchState/collectFlipGames/tracker 等既有消費端不必改)
+function applyFlipState(it, fs){
+  it.flipState = fs || "none";
+  it.platformFlip = (it.flipState === "flipped");
+  it.flipVanished = (it.flipState === "converged_intl" || it.flipState === "converged_lottery" || it.flipState === "converged_unknown");
+}
 // 讀「賽前讓分線變動」兩格 → 衍生 縮線(shrink)/放線(grow)/null（縮＝幅度變小，用 abs 比較，正負皆可）
 function readSettleHdMove(it){
   const o=parseFloat($("#settleOpenHd")?.value), c=parseFloat($("#settleCloseHd")?.value);
@@ -5718,9 +5764,8 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   if(!settleTarget) return;
   if(!validateSettleOdds()) return;
   const it = settleTarget;
-  // store odds + flip mark onto the card WITHOUT requiring score / settling
-  const flipChecked = !!($("#settleFlip") && $("#settleFlip").checked);
-  it.platformFlip = flipChecked;
+  // store odds + flip state onto the card WITHOUT requiring score / settling
+  applyFlipState(it, ($("#settleFlipState") && $("#settleFlipState").value) || "none");
   const oa = parseFloat($("#flipOddsAway")?.value);
   const oh = parseFloat($("#flipOddsHome")?.value);
   it.flipOddsAway = isNaN(oa) ? null : oa;
@@ -5733,8 +5778,7 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   const coh = parseFloat($("#closeOddsHome")?.value);
   it.closeOddsAway = isNaN(coa) ? null : coa;
   it.closeOddsHome = isNaN(coh) ? null : coh;
-  it.flipVanished = !!($("#settleFlipVanished") && $("#settleFlipVanished").checked);
-  it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
+  it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);  // flipVanished 已由 applyFlipState 設定
   readSettleHdMove(it);
   const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
   if(_hv!==undefined) it.hdVal = (_hv==="" ? "" : _hv);
@@ -5771,10 +5815,9 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   if(!picks.ml){ alert("請選擇獨贏結果（含「和」）。"); return; }
   if(!picks.hd){ alert("請選擇讓分結果。"); return; }
   if(!picks.tot){ alert("請選擇大小分結果。"); return; }
-  // platform-flip: read checkbox, write back to the card (keeps card button in sync)
-  const flipChecked = !!($("#settleFlip") && $("#settleFlip").checked);
-  it.platformFlip = flipChecked;
-  picks.platformFlip = flipChecked;
+  // 顛倒場狀態：讀下拉、反寫卡片(維持卡片按鈕/標籤同步)
+  applyFlipState(it, ($("#settleFlipState") && $("#settleFlipState").value) || "none");
+  picks.flipState = it.flipState; picks.platformFlip = it.platformFlip;
   // Stake moneyline odds — now read for ANY game (divergence analysis no longer
   // limited to flip games). Blank = not recorded.
   {
@@ -5796,8 +5839,7 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     it.closeOddsHome = isNaN(coh) ? null : coh;
     picks.closeOddsAway = it.closeOddsAway;
     picks.closeOddsHome = it.closeOddsHome;
-    it.flipVanished = !!($("#settleFlipVanished") && $("#settleFlipVanished").checked);
-    picks.flipVanished = it.flipVanished;
+    picks.flipVanished = it.flipVanished;  // it.flipVanished 已由 applyFlipState 設定
     it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
     picks.preGameSwap = it.preGameSwap;
     readSettleHdMove(it);
@@ -5885,6 +5927,7 @@ function applySettlement(it, picks, delta){
     lightsSnapshot,
     trendTop,
     platformFlip: !!picks.platformFlip,
+    flipState: (picks.flipState || (picks.platformFlip ? "flipped" : (picks.flipVanished ? "converged_unknown" : "none"))),
     flipOddsAway: (picks.flipOddsAway!=null ? picks.flipOddsAway : null),
     flipOddsHome: (picks.flipOddsHome!=null ? picks.flipOddsHome : null),
     openOddsAway: (picks.openOddsAway!=null ? picks.openOddsAway : null),
