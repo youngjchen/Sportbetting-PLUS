@@ -4859,27 +4859,74 @@ function renderSwapTracker(leagueF){
     });
     h += `</tbody></table>`;
   }
-  // ⓪c 顛倒收斂方向 → 押主場ML
-  const dirRows=[{key:"converged_intl",label:"曾顛倒→國際貼回台彩"},{key:"converged_lottery",label:"曾顛倒→台彩貼向國際"}];
-  if(dirRows.some(r=>flipDirAgg(r.key,leagueF).n>0)){
-    h += `<div class="rv-head" style="margin-top:16px">⓪c 顛倒收斂方向 → 押主場ML <span class="rv-sub">誰貼合誰是否預示結果（主場基準 ${baseTxt}；★累積 ${SWAP_TRACK_TARGET} 場再定論）</span></div>`;
-    h += `<table class="rv-table"><thead><tr><th class="lbl">收斂方向</th><th>主場勝率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
-    dirRows.forEach(r=>{
-      const a=flipDirAgg(r.key,leagueF); if(a.n===0) return;
-      const pct=a.pct!=null?Math.round(a.pct*100):null;
-      const lift=(base!=null&&a.pct!=null)?(a.pct-base):null;
-      const lc=lift!=null?(lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink-dim)")):"var(--ink-dim)";
-      let verdict;
-      if(a.n<SWAP_TRACK_TARGET) verdict=`累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`; else if(lift!=null&&Math.abs(lift)>=0.08) verdict=`偏離基準 ✓ 值得注意`; else verdict=`接近基準`;
-      h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}" style="background:rgba(255,176,46,.07)">`+
-           `<td class="lbl">${esc(r.label)} ★</td>`+
-           `<td><b style="color:${lc}">${pct!=null?pct+"%":"—"}</b>${lift!=null?` <span style="font-size:11px;color:${lc}">(${lift>0?"+":""}${Math.round(lift*100)}pp)</span>`:""}</td>`+
-           `<td><span class="rv-samp">${a.home} / ${a.n}</span></td>`+
-           `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td></tr>`;
-    });
-    h += `</tbody></table>`;
-  }
   h += `</div>`;
+  return h;
+}
+// ── 神刻奇門 C1（投手生年干 → 確認過濾器）追蹤 ─────────────────────────
+// C1 選邊由工作流(computeC1.js)算好寫 data/qimen_c1.json；板上以 date|兩隊 為鍵 join
+// 你的結算資料(mlResult + 熱門方)，累積「C1 與收盤熱門一致」的命中率。收盤熱門以讓分熱門
+// (hdFav)為代理(棒球ML/讓分熱門幾乎一致)；未來結算若存 mlFav 會優先採用。
+let _c1loading = false;
+function ensureC1(){
+  if(typeof window === "undefined") return;
+  if(window.QIMEN_C1 !== undefined || _c1loading) return;
+  _c1loading = true;
+  fetch("data/qimen_c1.json").then(r=>r.ok?r.json():null).then(d=>{
+    const m = {};
+    if(d) for(const k in d){ const p = String(k).split("|"); m[p[0]+"|"+p[1]] = d[k]; }
+    window.QIMEN_C1 = m;
+    if(document.querySelector("#reviewBody")) renderReviewPage();
+  }).catch(()=>{ window.QIMEN_C1 = {}; });
+}
+function c1Key(g){ return `${g.date}|` + [String(g.awayTeam||""), String(g.homeTeam||"")].sort().join("@"); }
+function wilsonLow(k,n,z){ z=z||1.96; if(!n) return 0; const p=k/n, d=1+z*z/n, c=p+z*z/(2*n), hw=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n)); return (c-hw)/d; }
+function c1Agg(leagueF){
+  let n=0, hit=0, agN=0, agHit=0, favBetN=0, favBetHit=0;
+  const M = (typeof window!=="undefined" && window.QIMEN_C1) || {};
+  (doc.games||[]).forEach(g=>{
+    if(g.mlResult!=="home" && g.mlResult!=="away") return;
+    if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
+    const fav = g.mlFav || g.hdFav;
+    if(fav==="home" || fav==="away"){ favBetN++; if(fav===g.mlResult) favBetHit++; }
+    const c = M[c1Key(g)];
+    if(!c || !c.pick) return;
+    n++; if(c.pick===g.mlResult) hit++;
+    if((fav==="home"||fav==="away") && c.pick===fav){ agN++; if(c.pick===g.mlResult) agHit++; }
+  });
+  return {n,hit,agN,agHit,favBetN,favBetHit};
+}
+function renderC1Tracker(leagueF){
+  ensureC1();
+  const loaded = (typeof window!=="undefined" && window.QIMEN_C1);
+  const a = c1Agg(leagueF);
+  if(loaded && a.n===0) return "";  // 已載入但這批沒對到任何 C1 訊號 → 不顯示
+  const favPct = a.favBetN ? Math.round(a.favBetHit/a.favBetN*100) : null;
+  let h = `<div class="rv-section"><div class="rv-head">⓪c 神刻奇門 C1（投手生年干）→ 確認過濾器 `+
+    `<span class="rv-sub">${loaded?"":"（C1 資料載入中…）"}神刻盤先發投手生年干「破敗較少」方；★ 僅在與收盤熱門（讓分熱門代）同邊才出手。對照純押熱門 ${favPct!=null?favPct+"%":"—"}；累積 ${SWAP_TRACK_TARGET} 場定論</span></div>`;
+  h += `<table class="rv-table"><thead><tr><th class="lbl">規則</th><th>命中率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
+  const stdPct = a.n ? Math.round(a.hit/a.n*100) : null;
+  h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}">`+
+       `<td class="lbl">C1 標準型（破敗較少方）</td>`+
+       `<td><b>${stdPct!=null?stdPct+"%":"—"}</b></td>`+
+       `<td><span class="rv-samp">${a.hit} / ${a.n}</span></td>`+
+       `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">參考；單獨不打敗市場</td></tr>`;
+  const agPct = a.agN ? (a.agHit/a.agN) : null;
+  const favBase = a.favBetN ? (a.favBetHit/a.favBetN) : null;
+  const lo = a.agN ? wilsonLow(a.agHit, a.agN) : 0;
+  let verdict, col="var(--ink-dim)";
+  if(a.agN < SWAP_TRACK_TARGET){ verdict = `累積中，還差 ${SWAP_TRACK_TARGET-a.agN} 場`; }
+  else if(agPct>=0.58 && lo>=0.54){ verdict = `✅ 可參考下注`; col="#28c76f"; }
+  else if(agPct>=0.52){ verdict = `⚠ 觀察中，趨勢未定`; col="#ffb02e"; }
+  else { verdict = `❌ 雜訊，放棄`; col="#ff5d5d"; }
+  const agLift = (favBase!=null && agPct!=null) ? (agPct-favBase) : null;
+  h += `<tr class="rv-row${a.agN<RV_SAMPLE_MIN?" low-sample":""}" style="background:rgba(255,176,46,.07)">`+
+       `<td class="lbl">C1 ∧ 收盤熱門一致 ★</td>`+
+       `<td><b style="color:${col}">${agPct!=null?Math.round(agPct*100)+"%":"—"}</b>`+
+       `${agLift!=null?` <span style="font-size:11px;color:${col}">(${agLift>0?"+":""}${Math.round(agLift*100)}pp vs 純押熱門)</span>`:""}</td>`+
+       `<td><span class="rv-samp">${a.agHit} / ${a.agN}</span>`+
+       `${a.agN<SWAP_TRACK_TARGET?` <span style="font-size:11px;color:var(--ink-dim)">·進度 ${Math.round(a.agN/SWAP_TRACK_TARGET*100)}%</span>`:""}</td>`+
+       `<td class="lbl" style="font-size:12px;color:${col}">${verdict}</td></tr>`;
+  h += `</tbody></table></div>`;
   return h;
 }
 function renderReviewPage(){
@@ -4917,6 +4964,7 @@ function renderReviewPage(){
 
   // ---- ⓪ 賽前換邊訊號追蹤（放在最前面，是主動追蹤的假設） ----
   html += renderSwapTracker(leagueF);
+  html += renderC1Tracker(leagueF);   // ⓪c 神刻奇門 C1 確認過濾器（獨立區，不受換邊旗標有無影響）
 
   // ---- 回顧一: by light count bucket ----
   html += `<div class="rv-section">`;
