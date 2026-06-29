@@ -4871,7 +4871,7 @@ function ensureC1(){
   if(typeof window === "undefined") return;
   if(window.QIMEN_C1 !== undefined || _c1loading) return;
   _c1loading = true;
-  fetch("data/qimen_c1.json").then(r=>r.ok?r.json():null).then(d=>{
+  fetch("data/qimen_c1.json?v=3", {cache:"no-store"}).then(r=>r.ok?r.json():null).then(d=>{
     const m = {};
     if(d) for(const k in d){ const p = String(k).split("|"); m[p[0]+"|"+p[1]] = d[k]; }
     window.QIMEN_C1 = m;
@@ -4881,11 +4881,13 @@ function ensureC1(){
 function c1Key(g){ return `${g.date}|` + [String(g.awayTeam||""), String(g.homeTeam||"")].sort().join("@"); }
 function wilsonLow(k,n,z){ z=z||1.96; if(!n) return 0; const p=k/n, d=1+z*z/n, c=p+z*z/(2*n), hw=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n)); return (c-hw)/d; }
 function c1Agg(leagueF){
-  let n=0, hit=0, agN=0, agHit=0, favBetN=0, favBetHit=0;
+  let n=0, hit=0, agN=0, agHit=0, favBetN=0, favBetHit=0, settled=0;
   const M = (typeof window!=="undefined" && window.QIMEN_C1) || {};
   (doc.games||[]).forEach(g=>{
+    if(!g) return;                                              // ★防呆：跳過 null（漏這行會整頁炸）
     if(g.mlResult!=="home" && g.mlResult!=="away") return;
     if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
+    settled++;
     const fav = g.mlFav || g.hdFav;
     if(fav==="home" || fav==="away"){ favBetN++; if(fav===g.mlResult) favBetHit++; }
     const c = M[c1Key(g)];
@@ -4893,16 +4895,18 @@ function c1Agg(leagueF){
     n++; if(c.pick===g.mlResult) hit++;
     if((fav==="home"||fav==="away") && c.pick===fav){ agN++; if(c.pick===g.mlResult) agHit++; }
   });
-  return {n,hit,agN,agHit,favBetN,favBetHit};
+  return {n,hit,agN,agHit,favBetN,favBetHit,settled};
 }
 function renderC1Tracker(leagueF){
+ try{
   ensureC1();
-  const loaded = (typeof window!=="undefined" && window.QIMEN_C1);
+  const M = (typeof window!=="undefined" && window.QIMEN_C1) || null;
   const a = c1Agg(leagueF);
-  if(loaded && a.n===0) return "";  // 已載入但這批沒對到任何 C1 訊號 → 不顯示
   const favPct = a.favBetN ? Math.round(a.favBetHit/a.favBetN*100) : null;
   let h = `<div class="rv-section"><div class="rv-head">⓪c 神刻奇門 C1（投手生年干）→ 確認過濾器 `+
-    `<span class="rv-sub">${loaded?"":"（C1 資料載入中…）"}神刻盤先發投手生年干「破敗較少」方；★ 僅在與收盤熱門（讓分熱門代）同邊才出手。對照純押熱門 ${favPct!=null?favPct+"%":"—"}；累積 ${SWAP_TRACK_TARGET} 場定論</span></div>`;
+    `<span class="rv-sub">神刻盤先發投手生年干「破敗較少」方；★ 僅在與收盤熱門（讓分熱門代）同邊才出手。對照純押熱門 ${favPct!=null?favPct+"%":"—"}；累積 ${SWAP_TRACK_TARGET} 場定論</span></div>`;
+  if(M===null){ return h + `<div style="padding:8px;font-size:12px;color:var(--ink-dim)">C1 資料載入中…（若一直停在這，代表抓 data/qimen_c1.json 失敗）</div></div>`; }
+  h += `<div style="padding:4px 0;font-size:12px;color:var(--ink-dim)">C1 庫 ${Object.keys(M).length} 場 · 你已結算 ${a.settled} 場 · 對到 ${a.n} 場${(Object.keys(M).length>0 && a.n===0)?'　← 隊名或日期對不上(多半是回補範圍 4/1–6/25 外的新場)':''}</div>`;
   h += `<table class="rv-table"><thead><tr><th class="lbl">規則</th><th>命中率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
   const stdPct = a.n ? Math.round(a.hit/a.n*100) : null;
   h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}">`+
@@ -4928,6 +4932,9 @@ function renderC1Tracker(leagueF){
        `<td class="lbl" style="font-size:12px;color:${col}">${verdict}</td></tr>`;
   h += `</tbody></table></div>`;
   return h;
+ }catch(e){
+  return `<div class="rv-section"><div class="rv-head">⓪c 神刻奇門 C1</div><div style="padding:8px;font-size:12px;color:#ff5d5d">C1 區塊發生錯誤（已隔離，不影響其他區）：${(e&&e.message)||e}</div></div>`;
+ }
 }
 function renderReviewPage(){
   const body = $("#reviewBody"); if(!body) return;
