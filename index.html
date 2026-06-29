@@ -4802,77 +4802,87 @@ function flipDirAgg(dir, leagueF){
   return {n, home, pct: n ? home/n : null};
 }
 const SWAP_TRACK_TARGET = 100;   // 累積到這個樣本數才下定論
+function c1Role(g){
+  return `C1押:${esc(g.pick==='home'?g.home:g.away)}（破敗 主${g.hb}/客${g.ab}）`+(g.fav?`・熱門:${esc(g.fav==='home'?g.home:g.away)}`:'')+`・${g.hit?'<span class="dr-hit">中</span>':'<span class="dr-miss">沒中</span>'}`;
+}
+// 大數字一列（仿 ⑤ 區的大且清楚）：左大 %，右標籤/樣本/判讀，下方明細展開
+function bigSignalRow(label, pctTxt, pctColor, subTxt, sampleTxt, verdict, star, drill){
+  let r = `<div style="display:flex;align-items:baseline;gap:16px;padding:14px 2px;border-top:1px solid var(--line)">`+
+    `<div style="font-family:'Oswald';font-weight:700;font-size:30px;line-height:1;color:${pctColor||'var(--ink)'};min-width:104px">${pctTxt}`+
+    `${subTxt?`<span style="font-size:12px;color:var(--ink-dim);font-weight:400"> ${subTxt}</span>`:''}</div>`+
+    `<div style="flex:1;min-width:0">`+
+      `<div style="font-size:15px;font-weight:600">${esc(label)}${star?' <span style="color:#ffb02e">★</span>':''}</div>`+
+      `<div style="font-size:13px;color:var(--ink-dim);margin-top:3px">${sampleTxt}${verdict?` ・ ${verdict}`:''}</div>`+
+    `</div></div>`;
+  if(drill && drill.id) r += `<div class="drill-toggle" onclick="toggleDrillById('${drill.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:-4px 0 6px">${drill.label}</div>`+drill.html;
+  return r;
+}
+// ⓪ 合一：賽前換邊 + 讓分線變動 + 神刻奇門 C1（不分 B/C 區塊，連續列出，移除平台顛倒——它在 ⑤ 區已有）
 function renderSwapTracker(leagueF){
-  const rows = [
+ try{
+  ensureC1();
+  const base = baseHomeRate(leagueF); const baseTxt = base!=null?Math.round(base*100)+"%":"—";
+  const bn = baseNocoverRate(leagueF); const bnTxt = bn!=null?Math.round(bn*100)+"%":"—";
+  const swapRows = [
     {key:"preGameSwap",  label:"賽前讓分方曾對調", track:true},
-    {key:"flipVanished", label:"收盤前變一致",     track:false},
-    {key:"platformFlip", label:"平台顛倒",         track:false}
+    {key:"flipVanished", label:"收盤前變一致",     track:false}
   ];
-  if(!rows.some(r=>swapSignalAgg(r.key,leagueF).n>0)) return "";
-  const base = baseHomeRate(leagueF);
-  const baseTxt = base!=null ? Math.round(base*100)+"%" : "—";
+  const moveRows = [
+    {key:"shrink", label:"讓分線縮小→冷門過盤", track:true},
+    {key:"grow",   label:"讓分線放大→冷門過盤", track:false}
+  ];
+  const c1 = c1Agg(leagueF);
+  const M = (typeof window!=="undefined" && window.QIMEN_C1) || null;
+  const favPct = c1.favBetN ? Math.round(c1.favBetHit/c1.favBetN*100) : null;
+  const info = rvInfo(`本區＝追蹤中的假設（不受上方範圍/市場篩選影響）。`+
+    `① 賽前換邊類 → 押主場 ML，主場基準 ${baseTxt}。`+
+    `② 讓分線變動 → 押冷門過盤，基準不過盤 ${bnTxt}。`+
+    `③ 神刻奇門 C1 → 先發投手生年干「破敗較少」方；★ 僅在與收盤熱門（讓分熱門代）同邊才出手，對照純押熱門 ${favPct!=null?favPct+"%":"—"}。`+
+    `★ 為重點追蹤，累積 ${SWAP_TRACK_TARGET} 場再定論。`);
   let h = `<div class="rv-section">`;
-  h += `<div class="rv-head">⓪ 賽前換邊訊號 → 押主場ML `+
-       `<span class="rv-sub">追蹤中的假設（主場基準 ${baseTxt}；★ 為重點追蹤，累積 ${SWAP_TRACK_TARGET} 場再定論。本區不受上方範圍/市場篩選影響）</span></div>`;
-  h += `<table class="rv-table"><thead><tr><th class="lbl">訊號</th><th>主場勝率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
-  rows.forEach(r=>{
-    const a = swapSignalAgg(r.key, leagueF);
-    if(a.n===0) return;
-    const pct = a.pct!=null ? Math.round(a.pct*100) : null;
-    const lift = (base!=null && a.pct!=null) ? (a.pct-base) : null;
-    const liftColor = lift!=null ? (lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink-dim)")) : "var(--ink-dim)";
-    let verdict;
-    if(r.track){
-      if(a.n<SWAP_TRACK_TARGET) verdict = `累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`;
-      else if(a.pct>=0.60) verdict = `維持高檔 ✓ 訊號可能成立`;
-      else verdict = `已回落至基準，視為雜訊`;
-    }else{
-      verdict = (lift!=null && lift>0.05) ? "略高於基準" : "無明顯優勢";
-    }
-    const prog = r.track ? Math.min(100, Math.round(a.n/SWAP_TRACK_TARGET*100)) : null;
-    h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}"${r.track?' style="background:rgba(255,176,46,.07)"':''}>`+
-         `<td class="lbl">${esc(r.label)}${r.track?" ★":""}</td>`+
-         `<td><b style="color:${liftColor}">${pct!=null?pct+"%":"—"}</b>`+
-         `${lift!=null?` <span style="font-size:11px;color:${liftColor}">(${lift>0?"+":""}${Math.round(lift*100)}pp)</span>`:""}</td>`+
-         `<td><span class="rv-samp">${a.home} / ${a.n}</span>${prog!=null?` <span style="font-size:11px;color:var(--ink-dim)">·進度 ${prog}%</span>`:""}</td>`+
-         `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td>`+
-         `</tr>`;
-  });
-  h += `</tbody></table>`;
-  rows.forEach(r=>{
-    const a = swapSignalAgg(r.key, leagueF); if(!a.games||!a.games.length) return;
+  h += `<div class="rv-head">⓪ 賽前換邊 ＋ 神刻奇門 追蹤 <span class="rv-sub">點 i 看完整說明</span>${info.icon}</div>${info.pop}`;
+  swapRows.forEach(r=>{
+    const a = swapSignalAgg(r.key, leagueF); if(a.n===0) return;
+    const pct = a.pct!=null?Math.round(a.pct*100):null;
+    const lift = (base!=null&&a.pct!=null)?(a.pct-base):null;
+    const col = lift!=null?(lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink)")):"var(--ink)";
+    const verdict = r.track ? (a.n<SWAP_TRACK_TARGET?`累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`:(a.pct>=0.60?"維持高檔 ✓":"已回落，視為雜訊")) : (lift!=null&&lift>0.05?"略高於基準":"無明顯優勢");
     const det = drillBlock(a.games, g=>`主場 ${esc(g.home)}：${g.homeWon?'<span class="dr-hit">贏</span>':'<span class="dr-miss">沒贏</span>'}`);
-    if(det.id) h += `<div class="drill-toggle" onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:4px 0 2px">展開「${esc(r.label)}」${a.games.length} 場明細核對</div>`+det.html;
+    h += bigSignalRow(r.label, pct!=null?pct+"%":"—", col, lift!=null?(lift>0?"+":"")+Math.round(lift*100)+"pp":"", `主場勝率 ${a.home}/${a.n}`, verdict, r.track, det.id?{id:det.id,label:`展開 ${a.n} 場明細核對`,html:det.html}:null);
   });
-  // ⓪b 讓分線變動 → 冷門過盤（fav_nocover）
-  const moveRows=[{key:"shrink",label:"讓分線縮小(熱門讓得少)",track:true},{key:"grow",label:"讓分線放大",track:false}];
-  if(moveRows.some(r=>hdMoveAgg(r.key,leagueF).n>0)){
-    const bn=baseNocoverRate(leagueF); const bnTxt=bn!=null?Math.round(bn*100)+"%":"—";
-    h += `<div class="rv-head" style="margin-top:16px">⓪b 讓分線變動 → 冷門過盤 <span class="rv-sub">縮線是否預示冷門吃讓分（基準不過盤 ${bnTxt}；★累積 ${SWAP_TRACK_TARGET} 場再定論）</span></div>`;
-    h += `<table class="rv-table"><thead><tr><th class="lbl">訊號</th><th>冷門過盤率</th><th>命中 / 樣本</th><th class="lbl">判讀</th></tr></thead><tbody>`;
-    moveRows.forEach(r=>{
-      const a=hdMoveAgg(r.key,leagueF); if(a.n===0) return;
-      const pct=a.pct!=null?Math.round(a.pct*100):null;
-      const lift=(bn!=null&&a.pct!=null)?(a.pct-bn):null;
-      const lc=lift!=null?(lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink-dim)")):"var(--ink-dim)";
-      let verdict;
-      if(r.track){ if(a.n<SWAP_TRACK_TARGET) verdict=`累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`; else if(bn!=null && a.pct>=bn+0.05) verdict=`高於基準 ✓ 可能成立`; else verdict=`未明顯高於基準`; }
-      else verdict=(lift!=null&&lift>0.05)?"略高於基準":"無明顯優勢";
-      h += `<tr class="rv-row${a.n<RV_SAMPLE_MIN?" low-sample":""}"${r.track?' style="background:rgba(255,176,46,.07)"':''}>`+
-           `<td class="lbl">${esc(r.label)}${r.track?" ★":""}</td>`+
-           `<td><b style="color:${lc}">${pct!=null?pct+"%":"—"}</b>${lift!=null?` <span style="font-size:11px;color:${lc}">(${lift>0?"+":""}${Math.round(lift*100)}pp)</span>`:""}</td>`+
-           `<td><span class="rv-samp">${a.nocov} / ${a.n}</span></td>`+
-           `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td></tr>`;
-    });
-    h += `</tbody></table>`;
-    moveRows.forEach(r=>{
-      const a=hdMoveAgg(r.key,leagueF); if(!a.games||!a.games.length) return;
-      const det=drillBlock(a.games, g=>`${g.nocov?'<span class="dr-hit">冷門過盤</span>':'<span class="dr-miss">冷門沒過</span>'}`);
-      if(det.id) h += `<div class="drill-toggle" onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:4px 0 2px">展開「${esc(r.label)}」${a.games.length} 場明細核對</div>`+det.html;
-    });
+  moveRows.forEach(r=>{
+    const a = hdMoveAgg(r.key, leagueF); if(a.n===0) return;
+    const pct = a.pct!=null?Math.round(a.pct*100):null;
+    const lift = (bn!=null&&a.pct!=null)?(a.pct-bn):null;
+    const col = lift!=null?(lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink)")):"var(--ink)";
+    const verdict = r.track ? (a.n<SWAP_TRACK_TARGET?`累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`:(bn!=null&&a.pct>=bn+0.05?"高於基準 ✓":"未明顯高於基準")) : (lift!=null&&lift>0.05?"略高於基準":"無明顯優勢");
+    const det = drillBlock(a.games, g=>`${g.nocov?'<span class="dr-hit">冷門過盤</span>':'<span class="dr-miss">冷門沒過</span>'}`);
+    h += bigSignalRow(r.label, pct!=null?pct+"%":"—", col, lift!=null?(lift>0?"+":"")+Math.round(lift*100)+"pp":"", `冷門過盤率 ${a.nocov}/${a.n}`, verdict, r.track, det.id?{id:det.id,label:`展開 ${a.n} 場明細核對`,html:det.html}:null);
+  });
+  if(M===null){
+    h += `<div style="padding:14px 2px;border-top:1px solid var(--line);font-size:13px;color:var(--ink-dim)">神刻奇門 C1 資料載入中…</div>`;
+  } else {
+    h += `<div style="padding:12px 2px 0;border-top:1px solid var(--line);font-size:12px;color:var(--ink-dim)">神刻奇門 C1 — 庫 ${Object.keys(M).length} 場・你已結算 ${c1.settled} 場・對到 ${c1.n} 場${(Object.keys(M).length>0&&c1.n===0)?'（隊名或日期對不上）':''}</div>`;
+    const stdPct = c1.n?Math.round(c1.hit/c1.n*100):null;
+    const dStd = drillBlock(c1.stdGames, c1Role);
+    h += bigSignalRow("神刻 C1 標準型（破敗較少方）", stdPct!=null?stdPct+"%":"—", "var(--ink)", "", `命中 ${c1.hit}/${c1.n}`, "參考；單獨不打敗市場", false, dStd.id?{id:dStd.id,label:`展開 ${c1.stdGames.length} 場明細核對`,html:dStd.html}:null);
+    const agPct = c1.agN?(c1.agHit/c1.agN):null;
+    const favBase = c1.favBetN?(c1.favBetHit/c1.favBetN):null;
+    const lo = c1.agN?wilsonLow(c1.agHit,c1.agN):0;
+    let col="var(--ink)", verdict;
+    if(c1.agN<SWAP_TRACK_TARGET){ verdict=`累積中，還差 ${SWAP_TRACK_TARGET-c1.agN} 場`; }
+    else if(agPct>=0.58&&lo>=0.54){ verdict="✅ 可參考下注"; col="#28c76f"; }
+    else if(agPct>=0.52){ verdict="⚠ 觀察中"; col="#ffb02e"; }
+    else { verdict="❌ 雜訊"; col="#ff5d5d"; }
+    const agLift = (favBase!=null&&agPct!=null)?(agPct-favBase):null;
+    const dAg = drillBlock(c1.agGames, c1Role);
+    h += bigSignalRow("神刻 C1 ∧ 收盤熱門一致", agPct!=null?Math.round(agPct*100)+"%":"—", col, agLift!=null?(agLift>0?"+":"")+Math.round(agLift*100)+"pp":"", `命中 ${c1.agHit}/${c1.agN}`, verdict, true, dAg.id?{id:dAg.id,label:`展開 ${c1.agGames.length} 場明細核對`,html:dAg.html}:null);
   }
   h += `</div>`;
   return h;
+ }catch(e){
+  return `<div class="rv-section"><div class="rv-head">⓪ 追蹤</div><div style="padding:8px;color:#ff5d5d;font-size:12px">本區出錯（已隔離）：${(e&&e.message)||e}</div></div>`;
+ }
 }
 // ── 神刻奇門 C1（投手生年干 → 確認過濾器）追蹤 ─────────────────────────
 // C1 選邊由工作流(computeC1.js)算好寫 data/qimen_c1.json；板上以 date|兩隊 為鍵 join
@@ -4991,9 +5001,8 @@ function renderReviewPage(){
   }
   html += `</div></div>`;
 
-  // ---- ⓪ 賽前換邊訊號追蹤（放在最前面，是主動追蹤的假設） ----
+  // ---- ⓪ 賽前換邊 + 神刻奇門 追蹤（合一區，最前面） ----
   html += renderSwapTracker(leagueF);
-  html += renderC1Tracker(leagueF);   // ⓪c 神刻奇門 C1 確認過濾器（獨立區，不受換邊旗標有無影響）
 
   // ---- 回顧一: by light count bucket ----
   html += `<div class="rv-section">`;
