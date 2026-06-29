@@ -4750,14 +4750,15 @@ $("#reviewClose") && ($("#reviewClose").onclick = closeReviewPage);
 
 // 賽前換邊訊號 → 押主場ML 的命中追蹤（資料來自 doc.games，每次結算自動累積）
 function swapSignalAgg(flagKey, leagueF){
-  let n=0, home=0;
+  let n=0, home=0; const games=[];
   (doc.games||[]).forEach(g=>{
     if(!g || g[flagKey]!==true) return;
     if(g.mlResult!=="away" && g.mlResult!=="home") return;
     if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
     n++; if(g.mlResult==="home") home++;
+    games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,homeWon:g.mlResult==="home"});
   });
-  return {n, home, pct: n ? home/n : null};
+  return {n, home, pct: n ? home/n : null, games};
 }
 function baseHomeRate(leagueF){
   let n=0, home=0;
@@ -4770,14 +4771,15 @@ function baseHomeRate(leagueF){
 }
 // 讓分線變動(縮/放) → 冷門過盤(fav_nocover)
 function hdMoveAgg(move, leagueF){
-  let n=0, nocov=0;
+  let n=0, nocov=0; const games=[];
   (doc.games||[]).forEach(g=>{
     if(!g || g.hdLineMove!==move) return;
     if(g.hdResult!=="fav_cover" && g.hdResult!=="fav_nocover") return;
     if(leagueF && leagueF!=="all" && g.league && g.league!==leagueF) return;
     n++; if(g.hdResult==="fav_nocover") nocov++;
+    games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,nocov:g.hdResult==="fav_nocover"});
   });
-  return {n, nocov, pct: n ? nocov/n : null};
+  return {n, nocov, pct: n ? nocov/n : null, games};
 }
 function baseNocoverRate(leagueF){
   let n=0, nocov=0;
@@ -4837,6 +4839,11 @@ function renderSwapTracker(leagueF){
          `</tr>`;
   });
   h += `</tbody></table>`;
+  rows.forEach(r=>{
+    const a = swapSignalAgg(r.key, leagueF); if(!a.games||!a.games.length) return;
+    const det = drillBlock(a.games, g=>`主場 ${esc(g.home)}：${g.homeWon?'<span class="dr-hit">贏</span>':'<span class="dr-miss">沒贏</span>'}`);
+    if(det.id) h += `<div class="drill-toggle" onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:4px 0 2px">展開「${esc(r.label)}」${a.games.length} 場明細核對</div>`+det.html;
+  });
   // ⓪b 讓分線變動 → 冷門過盤（fav_nocover）
   const moveRows=[{key:"shrink",label:"讓分線縮小(熱門讓得少)",track:true},{key:"grow",label:"讓分線放大",track:false}];
   if(moveRows.some(r=>hdMoveAgg(r.key,leagueF).n>0)){
@@ -4858,6 +4865,11 @@ function renderSwapTracker(leagueF){
            `<td class="lbl" style="font-size:12px;color:var(--ink-dim)">${verdict}</td></tr>`;
     });
     h += `</tbody></table>`;
+    moveRows.forEach(r=>{
+      const a=hdMoveAgg(r.key,leagueF); if(!a.games||!a.games.length) return;
+      const det=drillBlock(a.games, g=>`${g.nocov?'<span class="dr-hit">冷門過盤</span>':'<span class="dr-miss">冷門沒過</span>'}`);
+      if(det.id) h += `<div class="drill-toggle" onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:4px 0 2px">展開「${esc(r.label)}」${a.games.length} 場明細核對</div>`+det.html;
+    });
   }
   h += `</div>`;
   return h;
@@ -4882,6 +4894,7 @@ function c1Key(g){ return `${g.date}|` + [String(g.awayTeam||""), String(g.homeT
 function wilsonLow(k,n,z){ z=z||1.96; if(!n) return 0; const p=k/n, d=1+z*z/n, c=p+z*z/(2*n), hw=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n)); return (c-hw)/d; }
 function c1Agg(leagueF){
   let n=0, hit=0, agN=0, agHit=0, favBetN=0, favBetHit=0, settled=0;
+  const stdGames=[], agGames=[];
   const M = (typeof window!=="undefined" && window.QIMEN_C1) || {};
   (doc.games||[]).forEach(g=>{
     if(!g) return;                                              // ★防呆：跳過 null（漏這行會整頁炸）
@@ -4892,10 +4905,12 @@ function c1Agg(leagueF){
     if(fav==="home" || fav==="away"){ favBetN++; if(fav===g.mlResult) favBetHit++; }
     const c = M[c1Key(g)];
     if(!c || !c.pick) return;
-    n++; if(c.pick===g.mlResult) hit++;
-    if((fav==="home"||fav==="away") && c.pick===fav){ agN++; if(c.pick===g.mlResult) agHit++; }
+    const h = (c.pick===g.mlResult); n++; if(h) hit++;
+    const gm = {date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,pick:c.pick,hit:h,fav:fav,hb:c.homeBroken,ab:c.awayBroken};
+    stdGames.push(gm);
+    if((fav==="home"||fav==="away") && c.pick===fav){ agN++; if(h) agHit++; agGames.push(gm); }
   });
-  return {n,hit,agN,agHit,favBetN,favBetHit,settled};
+  return {n,hit,agN,agHit,favBetN,favBetHit,settled,stdGames,agGames};
 }
 function renderC1Tracker(leagueF){
  try{
@@ -4930,7 +4945,14 @@ function renderC1Tracker(leagueF){
        `<td><span class="rv-samp">${a.agHit} / ${a.agN}</span>`+
        `${a.agN<SWAP_TRACK_TARGET?` <span style="font-size:11px;color:var(--ink-dim)">·進度 ${Math.round(a.agN/SWAP_TRACK_TARGET*100)}%</span>`:""}</td>`+
        `<td class="lbl" style="font-size:12px;color:${col}">${verdict}</td></tr>`;
-  h += `</tbody></table></div>`;
+  h += `</tbody></table>`;
+  // 每場明細核對（與 ⑤ 區同款，可點開逐場對帳）
+  const roleC1 = g => `C1 押:${esc(g.pick==='home'?g.home:g.away)}（破敗 主${g.hb}/客${g.ab}）`+(g.fav?`・熱門:${esc(g.fav==='home'?g.home:g.away)}`:'')+`・${g.hit?'<span class="dr-hit">中</span>':'<span class="dr-miss">沒中</span>'}`;
+  const dAg = drillBlock(a.agGames, roleC1);
+  const dStd = drillBlock(a.stdGames, roleC1);
+  if(dAg.id){ h += `<div class="drill-toggle" onclick="toggleDrillById('${dAg.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:8px 0 2px">展開「C1 ∧ 收盤熱門一致」${a.agGames.length} 場明細核對</div>`+dAg.html; }
+  if(dStd.id){ h += `<div class="drill-toggle" onclick="toggleDrillById('${dStd.id}',this)" style="cursor:pointer;font-size:12px;color:var(--accent);margin:4px 0 2px">展開「C1 標準型」全部 ${a.stdGames.length} 場明細核對</div>`+dStd.html; }
+  h += `</div>`;
   return h;
  }catch(e){
   return `<div class="rv-section"><div class="rv-head">⓪c 神刻奇門 C1</div><div style="padding:8px;font-size:12px;color:#ff5d5d">C1 區塊發生錯誤（已隔離，不影響其他區）：${(e&&e.message)||e}</div></div>`;
