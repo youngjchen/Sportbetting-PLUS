@@ -79,31 +79,86 @@
 
   // ---- 瀏覽器接線 ----
   if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-    var DATA = [], loaded = false;
-    // 設定（提前宣告：下面 load()/setInterval 會立刻用到，var 雖提升但賦值須在使用前）
+    var PS_DATA = [];                // 玩運彩 feed（ERA / 盤口 / 非MLB如NPB場）
+    var MLB_DATA = [];              // MLB 官方 API（權威即時比分+終場狀態，CORS 可直抓）
+    var DATA = [], loaded = false;  // 合併：MLB 分數/狀態 為準，玩運彩補 ERA/盤口，非MLB場留玩運彩
+    // 設定
     var AUTO_SETTLE = true;          // 全自動結算；不想要就設 false
-    var SWEEP_MS = 180000;           // 每 3 分：重抓資料 + 掃描結算 + 更新即時比分面板
-    // 即時比分浮動面板狀態（僅本次連線有效，重整會重置）
-    var psDismissed = {};            // 你手動移除的場：officialId → true
-    var psExpanded = {};             // 展開逐局的場：officialId → true
-    var psMin = false;               // 面板是否最小化（收進快捷鍵）
+    var SWEEP_MS = 180000;           // 玩運彩 feed（ERA/盤口）3 分重抓即可
+    var MLB_POLL_MS = 60000;         // ★MLB 比分每 60 秒抓一次 → 終場後 ~1-2 分內結算
+    var psDismissed = {}, psExpanded = {}, psMin = false;   // (即時比分面板已停用，保留宣告供舊碼不報錯)
+    // MLB teamId → 中文（與 mlb_fetch.js 同步）
+    var TEAM_CN = {108:'天使',109:'響尾蛇',110:'金鶯',111:'紅襪',112:'小熊',113:'紅人',114:'守護者',115:'落磯',116:'老虎',117:'太空人',118:'皇家',119:'道奇',120:'國民',121:'大都會',133:'運動家',134:'海盜',135:'教士',136:'水手',137:'巨人',138:'紅雀',139:'光芒',140:'遊騎兵',141:'藍鳥',142:'雙城',143:'費城人',144:'勇士',145:'白襪',146:'馬林魚',147:'洋基',158:'釀酒人'};
 
     function fetchJson(url) {
       return fetch(url + '?t=' + Date.now(), { cache: 'no-store' })
         .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); });
     }
-    function load() {
-      fetchJson(FEED_URL)
-        .catch(function () { return fetchJson(FEED_FALLBACK); })   // raw 失敗就改用 Pages 相對路徑
-        .then(function (arr) {
-          DATA = Array.isArray(arr) ? arr : []; loaded = true; console.log('[玩運彩融合] 載入', DATA.length, '場');
-          try { renderPanel(); } catch (e) {}                       // 更新即時比分面板
-          if (AUTO_SETTLE) setTimeout(autoSettleSweep, 1000);      // 載入後先掃一次（等板子就緒）
-        })
-        .catch(function (e) { console.warn('[玩運彩融合] 載入失敗（結算照常運作）:', e.message); });
+    function twShift(iso) { var d = new Date(iso); return new Date(d.getTime() + 8 * 3600000); }   // UTC→台灣(以 UTC 表示)
+    function twDateOf(iso) { return twShift(iso).toISOString().slice(0, 10); }
+    function twHHMMof(iso) { var t = twShift(iso); return String(t.getUTCHours()).padStart(2,'0') + ':' + String(t.getUTCMinutes()).padStart(2,'0'); }
+
+    // ★ 從 MLB 官方 API 抓即時比分/狀態（多抓 3 天 UTC 日期，按各場台灣日期歸類，涵蓋跨日）
+    function loadMLB() {
+      var ds = []; var now = Date.now();
+      for (var k = -1; k <= 1; k++) ds.push(new Date(now + k * 86400000).toISOString().slice(0, 10));
+      Promise.all(ds.map(function (d) {
+        return fetch('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=' + d + '&t=' + Date.now(), { cache: 'no-store' })
+          .then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; });
+      })).then(function (res) {
+        var byPk = {};
+        res.forEach(function (j) {
+          if (!j || !j.dates) return;
+          j.dates.forEach(function (dd) { (dd.games || []).forEach(function (g) {
+            var a = g.teams && g.teams.away, h = g.teams && g.teams.home;
+            if (!a || !h || !a.team || !h.team) return;
+            var aCN = TEAM_CN[a.team.id], hCN = TEAM_CN[h.team.id]; if (!aCN || !hCN) return;
+            var ab = (g.status && g.status.abstractGameState) || '';
+            byPk[g.gamePk] = { officialId: 'mlb' + g.gamePk, _mlb: true,
+              date: twDateOf(g.gameDate), gameTime: twHHMMof(g.gameDate), time: twHHMMof(g.gameDate),
+              awayTeam: aCN, homeTeam: hCN,
+              awayScore: (a.score != null ? a.score : null), homeScore: (h.score != null ? h.score : null),
+              status: ab === 'Final' ? 'finished' : (ab === 'Live' ? 'inprogress' : 'scheduled') };
+          }); });
+        });
+        MLB_DATA = Object.keys(byPk).map(function (k) { return byPk[k]; });
+        rebuildDATA();
+        if (AUTO_SETTLE) setTimeout(autoSettleSweep, 300);   // MLB 一更新就立刻掃一次
+      }).catch(function (e) { console.warn('[結算] MLB 比分抓取失敗（玩運彩照常）:', e && e.message); });
     }
-    load();
-    setInterval(function () { load(); }, SWEEP_MS);                // 定時重抓最新資料，抓完再觸發掃描
+    function findPS(m) {   // 在玩運彩 feed 找對應 MLB 場（補 ERA/盤口）
+      for (var i = 0; i < PS_DATA.length; i++) { var p = PS_DATA[i];
+        if (dateEq(m.date, p.date) && teamMatch(m.awayTeam, p.awayTeam) && teamMatch(m.homeTeam, p.homeTeam)) return p; }
+      return null;
+    }
+    function rebuildDATA() {
+      var used = {};
+      var merged = MLB_DATA.map(function (m) {              // MLB 場：分數/狀態用 MLB，ERA/盤口補玩運彩
+        var ps = findPS(m);
+        if (ps) { used[ps.officialId] = 1;
+          var o = {}; for (var key in ps) o[key] = ps[key];
+          o.awayScore = m.awayScore; o.homeScore = m.homeScore; o.status = m.status;
+          o.officialId = m.officialId; o.date = m.date; o.gameTime = m.gameTime || ps.gameTime; o._mlb = true;
+          return o;
+        }
+        return m;
+      });
+      var rest = PS_DATA.filter(function (p) {              // 非 MLB（NPB 等）只有玩運彩 → 保留原路徑
+        if (used[p.officialId]) return false;
+        return !MLB_DATA.some(function (m) { return dateEq(m.date, p.date) && teamMatch(m.awayTeam, p.awayTeam) && teamMatch(m.homeTeam, p.homeTeam); });
+      });
+      DATA = merged.concat(rest); loaded = true;
+    }
+    function load() {     // 玩運彩 feed（ERA/盤口/非MLB場）
+      fetchJson(FEED_URL)
+        .catch(function () { return fetchJson(FEED_FALLBACK); })
+        .then(function (arr) { PS_DATA = Array.isArray(arr) ? arr : []; rebuildDATA();
+          if (AUTO_SETTLE) setTimeout(autoSettleSweep, 1000); })
+        .catch(function (e) { console.warn('[結算] 玩運彩載入失敗（MLB 照常結算）:', e.message); });
+    }
+    load();  loadMLB();
+    setInterval(load, SWEEP_MS);
+    setInterval(loadMLB, MLB_POLL_MS);                              // ★ MLB 比分快輪詢
 
     function $(id) { return document.getElementById(id); }
     function markFilled(inp) {
@@ -385,18 +440,9 @@
       document.addEventListener('pointercancel', function () { psEndDrag(); psEndResize(); });
     }
 
-    function renderPanel() {
-      if (typeof document === 'undefined') return;
-      var list = psScoreList();
-      var p = document.getElementById('ps-live-panel');
-      if (!list.length) { if (p) p.style.display = 'none'; psHideLauncher(); return; }   // 當天沒有可顯示的場 → 面板+快捷鍵鈕都藏
-      if (psMin) { if (p) p.style.display = 'none'; psShowLauncher(list); return; }       // 最小化 → 只剩快捷鍵那顆「比分」鈕
-      psHideLauncher();
-      if (!p) p = psCreateShell();
-      p.style.display = 'flex';
-      var liveN = list.filter(function (g) { return g.status === 'inprogress'; }).length;
-      p.querySelector('.ps-count').textContent = '(' + (liveN ? liveN + ' 進行中' : list.length + ' 場') + ')';
-      p.querySelector('.ps-body').innerHTML = list.map(psRowHtml).join('');
+    function renderPanel() {   // ★即時比分面板已移除（反應落後、無參考價值）；清掉任何殘留 DOM
+      var p = document.getElementById('ps-live-panel'); if (p) p.remove();
+      var b = document.getElementById('ps-launcher'); if (b) b.remove();
     }
 
     // ===== 全自動結算 =====（AUTO_SETTLE / SWEEP_MS 已於頂端宣告）
@@ -479,7 +525,7 @@
     else hook();
 
     // 供測試：注入資料 / 直接呼叫
-    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, findGame: findGame, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne, renderPanel: renderPanel, psScoreList: psScoreList };
+    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, _setMLB: function (d) { MLB_DATA = d || []; rebuildDATA(); }, _setPS: function (d) { PS_DATA = d || []; rebuildDATA(); }, getData: function () { return DATA; }, getMLB: function () { return MLB_DATA; }, loadMLB: loadMLB, rebuildDATA: rebuildDATA, findGame: findGame, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne, renderPanel: renderPanel };
   }
 
   // ---- 測試匯出 ----
