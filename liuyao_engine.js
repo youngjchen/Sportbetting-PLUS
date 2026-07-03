@@ -10,7 +10,8 @@
      確定性計分（B3-2 自定聲明，實驗 L 凍結前定案）：
        月建 vs 爻：同/生→+2、剋→−2、爻生建/爻剋建→−1；日辰同法；
        每一動爻（非自身）：生/同→+1、剋→−1、其餘 0。
-     世分>應分→世方；<→應方；平手→世應本爻相剋裁決；再平→依極性判世方（B3-3 自定）。
+     世分>應分→世方；<→應方；平手→世應本爻相剋裁決；再平＝卦無表態→**棄場**
+     （L 凍結裁定 2026-07-03：與 M 排除比和同邏輯——系統無表態的場次不由約定代打；理由詳協議附錄）。
    - 極性（已核可）：世=「大」方（大小分）。
    - 月建=節氣月支、日辰=日支（0 點換日，與梅花臂同約定）。
    自測：node liuyao_engine.js --selftest    認證：node liuyao_engine.js --cert
@@ -68,8 +69,8 @@ function castFromBacks(backs, monthZhi, dayZhi) {   // backs: 6 個 0..3（botto
   if (sShi > sYing) winner = '世'; else if (sYing > sShi) winner = '應';
   else if (KE[ZHI5[shiZhi]] === ZHI5[yingZhi]) { winner = '世'; tiebreak = '世剋應'; }
   else if (KE[ZHI5[yingZhi]] === ZHI5[shiZhi]) { winner = '應'; tiebreak = '應剋世'; }
-  else { winner = '世'; tiebreak = '極性'; }
-  return { yao, bits, hexLow: low.name, hexUp: up.name, moving, shi, ying, shiZhi, yingZhi, sShi, sYing, winner, tiebreak, pick: winner === '世' ? '大' : '小' };
+  else { winner = null; tiebreak = '平手棄場'; }
+  return { yao, bits, hexLow: low.name, hexUp: up.name, moving, shi, ying, shiZhi, yingZhi, sShi, sYing, winner, tiebreak, pick: winner === null ? null : (winner === '世' ? '大' : '小') };
 }
 
 function zhiContext(y, m, d, hh, mi) {   // 月建（節氣月支）＋日辰（0點換日）
@@ -105,7 +106,7 @@ if (require.main === module && process.argv.includes('--selftest')) {
   const gou = castFromBacks([2, 1, 1, 1, 1, 1], '午', '子');
   ok('姤 世支=丑 應支=午', gou.shiZhi === '丑' && gou.yingZhi === '午', gou);
   // 3) 計分手算例：乾為天、月午日子 → 世戌土:+2(午生戌)−1(戌剋子? 子水 vs 戌土=土剋水→爻剋建−1)=+1；應辰土同=+1 → 平手→戌辰同行不相剋→極性→世
-  ok('計分平手→極性→世(押大)', qian.sShi === 1 && qian.sYing === 1 && qian.tiebreak === '極性' && qian.pick === '大', qian);
+  ok('計分平手且剋裁決不成立→棄場(pick=null)', qian.sShi === 1 && qian.sYing === 1 && qian.tiebreak === '平手棄場' && qian.pick === null, qian);
   // 4) 動爻：姤 爻1=交(老陰動)＝世位自身 → 世自跳過；動爻丑土 vs 應午火 無生剋→0
   const gouM = castFromBacks([0, 1, 1, 1, 1, 1], '午', '子');
   ok('動爻自身跳過＋無生剋=0', gouM.moving.length === 1 && gouM.moving[0] === 1 && gouM.sShi === gou.sShi && gouM.sYing === gou.sYing, gouM);
@@ -124,23 +125,24 @@ if (require.main === module && process.argv.includes('--selftest')) {
 if (require.main === module && process.argv.includes('--cert')) {
   const rng = mulberry32(0x5EED6EA0);
   const Z = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
-  const N = 1e6; let big = 0, tieKe = 0, tiePol = 0; const movDist = {}; const byMonth = {};
+  const N = 1e6; let big = 0, tieKe = 0, abstain = 0; const movDist = {}; const byMonth = {};
   for (let i = 0; i < N; i++) {
     const bits18 = []; for (let b = 0; b < 18; b++) bits18.push(rng() < 0.5 ? 1 : 0);
     const backs = bitsToBacks(bits18);
     const mz = Z[Math.floor(rng() * 12)], dz = Z[Math.floor(rng() * 12)];
     const c = castFromBacks(backs, mz, dz);
     if (c.pick === '大') big++;
-    if (c.tiebreak === '世剋應' || c.tiebreak === '應剋世') tieKe++; if (c.tiebreak === '極性') tiePol++;
+    if (c.tiebreak === '世剋應' || c.tiebreak === '應剋世') tieKe++; if (c.pick === null) abstain++;
     movDist[c.moving.length] = (movDist[c.moving.length] || 0) + 1;
-    (byMonth[mz] ||= { n: 0, b: 0 }); byMonth[mz].n++; if (c.pick === '大') byMonth[mz].b++;
+    if (c.pick != null) { (byMonth[mz] ||= { n: 0, b: 0 }); byMonth[mz].n++; if (c.pick === '大') byMonth[mz].b++; }
   }
   const pct = (a, b) => (100 * a / b).toFixed(3) + '%';
-  console.log(`六爻 10⁶ 認證（均勻錢＋均勻月日支）：押大 ${pct(big, N)}｜剋裁決 ${pct(tieKe, N)}｜極性裁決 ${pct(tiePol, N)}`);
+  const dec = N - abstain;
+  console.log(`六爻 10⁶ 認證（均勻錢＋均勻月日支）：棄場 ${pct(abstain, N)}｜有表態 ${pct(dec, N)}｜有表態中押大 ${pct(big, dec)}｜剋裁決 ${pct(tieKe, N)}`);
   console.log('動爻數分布:', JSON.stringify(movDist));
   const mRates = Object.entries(byMonth).map(([k, v]) => [k, 100 * v.b / v.n]);
   const mx = mRates.reduce((a, c) => c[1] > a[1] ? c : a), mn = mRates.reduce((a, c) => c[1] < a[1] ? c : a);
   console.log(`各月支押大範圍: ${mn[0]} ${mn[1].toFixed(2)}% ~ ${mx[0]} ${mx[1].toFixed(2)}%`);
-  const dev = Math.abs(100 * big / N - 50);
+  const dev = Math.abs(100 * big / dec - 50);
   console.log(`判準 |押大−50%| ≤ 0.5pp → 偏差 ${dev.toFixed(3)}pp → ${dev <= 0.5 ? '通過 ✅' : '不通過（依協議 §3 以 p₀ 機制吸收，L 凍結前記錄認證值）'}`);
 }

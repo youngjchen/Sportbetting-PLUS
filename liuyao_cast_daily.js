@@ -32,8 +32,9 @@ async function fetchSchedule() {
   return games;
 }
 async function beaconPulse() {
-  const r = await axios.get(`https://beacon.nist.gov/beacon/2.0/pulse/time/${Date.now()}`, { timeout: 20000 });
-  return r.data.pulse;   // { timeStamp, outputValue(128 hex), pulseIndex... }
+  // v2 API：/pulse/time/{ms} 需恰好對齊脈衝分鐘（任意毫秒回 404）→ 改用 /pulse/last 取最新脈衝
+  const r = await axios.get('https://beacon.nist.gov/beacon/2.0/pulse/last', { timeout: 20000 });
+  return r.data.pulse;   // { timeStamp, outputValue(128 hex), pulseIndex, uri... }
 }
 function bitsFrom(outputValue, gamePk) {
   const h = crypto.createHash('sha256').update(outputValue + '|' + gamePk).digest();
@@ -63,7 +64,7 @@ function bitsFrom(outputValue, gamePk) {
     const backs = eng.bitsToBacks(bitsFrom(pulse.outputValue, String(g.gamePk)));
     const c = eng.castFromBacks(backs, ctx.monthZhi, ctx.dayZhi);
     const entry = { gamePk: g.gamePk, gameType: g.gameType, matchup: `${g.away}@${g.home}`, gameTimeUTC: new Date(g.ts).toISOString(), castAt: new Date().toISOString(), monthZhi: ctx.monthZhi, dayZhi: ctx.dayZhi, beaconTS: pulse.timeStamp, beaconOutput: pulse.outputValue, backs, shi: c.shi, ying: c.ying, shiZhi: c.shiZhi, yingZhi: c.yingZhi, sShi: c.sShi, sYing: c.sYing, tiebreak: c.tiebreak, pick: c.pick, phase: 'pilot-2026' };
-    console.log(`  卦 ${entry.matchup} → 押${c.pick}（世${c.shi}${c.shiZhi} ${c.sShi} vs 應${c.ying}${c.yingZhi} ${c.sYing}${c.tiebreak ? '/' + c.tiebreak : ''}）`);
+    console.log(`  卦 ${entry.matchup} → ${c.pick ? '押' + c.pick : '棄場（卦無表態，仍入帳全報不藏）'}（世${c.shi}${c.shiZhi} ${c.sShi} vs 應${c.ying}${c.yingZhi} ${c.sYing}${c.tiebreak ? '/' + c.tiebreak : ''}）`);
     if (!DRY) ledger.push(entry);
   }
   if (!DRY) {
