@@ -1,0 +1,21 @@
+# 六爻前瞻自動起卦排程（範本——複製到 .github/workflows/liuyao-cast.yml 才會啟用）
+# 啟用前確認：1) repo Actions 有 contents:write 權限 2) 賽季時段 3) 實驗 L 協議附錄已凍結
+name: liuyao-cast
+on:
+  schedule:
+    - cron: '*/30 14-23 * * *'   # UTC 14:00–23:59 = 台北 22:00–07:59（涵蓋多數 MLB 開賽前窗口）
+    - cron: '*/30 0-4 * * *'     # UTC 00:00–04:59 = 台北 08:00–12:59
+  workflow_dispatch: {}
+permissions:
+  contents: write
+jobs:
+  cast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: node liuyao_cast_daily.js --commit
+      - run: git pull --rebase && git push
