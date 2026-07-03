@@ -7,7 +7,10 @@
    用法：
      node playsport_totals.js --selftest 2026-06-05     （測單日、印出、不寫檔）
      node playsport_totals.js --from 2026-04-01 --to 2026-06-25 [--out data/playsport_totals.json]
+                              [--seasononly]（只跑 3~11 月）[--resume]（跳過 _done.json 已完成日期，長區間分段續跑用）
    產出：陣列 [{key,date,time,away,home,totLine,hdAwayLine,gameid}]，key=date+兩隊+time。
+   歷史回補註記：2019~2021 克里夫蘭隊名「印地安人」（2022 起改「守護者」），KNOWN_TEAMS 兩者皆收；
+     全期 2019→今約 2,700 天 × 4-8s ≈ 4~6 小時，建議 --seasononly 並分年段跑，進度記在 *_done.json。
    ============================================================ */
 'use strict';
 const fs = require('fs');
@@ -39,7 +42,7 @@ function to24(s) { // "AM 06:40" / "PM 01:05" → "06:40" / "13:05"
 }
 const lineNum = ($cell) => { const t = $cell.find('.data-wrap > strong').first().text().trim(); return t || null; };
 // 30 隊中文名（與 MLB spine 一致）：用「已知隊名」比對，避免把日籍球員漢字名(今永昇太/大谷翔平等)誤當隊名
-const KNOWN_TEAMS = ['天使', '響尾蛇', '金鶯', '紅襪', '小熊', '紅人', '守護者', '落磯', '老虎', '太空人', '皇家', '道奇', '國民', '大都會', '運動家', '海盜', '教士', '水手', '巨人', '紅雀', '光芒', '遊騎兵', '藍鳥', '雙城', '費城人', '勇士', '白襪', '馬林魚', '洋基', '釀酒人'];
+const KNOWN_TEAMS = ['天使', '響尾蛇', '金鶯', '紅襪', '小熊', '紅人', '守護者', '落磯', '老虎', '太空人', '皇家', '道奇', '國民', '大都會', '運動家', '海盜', '教士', '水手', '巨人', '紅雀', '光芒', '遊騎兵', '藍鳥', '雙城', '費城人', '勇士', '白襪', '馬林魚', '洋基', '釀酒人', '印地安人', '印第安人']; // 末兩項=克里夫蘭 2019~2021 舊名（2022 改守護者），兩種寫法皆收
 function teamsFromText(text) {
   const found = [];
   for (const name of KNOWN_TEAMS) { const idx = text.indexOf(name); if (idx >= 0) found.push([idx, name]); }
@@ -54,7 +57,7 @@ function parseDay(html, dateDash) {
     const $tr = $(tr); const gid = $tr.attr('gameid'); if (!gid) return;
     (byGame[gid] ||= []).push($tr);
   });
-  const out = [];
+  const out = []; const skipped = [];
   for (const gid in byGame) {
     const rows = byGame[gid];
     let time = '', teamText = '', tot = null, hd = null; const links = [];
@@ -69,7 +72,7 @@ function parseDay(html, dateDash) {
     const byKnown = teamsFromText(teamText);                                 // 已結束版面：用已知隊名比對(最穩)
     if (byKnown[0] && byKnown[1]) { away = byKnown[0]; home = byKnown[1]; }
     else if (links.length >= 2) { away = links[0]; home = links[1]; }        // 未開賽版面退路：各隊一個連結
-    if (!away || !home) continue;
+    if (!away || !home) { skipped.push({ gameid: gid, teamText: teamText.trim().slice(0, 60) }); continue; }
     const totLine = tot != null ? parseFloat(tot) : null;
     out.push({
       key: `${dateDash}|${[away, home].sort().join('@')}|${time}`,
@@ -79,6 +82,7 @@ function parseDay(html, dateDash) {
       gameid: gid,
     });
   }
+  out.skipped = skipped; // 診斷用陣列屬性：JSON.stringify 不會帶出，僅供呼叫端檢視（把靜默丟棄變可見）
   return out;
 }
 
@@ -96,12 +100,18 @@ async function main() {
     console.log(`自測 ${ymdDash(date)}：${games.length} 場`);
     games.slice(0, 8).forEach(g => console.log(`  ${g.time} ${g.away}@${g.home} | 大小線 ${g.totLine} | 讓分(客) ${g.hdAwayLine} | ${g.key}`));
     console.log(`有大小線: ${games.filter(g => g.totLine != null).length}/${games.length}`);
+    const sk = games.skipped || [];
+    if (sk.length) { console.log(`隊名未識別跳過 ${sk.length} 場：`); sk.slice(0, 5).forEach(s => console.log(`  ⚠ ${s.teamText}`)); }
     return;
   }
   const from = arg('--from'), to = arg('--to');
   if (!from || !to) { console.error('需要 --from --to（或 --selftest YYYY-MM-DD）'); process.exit(1); }
   const outPath = arg('--out', path.join('data', 'playsport_totals.json'));
-  const dates = dateList(from, to);
+  const donePath = outPath.replace(/\.json$/i, '') + '_done.json';   // 已完成日期側檔（斷點續補）
+  const done = new Set((() => { try { return JSON.parse(fs.readFileSync(donePath, 'utf8')); } catch (e) { return []; } })());
+  let dates = dateList(from, to);
+  if (process.argv.includes('--seasononly')) dates = dates.filter(d => { const m = +d.slice(4, 6); return m >= 3 && m <= 11; }); // MLB 約 3~11 月（含季後賽）
+  if (process.argv.includes('--resume')) dates = dates.filter(d => !done.has(d));
   const store = {};
   for (const g of (() => { try { return JSON.parse(fs.readFileSync(outPath, 'utf8')); } catch (e) { return []; } })()) store[g.key] = g;
   let added = 0, withTot = 0, fail = 0;
@@ -110,12 +120,16 @@ async function main() {
     try {
       const games = parseDay(await fetchDay(dates[i]), ymdDash(dates[i]));
       for (const g of games) { store[g.key] = g; added++; if (g.totLine != null) withTot++; }
-      console.log(`  ${dates[i]}  ${games.length} 場（有大小線 ${games.filter(g => g.totLine != null).length}）`);
+      done.add(dates[i]);
+      const sk = (games.skipped || []).length;
+      console.log(`  ${dates[i]}  ${games.length} 場（有大小線 ${games.filter(g => g.totLine != null).length}${sk ? `，隊名未識別 ${sk}` : ''}）`);
+      if (sk) games.skipped.slice(0, 2).forEach(s => console.warn(`    ⚠ 未識別: ${s.teamText}`));
     } catch (e) { fail++; console.warn(`  ${dates[i]} ⚠ ${e.message}`); }
-    if (i % 10 === 9) fs.writeFileSync(outPath, JSON.stringify(Object.values(store)));
+    if (i % 10 === 9) { fs.writeFileSync(outPath, JSON.stringify(Object.values(store))); fs.writeFileSync(donePath, JSON.stringify([...done])); }
     await rndGap();
   }
   fs.writeFileSync(outPath, JSON.stringify(Object.values(store)));
+  fs.writeFileSync(donePath, JSON.stringify([...done]));
   console.log(`\n完成。處理 ${added} 場列、有大小線 ${withTot}、失敗日 ${fail}。總計 ${Object.keys(store).length} 場 → ${outPath}`);
 }
 main().catch(e => { console.error('FATAL', e); process.exit(1); });
