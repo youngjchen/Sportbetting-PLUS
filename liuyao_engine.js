@@ -17,7 +17,7 @@
    自測：node liuyao_engine.js --selftest    認證：node liuyao_engine.js --cert
    ============================================================ */
 'use strict';
-const { Solar } = require('lunar-javascript');
+const { Solar } = (typeof require === 'function' && typeof module !== 'undefined') ? require('lunar-javascript') : window; // Node/瀏覽器雙環境（瀏覽器由 lunar.js 全域提供）
 
 const ZHI5 = { 子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水' };
 const SHENG = { 木: '火', 火: '土', 土: '金', 金: '水', 水: '木' };
@@ -83,12 +83,13 @@ function bitsToBacks(bits18) {           // 18 bit（每爻 3 bit，1=背）→ 
   const backs = []; for (let i = 0; i < 6; i++) backs.push(bits18[3 * i] + bits18[3 * i + 1] + bits18[3 * i + 2]);
   return backs;
 }
-module.exports = { castFromBacks, zhiContext, bitsToBacks, shiPosition };
+const __api = { castFromBacks, zhiContext, bitsToBacks, shiPosition };
+if (typeof module !== 'undefined') { module.exports = __api; } else { window.LiuyaoEngine = __api; }
 
 // ─────────────── 自測與認證 ───────────────
 function mulberry32(a) { return function () { a |= 0; a = (a + 0x6D2B79F5) | 0; let t = Math.imul(a ^ (a >>> 15), 1 | a); t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t; return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
 
-if (require.main === module && process.argv.includes('--selftest')) {
+if (typeof require === 'function' && require.main === module && process.argv.includes('--selftest')) {
   let fail = 0; const ok = (m, c, d) => { console.log(`${c ? 'PASS' : 'FAIL'}  ${m}${c ? '' : ' ← ' + JSON.stringify(d)}`); if (!c) fail++; };
   // 1) 尋世訣：京房八宮已知卦例
   const shiOf = (low, up) => shiPosition([...low, ...up]);
@@ -122,7 +123,7 @@ if (require.main === module && process.argv.includes('--selftest')) {
   console.log(fail === 0 ? '\n全部通過 ✅' : `\n${fail} 項失敗 ❌`); process.exit(fail ? 1 : 0);
 }
 
-if (require.main === module && process.argv.includes('--cert')) {
+if (typeof require === 'function' && require.main === module && process.argv.includes('--cert')) {
   const rng = mulberry32(0x5EED6EA0);
   const Z = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
   const N = 1e6; let big = 0, tieKe = 0, abstain = 0; const movDist = {}; const byMonth = {};

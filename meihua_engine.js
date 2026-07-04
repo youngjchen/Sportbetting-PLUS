@@ -13,7 +13,7 @@
    自測：node meihua_engine.js --selftest
    ============================================================ */
 'use strict';
-const { Solar } = require('lunar-javascript');
+const { Solar } = (typeof require === 'function' && typeof module !== 'undefined') ? require('lunar-javascript') : window; // Node/瀏覽器雙環境（瀏覽器由 lunar.js 全域提供）
 
 const ZHI = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
 const TRI = { 1: ['乾', '金'], 2: ['兌', '金'], 3: ['離', '火'], 4: ['震', '木'], 5: ['巽', '木'], 6: ['坎', '水'], 7: ['艮', '土'], 8: ['坤', '土'] };
@@ -56,10 +56,11 @@ function castFromTaipei(y, m, d, hh, mi) {
   return Object.assign({ nHour: nums.nHour, lunarText: nums.lunarText }, castFromNumbers(nums.nYear, nums.nMonth, nums.nDay, nums.nHour));
 }
 
-module.exports = { numbersFromTaipei, castFromNumbers, castFromTrigrams, castFromTaipei, hourIndex };
+const __api = { numbersFromTaipei, castFromNumbers, castFromTrigrams, castFromTaipei, hourIndex };
+if (typeof module !== 'undefined') { module.exports = __api; } else { window.MeihuaEngine = __api; }
 
 // ─────────────── 自測 ───────────────
-if (require.main === module && process.argv.includes('--selftest')) {
+if (typeof require === 'function' && require.main === module && process.argv.includes('--selftest')) {
   let fail = 0;
   const ok = (name, cond, detail) => { console.log(`${cond ? 'PASS' : 'FAIL'}  ${name}${cond ? '' : '  ← ' + detail}`); if (!cond) fail++; };
 
