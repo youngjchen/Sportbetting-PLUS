@@ -158,6 +158,8 @@
         return !MLB_DATA.some(function (m) { return dateEq(m.date, p.date) && teamMatch(m.awayTeam, p.awayTeam) && teamMatch(m.homeTeam, p.homeTeam); });
       });
       DATA = merged.concat(rest); loaded = true;
+      // 即時資料每輪更新後通知板子重繪，讓卡片/標籤呈現最新比分（板子端自行節流＋避開互動中）
+      if (typeof global.__onLiveData === 'function') { try { global.__onLiveData(); } catch (e) {} }
     }
     function load() {     // 玩運彩 feed（ERA/盤口/非MLB場）
       fetchJson(FEED_URL)
@@ -535,7 +537,17 @@
     else hook();
 
     // 供測試：注入資料 / 直接呼叫
-    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, _setMLB: function (d) { MLB_DATA = d || []; rebuildDATA(); }, _setPS: function (d) { PS_DATA = d || []; rebuildDATA(); }, getData: function () { return DATA; }, getMLB: function () { return MLB_DATA; }, loadMLB: loadMLB, rebuildDATA: rebuildDATA, findGame: findGame, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne, renderPanel: renderPanel };
+    // 給板子取「即時比分」：對到當天該場，回進行中/已結束(未結算)比分；未開賽/無比分回 null
+    function liveScoreFor(it, activeDate) {
+      try {
+        var g = findGame(DATA, it, activeDate);
+        if (!g) return null;
+        if (g.status !== 'inprogress' && g.status !== 'finished') return null;   // upcoming 場比分為 0，不能顯示
+        if (g.awayScore == null || g.homeScore == null) return null;
+        return { away: g.awayScore, home: g.homeScore, status: g.status, inning: g.inning || null, final: g.status === 'finished' };
+      } catch (e) { return null; }
+    }
+    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, _setMLB: function (d) { MLB_DATA = d || []; rebuildDATA(); }, _setPS: function (d) { PS_DATA = d || []; rebuildDATA(); }, getData: function () { return DATA; }, getMLB: function () { return MLB_DATA; }, loadMLB: loadMLB, rebuildDATA: rebuildDATA, findGame: findGame, liveScoreFor: liveScoreFor, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne, renderPanel: renderPanel };
   }
 
   // ---- 測試匯出 ----

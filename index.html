@@ -1182,6 +1182,9 @@
 .bbadge:hover{ background:rgba(255,150,40,.22); }
 .bbadge.on{ color:#1a1205; background:#ff9f43; border-color:#ff9f43; }
 .bbadge.done{ color:#2ee07f; background:rgba(40,199,111,.10); border-color:rgba(40,199,111,.5); }
+/* 曾經顛倒(收盤前變一致)徽章：靛藍/長春花色；非互動、僅標示 */
+.bbadge.was{ color:#c7cdff; background:rgba(127,139,245,.14); border-color:rgba(127,139,245,.55); cursor:default; }
+.bbadge.was:hover{ background:rgba(127,139,245,.22); }
 .bico{ width:26px; height:26px; display:grid; place-items:center; border-radius:7px; cursor:pointer; color:var(--ink-dim); font-size:14px; flex:0 0 auto; }
 .bico:hover{ background:#222a36; color:var(--ink); }
 .bico.bdel:hover{ color:var(--danger); }
@@ -1190,6 +1193,9 @@
 .bflipbanner{ display:flex; align-items:center; gap:8px; padding:7px 16px; background:rgba(160,90,255,.16); border-bottom:1px solid rgba(160,90,255,.45); color:#d9b3ff; font-size:12.5px; font-weight:700; letter-spacing:.02em; }
 .bflipbanner .ic{ font-size:15px; }
 .card.bcard.flip{ border-color:rgba(160,90,255,.6); box-shadow:0 0 0 1px rgba(160,90,255,.3),0 10px 26px rgba(0,0,0,.5); }
+/* 曾經顛倒(收盤前已收斂一致)：靛藍/長春花橫幅＋卡框，與「仍顛倒」的鮮紫同家族、清楚區分 */
+.bflipbanner.was{ background:rgba(127,139,245,.14); border-bottom-color:rgba(127,139,245,.42); color:#c7cdff; }
+.card.bcard.flip-was{ border-color:rgba(127,139,245,.55); box-shadow:0 0 0 1px rgba(127,139,245,.28),0 10px 26px rgba(0,0,0,.5); }
 
 .bbody{ display:grid; grid-template-columns:212px 1fr; align-items:stretch; }
 /* 左計分板：純隊名、直向置中。客隊比分在名字上、主隊比分在名字下，比分大、琥珀色 */
@@ -1211,6 +1217,15 @@
 .bmid-cmp{ display:grid; grid-template-columns:auto auto auto; gap:1px 8px; font-family:"Oswald"; font-size:12px; align-items:center; }
 .bmid-cmp .l{ color:var(--ink-dim); font-size:10px; letter-spacing:.04em; }
 .bmid-cmp .va{ color:#9bd5ff; font-weight:700; text-align:right; } .bmid-cmp .vh{ color:#ffd27f; font-weight:700; text-align:left; }
+/* 即時比分（工作流每輪刷新）：進行中／未結算終場，綠色＋局數chip，與已結算琥珀清楚區分 */
+.bteam-sc.live{ color:#3ad6a0; }
+.bmid-score.live{ color:#3ad6a0; }
+.blivechip{ font-family:"Oswald"; font-size:11px; font-weight:700; letter-spacing:.05em; padding:2px 8px; border-radius:8px; white-space:nowrap; }
+.blivechip.on{ color:#3ad6a0; background:rgba(58,214,160,.15); border:1px solid rgba(58,214,160,.42); }
+/* 未結算終場：琥珀「待結算」，提醒此場已終但尚未結算（常見於走盤/缺盤口需人工） */
+.blivechip.fin{ color:#ffb24d; background:rgba(255,176,46,.14); border:1px solid rgba(255,176,46,.5); }
+@keyframes blivepulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
+.blivechip.fin{ animation:blivepulse 1.8s ease-in-out infinite; }
 
 .binfo{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid var(--ink-dim); color:var(--ink-dim); font-size:11px; font-weight:700; font-family:Georgia,serif; font-style:italic; cursor:pointer; flex:0 0 auto; user-select:none; }
 .binfo:hover{ border-color:var(--lit); color:var(--lit); }
@@ -1316,8 +1331,13 @@
 #matchnav .nvtag.st-odds2{ color:#ffce7a; border-color:rgba(255,176,46,.50); background:rgba(255,176,46,.14); }
 #matchnav .nvtag.st-odds3{ color:#ffd98a; border-color:rgba(255,176,46,.80); background:rgba(255,176,46,.24); }
 #matchnav .nvtag .nvscore{ font-family:"Oswald"; font-weight:700; font-size:1.25em; color:var(--lit); letter-spacing:.02em; }
+#matchnav .nvtag .nvscore.live{ color:#3ad6a0; }   /* 即時比分(未結算)：綠 */
+#matchnav .nvtag .nvinn{ font-family:"Oswald"; font-size:.82em; color:#6fc9a4; margin-left:5px; letter-spacing:.02em; }
+#matchnav .nvtag .nvinn.pending{ color:#ffb24d; }   /* 未結算終場：琥珀「待結算」 */
 #matchnav .nvtag.st-full{ color:#5fd79e; border-color:rgba(40,199,111,.5); background:rgba(40,199,111,.12); }
 #matchnav .nvtag.st-flip{ color:#cda4ff; border-color:#b96bff; background:rgba(185,107,255,.18); }
+/* 曾經顛倒(收盤前變一致)：靛藍/長春花色，與仍顛倒紫色區分 */
+#matchnav .nvtag.st-flip-was{ color:#c7cdff; border-color:#7f8bf5; background:rgba(127,139,245,.18); }
 #matchnav .nvtag.dragging{ opacity:.45; }
 #matchnav .nvsec.flipsec{ color:#cda4ff; }
 #matchnav .nvtag:hover{ color:#ffe39a; }
@@ -2573,13 +2593,15 @@ function renderCardB(it){
   if(it.settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改 / 取消結算"; sm.onclick=()=>openSettleModal(it); head.appendChild(sm); }
   // 顛倒：純標記切換（點一下變亮，不開任何輸入視窗）
   const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"⇅ 顛倒":"顛倒"; flipB.title="標記平台顛倒（台彩 vs STAKE 受讓方相反）— 點一下切換"; flipB.onclick=()=>{ snapshot(); it.platformFlip=!it.platformFlip; save(); render(); };
+  // 曾經顛倒（收盤前已收斂一致）→ 靛藍徽章標示，讓賽前/已結算的收斂場也能一眼辨識（非互動）
+  const wasB = (!it.platformFlip && it.flipVanished) ? (()=>{ const b=document.createElement("span"); b.className="bbadge was"; b.textContent="曾顛倒"; b.title="曾經顛倒，收盤前已收斂一致（在結算視窗的『顛倒場狀態』設定）— 點頂部右鍵可修改"; return b; })() : null;
   // 賽前▸輸入：開結算視窗填賠率
   const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
   const preB = document.createElement("button"); preB.className="bbadge"+(hasOdds?" done":""); preB.textContent = hasOdds?"賽前 ✓":"賽前▸輸入"; preB.title="輸入賽前賠率 / 開結算視窗"; preB.onclick=()=>openSettleModal(it);
   // collapse + delete
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除"; delB.onclick=()=>{ snapshot(); state.items=state.items.filter(x=>x.id!==it.id); save(); render(); };
-  head.append(flipB, preB, colB, delB);
+  head.append(flipB); if(wasB) head.append(wasB); head.append(preB, colB, delB);
   head.title = "右鍵 → 開結算視窗";
   head.addEventListener("contextmenu", (e)=>{ e.preventDefault(); openSettleModal(it); });  // 右鍵點卡片頂部＝開結算
   el.appendChild(head);
@@ -2590,6 +2612,11 @@ function renderCardB(it){
     const bn=document.createElement("div"); bn.className="bflipbanner";
     bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：台彩與 STAKE 受讓方相反";
     el.appendChild(bn);
+  } else if(it.flipVanished){                              // 曾經顛倒→收盤前變一致：靛藍橫幅＋卡框
+    el.classList.add("flip-was");
+    const bn=document.createElement("div"); bn.className="bflipbanner was";
+    bn.innerHTML="<span class='ic'>⇄</span>平台曾顛倒：收盤前已收斂一致";
+    el.appendChild(bn);
   }
 
   if(!it.collapsed){
@@ -2599,6 +2626,9 @@ function renderCardB(it){
     // 左：計分板（純隊名；電腦直排：客比分在名字上、主比分在名字下，大、琥珀色；手機橫排中央放比分/勝率比對）
     const mob = (canvas && canvas.clientWidth ? canvas.clientWidth : window.innerWidth) <= 680;
     const settledScore = !!(it.settled && it.settled.awayScore!=null && it.settled.homeScore!=null);
+    // 即時比分（工作流每輪刷新）：未結算的進行中/未結算終場也直接呈現，綠色＋局數以區別於已結算琥珀
+    const live = settledScore ? null : liveScoreFor(it);
+    const showLive = !!live;
     const score = document.createElement("div"); score.className="bscore";
     function nameEl(side){
       const nm = document.createElement("div"); nm.className="bteam-nm";
@@ -2617,9 +2647,9 @@ function renderCardB(it){
       return pc;
     }
     function scoreEl(side){
-      if(!settledScore) return null;
-      const sc = document.createElement("div"); sc.className="bteam-sc"; sc.textContent = it.settled[side+"Score"];
-      return sc;
+      if(settledScore){ const sc=document.createElement("div"); sc.className="bteam-sc"; sc.textContent=it.settled[side+"Score"]; return sc; }
+      if(showLive){ const sc=document.createElement("div"); sc.className="bteam-sc live"; sc.textContent=live[side]; return sc; }
+      return null;
     }
     function teamBlock(side, order){
       const wrap = document.createElement("div"); wrap.className="bteam "+side;
@@ -2627,21 +2657,26 @@ function renderCardB(it){
       return wrap;
     }
     if(!mob){
-      // 電腦直排：客＝比分／名／勝率；VS；主＝勝率／名／比分（兩隊比分在外緣、勝率在中間相鄰）
-      const vsEl = document.createElement("div"); vsEl.className="bvs"; vsEl.textContent="VS";
+      // 電腦直排：客＝比分／名／勝率；中央(VS 或 即時局數chip)；主＝勝率／名／比分（兩隊比分在外緣、勝率在中間相鄰）
+      const vsEl = document.createElement("div");
+      if(showLive){ vsEl.className="blivechip "+(live.final?"fin":"on"); vsEl.textContent = live.final?"終場待結算":(live.inning||"LIVE"); vsEl.title = live.final?"已終場但尚未結算（即時比分）— 點頂部右鍵可結算":"進行中（即時比分，每輪刷新）"; }
+      else { vsEl.className="bvs"; vsEl.textContent="VS"; }
       score.append(teamBlock("away",["score","name","pcts"]), vsEl, teamBlock("home",["pcts","name","score"]));
     } else {
-      // 手機橫排：客 ｜ 中央(比分/賽前勝率比對) ｜ 主
+      // 手機橫排：客 ｜ 中央(比分/即時比分/賽前勝率比對) ｜ 主
       const mid = document.createElement("div"); mid.className="bmid";
       if(settledScore){
         mid.innerHTML = `<div class="bmid-score">${it.settled.awayScore}<span class="c">:</span>${it.settled.homeScore}</div>`;
+      } else if(showLive){
+        mid.innerHTML = `<div class="bmid-score live">${live.away}<span class="c">:</span>${live.home}</div>`
+          + `<div class="blivechip ${live.final?'fin':'on'}" style="margin-top:5px">${live.final?'終場待結算':esc(live.inning||'LIVE')}</div>`;
       } else if(wp.mdlA!=null || wp.impA!=null){
         mid.innerHTML = `<div class="bmid-cmp">`
           + `<span class="va">${wp.mdlA!=null?wp.mdlA+'%':'—'}</span><span class="l">模型</span><span class="vh">${wp.mdlH!=null?wp.mdlH+'%':'—'}</span>`
           + `<span class="va">${wp.impA!=null?wp.impA+'%':'—'}</span><span class="l">盤口</span><span class="vh">${wp.impH!=null?wp.impH+'%':'—'}</span>`
           + `</div>`;
       } else { mid.innerHTML = `<div class="bvs">VS</div>`; }
-      const ord = settledScore ? ["name","pcts"] : ["name"];
+      const ord = (settledScore||showLive) ? ["name","pcts"] : ["name"];
       score.append(teamBlock("away",ord), mid, teamBlock("home",ord));
     }
     body.appendChild(score);
@@ -2989,12 +3024,32 @@ function renderSummary(){
   canvas.appendChild(box);
   applySummaryScale();
 }
+/* 即時比分：向玩運彩/MLB 融合 add-on 取當天該場的進行中/未結算終場比分（無資料回 null）*/
+function liveScoreFor(it){
+  try{ return (window.__psFusion && window.__psFusion.liveScoreFor) ? window.__psFusion.liveScoreFor(it, doc.activeDate) : null; }
+  catch(e){ return null; }
+}
+/* 工作流每輪刷新即時資料後由 add-on 呼叫→輕量重繪呈現最新比分；避開手動結算/看彈窗/拖曳中，並節流 */
+let _liveRenderT=null;
+window.__onLiveData = function(){
+  clearTimeout(_liveRenderT);
+  _liveRenderT = setTimeout(function(){
+    try{
+      const modal=document.getElementById("settleModal");
+      if(modal && modal.classList.contains("show") && modal.style.display!=="none") return;  // 手動結算中
+      if(document.querySelector(".bpop")) return;                                             // 正在看近況/評語彈窗
+      if(_navDrag) return;                                                                     // 拖曳標籤中
+      if(typeof render==="function") render();
+    }catch(e){}
+  }, 400);
+};
 /* ① 對戰導覽列：列出當天所有對戰標籤（分組），滑過放大、點擊平滑捲到該場卡片、拖曳改順序 */
 let _navDrag=null;                                       // 拖曳中的標籤 it.id
 function gtMins(it){ const m=/(\d{1,2}):(\d{2})/.exec((it&&it.gameTime)||""); return m?(+m[1])*60+(+m[2]):1e9; }
 function cmpMatch(a,b){ return (gtMins(a)-gtMins(b)) || ((a.seq==null?1e9:a.seq)-(b.seq==null?1e9:b.seq)); }  // 組內：開球時間→手動 seq（時間優先，晚場不會排到早場前）
 function navMatchState(it){
-  if(it.platformFlip) return "st-flip";                  // 顛倒場優先(覆蓋完整度)
+  if(it.platformFlip) return "st-flip";                  // 仍顛倒(紫)：最高優先
+  if(it.flipVanished) return "st-flip-was";              // 曾經顛倒→開賽前變一致(靛藍)：優先於已結算，才不會被綠色蓋掉而無法辨認
   if(it.settled) return "st-full";                       // 已結算＝資料齊全(綠)
   // 黃色＝賠率填寫進度提醒(不再因燈號變色)：開盤/下注/收盤 三組,填幾組黃色就多深
   let c=0;
@@ -3031,10 +3086,16 @@ function renderMatchNav(){
   function tag(it){
     const t=document.createElement("div"); t.className="nvtag "+navMatchState(it);
     const teams = it.away+" / "+it.home;
-    if(showScore && it.settled){                          // 比分模式＋已結算：比分加粗加大、用卡片分數色
+    const lv = showScore ? liveScoreFor(it) : null;       // 比分模式下才查即時比分
+    if(showScore && it.settled){                          // 比分模式＋已結算：比分加粗加大、用卡片分數色(琥珀)
       const sc = it.settled.awayScore+":"+it.settled.homeScore;
       t.innerHTML = esc(teams)+'　<span class="nvscore">'+esc(sc)+'</span>';
       t.title = teams+"　"+sc;
+    } else if(lv){                                         // 比分模式＋未結算但有即時比分：綠色，進行中附局數／未結算終場附琥珀「待結算」
+      const sc = lv.away+":"+lv.home;
+      const mark = lv.final ? '<span class="nvinn pending">待結算</span>' : (lv.inning?('<span class="nvinn">'+esc(lv.inning)+'</span>'):'');
+      t.innerHTML = esc(teams)+'　<span class="nvscore live">'+esc(sc)+'</span>'+mark;
+      t.title = teams+"　"+sc+(lv.final?"（未結算終場，待人工結算）":("　"+(lv.inning||"進行中")));
     } else {
       const suffix = it.gameTime?("　"+it.gameTime):"";
       t.textContent = teams + suffix;
@@ -6614,6 +6675,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   setInterval(autoBackupSnapshot, 5*60*1000);
   setTimeout(checkBackupReminder, 1200);
 })();
-</script><script src="./odds-integration.js?v=20260625dh3"></script><script src="./pregame-integration.js?v=20260704dh2"></script><script src="./github-sync.js?v=1"></script><script src="./divination-addon.js?v=20260704c"></script>
+</script><script src="./odds-integration.js?v=20260625dh3"></script><script src="./pregame-integration.js?v=20260704live1"></script><script src="./github-sync.js?v=1"></script><script src="./divination-addon.js?v=20260704c"></script>
 </body>
 </html>

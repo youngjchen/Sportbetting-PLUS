@@ -5,8 +5,13 @@ on:
   schedule:
     # GitHub 的 schedule 不準、會被大量延遲/丟棄（越高頻越會被降級），
     # 所以這裡【不靠它每 5 分鐘】，只把它當「迴圈結束後重啟」的後援。
-    # 排密一點(半小時一次)、避開整點(整點 GitHub 負載最重 → 更容易被丟)。
+    # 多條錯開的排程 = 更多獨立「重啟機會」；GitHub 丟掉其中幾條時，仍有其他條能接力。
+    # concurrency 保證同時只有一個迴圈在跑（多的觸發只會刷新那唯一的 pending 名額，不會疊跑），
+    # 所以加密是安全的。避開整點(整點 GitHub 負載最重 → 更容易被丟)。
+    # 修正 2026-07-04：原本只有 7,37 兩條、13:07→16:50 全被丟造成 3h43m 空窗、吞掉亞洲聯盟臨場盤口。
     - cron: '7,37 * * * *'
+    - cron: '17,47 * * * *'
+    - cron: '27,57 * * * *'
 
 # 同一時間只允許一個迴圈在跑；期間被觸發的新 run 會排隊(pending)，
 # 等正在跑的迴圈結束後【立刻接手】→ 近乎不間斷的 5 分鐘輪詢。
@@ -16,6 +21,7 @@ concurrency:
 
 permissions:
   contents: write
+  actions: write        # 允許用 gh workflow run 自我重觸發（見最後一步）
 
 jobs:
   poll:
@@ -44,3 +50,19 @@ jobs:
             fi
             sleep 300                           # 5 分鐘
           done
+      - name: 自我重觸發下一輪（cron 被丟時的後援；需設 WORKFLOW_PAT secret 才啟用）
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          # 為什麼：GitHub 的 schedule 會被整批丟棄（2026-07-04 就 13:07→16:50 全丟、3h43m 空窗）。
+          # 迴圈正常跑完(~5h25m)後主動排入下一輪，就不必只靠可能被丟的 cron。
+          # concurrency 群組保證同時只有一個迴圈在跑 → 這個 dispatch 只會成為唯一 pending、
+          # 待本輪結束後無縫接手，不會疊跑、不會失控。GITHUB_TOKEN 無法觸發 workflow → 必須用 PAT。
+          if [ -z "$GH_TOKEN" ]; then
+            echo "ℹ️ 未設定 WORKFLOW_PAT secret → 略過自我重觸發（仍靠 schedule cron 接力，行為同舊版）"
+            exit 0
+          fi
+          gh workflow run scrape.yml -R "${{ github.repository }}" \
+            && echo "✅ 已排入下一輪（不受 GitHub schedule 丟包影響）" \
+            || echo "⚠️ 自我重觸發失敗（PAT 權限不足？）— 仍有 cron 後援，不影響本輪"

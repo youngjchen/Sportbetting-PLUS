@@ -19,6 +19,15 @@ const path = require('path');
 // 重複資料以價去重，不會爆量。
 const ACTIVE_WINDOW_HOURS = 24;
 
+// 已開賽的比賽仍保留這麼多分鐘繼續補抓「讓分/大小」盤口。
+// 為什麼要這樣：日/韓/中職的讓分・大小盤 Bet365 常態只在【開賽前後幾分鐘】才貼出、且很稀疏，
+// 而 MLB 提早數小時就有。原本一開賽(ts<=now)就永遠丟棄該場 → 亞洲場臨場才貼的盤根本補不到
+// （2026-07-04 實例：爬蟲 13:07~16:50 停擺，17:00 那批亞洲場 16:50 復活只抓到獨贏、讓分還沒貼；
+//   17:02 之後爬蟲正常但已開賽被丟，讓分/大小全空）。
+// 加這個 grace 窗後，剛開賽的場會再多留幾輪、把臨場貼出的收盤讓分/大小補齊。
+// ⚠ 只用於補 hd/ou；獨贏(ml)在開賽後不再累加，避免混入場中價（見 run()）。
+const START_GRACE_MIN = 30;
+
 const OUTPUT_FILE = path.join('data', 'odds_log.json');
 const REQUEST_GAP_MS = 900;
 
@@ -157,6 +166,16 @@ function parseTaiwan(s) {
   return { date: new Date(iso), iso };
 }
 
+// 抓取窗格判定（純函式，可單元測試）：
+//   · 未開賽 → 只要在未來 limitMs 內就抓（started=false，獨贏/讓分/大小都累加）
+//   · 已開賽 → 開賽後 graceMs 內仍抓（started=true，只補讓分/大小，不碰獨贏）
+//   · 其他（太遠的未來、太久的過去）→ 不抓
+function captureState(ts, now, graceMs, limitMs) {
+  const future = ts > now;
+  const eligible = future ? (ts < now + limitMs) : (ts > now - graceMs);
+  return { eligible, started: !future };
+}
+
 function scheduleURLsForLeague(id) {
   const set = new Set();
   const add = (ms) => {
@@ -229,7 +248,8 @@ async function fetchMatchOdds(match) {
 // ---- 賽程：逐聯盟抓 1~2 個月檔，篩窗格內未開打的場，每場標 league -----------
 async function fetchUpcomingMatches() {
   const now = Date.now();
-  const limit = now + ACTIVE_WINDOW_HOURS * 3600 * 1000;
+  const limitMs = ACTIVE_WINDOW_HOURS * 3600 * 1000;
+  const graceMs = START_GRACE_MIN * 60 * 1000;
   const seen = new Set();
   const list = [];
   let anyOk = false;
@@ -248,20 +268,22 @@ async function fetchUpcomingMatches() {
         console.log(`  ⚠️ [${lg.key}] 賽程檔略過（可能該月未發佈或代號需調整）: ${url} (${e.message})`);
       }
     }
-    let cnt = 0;
+    let cnt = 0, graceCnt = 0;
     for (const m of data) {
       if (seen.has(m[0])) continue;
       const { date, iso } = parseTaiwan(m[2]);
       const ts = date.getTime();
-      if (!(ts > now && ts < limit)) continue;
+      const cs = captureState(ts, now, graceMs, limitMs);
+      if (!cs.eligible) continue;
       seen.add(m[0]);
       list.push({
-        id: m[0], league: lg.key, time: m[2], startISO: iso,
+        id: m[0], league: lg.key, time: m[2], startISO: iso, started: cs.started,
         homeRaw: teamDict[m[3]] || null, awayRaw: teamDict[m[4]] || null
       });
       cnt++;
+      if (cs.started) graceCnt++;
     }
-    console.log(`  [${lg.key}] 窗格內未開打：${cnt} 場`);
+    console.log(`  [${lg.key}] 窗格內：${cnt} 場${graceCnt ? `（含剛開賽補讓分/大小 ${graceCnt} 場）` : ''}`);
   }
 
   if (!anyOk) return null;
@@ -311,14 +333,18 @@ async function run() {
     if (!e.hd) e.hd = { bet365: null };
     if (!e.ou) e.ou = { bet365: null };
 
-    for (const [book, o] of Object.entries(odds.ml)) {
-      if (!e.ml[book]) e.ml[book] = { open: { home: o.openHome, away: o.openAway }, live: [] };
-      const arr = e.ml[book].live;
-      const last = arr[arr.length - 1];
-      if (!last || last.home !== o.liveHome || last.away !== o.liveAway) {
-        arr.push({ ts: stamp, home: o.liveHome, away: o.liveAway });
+    // 獨贏：只在【未開賽】累加，避免混入場中即時價（grace 窗補抓的已開賽場不碰 ml）
+    if (!m.started) {
+      for (const [book, o] of Object.entries(odds.ml)) {
+        if (!e.ml[book]) e.ml[book] = { open: { home: o.openHome, away: o.openAway }, live: [] };
+        const arr = e.ml[book].live;
+        const last = arr[arr.length - 1];
+        if (!last || last.home !== o.liveHome || last.away !== o.liveAway) {
+          arr.push({ ts: stamp, home: o.liveHome, away: o.liveAway });
+        }
       }
     }
+    // 讓分/大小：未開賽 + grace 窗都補抓（保留最完整那份）——這正是亞洲場臨場才貼盤的救援
     if (odds.hd && (!e.hd.bet365 || odds.hd.length >= e.hd.bet365.length)) e.hd.bet365 = odds.hd;
     if (odds.ou && (!e.ou.bet365 || odds.ou.length >= e.ou.bet365.length)) e.ou.bet365 = odds.ou;
 
@@ -347,4 +373,4 @@ if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
 
-module.exports = { mapTeam, parseHistoryTable, parseTaiwan, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS };
+module.exports = { mapTeam, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS };
