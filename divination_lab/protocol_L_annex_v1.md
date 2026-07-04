@@ -44,6 +44,11 @@ p₀ = p̂側·P̂over + (1−p̂側)(1−P̂over)，兩參數皆於 confirmator
 
 同主協議 §7：gameType=R、Final、非 7 局、有大小線、非 ambiguous、gamePk 唯一性硬斷言；加：棄場卦、beacon 失敗未起卦場次（留痕記數）。
 
+## 7b. 修訂紀錄
+
+**v1.1（2026-07-04，pilot 期間、confirmatory 開跑前）**：起卦窗口 55–120 分 → **40–180 分**；新增**漏卦留痕**條目（missedWindow＝棄場，不得無聲消失）。
+原因：2026-07-04 漏卦事故——GitHub cron 常態遲到 10–40 分鐘，加上當日 cron 空窗與一次 YAML BOM 啟動失敗，65 分鐘寬的窗口被整段吃掉（gamePk 822716 未起卦）。窗口加寬不改變任何斷卦規則與統計程序；40 分下限仍在開打前、資訊環境不變。本修訂在任何 confirmatory 卦產生之前生效；附錄雜湊隨本節更新，對照臂 key 以分析日檔案雜湊為準。
+
 ## 8. 啟用程序（唯一未完成步驟，使用者執行）
 
 1. repo Settings → Actions → Workflow permissions → **Read and write**。
