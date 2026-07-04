@@ -36,10 +36,17 @@ async function fetchSchedule() {
   for (const dd of r.data.dates || []) for (const g of dd.games || []) games.push({ gamePk: g.gamePk, ts: Date.parse(g.gameDate), gameType: g.gameType, away: g.teams.away.team.name, home: g.teams.home.team.name });
   return games;
 }
-async function beaconPulse() {
-  // v2 API：/pulse/time/{ms} 需恰好對齊脈衝分鐘（任意毫秒回 404）→ 用 /pulse/last 取最新脈衝
-  const r = await axios.get('https://beacon.nist.gov/beacon/2.0/pulse/last', { timeout: 20000 });
-  return r.data.pulse;   // { timeStamp, outputValue(128 hex), pulseIndex, uri... }
+async function beaconPulseFor(gameTs) {
+  // v1.2 熵源釘選：取「開賽前 240 分」那一刻的信標脈衝（/pulse/time/previous/{ms} 回傳 ≤ms 的最新脈衝，無 404 風險）。
+  // 卦象因此成為 (gamePk, 排定開賽時間) 的純函數——排程遲到、手動觸發、重跑，內容完全相同 → 人為時機因素歸零。
+  const anchorMs = Math.floor((gameTs - 240 * 60000) / 60000) * 60000;
+  try {
+    const r = await axios.get('https://beacon.nist.gov/beacon/2.0/pulse/time/previous/' + anchorMs, { timeout: 20000 });
+    return { pulse: r.data.pulse, anchorMs, pinned: true };
+  } catch (e) {
+    const r2 = await axios.get('https://beacon.nist.gov/beacon/2.0/pulse/last', { timeout: 20000 });   // 罕見缺脈衝才退回，標記未釘選
+    return { pulse: r2.data.pulse, anchorMs, pinned: false };
+  }
 }
 function bitsFrom(outputValue, gamePk) {
   const h = crypto.createHash('sha256').update(outputValue + '|' + gamePk).digest();
@@ -65,22 +72,21 @@ function bitsFrom(outputValue, gamePk) {
   }
 
   if (todo.length) {
-    let pulse = null;
-    if (DRY) { pulse = { outputValue: crypto.randomBytes(64).toString('hex'), timeStamp: 'DRY', uri: 'DRY' }; }
-    else {
-      try { pulse = await beaconPulse(); }
-      catch (e) { ledger.push({ failedAt: new Date().toISOString(), reason: 'beacon:' + e.message, gamePks: todo.map(g => g.gamePk) }); fs.writeFileSync(LEDGER, JSON.stringify(ledger, null, 1)); console.error('beacon 失敗，已留痕，下輪重試'); pulse = null; }
-    }
-    if (pulse) {
-      const t = twNow();
-      const ctx = eng.zhiContext(t.getUTCFullYear(), t.getUTCMonth() + 1, t.getUTCDate(), t.getUTCHours(), t.getUTCMinutes());
-      for (const g of todo) {
-        const backs = eng.bitsToBacks(bitsFrom(pulse.outputValue, String(g.gamePk)));
-        const c = eng.castFromBacks(backs, ctx.monthZhi, ctx.dayZhi);
-        const entry = { gamePk: g.gamePk, gameType: g.gameType, matchup: `${g.away}@${g.home}`, gameTimeUTC: new Date(g.ts).toISOString(), castAt: new Date().toISOString(), monthZhi: ctx.monthZhi, dayZhi: ctx.dayZhi, beaconTS: pulse.timeStamp, beaconOutput: pulse.outputValue, backs, shi: c.shi, ying: c.ying, shiZhi: c.shiZhi, yingZhi: c.yingZhi, sShi: c.sShi, sYing: c.sYing, tiebreak: c.tiebreak, pick: c.pick, phase: 'pilot-2026' };
-        console.log(`  卦 ${entry.matchup} → ${c.pick ? '押' + c.pick : '棄場（卦無表態，仍入帳）'}（世${c.shi}${c.shiZhi} ${c.sShi} vs 應${c.ying}${c.yingZhi} ${c.sYing}${c.tiebreak ? '/' + c.tiebreak : ''}）`);
-        if (!DRY) { ledger.push(entry); dirty = true; }
+    // 曆法脈絡以「錨定脈衝時刻」計（=卦的定義時刻），與觸發時刻無關 → 完全可重算驗證
+    for (const g of todo) {
+      let bp;
+      if (DRY) bp = { pulse: { outputValue: crypto.randomBytes(64).toString('hex'), timeStamp: 'DRY' }, anchorMs: g.ts - 240 * 60000, pinned: false };
+      else {
+        try { bp = await beaconPulseFor(g.ts); }
+        catch (e) { ledger.push({ failedAt: new Date().toISOString(), reason: 'beacon:' + e.message, gamePks: [g.gamePk] }); dirty = true; console.error(`beacon 失敗（${g.away}@${g.home}），已留痕，下輪重試`); continue; }
       }
+      const at = new Date(bp.anchorMs + 8 * 3600e3);   // 錨定時刻的台北時間
+      const ctx = eng.zhiContext(at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate(), at.getUTCHours(), at.getUTCMinutes());
+      const backs = eng.bitsToBacks(bitsFrom(bp.pulse.outputValue, String(g.gamePk)));
+      const c = eng.castFromBacks(backs, ctx.monthZhi, ctx.dayZhi);
+      const entry = { gamePk: g.gamePk, gameType: g.gameType, matchup: `${g.away}@${g.home}`, gameTimeUTC: new Date(g.ts).toISOString(), castAt: new Date().toISOString(), beaconAnchor: new Date(bp.anchorMs).toISOString(), beaconPinned: bp.pinned, monthZhi: ctx.monthZhi, dayZhi: ctx.dayZhi, beaconTS: bp.pulse.timeStamp, beaconOutput: bp.pulse.outputValue, backs, shi: c.shi, ying: c.ying, shiZhi: c.shiZhi, yingZhi: c.yingZhi, sShi: c.sShi, sYing: c.sYing, tiebreak: c.tiebreak, pick: c.pick, phase: 'pilot-2026' };
+      console.log(`  卦 ${entry.matchup} → ${c.pick ? '押' + c.pick : '棄場（卦無表態，仍入帳）'}（世${c.shi}${c.shiZhi} ${c.sShi} vs 應${c.ying}${c.yingZhi} ${c.sYing}${c.tiebreak ? '/' + c.tiebreak : ''}｜錨定${bp.pinned ? '' : '⚠未'}釘選）`);
+      if (!DRY) { ledger.push(entry); dirty = true; }
     }
   }
 

@@ -49,6 +49,9 @@ p₀ = p̂側·P̂over + (1−p̂側)(1−P̂over)，兩參數皆於 confirmator
 **v1.1（2026-07-04，pilot 期間、confirmatory 開跑前）**：起卦窗口 55–120 分 → **40–180 分**；新增**漏卦留痕**條目（missedWindow＝棄場，不得無聲消失）。
 原因：2026-07-04 漏卦事故——GitHub cron 常態遲到 10–40 分鐘，加上當日 cron 空窗與一次 YAML BOM 啟動失敗，65 分鐘寬的窗口被整段吃掉（gamePk 822716 未起卦）。窗口加寬不改變任何斷卦規則與統計程序；40 分下限仍在開打前、資訊環境不變。本修訂在任何 confirmatory 卦產生之前生效；附錄雜湊隨本節更新，對照臂 key 以分析日檔案雜湊為準。
 
+**v1.2（2026-07-05，pilot 期間、confirmatory 開跑前）**：熵源由「執行當下最新脈衝」改為**釘選脈衝**——每場固定取「排定開賽時刻 −240 分鐘」之信標脈衝（`/pulse/time/previous/{ms}`），派生不變（SHA256(outputValue|gamePk) 前 18 bit）。
+動機：實測發現排程自啟用起因 YAML BOM 失效，期間所有起卦均由使用者手動觸發；在「最新脈衝」設計下，觸發時機理論上可挑選脈衝（pulse shopping）。釘選後卦象＝(gamePk, 排定開賽時間) 的純函數，**任何人、任何時刻、任何觸發方式重算皆得同卦**——人為時機因素歸零，手動救援永久無害。卦之定義時刻＝錨定脈衝時刻（月建/日辰依此計）。cron 分鐘同時改為 7/37 錯峰。v1.2 前的 3 筆 pilot 卦（最新脈衝制）保留原記錄並以 beaconAnchor 欄位缺席識別；confirmatory 全程 v1.2 制。
+
 ## 8. 啟用程序（唯一未完成步驟，使用者執行）
 
 1. repo Settings → Actions → Workflow permissions → **Read and write**。

@@ -1,10 +1,11 @@
-﻿# ?剔??芸?韏瑕??嚗??砂?鋆賢 .github/workflows/liuyao-cast.yml ???嚗?
-# ??Ⅱ隤?1) repo Actions ??contents:write 甈? 2) 鞈賢迤?挾 3) 撖阡? L ?降??撌脣?蝯?
+# 範本：複製到 .github/workflows/liuyao-cast.yml 即啟用（目前 repo 已啟用同內容之正式檔）。
+# v1.2：熵源釘選於「開賽前 240 分的信標脈衝」→ 觸發時機（排程/手動/遲到）不影響卦象內容。
+# 分鐘取 7,37 錯開 GitHub cron 尖峰。此檔只能用編輯工具改，勿用 PowerShell（BOM/編碼會毀掉 Actions YAML）。
 name: liuyao-cast
 on:
   schedule:
-    - cron: '*/30 12-23 * * *'   # UTC 14:00??3:59 = ?啣? 22:00??7:59嚗項????MLB ?魚?????
-    - cron: '*/30 0-4 * * *'     # UTC 00:00??4:59 = ?啣? 08:00??2:59
+    - cron: '7,37 12-23 * * *'   # UTC 12–23 = 台北 20:00–07:59
+    - cron: '7,37 0-4 * * *'     # UTC 0–4  = 台北 08:00–12:59
   workflow_dispatch: {}
 permissions:
   contents: write

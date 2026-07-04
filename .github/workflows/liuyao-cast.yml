@@ -1,10 +1,11 @@
 # 六爻前瞻起卦守護工作流（divination-lab 實驗 L）— 由 liuyao_cast_daily.js 執行。
-# 需求：1) repo Actions 需 contents:write 權限 2) 排程每 30 分一輪 3) 起卦結果 commit 進 ledger 公證時間戳。
+# v1.2：熵源釘選於「開賽前 240 分的信標脈衝」→ 觸發時機（排程/手動/遲到）不影響卦象內容，手動救援永久無害。
+# 分鐘取 7,37 錯開 GitHub cron 尖峰（:00/:30 延遲最重）。此檔只能用編輯工具改，勿用 PowerShell（BOM 會讓 Actions 拒收）。
 name: liuyao-cast
 on:
   schedule:
-    - cron: '*/30 12-23 * * *'   # UTC 12:00–23:59 = 台北 20:00–07:59（涵蓋 MLB 開打前的起卦視窗）
-    - cron: '*/30 0-4 * * *'     # UTC 00:00–04:59 = 台北 08:00–12:59
+    - cron: '7,37 12-23 * * *'   # UTC 12–23 = 台北 20:00–07:59
+    - cron: '7,37 0-4 * * *'     # UTC 0–4  = 台北 08:00–12:59
   workflow_dispatch: {}
 permissions:
   contents: write
