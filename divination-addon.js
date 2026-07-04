@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260704d';
+  const V = '20260704e';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -173,7 +173,7 @@
         ? `<div class="dv-item"><b>漏卦（棄場留痕）</b>　${esc(e.matchup || e.gamePk)}<div class="dv-sub">開打 ${esc(String(e.gameTimeUTC).slice(5, 16))}Z｜排程未在窗口內起卦，依附錄規則棄場${e.reason ? '｜' + esc(e.reason) : ''}</div></div>`
         : `<div class="dv-item"><b>${e.pick ? '押 ' + e.pick + '分' : '棄場'}</b>　${esc(e.matchup || e.gamePk)}<div class="dv-sub">起卦 ${esc(String(e.castAt).slice(5, 16))}Z｜世${e.shi}${esc(e.shiZhi)}(${e.sShi}) vs 應${e.ying}${esc(e.yingZhi)}(${e.sYing})｜beacon ${esc(String(e.beaconTS).slice(5, 16))}｜${esc(e.phase)}</div></div>`).join('');
       box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">機器卦（實驗 L・六爻・大小分）</div>
-        <div class="dvp-note">排程在每場開打前 55–120 分鐘自動搖卦（NIST 隨機信標），一場一卦永不重抽。2026 剩餘賽季＝試車；2027 全季＝正式樣本，季後才開盒。</div>${rows || '<div class="dv-empty">排程尚未產生卦——第一批將在下一個比賽日窗口出現</div>'}</div>`;
+        <div class="dvp-note">排程在每場開打前 40–180 分鐘自動搖卦（NIST 隨機信標），一場一卦永不重抽；錯過窗口的比賽記「漏卦」棄場留痕。2026 剩餘賽季＝試車；2027 全季＝正式樣本，季後才開盒。</div>${rows || '<div class="dv-empty">排程尚未產生卦——第一批將在下一個比賽日窗口出現</div>'}</div>`;
     } catch (e) { box.innerHTML = '<div class="dvp-wrap"><div class="dvp-h">機器卦</div><div class="dv-empty">排程尚未產生卦（ledger 檔尚未建立）</div></div>'; }
   }
 
