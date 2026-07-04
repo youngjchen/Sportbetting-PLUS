@@ -1,10 +1,10 @@
-# 六爻前瞻自動起卦排程（範本——複製到 .github/workflows/liuyao-cast.yml 才會啟用）
-# 啟用前確認：1) repo Actions 有 contents:write 權限 2) 賽季時段 3) 實驗 L 協議附錄已凍結
+﻿# ?剔??芸?韏瑕??嚗??砂?鋆賢 .github/workflows/liuyao-cast.yml ???嚗?
+# ??Ⅱ隤?1) repo Actions ??contents:write 甈? 2) 鞈賢迤?挾 3) 撖阡? L ?降??撌脣?蝯?
 name: liuyao-cast
 on:
   schedule:
-    - cron: '*/30 14-23 * * *'   # UTC 14:00–23:59 = 台北 22:00–07:59（涵蓋多數 MLB 開賽前窗口）
-    - cron: '*/30 0-4 * * *'     # UTC 00:00–04:59 = 台北 08:00–12:59
+    - cron: '*/30 12-23 * * *'   # UTC 14:00??3:59 = ?啣? 22:00??7:59嚗項????MLB ?魚?????
+    - cron: '*/30 0-4 * * *'     # UTC 00:00??4:59 = ?啣? 08:00??2:59
   workflow_dispatch: {}
 permissions:
   contents: write

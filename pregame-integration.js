@@ -46,16 +46,19 @@
       if (!dateEq(activeDate, g.date)) continue;
       if (teamMatch(it.away, g.awayTeam) && teamMatch(it.home, g.homeTeam)) cands.push(g);
     }
-    if (cands.length <= 1) return cands[0] || null;            // 非雙重賽：行為與舊版完全相同
-    // 雙重賽：同日同對戰多場 → 用卡片開球時間(it.gameTime)挑最接近的那一場
+    if (!cands.length) return null;
+    // 同日同對戰可能有兩場（雙重賽，或美國連兩天賽程映射到同一台灣日期）——
+    // 舊版「單一候選直接回傳」會讓 23:05 的卡被早上 07:05 已完賽那場錯誤結算（2026-07-04 實際發生）。
+    // 修正：卡片有開球時間就一律驗時間（±120 分內才算同一場），對不上寧可回 null 交人工，絕不錯配。
+    var TOL = 120;
     var want = hhmmToMin(it.gameTime);
-    if (want == null) return cands[0];                         // 卡片未記開球時間 → 退回第一場(盡力)
-    var best = cands[0], bd = Infinity;
+    if (want == null) return cands.length === 1 ? cands[0] : null;  // 卡片沒記時間：多場=模糊 → 交人工
+    var best = null, bd = Infinity;
     for (var j = 0; j < cands.length; j++) {
       var t = hhmmToMin(gameHHMM(cands[j])); if (t == null) continue;
       var d = Math.abs(t - want); if (d < bd) { bd = d; best = cands[j]; }
     }
-    return best;
+    return (best && bd <= TOL) ? best : null;
   }
   // 顛倒提示：比 運彩讓分方(favSide) vs STAKE讓分方(it.hdFav)，皆 'home'/'away'
   // 只認賽前運彩盤口(src='運彩')；賽後 on-box 是「過盤方」不是讓分方，14/14 驗證為誤，絕不拿來判顛倒
@@ -126,10 +129,17 @@
         if (AUTO_SETTLE) setTimeout(autoSettleSweep, 300);   // MLB 一更新就立刻掃一次
       }).catch(function (e) { console.warn('[結算] MLB 比分抓取失敗（玩運彩照常）:', e && e.message); });
     }
-    function findPS(m) {   // 在玩運彩 feed 找對應 MLB 場（補 ERA/盤口）
+    function findPS(m) {   // 在玩運彩 feed 找對應 MLB 場（補 ERA/盤口）；同日同對戰多場以開球時間就近配對（防跨場錯掛盤口）
+      var cands = [];
       for (var i = 0; i < PS_DATA.length; i++) { var p = PS_DATA[i];
-        if (dateEq(m.date, p.date) && teamMatch(m.awayTeam, p.awayTeam) && teamMatch(m.homeTeam, p.homeTeam)) return p; }
-      return null;
+        if (dateEq(m.date, p.date) && teamMatch(m.awayTeam, p.awayTeam) && teamMatch(m.homeTeam, p.homeTeam)) cands.push(p); }
+      if (cands.length <= 1) return cands[0] || null;
+      var want = hhmmToMin(m.gameTime);
+      if (want == null) return cands[0];
+      var best = cands[0], bd = Infinity;
+      for (var j = 0; j < cands.length; j++) { var t = hhmmToMin(gameHHMM(cands[j])); if (t == null) continue;
+        var d = Math.abs(t - want); if (d < bd) { bd = d; best = cands[j]; } }
+      return best;
     }
     function rebuildDATA() {
       var used = {};
