@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260704e';
+  const V = '20260705a';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -16,6 +16,43 @@
 
   const ZHI_WX = { 子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水' };
   const GUA_WX = { 乾: '金', 兌: '金', 離: '火', 震: '木', 巽: '木', 坎: '水', 艮: '土', 坤: '土' };
+  // 中文隊名 → MLB teamId（與 mlb_gamepk_join.js 同表）：統計結算直接對 MLB 官方 API，不依賴爬蟲快照
+  const TEAM_ID = { 天使: 108, 響尾蛇: 109, 金鶯: 110, 紅襪: 111, 小熊: 112, 紅人: 113, 守護者: 114, 印地安人: 114, 印第安人: 114, 落磯: 115, 老虎: 116, 太空人: 117, 皇家: 118, 道奇: 119, 國民: 120, 大都會: 121, 運動家: 133, 海盜: 134, 教士: 135, 水手: 136, 巨人: 137, 紅雀: 138, 光芒: 139, 遊騎兵: 140, 藍鳥: 141, 雙城: 142, 費城人: 143, 勇士: 144, 白襪: 145, 馬林魚: 146, 洋基: 147, 釀酒人: 158 };
+  const MARKETS = ['獨贏', '讓分', '大小'];
+
+  // ---- 結果解析：pregame 快照優先，MLB 官方 API 補漏（比賽一結束即可結算，與板上手動結算/爬蟲頻率脫鉤） ----
+  async function resolveOutcomes(casts) {
+    const res = {};   // officialId → {finished, as, hs}
+    let gmap = {};
+    try { (await (await fetch('data/pregame_data.json?nocache=' + Date.now())).json()).forEach(g => { gmap[g.officialId] = g; }); } catch (e) {}
+    const pending = [];
+    for (const c of casts) {
+      if (res[c.officialId]) continue;
+      const g = gmap[c.officialId];
+      if (g && g.status === 'finished' && g.awayScore != null) res[c.officialId] = { finished: true, as: g.awayScore, hs: g.homeScore };
+      else pending.push(c);
+    }
+    if (pending.length) {
+      const dates = [...new Set(pending.map(c => { const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00'); return new Date(ts).toISOString().slice(0, 10); }))].slice(0, 6);
+      const sched = [];
+      for (const d of dates) {
+        try { const j = await (await fetch('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=' + d)).json(); (j.dates || []).forEach(dd => (dd.games || []).forEach(g => sched.push(g))); } catch (e) {}
+      }
+      for (const c of pending) {
+        if (res[c.officialId]) continue;
+        const aId = TEAM_ID[c.away], hId = TEAM_ID[c.home];
+        const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00');
+        let best = null, bd = Infinity;
+        for (const g of sched) {
+          if (!g.teams || g.teams.away.team.id !== aId || g.teams.home.team.id !== hId) continue;
+          const d = Math.abs(Date.parse(g.gameDate) - ts); if (d < bd) { bd = d; best = g; }
+        }
+        if (best && bd <= 100 * 60000 && best.status && best.status.abstractGameState === 'Final' && best.teams.away.score != null)
+          res[c.officialId] = { finished: true, as: best.teams.away.score, hs: best.teams.home.score };
+      }
+    }
+    return res;
+  }
 
   const css = `
   #divpage{position:fixed;inset:0;z-index:170;background:var(--bg);display:none;flex-direction:column;overflow:hidden}
@@ -52,7 +89,21 @@
   .dv-stat th,.dv-stat td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
   .dv-stat th:first-child,.dv-stat td:first-child{text-align:left}
   .dv-stat th{color:var(--ink-dim);font-size:12.5px;font-weight:600;letter-spacing:.04em}
-  .dv-sec{margin:0 0 30px}`;
+  .dv-sec{margin:0 0 30px}
+  .dv-gt{width:100%;border-collapse:collapse;font-size:15.5px;color:var(--ink);min-width:560px}
+  .dv-gt th{color:var(--ink-dim);font-size:12.5px;font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .dv-gt td.dv-c{padding:12px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .dv-gt tr.dv-grow{cursor:pointer}
+  .dv-gt tr.dv-grow:hover td{background:rgba(255,255,255,.035)}
+  .dv-t{font-weight:700}
+  .dv-none{color:#3a4353}
+  .dv-gold{color:var(--lit);font-weight:800;text-shadow:0 0 12px var(--lit-glow)}
+  .dv-win{color:#28c76f;font-weight:700}
+  .dv-lose{color:#e23b3b;font-weight:700}
+  .dv-cnt{color:var(--ink-dim);font-size:11px}
+  .dv-dwrap{padding:4px 4px 12px}
+  .dv-dcard{margin:8px 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  .dv-del{float:right;background:none;border:1px solid #6b3a3a;color:#c98;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12.5px;margin-left:10px}`;
 
   let games = [], sel = { game: null, market: '大小', method: '六爻' }, gamesLoaded = false;
   const h = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
@@ -96,15 +147,24 @@
     <p class="dv-dim">梅花以體用生剋定方向，同樣只有一條訊號軸；不同市場分開起卦可能不一致，屬獨立隨機。</p>`;
   }
 
-  // ---- 已完賽命中判定（興趣統計用；.5 線無和局） ----
-  function outcomeOf(e, g) {
-    if (e.side == null) return null;
-    if (!g || g.status !== 'finished' || g.awayScore == null || g.homeScore == null) return null;
-    const as = g.awayScore, hs = g.homeScore;
+  // ---- 已完賽命中判定（興趣統計用；.5 線無和局；o=resolveOutcomes 的結果） ----
+  function hitOf(e, o) {
+    if (e.side == null || !o || !o.finished) return null;
+    const as = o.as, hs = o.hs;
     if (e.market === '大小') { if (e.totLine == null) return null; const t = as + hs; if (t === e.totLine) return null; return ((e.side === 0) === (t > e.totLine)) ? 1 : 0; }
     if (e.market === '獨贏') { if (as === hs) return null; return ((e.side === 0) === (hs > as)) ? 1 : 0; }
-    if (e.market === '讓分') { if (e.hdLine == null) return null; const hSigned = e.hdFav === 'home' ? -e.hdLine : e.hdLine; const cov = (hs - as) + hSigned; if (cov === 0) return null; return ((e.side === 0) === (cov > 0)) ? 1 : 0; }
+    if (e.market === '讓分') { if (e.hdLine == null || !e.hdFav) return null; const hSigned = e.hdFav === 'home' ? -e.hdLine : e.hdLine; const cov = (hs - as) + hSigned; if (cov === 0) return null; return ((e.side === 0) === (cov > 0)) ? 1 : 0; }
     return null;
+  }
+  // ---- 格內短判詞（一場一排用） ----
+  function shortVerdict(e) {
+    if (e.side == null) return '無表態';
+    if (e.market === '大小') return e.side === 0 ? '大' : '小';
+    if (e.market === '獨贏') return e.side === 0 ? e.home : e.away;
+    const home = e.side === 0, team = home ? e.home : e.away;
+    let sp = '';
+    if (e.hdLine != null) { const s = home ? (e.hdFav === 'home' ? -e.hdLine : e.hdLine) : (e.hdFav === 'away' ? -e.hdLine : e.hdLine); sp = (s > 0 ? '+' : '') + s; }
+    return team + sp;
   }
 
   async function fetchGames() {
@@ -177,32 +237,32 @@
     } catch (e) { box.innerHTML = '<div class="dvp-wrap"><div class="dvp-h">機器卦</div><div class="dv-empty">排程尚未產生卦（ledger 檔尚未建立）</div></div>'; }
   }
 
-  function statBlock(title, casts, gmap) {
+  function statBlock(title, casts, res) {
     const n = casts.length, ab = casts.filter(e => e.side == null).length;
     let settled = 0, hit = 0;
-    casts.forEach(e => { const o = outcomeOf(e, gmap[e.officialId]); if (o != null) { settled++; hit += o; } });
+    casts.forEach(e => { const o = hitOf(e, res[e.officialId]); if (o != null) { settled++; hit += o; } });
     const hr = settled ? (100 * hit / settled).toFixed(1) + '%' : '—';
     return `<tr><td>${esc(title)}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td>${hr}</td></tr>`;
   }
 
   async function renderStats() {
-    const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中…</div></div>';
-    let gmap = {}; try { (await (await fetch('data/pregame_data.json?nocache=' + Date.now())).json()).forEach(g => { gmap[g.officialId] = g; }); } catch (e) {}
+    const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中（即時對 MLB 官方結果結算）…</div></div>';
     const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+    const res = await resolveOutcomes(list);
     const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花');
-    let machine = { n: 0, ab: 0, big: 0 };
-    try { const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json(); arr.forEach(e => { if (e.failedAt) return; machine.n++; if (e.pick == null) machine.ab++; else if (e.pick === '大') machine.big++; }); } catch (e) {}
+    let machine = { n: 0, ab: 0, big: 0, missed: 0 };
+    try { const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json(); arr.forEach(e => { if (e.failedAt) return; if (e.missedWindow) { machine.missed++; return; } machine.n++; if (e.pick == null) machine.ab++; else if (e.pick === '大') machine.big++; }); } catch (e) {}
     const mDec = machine.n - machine.ab, mBig = mDec ? (100 * machine.big / mDec).toFixed(1) + '%' : '—';
     box.innerHTML = `<div class="dvp-wrap">
       <div class="dvp-h">興趣統計（人 vs 機器）</div>
-      <div class="dvp-note">手動卦是興趣紀錄，不入實驗；此處純為好玩。命中率只統計「近期已完賽且盤口線在起卦時記下」的手動卦，樣本通常很小，僅供參考。</div>
+      <div class="dvp-note">手動卦是興趣紀錄，不入實驗；此處純為好玩。命中率<b>即時對 MLB 官方結果結算</b>（比賽結束數分鐘內生效，與板上手動結算、爬蟲快照無關）；樣本通常很小，僅供參考。</div>
       <div class="dv-sec"><table class="dv-stat"><thead><tr><th>來源</th><th>起卦數</th><th>棄場</th><th>已完賽</th><th>命中</th><th>命中率</th></tr></thead><tbody>
-        ${statBlock('人・六爻搖卦', liu, gmap)}
-        ${statBlock('人・梅花起卦', mei, gmap)}
+        ${statBlock('人・六爻搖卦', liu, res)}
+        ${statBlock('人・梅花起卦', mei, res)}
         <tr><td>機器・六爻（實驗 L）</td><td>${machine.n}</td><td>${machine.ab}</td><td>—</td><td>—</td><td>—</td></tr>
       </tbody></table></div>
       <div class="dvp-h" style="font-size:16px">押向分布</div>
-      <div class="dvp-note">機器六爻押大率 ${mBig}（有表態 ${mDec} 卦）。理論值：六爻押大約 51.8%、棄場約 12.6%。</div>
+      <div class="dvp-note">機器六爻押大率 ${mBig}（有表態 ${mDec} 卦${machine.missed ? '；另漏卦 ' + machine.missed + ' 場棄場留痕' : ''}）。理論值：六爻押大約 51.8%、棄場約 12.6%。</div>
       <div class="dv-sec dv-dim" style="line-height:1.9">
         <p><b>專業提醒（不是討好）：</b></p>
         <p>1. 人的六爻和機器的六爻用的是<b>同一支引擎、同一種隨機品質</b>，差別只在起卦時刻。理論上兩者押向分布應該一致；若看到差異，在樣本小的時候<b>純屬隨機</b>，不代表「人比較準」或「機器比較準」。</p>
@@ -212,17 +272,64 @@
       </div></div>`;
   }
 
-  function renderHist() {
+  async function renderHist() {
     const box = document.getElementById('dv-p-hist');
-    const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
-    const sec = (title, arr) => `<div class="dv-sec"><div class="dvp-h" style="font-size:16px">${title}（${arr.length}）</div>` +
-      (arr.map((e, i) => `<div class="dv-item"><b>${esc(e.verdict)}</b>　${esc(e.matchup)}　<span class="dv-sub" style="display:inline">${e.market}</span>
-        <div class="dv-sub">${esc(e.ts.slice(5, 16))}Z｜${esc(e.source)}</div>
-        <details class="dv-details"><summary>為什麼是這個結果？</summary><div class="dv-exp-body">${explainHTML(e)}</div></details></div>`).join('') || '<div class="dv-empty">還沒有紀錄</div>') + '</div>';
-    box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">手動卦紀錄</div><div class="dvp-note">興趣紀錄（不入實驗）；六爻與梅花分開，最新在上，重複起卦全部留痕。</div>
-      ${sec('六爻搖卦', list.filter(e => e.method === '六爻'))}${sec('梅花起卦', list.filter(e => e.method === '梅花'))}
+    box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">整理中…</div></div>';
+    const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');   // unshift 序：越前越新
+    const res = await resolveOutcomes(list);
+    const latest = {}, counts = {};
+    list.forEach((e, i) => { const k = e.method + '|' + e.officialId + '|' + e.market; if (!(k in latest)) latest[k] = i; counts[k] = (counts[k] || 0) + 1; });
+    // 金字：同場同市場，兩法「最新卦」皆有表態且同向（雙棄場不算同讖）
+    const gold = new Set();
+    for (const k in latest) {
+      if (!k.startsWith('六爻|')) continue;
+      const other = '梅花' + k.slice(2);
+      if (!(other in latest)) continue;
+      const a = list[latest[k]], b = list[latest[other]];
+      if (a.side != null && a.side === b.side) { gold.add(k); gold.add(other); }
+    }
+    const section = (method, title) => {
+      const games = {};
+      list.forEach(e => { if (e.method !== method || games[e.officialId]) return; games[e.officialId] = { away: e.away, home: e.home, gameTime: e.gameTime, oid: e.officialId, ts: Date.parse(e.gameTime.replace(' ', 'T') + ':00+08:00') }; });
+      const rows = Object.values(games).sort((a, b) => b.ts - a.ts).map(g => {
+        const cells = MARKETS.map(mk => {
+          const k = method + '|' + g.oid + '|' + mk;
+          if (!(k in latest)) return '<td class="dv-c dv-none">—</td>';
+          const e = list[latest[k]], hit = hitOf(e, res[e.officialId]);
+          const mark = hit == null ? '' : (hit ? ' <span class="dv-win">✓</span>' : ' <span class="dv-lose">✗</span>');
+          const cnt = counts[k] > 1 ? ` <span class="dv-cnt">×${counts[k]}</span>` : '';
+          return `<td class="dv-c${gold.has(k) ? ' dv-gold' : ''}">${esc(shortVerdict(e))}${mark}${cnt}</td>`;
+        });
+        return `<tr class="dv-grow" data-oid="${esc(g.oid)}" data-m="${method}"><td class="dv-c dv-t">${esc(g.away)}＠${esc(g.home)}<div class="dv-sub">${esc(g.gameTime.slice(5))}</div></td>${cells.join('')}</tr>` +
+          `<tr class="dv-detail" data-for="${esc(g.oid)}|${method}" style="display:none"><td colspan="4"><div class="dv-dwrap"></div></td></tr>`;
+      }).join('');
+      return `<div class="dv-sec"><div class="dvp-h" style="font-size:16px">${title}</div>` +
+        (rows ? `<div style="overflow-x:auto"><table class="dv-gt"><thead><tr><th>比賽（點列展開詳解／刪除）</th><th>獨贏</th><th>讓分</th><th>大小分</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="dv-empty">還沒有紀錄</div>') + '</div>';
+    };
+    box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">手動卦紀錄</div>
+      <div class="dvp-note">一場一排、市場固定序（獨贏／讓分／大小分），最新比賽在上；格內為該市場「最新」一卦，×N＝重複起卦次數。<span class="dv-gold">金字＝六爻與梅花同讖</span>（趣味標記——兩次獨立隨機同向，統計上約半數機率）；✓✗＝已完賽命中結果。點比賽列展開每一筆卦的詳解與單筆刪除。</div>
+      ${section('六爻', '六爻搖卦')}${section('梅花', '梅花起卦')}
       ${list.length ? '<button class="dv-danger" id="dv-clear">清空所有手動紀錄</button>' : ''}</div>`;
     const c = document.getElementById('dv-clear'); if (c) c.onclick = () => { if (confirm('清空所有手動卦紀錄？')) { localStorage.removeItem(LS_KEY); renderHist(); } };
+    box.querySelectorAll('.dv-grow').forEach(tr => tr.onclick = () => {
+      const det = tr.nextElementSibling;
+      if (!det || !det.classList.contains('dv-detail')) return;
+      const open = det.style.display !== 'none';
+      if (open) { det.style.display = 'none'; return; }
+      const wrap = det.querySelector('.dv-dwrap');
+      wrap.innerHTML = list.map((e, i) => ({ e, i })).filter(x => x.e.method === tr.dataset.m && x.e.officialId === tr.dataset.oid)
+        .map(x => `<div class="dv-dcard"><button class="dv-del" data-i="${x.i}">刪除此卦</button><b>${esc(x.e.market)}｜${esc(x.e.verdict)}</b>
+          <div class="dv-sub">${esc(x.e.ts.slice(5, 16))}Z｜${esc(x.e.source)}</div>
+          <details class="dv-details"><summary>為什麼是這個結果？</summary><div class="dv-exp-body">${explainHTML(x.e)}</div></details></div>`).join('');
+      wrap.querySelectorAll('.dv-del').forEach(b => b.onclick = (ev) => {
+        ev.stopPropagation();
+        const i = +b.dataset.i, e = list[i];
+        if (!confirm(`刪除這筆卦？\n${e.market}｜${e.verdict}｜${e.ts.slice(5, 16)}Z`)) return;
+        const cur = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+        cur.splice(i, 1); localStorage.setItem(LS_KEY, JSON.stringify(cur)); renderHist();
+      });
+      det.style.display = '';
+    });
   }
 
   const TABS = { cast: null, auto: renderAuto, stats: renderStats, hist: renderHist };
