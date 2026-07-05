@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260705a';
+  const V = '20260705b';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -103,7 +103,8 @@
   .dv-cnt{color:var(--ink-dim);font-size:11px}
   .dv-dwrap{padding:4px 4px 12px}
   .dv-dcard{margin:8px 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
-  .dv-del{float:right;background:none;border:1px solid #6b3a3a;color:#c98;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12.5px;margin-left:10px}`;
+  .dv-del{float:right;background:none;border:1px solid #6b3a3a;color:#c98;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12.5px;margin-left:10px}
+  .dv-mask{color:var(--ink-dim);font-size:13px;letter-spacing:.03em}`;
 
   let games = [], sel = { game: null, market: '大小', method: '六爻' }, gamesLoaded = false;
   const h = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
@@ -259,10 +260,11 @@
       <div class="dv-sec"><table class="dv-stat"><thead><tr><th>來源</th><th>起卦數</th><th>棄場</th><th>已完賽</th><th>命中</th><th>命中率</th></tr></thead><tbody>
         ${statBlock('人・六爻搖卦', liu, res)}
         ${statBlock('人・梅花起卦', mei, res)}
-        <tr><td>機器・六爻（實驗 L）</td><td>${machine.n}</td><td>${machine.ab}</td><td>—</td><td>—</td><td>—</td></tr>
+        <tr><td>機器・六爻（實驗 L）</td><td>${machine.n}</td><td>${machine.ab}</td><td colspan="3" class="dv-mask">🔒 遮蔽至開盒（協議 §9，2027 季後）</td></tr>
       </tbody></table></div>
       <div class="dvp-h" style="font-size:16px">押向分布</div>
       <div class="dvp-note">機器六爻押大率 ${mBig}（有表態 ${mDec} 卦${machine.missed ? '；另漏卦 ' + machine.missed + ' 場棄場留痕' : ''}）。理論值：六爻押大約 51.8%、棄場約 12.6%。</div>
+      <div class="dvp-note">🔒 <b>機器卦命中率為什麼不顯示？</b>不是故障——凍結協議 §9 明文「命中率對照在分析日前遮蔽」（分析日＝2027 季後）。即時盯命中率會誘發偷看、中途起念改規則，正是當初審核堵掉的漏洞；試車期照樣遮，養成乾淨習慣。手動卦不受此限（本來就不入實驗）。</div>
       <div class="dv-sec dv-dim" style="line-height:1.9">
         <p><b>專業提醒（不是討好）：</b></p>
         <p>1. 人的六爻和機器的六爻用的是<b>同一支引擎、同一種隨機品質</b>，差別只在起卦時刻。理論上兩者押向分布應該一致；若看到差異，在樣本小的時候<b>純屬隨機</b>，不代表「人比較準」或「機器比較準」。</p>
