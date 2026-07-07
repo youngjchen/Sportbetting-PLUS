@@ -8,6 +8,7 @@ on:
     - cron: '11,41 0-4 * * *'     # UTC 0–4  = 台北 08:00–12:59
   workflow_dispatch: {}
   push:
+    branches: [main]                                # 限主分支：tag push 不套用 paths 過濾（GitHub 怪癖），會以 detached HEAD 跑而在 push 步驟失敗
     paths: ['.github/workflows/qiuqian-cast.yml']   # 自測觸發：只在本檔變更時跑一次（v1.2 熵源釘選下手動/推送觸發永久無害）
 permissions:
   contents: write
