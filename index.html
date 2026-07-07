@@ -1343,6 +1343,13 @@
 #matchnav .nvtag.st-flip-was{ color:#c7cdff; border-color:#7f8bf5; background:rgba(127,139,245,.18); }
 /* 賽前讓分方曾對調：青綠，與顛倒(紫)/曾顛倒(靛藍)三類分色 */
 #matchnav .nvtag.st-swap{ color:#7fe8d4; border-color:#2bbfa0; background:rgba(43,191,160,.16); }
+/* ◆ 交叉分層區塊 */
+.rv-section.rv-cross{ border:1px solid rgba(43,191,160,.28); border-radius:12px; padding:14px 16px; background:rgba(43,191,160,.05); }
+.ct-table th, .ct-table td{ white-space:nowrap; font-size:13px; text-align:center; padding:7px 8px; }
+.ct-table th.lbl, .ct-table td.lbl{ text-align:left; }
+.ct-table .ct-n{ display:block; font-size:10.5px; color:var(--ink-dim); }
+.ct-table .ct-desc{ font-size:11px; color:var(--ink-dim); font-weight:400; margin-top:2px; }
+.ct-note{ font-size:11.5px; line-height:1.7; color:var(--ink-dim); margin-top:10px; }
 #matchnav .nvtag.dragging{ opacity:.45; }
 #matchnav .nvsec.flipsec{ color:#cda4ff; }
 #matchnav .nvtag:hover{ color:#ffe39a; }
@@ -5040,6 +5047,23 @@ function renderC1Tracker(leagueF){
   return `<div class="rv-section"><div class="rv-head">⓪c 神刻奇門 C1</div><div style="padding:8px;font-size:12px;color:#ff5d5d">C1 區塊發生錯誤（已隔離，不影響其他區）：${(e&&e.message)||e}</div></div>`;
  }
 }
+// 顛倒／收斂／背離 交叉分層（維度1=收盤台美讓分方關係 flipped/converged/aligned；維度2=背離 於子集內計）
+// 只收有 flipState 的乾淨場（前瞻累積）；舊資料無此欄走 ⑤⑥。preGameSwap＝維度1 內的過程子計，不獨立成類。
+function collectCrossTab(leagueFilter){
+  const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&g.flipState&&g.awayScore!=null&&g.homeScore!=null);
+  const d1 = g => g.flipState==="flipped"?"flipped":((""+g.flipState).indexOf("converged")===0?"converged":"aligned");
+  const diverge = g => { if(g.closeOddsAway==null||g.closeOddsHome==null) return null; const low=g.closeOddsAway<g.closeOddsHome?"away":"home"; return low!==g.hdFav; }; // STAKE收盤低賠方≠台彩讓分方
+  const B = ()=>({n:0,hw:0,hwN:0,cov:0,covN:0,ov:0,ovN:0,swap:0,dv:0,dvN:0});
+  const rows={flipped:B(),converged:B(),aligned:B()};
+  for(const g of gs){ const o=rows[d1(g)]; o.n++;
+    if(g.awayScore!==g.homeScore){o.hwN++; if(g.homeScore>g.awayScore)o.hw++;}                 // 主勝
+    if(g.hdResult==="fav_cover"){o.covN++;o.cov++;} else if(g.hdResult==="fav_nocover")o.covN++; // 台彩讓分方過盤
+    if(g.totResult==="over"){o.ovN++;o.ov++;} else if(g.totResult==="under")o.ovN++;            // 開大
+    if(g.preGameSwap)o.swap++;
+    const d=diverge(g); if(d!=null){o.dvN++; if(d)o.dv++;}
+  }
+  return rows;
+}
 function renderReviewPage(){
   const body = $("#reviewBody"); if(!body) return;
   const scope = parseInt($("#reviewScope").value,10) || 3;
@@ -5073,7 +5097,34 @@ function renderReviewPage(){
   }
   html += `</div></div>`;
 
-  // ---- ⓪ 賽前換邊 + 神刻奇門 追蹤（合一區，最前面） ----
+  // ---- ◆ 顛倒／收斂／背離 交叉分層（乾淨前瞻，過渡期與下方 ⑤⑥ 並行）----
+  {
+    const ct = collectCrossTab(leagueF);
+    const pc = (x,n)=> n?Math.round(100*x/n)+"%":"—";
+    const nn = (x,n)=>`<span class="ct-n">${x}/${n}</span>`;
+    const R = (lbl,desc,o)=>`<tr class="rv-row${o.n<10?" low-sample":""}"><td class="lbl">${lbl}<div class="ct-desc">${desc}</div></td>`+
+      `<td>${o.n}</td>`+
+      `<td>${pc(o.hw,o.hwN)}${nn(o.hw,o.hwN)}</td>`+
+      `<td>${pc(o.cov,o.covN)}${nn(o.cov,o.covN)}</td>`+
+      `<td>${pc(o.ov,o.ovN)}${nn(o.ov,o.ovN)}</td>`+
+      `<td>${o.swap}</td>`+
+      `<td>${o.dvN?pc(o.dv,o.dvN):"—"}${o.dvN?nn(o.dv,o.dvN):""}</td></tr>`;
+    const tot = ct.flipped.n+ct.converged.n+ct.aligned.n;
+    html += `<div class="rv-section rv-cross"><div class="rv-head">◆ 顛倒／收斂／背離 交叉分層 <span class="rv-sub">乾淨前瞻（flipState 標記），與下方 ⑤⑥ 並行累積</span></div>`;
+    if(!tot){
+      html += `<div class="rv-empty">尚無 flipState 標記的結算場。<br>從今起每在結算視窗設定「顛倒場狀態」的場，就乾淨累積進這裡；舊資料無此欄，走下方 ⑤⑥ 過渡。</div>`;
+    } else {
+      html += `<div style="overflow-x:auto"><table class="rv-table ct-table"><thead><tr><th class="lbl">收盤台美讓分方</th><th>場數</th><th>主勝</th><th>台彩讓分方過盤</th><th>開大</th><th>曾對調</th><th>背離子集過盤</th></tr></thead><tbody>`;
+      html += R("顛倒 flipped","收盤兩盤仍相反",ct.flipped);
+      html += R("收斂 converged","曾相反·收盤已一致",ct.converged);
+      html += R("一直一致 aligned","曾標記·兩盤同向",ct.aligned);
+      html += `</tbody></table></div>`;
+      html += `<div class="ct-note">基準：主勝≈53%、台彩讓分方過盤≈40%。「曾對調」＝該類中 preGameSwap 場數（過程屬性，非獨立類，故不另分區塊）。「背離子集過盤」＝該類中「STAKE 收盤低賠方≠台彩讓分方」的子集之台彩讓分方過盤率（樣本更小）。<b>任何格 &lt;10 場都是雜訊，此區為前瞻累積用，非下注依據。</b></div>`;
+    }
+    html += `</div>`;
+  }
+
+  // ---- ⓪ 賽前換邊 + 神刻奇門 追蹤（合一區）----
   html += renderSwapTracker(leagueF);
 
   // ---- 回顧一: by light count bucket ----
@@ -5372,6 +5423,11 @@ function renderReviewPage(){
   }
 
   body.innerHTML = html;
+  // 版面順序（使用者指定）：交叉表 → ⑤⑥ → 燈號①-④。把燈號區塊 DOM append 到末尾（不動 html 拼接邏輯）。
+  try {
+    const secs = [...body.querySelectorAll(".rv-section")];
+    secs.filter(s => { const h = s.querySelector(".rv-head"); return h && /[①②③④]/.test(h.textContent); }).forEach(s => body.appendChild(s));
+  } catch(e){}
 }
 
 // Validate the stored "數據偏向" leading direction against actual ml result.
