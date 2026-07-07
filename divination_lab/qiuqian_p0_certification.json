@@ -1,0 +1,100 @@
+{
+ "generatedAt": "2026-07-07T06:57:29.946Z",
+ "mcN": 1000000,
+ "tablesFrozen": false,
+ "tableHashes": {
+  "layer_tables": "29a8f38a6f19f9854f4ce0739a1f1d97291973856b94a4baf52221bde53375dd",
+  "layer3_table": "eb604dcb185a9a61da4cc4f7fcb3dfee6591e2031a30854cdc8c84cd10280041"
+ },
+ "baseRates": {
+  "totals": 0.4927775737544375,
+  "ml": 0.5315038815670698,
+  "hd": 0.4296701944376077
+ },
+ "baseRateNs": {
+  "totals": 16338,
+  "ml": 16617,
+  "hd": 16252
+ },
+ "ritual": {
+  "abortRate": 0.091759,
+  "abortYunShare": 0.5102714720081953
+ },
+ "layers": {
+  "layer1": {
+   "counts": {
+    "吉": 28,
+    "凶": 21,
+    "棄": 11
+   },
+   "pDecidedGivenLot": 0.8166666666666667,
+   "pJiGivenDecided": 0.5714285714285714,
+   "p0": {
+    "totals": 0.49896822482206243,
+    "ml": 0.5045005545095814,
+    "hd": 0.4899528849196582
+   }
+  },
+  "layer2": {
+   "counts": {
+    "吉": 18,
+    "凶": 24,
+    "棄": 18
+   },
+   "pDecidedGivenLot": 0.7,
+   "pJiGivenDecided": 0.42857142857142855,
+   "p0": {
+    "totals": 0.5010317751779374,
+    "ml": 0.4954994454904186,
+    "hd": 0.5100471150803417
+   }
+  },
+  "layer3": {
+   "counts": {
+    "吉": 23,
+    "凶": 22,
+    "棄": 15
+   },
+   "pDecidedGivenLot": 0.75,
+   "pJiGivenDecided": 0.5111111111111111,
+   "p0": {
+    "totals": 0.4998395016389875,
+    "ml": 0.500700086257046,
+    "hd": 0.4984371154319468
+   }
+  }
+ },
+ "crossCheck": {
+  "lotUniformMaxZ": 2.124210631499959,
+  "lotUniformOK": true,
+  "tendencyOK": true,
+  "detail": {
+   "layer1": {
+    "pJi_mc": 0.467865907837237,
+    "pJi_analytic": 0.4666666666666667,
+    "z": 2.290890475930364
+   },
+   "layer2": {
+    "pJi_mc": 0.3003740196709904,
+    "pJi_analytic": 0.3,
+    "z": 0.7778311796131426
+   },
+   "layer3": {
+    "pJi_mc": 0.3837263457606516,
+    "pJi_analytic": 0.38333333333333336,
+    "z": 0.7703592561220436
+   }
+  }
+ },
+ "sampleBudget": {
+  "note": "全季約2,430場×(1−棄場率)×各層有表態率",
+  "perLayerEffectivePerSeason": {
+   "layer1": 1802,
+   "layer2": 1545,
+   "layer3": 1655
+  }
+ },
+ "tripwires": {
+  "note": "前瞻各層傾向對本認證值 ±3pp（同 L）；籤號分布 χ² 年檢"
+ }
+}

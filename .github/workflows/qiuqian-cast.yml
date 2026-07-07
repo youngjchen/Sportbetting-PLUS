@@ -1,0 +1,28 @@
+# 求籤前瞻起籤守護工作流（divination-lab 實驗 Q）— 由 qiuqian_cast_daily.js 執行。
+# 熵源釘選於「開賽前 240 分的信標脈衝」（同 L v1.2）→ 觸發時機不影響籤象內容，手動救援永久無害。
+# 分鐘取 11,41 與 liuyao-cast(7,37) 錯峰。此檔只能用編輯工具改，勿用 PowerShell（BOM 會讓 Actions 拒收）。
+name: qiuqian-cast
+on:
+  schedule:
+    - cron: '11,41 12-23 * * *'   # UTC 12–23 = 台北 20:00–07:59
+    - cron: '11,41 0-4 * * *'     # UTC 0–4  = 台北 08:00–12:59
+  workflow_dispatch: {}
+permissions:
+  contents: write
+concurrency:
+  group: qiuqian-cast
+  cancel-in-progress: false
+jobs:
+  cast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: |
+          git config user.name "qiuqian-bot"
+          git config user.email "qiuqian-bot@users.noreply.github.com"
+      - run: node qiuqian_cast_daily.js --commit
+      - run: git pull --rebase && git push

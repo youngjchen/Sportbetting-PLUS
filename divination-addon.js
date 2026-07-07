@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260705b';
+  const V = '20260706a';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -104,7 +104,20 @@
   .dv-dwrap{padding:4px 4px 12px}
   .dv-dcard{margin:8px 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
   .dv-del{float:right;background:none;border:1px solid #6b3a3a;color:#c98;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12.5px;margin-left:10px}
-  .dv-mask{color:var(--ink-dim);font-size:13px;letter-spacing:.03em}`;
+  .dv-mask{color:var(--ink-dim);font-size:13px;letter-spacing:.03em}
+  .dv-anim{margin-top:22px;padding:36px 20px;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:16px}
+  .dv-coins{display:flex;gap:18px}
+  .dv-coin{width:46px;height:46px;border-radius:50%;border:2px solid var(--lit);display:flex;align-items:center;justify-content:center;font-size:19px;color:var(--lit);animation:dvflip .3s linear infinite}
+  .dv-coin:nth-child(2){animation-delay:.1s}.dv-coin:nth-child(3){animation-delay:.2s}
+  @keyframes dvflip{from{transform:rotateX(0)}to{transform:rotateX(360deg)}}
+  .dv-yaostack{display:flex;flex-direction:column-reverse;gap:7px}
+  .dv-yao{width:98px;height:10px;border-radius:3px;background:var(--lit);opacity:0;animation:dvyao .18s ease-out forwards}
+  .dv-yao.broken{background:linear-gradient(90deg,var(--lit) 0 40%,transparent 40% 60%,var(--lit) 60% 100%)}
+  @keyframes dvyao{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
+  .dv-animlbl{color:var(--ink-dim);font-size:13.5px;letter-spacing:.14em}
+  .dv-glyph{font-size:27px;letter-spacing:.12em;color:var(--ink);margin:2px 0 0}
+  .dv-abstain .dv-verdict{color:var(--ink-dim)}
+  .dv-okbadge{display:inline-block;border:1px solid var(--lit);color:var(--lit);border-radius:8px;padding:2px 10px;font-size:12.5px;margin-left:8px}`;
 
   let games = [], sel = { game: null, market: '大小', method: '六爻' }, gamesLoaded = false;
   const h = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
@@ -215,11 +228,24 @@
         nonExperimental: true,
       };
       const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); list.unshift(entry); localStorage.setItem(LS_KEY, JSON.stringify(list.slice(0, 300)));
-      document.getElementById('dv-result').innerHTML =
-        `<div class="dv-card"><div class="dv-dim">${esc(entry.matchup)}　${esc(entry.gameTime)}　${market}｜${sel.method}</div>
+      // 起卦動畫（純 CSS，~1.15s）→ 結果卡帶「起卦完成 ✓ 時:分:秒」戳與卦象字符——三市場連占、全棄場也能一眼確認每一卦都真的起過
+      const TRI = { 乾: '☰', 兌: '☱', 離: '☲', 震: '☳', 巽: '☴', 坎: '☵', 艮: '☶', 坤: '☷' };
+      let glyph;
+      if (sel.method === '六爻') glyph = (TRI[cast.hexUp] || esc(cast.hexUp || '')) + (TRI[cast.hexLow] || esc(cast.hexLow || '')) + (cast.moving && cast.moving.length ? '　動' + cast.moving.join('·') : '　六爻安靜');
+      else glyph = (TRI[cast['上卦']] || '') + (TRI[cast['下卦']] || '') + '　動' + cast.moving;
+      const stamp = t.toTimeString().slice(0, 8);
+      const anim = sel.method === '六爻'
+        ? `<div class="dv-anim"><div class="dv-coins"><div class="dv-coin">錢</div><div class="dv-coin">錢</div><div class="dv-coin">錢</div></div><div class="dv-animlbl">三錢六擲中…</div></div>`
+        : `<div class="dv-anim"><div class="dv-yaostack">${[0, 1, 2, 3, 4, 5].map(i => `<div class="dv-yao${i % 3 === 1 ? ' broken' : ''}" style="animation-delay:${(i * 0.16).toFixed(2)}s"></div>`).join('')}</div><div class="dv-animlbl">梅花起卦中…</div></div>`;
+      const resultHTML =
+        `<div class="dv-card${side == null ? ' dv-abstain' : ''}"><div class="dv-dim">${esc(entry.matchup)}　${esc(entry.gameTime)}　${market}｜${sel.method}<span class="dv-okbadge">起卦完成 ✓ ${stamp}</span></div>
+         <div class="dv-glyph">${glyph}</div>
          <div class="dv-verdict">${esc(entry.verdict)}</div>
          <div class="dv-dim">隨機源：${esc(entry.source)}　｜　※ 興趣紀錄，不入實驗統計</div>
          <details class="dv-details"><summary>為什麼是這個結果？</summary><div class="dv-exp-body">${explainHTML(entry)}</div></details></div>`;
+      document.getElementById('dv-result').innerHTML = anim;
+      setTimeout(() => { document.getElementById('dv-result').innerHTML = resultHTML; btn.disabled = false; btn.textContent = '起　卦'; }, 1150);
+      return;
     } catch (e) { document.getElementById('dv-result').innerHTML = `<div class="dv-card">起卦失敗：${esc(e.message)}</div>`; }
     btn.disabled = false; btn.textContent = '起　卦';
   }
@@ -228,13 +254,30 @@
     const box = document.getElementById('dv-p-auto'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">載入中…</div></div>';
     try {
       const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json();
-      const rows = arr.slice(-60).reverse().map(e => e.failedAt
+      const main = arr.filter(e => !e.market);   // v1.3 起 ledger 混有獨贏/讓分 exploratory 條目（e.market），本區只列 confirmatory 大小分
+      const xN = arr.length - main.length;
+      const rows = main.slice(-60).reverse().map(e => e.failedAt
         ? `<div class="dv-item">⚠ beacon 失敗<div class="dv-sub">${esc(String(e.failedAt).slice(5, 16))}</div></div>`
         : e.missedWindow
         ? `<div class="dv-item"><b>漏卦（棄場留痕）</b>　${esc(e.matchup || e.gamePk)}<div class="dv-sub">開打 ${esc(String(e.gameTimeUTC).slice(5, 16))}Z｜排程未在窗口內起卦，依附錄規則棄場${e.reason ? '｜' + esc(e.reason) : ''}</div></div>`
         : `<div class="dv-item"><b>${e.pick ? '押 ' + e.pick + '分' : '棄場'}</b>　${esc(e.matchup || e.gamePk)}<div class="dv-sub">起卦 ${esc(String(e.castAt).slice(5, 16))}Z｜世${e.shi}${esc(e.shiZhi)}(${e.sShi}) vs 應${e.ying}${esc(e.yingZhi)}(${e.sYing})｜beacon ${esc(String(e.beaconTS).slice(5, 16))}｜${esc(e.phase)}</div></div>`).join('');
+      let qHtml;
+      try {
+        const qarr = await (await fetch('data/qiuqian_casts.json?nocache=' + Date.now())).json();
+        const MK = { totals: '大小', ml: '獨贏', hd: '讓分' };
+        const qRows = qarr.slice(-45).reverse().map(e => e.failedAt
+          ? `<div class="dv-item">⚠ beacon 失敗<div class="dv-sub">${esc(String(e.failedAt).slice(5, 16))}</div></div>`
+          : e.missedWindow
+          ? `<div class="dv-item"><b>漏籤（棄場留痕）</b>　${esc(e.matchup || e.gamePk)}［${MK[e.market] || esc(e.market)}］<div class="dv-sub">開打 ${esc(String(e.gameTimeUTC).slice(5, 16))}Z｜窗口已過未起籤</div></div>`
+          : e.aborted
+          ? `<div class="dv-item"><b>棄場（神示改日）</b>　${esc(e.matchup || e.gamePk)}［${MK[e.market] || esc(e.market)}］<div class="dv-sub">起籤 ${esc(String(e.castAt).slice(5, 16))}Z｜${e.aborted === 'oracle-yun' ? '允筊' : '確筊'}階段連五非聖後插問得聖｜beacon ${esc(String(e.beaconTS).slice(5, 16))}</div></div>`
+          : `<div class="dv-item"><b>已起籤 ✓</b>　${esc(e.matchup || e.gamePk)}［${MK[e.market] || esc(e.market)}］<div class="dv-sub">起籤 ${esc(String(e.castAt).slice(5, 16))}Z｜<span class="dv-mask">🔒 籤號與判讀遮蔽至開盒</span>｜beacon ${esc(String(e.beaconTS).slice(5, 16))}｜${esc(e.phase)}</div></div>`).join('');
+        qHtml = qRows || '<div class="dv-empty">排程尚未產生籤——第一批將在下一個比賽日窗口出現</div>';
+      } catch (e) { qHtml = '<div class="dv-empty">排程尚未產生籤（ledger 檔尚未建立）</div>'; }
       box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">機器卦（實驗 L・六爻・大小分）</div>
-        <div class="dvp-note">排程在每場開打前 40–180 分鐘自動搖卦（NIST 隨機信標），一場一卦永不重抽；錯過窗口的比賽記「漏卦」棄場留痕。2026 剩餘賽季＝試車；2027 全季＝正式樣本，季後才開盒。</div>${rows || '<div class="dv-empty">排程尚未產生卦——第一批將在下一個比賽日窗口出現</div>'}</div>`;
+        <div class="dvp-note">排程在每場開打前 40–180 分鐘自動搖卦（NIST 隨機信標），一場一卦永不重抽；錯過窗口的比賽記「漏卦」棄場留痕。2026 剩餘賽季＝試車；2027 全季＝正式樣本，季後才開盒。${xN ? `另有 v1.3 獨贏/讓分 exploratory 卦 ${xN} 筆（遮蔽中，不列示）。` : ''}</div>${rows || '<div class="dv-empty">排程尚未產生卦——第一批將在下一個比賽日窗口出現</div>'}
+        <div class="dvp-h" style="margin-top:36px">機器籤（實驗 Q・六十甲子籤・三市場）</div>
+        <div class="dvp-note">照北港朝天宮官方線上求籤程序機械執行：允筊三聖杯 → 抽籤 → 確筊三聖杯；任一筊階段連五非聖即插問「弟子是否改日再問」，得聖＝棄場留痕。籤號與判讀遮蔽至開盒（協議 §9 同 L）。</div>${qHtml}</div>`;
     } catch (e) { box.innerHTML = '<div class="dvp-wrap"><div class="dvp-h">機器卦</div><div class="dv-empty">排程尚未產生卦（ledger 檔尚未建立）</div></div>'; }
   }
 
@@ -252,7 +295,7 @@
     const res = await resolveOutcomes(list);
     const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花');
     let machine = { n: 0, ab: 0, big: 0, missed: 0 };
-    try { const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json(); arr.forEach(e => { if (e.failedAt) return; if (e.missedWindow) { machine.missed++; return; } machine.n++; if (e.pick == null) machine.ab++; else if (e.pick === '大') machine.big++; }); } catch (e) {}
+    try { const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json(); arr.forEach(e => { if (e.failedAt) return; if (e.market) return; /* v1.3 exploratory 另冊，不入本表 */ if (e.missedWindow) { machine.missed++; return; } machine.n++; if (e.pick == null) machine.ab++; else if (e.pick === '大') machine.big++; }); } catch (e) {}
     const mDec = machine.n - machine.ab, mBig = mDec ? (100 * machine.big / mDec).toFixed(1) + '%' : '—';
     box.innerHTML = `<div class="dvp-wrap">
       <div class="dvp-h">興趣統計（人 vs 機器）</div>

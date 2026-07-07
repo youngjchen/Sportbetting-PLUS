@@ -53,6 +53,17 @@ function bitsFrom(outputValue, gamePk) {
   const bits = []; for (let i = 0; i < 18; i++) bits.push((h[i >> 3] >> (7 - (i & 7))) & 1);
   return bits;
 }
+/* ── v1.3（附錄修訂 divination_lab/L_v1.3_amendment.md）：獨贏/讓分 exploratory 卦 ──
+   新市場推導 = SHA256(outputValue|gamePk|market) 前 18 bit——輸入含市場後綴，
+   與 legacy bitsFrom（無後綴）不相交；confirmatory 大小分推導逐位元不變。
+   極性映射（凍結）：卦極性正（押大側）→ ml押主 / hd押熱門過盤；負→ 客/受讓；平手棄場同構。 */
+const X_MARKETS = ['ml', 'hd'];
+function bitsFromMkt(outputValue, gamePk, market) {
+  const h = crypto.createHash('sha256').update(outputValue + '|' + gamePk + '|' + market).digest();
+  const bits = []; for (let i = 0; i < 18; i++) bits.push((h[i >> 3] >> (7 - (i & 7))) & 1);
+  return bits;
+}
+const dirFor = (mk, pick) => pick == null ? null : (mk === 'ml' ? (pick === '大' ? '主' : '客') : (pick === '大' ? '熱門過盤' : '受讓'));
 
 (async function main() {
   const now = Date.now();
@@ -87,6 +98,37 @@ function bitsFrom(outputValue, gamePk) {
       const entry = { gamePk: g.gamePk, gameType: g.gameType, matchup: `${g.away}@${g.home}`, gameTimeUTC: new Date(g.ts).toISOString(), castAt: new Date().toISOString(), beaconAnchor: new Date(bp.anchorMs).toISOString(), beaconPinned: bp.pinned, monthZhi: ctx.monthZhi, dayZhi: ctx.dayZhi, beaconTS: bp.pulse.timeStamp, beaconOutput: bp.pulse.outputValue, backs, shi: c.shi, ying: c.ying, shiZhi: c.shiZhi, yingZhi: c.yingZhi, sShi: c.sShi, sYing: c.sYing, tiebreak: c.tiebreak, pick: c.pick, phase: 'pilot-2026' };
       console.log(`  卦 ${entry.matchup} → ${c.pick ? '押' + c.pick : '棄場（卦無表態，仍入帳）'}（世${c.shi}${c.shiZhi} ${c.sShi} vs 應${c.ying}${c.yingZhi} ${c.sYing}${c.tiebreak ? '/' + c.tiebreak : ''}｜錨定${bp.pinned ? '' : '⚠未'}釘選）`);
       if (!DRY) { ledger.push(entry); dirty = true; }
+    }
+  }
+
+  /* ── v1.3 exploratory 區塊（獨立於 legacy 路徑之後執行；legacy 完全未動） ── */
+  const doneX = new Set(ledger.filter(e => e.market).map(e => e.gamePk + '|' + e.market));
+  if (!DRY) for (const g of games.filter(g => { const m = (g.ts - now) / 60000; return m < WIN_MIN && m > MISS_LOOKBACK; })) for (const mk of X_MARKETS) {
+    if (doneX.has(g.gamePk + '|' + mk)) continue;
+    ledger.push({ gamePk: g.gamePk, market: mk, exploratory: true, gameType: g.gameType, matchup: `${g.away}@${g.home}`, gameTimeUTC: new Date(g.ts).toISOString(), missedWindow: true, notedAt: new Date().toISOString(), annex: 'v1.3', phase: 'pilot-2026' });
+    doneX.add(g.gamePk + '|' + mk); dirty = true;
+    console.log(`  漏卦留痕（棄場） ${g.away}@${g.home} [${mk}]`);
+  }
+  {
+    const pulseCache = new Map();
+    for (const g of inWindow) for (const mk of X_MARKETS) {
+      if (doneX.has(g.gamePk + '|' + mk)) continue;
+      let bp = pulseCache.get(g.gamePk);
+      if (!bp) {
+        if (DRY) bp = { pulse: { outputValue: crypto.randomBytes(64).toString('hex'), timeStamp: 'DRY' }, anchorMs: g.ts - 240 * 60000, pinned: false };
+        else {
+          try { bp = await beaconPulseFor(g.ts); }
+          catch (e) { ledger.push({ failedAt: new Date().toISOString(), reason: 'beacon:' + e.message, gamePks: [g.gamePk], market: mk, annex: 'v1.3' }); dirty = true; console.error(`beacon 失敗（${g.away}@${g.home} [${mk}]），留痕下輪重試`); continue; }
+        }
+        pulseCache.set(g.gamePk, bp);
+      }
+      const at = new Date(bp.anchorMs + 8 * 3600e3);
+      const ctx = eng.zhiContext(at.getUTCFullYear(), at.getUTCMonth() + 1, at.getUTCDate(), at.getUTCHours(), at.getUTCMinutes());
+      const backs = eng.bitsToBacks(bitsFromMkt(bp.pulse.outputValue, String(g.gamePk), mk));
+      const c = eng.castFromBacks(backs, ctx.monthZhi, ctx.dayZhi);
+      const entry = { gamePk: g.gamePk, market: mk, exploratory: true, gameType: g.gameType, matchup: `${g.away}@${g.home}`, gameTimeUTC: new Date(g.ts).toISOString(), castAt: new Date().toISOString(), beaconAnchor: new Date(bp.anchorMs).toISOString(), beaconPinned: bp.pinned, monthZhi: ctx.monthZhi, dayZhi: ctx.dayZhi, beaconTS: bp.pulse.timeStamp, beaconOutput: bp.pulse.outputValue, backs, shi: c.shi, ying: c.ying, shiZhi: c.shiZhi, yingZhi: c.yingZhi, sShi: c.sShi, sYing: c.sYing, tiebreak: c.tiebreak, pick: c.pick, dir: dirFor(mk, c.pick), annex: 'v1.3', phase: 'pilot-2026' };
+      console.log(`  卦 ${entry.matchup} [${mk}] → ${entry.dir ? '押' + entry.dir : '棄場（卦無表態，仍入帳）'}`);
+      if (!DRY) { ledger.push(entry); doneX.add(g.gamePk + '|' + mk); dirty = true; }
     }
   }
 
