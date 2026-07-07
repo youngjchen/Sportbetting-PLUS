@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260706a';
+  const V = '20260707a';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -105,6 +105,8 @@
   .dv-dcard{margin:8px 0;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px}
   .dv-del{float:right;background:none;border:1px solid #6b3a3a;color:#c98;border-radius:8px;padding:4px 10px;cursor:pointer;font-size:12.5px;margin-left:10px}
   .dv-mask{color:var(--ink-dim);font-size:13px;letter-spacing:.03em}
+  #divpage .dv-subrow td{padding-top:4px;padding-bottom:4px;border-bottom:1px dotted var(--line)}
+  #divpage .dv-subm{padding-left:16px;color:var(--ink-dim);font-size:13px}
   .dv-anim{margin-top:22px;padding:36px 20px;background:var(--panel);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;align-items:center;gap:16px}
   .dv-coins{display:flex;gap:18px}
   .dv-coin{width:46px;height:46px;border-radius:50%;border:2px solid var(--lit);display:flex;align-items:center;justify-content:center;font-size:19px;color:var(--lit);animation:dvflip .3s linear infinite}
@@ -288,6 +290,19 @@
     const hr = settled ? (100 * hit / settled).toFixed(1) + '%' : '—';
     return `<tr><td>${esc(title)}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td>${hr}</td></tr>`;
   }
+  // Q3：一個 method 展開為「總＋三市場」四列（獨贏/讓分/大小分開看命中率）
+  function statRows(title, casts, res) {
+    const rows = [['', title, true]].concat(MARKETS.map(mk => [mk, '└ ' + mk, false]));
+    return rows.map(([mk, lbl, main]) => {
+      const arr = mk ? casts.filter(e => e.market === mk) : casts;
+      const n = arr.length, ab = arr.filter(e => e.side == null).length;
+      let settled = 0, hit = 0;
+      arr.forEach(e => { const o = hitOf(e, res[e.officialId]); if (o != null) { settled++; hit += o; } });
+      const hr = settled ? (100 * hit / settled).toFixed(1) + '%' : '—';
+      const c = main ? '' : ' class="dv-subrow"';
+      return `<tr${c}><td>${main ? esc(title) : '<span class="dv-subm">' + esc(lbl) + '</span>'}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td>${hr}</td></tr>`;
+    }).join('');
+  }
 
   async function renderStats() {
     const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中（即時對 MLB 官方結果結算）…</div></div>';
@@ -301,10 +316,10 @@
       <div class="dvp-h">興趣統計（人 vs 機器）</div>
       <div class="dvp-note">手動卦是興趣紀錄，不入實驗；此處純為好玩。命中率<b>即時對 MLB 官方結果結算</b>（比賽結束數分鐘內生效，與板上手動結算、爬蟲快照無關）；樣本通常很小，僅供參考。</div>
       <div class="dv-sec"><table class="dv-stat"><thead><tr><th>來源</th><th>起卦數</th><th>棄場</th><th>已完賽</th><th>命中</th><th>命中率</th></tr></thead><tbody>
-        ${statBlock('人・六爻搖卦', liu, res)}
-        ${statBlock('人・梅花起卦', mei, res)}
+        ${statRows('人・六爻搖卦', liu, res)}
+        ${statRows('人・梅花起卦', mei, res)}
         <tr><td>機器・六爻（實驗 L）</td><td>${machine.n}</td><td>${machine.ab}</td><td colspan="3" class="dv-mask">🔒 遮蔽至開盒（協議 §9，2027 季後）</td></tr>
-      </tbody></table></div>
+      </tbody></table><div class="dvp-note" style="margin-top:8px">三市場（獨贏／讓分／大小）分開列命中率——手動卦樣本小，各市場再拆更小，看看即可，統計上不可推論。</div></div>
       <div class="dvp-h" style="font-size:16px">押向分布</div>
       <div class="dvp-note">機器六爻押大率 ${mBig}（有表態 ${mDec} 卦${machine.missed ? '；另漏卦 ' + machine.missed + ' 場棄場留痕' : ''}）。理論值：六爻押大約 51.8%、棄場約 12.6%。</div>
       <div class="dvp-note">🔒 <b>機器卦命中率為什麼不顯示？</b>不是故障——凍結協議 §9 明文「命中率對照在分析日前遮蔽」（分析日＝2027 季後）。即時盯命中率會誘發偷看、中途起念改規則，正是當初審核堵掉的漏洞；試車期照樣遮，養成乾淨習慣。手動卦不受此限（本來就不入實驗）。</div>
