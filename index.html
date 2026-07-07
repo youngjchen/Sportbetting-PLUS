@@ -1196,6 +1196,9 @@
 /* 曾經顛倒(收盤前已收斂一致)：靛藍/長春花橫幅＋卡框，與「仍顛倒」的鮮紫同家族、清楚區分 */
 .bflipbanner.was{ background:rgba(127,139,245,.14); border-bottom-color:rgba(127,139,245,.42); color:#c7cdff; }
 .card.bcard.flip-was{ border-color:rgba(127,139,245,.55); box-shadow:0 0 0 1px rgba(127,139,245,.28),0 10px 26px rgba(0,0,0,.5); }
+/* 賽前讓分方曾對調：青綠橫幅＋卡框，與顛倒(紫)/曾顛倒(靛藍)三類分色 */
+.bflipbanner.swap{ background:rgba(43,191,160,.13); border-bottom-color:rgba(43,191,160,.4); color:#7fe8d4; }
+.card.bcard.flip-swap{ border-color:rgba(43,191,160,.5); box-shadow:0 0 0 1px rgba(43,191,160,.26),0 10px 26px rgba(0,0,0,.5); }
 
 .bbody{ display:grid; grid-template-columns:212px 1fr; align-items:stretch; }
 /* 左計分板：純隊名、直向置中。客隊比分在名字上、主隊比分在名字下，比分大、琥珀色 */
@@ -1338,6 +1341,8 @@
 #matchnav .nvtag.st-flip{ color:#cda4ff; border-color:#b96bff; background:rgba(185,107,255,.18); }
 /* 曾經顛倒(收盤前變一致)：靛藍/長春花色，與仍顛倒紫色區分 */
 #matchnav .nvtag.st-flip-was{ color:#c7cdff; border-color:#7f8bf5; background:rgba(127,139,245,.18); }
+/* 賽前讓分方曾對調：青綠，與顛倒(紫)/曾顛倒(靛藍)三類分色 */
+#matchnav .nvtag.st-swap{ color:#7fe8d4; border-color:#2bbfa0; background:rgba(43,191,160,.16); }
 #matchnav .nvtag.dragging{ opacity:.45; }
 #matchnav .nvsec.flipsec{ color:#cda4ff; }
 #matchnav .nvtag:hover{ color:#ffe39a; }
@@ -2595,15 +2600,13 @@ function renderCardB(it){
   const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"⇅ 顛倒":"顛倒"; flipB.title="標記平台顛倒（台彩 vs STAKE 受讓方相反）— 點一下切換"; flipB.onclick=()=>{ snapshot(); it.platformFlip=!it.platformFlip; save(); render(); };
   // 曾經顛倒（收盤前已收斂一致）→ 靛藍徽章標示，讓賽前/已結算的收斂場也能一眼辨識（非互動）
   const wasB = (!it.platformFlip && it.flipVanished) ? (()=>{ const b=document.createElement("span"); b.className="bbadge was"; b.textContent="曾顛倒"; b.title="曾經顛倒，收盤前已收斂一致（在結算視窗的『顛倒場狀態』設定）— 點頂部右鍵可修改"; return b; })() : null;
-  // 賽前讓分方曾對調（preGameSwap）→ 紫徽章。與「顛倒(收盤仍相反)」「曾顛倒(已收斂)」是三種不同訊號，故獨立標記（僅在非顛倒/非曾顛倒時顯示，避免重複）
-  const swapB = (it.preGameSwap && !it.platformFlip && !it.flipVanished) ? (()=>{ const b=document.createElement("span"); b.className="bbadge"; b.style.cssText="background:#4a2f6b;color:#e9d5ff;border-color:#8a5cb0"; b.textContent="曾對調"; b.title="賽前讓分方曾對調（preGameSwap）—「顛倒＝收盤仍相反、避主場」「曾顛倒＝已收斂、偏主場」「曾對調＝賽前換過邊、偏主場」是三種不同訊號"; return b; })() : null;
   // 賽前▸輸入：開結算視窗填賠率
   const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
   const preB = document.createElement("button"); preB.className="bbadge"+(hasOdds?" done":""); preB.textContent = hasOdds?"賽前 ✓":"賽前▸輸入"; preB.title="輸入賽前賠率 / 開結算視窗"; preB.onclick=()=>openSettleModal(it);
   // collapse + delete
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除"; delB.onclick=()=>{ snapshot(); state.items=state.items.filter(x=>x.id!==it.id); save(); render(); };
-  head.append(flipB); if(wasB) head.append(wasB); if(swapB) head.append(swapB); head.append(preB, colB, delB);
+  head.append(flipB); if(wasB) head.append(wasB); head.append(preB, colB, delB);
   head.title = "右鍵 → 開結算視窗";
   head.addEventListener("contextmenu", (e)=>{ e.preventDefault(); openSettleModal(it); });  // 右鍵點卡片頂部＝開結算
   el.appendChild(head);
@@ -2619,8 +2622,11 @@ function renderCardB(it){
     const bn=document.createElement("div"); bn.className="bflipbanner was";
     bn.innerHTML="<span class='ic'>⇄</span>平台曾顛倒：收盤前已收斂一致";
     el.appendChild(bn);
-  } else if(it.preGameSwap){                                // 賽前讓分方曾對調（非顛倒/非曾顛倒）→ 紫色左框，與另兩類區分
-    el.style.boxShadow="inset 4px 0 0 #8a5cb0";
+  } else if(it.preGameSwap){                                // 賽前讓分方曾對調（非顛倒/非曾顛倒）→ 青綠卡框＋橫幅，與另兩類分色
+    el.classList.add("flip-swap");
+    const bn=document.createElement("div"); bn.className="bflipbanner swap";
+    bn.innerHTML="<span class='ic'>⇆</span>賽前讓分方曾對調（與顛倒/曾顛倒是不同訊號）";
+    el.appendChild(bn);
   }
 
   if(!it.collapsed){
@@ -3054,6 +3060,7 @@ function cmpMatch(a,b){ return (gtMins(a)-gtMins(b)) || ((a.seq==null?1e9:a.seq)
 function navMatchState(it){
   if(it.platformFlip) return "st-flip";                  // 仍顛倒(紫)：最高優先
   if(it.flipVanished) return "st-flip-was";              // 曾經顛倒→開賽前變一致(靛藍)：優先於已結算，才不會被綠色蓋掉而無法辨認
+  if(it.preGameSwap) return "st-swap";                   // 賽前讓分方曾對調(青綠)：優先於已結算，才不被綠色蓋掉
   if(it.settled) return "st-full";                       // 已結算＝資料齊全(綠)
   // 黃色＝賠率填寫進度提醒(不再因燈號變色)：開盤/下注/收盤 三組,填幾組黃色就多深
   let c=0;
