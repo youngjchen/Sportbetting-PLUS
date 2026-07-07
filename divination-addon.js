@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260707a';
+  const V = '20260707b';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -118,6 +118,8 @@
   @keyframes dvyao{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:none}}
   .dv-animlbl{color:var(--ink-dim);font-size:13.5px;letter-spacing:.14em}
   .dv-glyph{font-size:27px;letter-spacing:.12em;color:var(--ink);margin:2px 0 0}
+  .dv-coin.dv-jiao{border-radius:50% 50% 42% 42%}
+  #divpage .dv-poem{font-size:17px;line-height:1.85;color:var(--ink);margin:6px 0 10px;letter-spacing:.04em}
   .dv-abstain .dv-verdict{color:var(--ink-dim)}
   .dv-okbadge{display:inline-block;border:1px solid var(--lit);color:var(--lit);border-radius:8px;padding:2px 10px;font-size:12.5px;margin-left:8px}`;
 
@@ -144,6 +146,19 @@
   function explainHTML(e) {
     const c = e.cast; if (!c) return '<p class="dv-dim">（舊版紀錄，無詳解）</p>';
     const homeRep = e.market === '大小' ? '大分' : e.home, awayRep = e.market === '大小' ? '小分' : e.away;
+    if (e.method === '求籤') {
+      if (c.aborted) return `<p>擲筊求籤過程中，連續五次未得聖杯，插問「弟子是否改日再問」得聖杯 → <b>神示改日，棄場</b>（不代為決定方向）。</p>`;
+      const en = c.entry || {};
+      const jie = en.officialJie || {};
+      const jieRows = Object.entries(jie).map(([k, v]) => `<b>${esc(k)}</b>　${esc(v)}`).join('　｜　');
+      const vtxt = c.verdict === '吉' ? ('吉 → 押 ' + esc(homeRep)) : (c.verdict === '凶' ? ('凶 → 押 ' + esc(awayRep)) : '中平／無明確方向 → 棄場');
+      return `<p><b>第 ${c.lot} 籤　${esc(en.ganzhi || '')}</b>　<span class="dv-dim">${esc(en.wuxing || '')}</span></p>
+      <p class="dv-poem">${(en.poem || []).map(esc).join('<br>')}</p>
+      ${jieRows ? `<p>${jieRows}</p>` : ''}
+      ${(en.officialStoryTitles && en.officialStoryTitles.length) ? `<p><b>典故</b>　${esc(en.officialStoryTitles.join('、'))}<br><span class="dv-dim">${esc(en.officialStoryGist || '')}</span></p>` : ''}
+      <p>本場判讀：<b>${vtxt}</b>　<span class="dv-dim">（依凍結判讀表；此為興趣紀錄，不入實驗統計）</span></p>
+      <p class="dv-dim">求籤程序：擲筊 ${esc((c.log || []).join(' '))}</p>`;
+    }
     if (e.method === '六爻') {
       const sw = ZHI_WX[c.shiZhi], yw = ZHI_WX[c.yingZhi], ctx = e.ctx || {};
       let line3;
@@ -205,6 +220,19 @@
     return { bits, src };
   }
 
+  // 手動求籤儀式（瀏覽器 CSPRNG；手動卦非實驗，不需 HMAC 可驗證性）：允筊3聖→抽籤(拒絕采樣)→確筊3聖；連5非聖插問改日=棄場。同 qiuqian_engine.js 邏輯。
+  function qiuqianManualRitual() {
+    let pool = [], pi = 0;
+    const grow = () => { const u = new Uint8Array(32); crypto.getRandomValues(u); for (const b of u) for (let k = 7; k >= 0; k--) pool.push((b >> k) & 1); };
+    const bits = n => { while (pi + n > pool.length) grow(); let v = 0; for (let i = 0; i < n; i++) v = (v << 1) | pool[pi++]; return v; };
+    const jiao = () => { const v = bits(2); return v <= 1 ? '聖' : (v === 2 ? '笑' : '陰'); };
+    const stage = (need, tag) => { let sheng = 0, run = 0, log = []; while (sheng < need) { const t = jiao(); log.push(tag + t); if (t === '聖') { sheng++; run = 0; } else if (++run >= 5) { const m = jiao(); log.push(tag + '改?' + m); if (m === '聖') return { aborted: true, log }; run = 0; } } return { aborted: false, log }; };
+    const yun = stage(3, '允'); if (yun.aborted) return { aborted: 'oracle-yun', log: yun.log };
+    let lot; for (;;) { const v = bits(6); if (v < 60) { lot = v + 1; break; } }
+    const que = stage(3, '確'); if (que.aborted) return { aborted: 'oracle-que', lot, log: yun.log.concat(que.log) };
+    return { aborted: null, lot, log: yun.log.concat(que.log) };
+  }
+
   async function doCast() {
     if (!sel.game) return;
     const g = sel.game, market = sel.market, btn = document.getElementById('dv-go');
@@ -217,9 +245,21 @@
         const e = await entropy18(g.officialId + '|' + market); src = e.src;
         cast = window.LiuyaoEngine.castFromBacks(window.LiuyaoEngine.bitsToBacks(e.bits), ctx.monthZhi, ctx.dayZhi);
         side = cast.winner === null ? null : (cast.winner === '世' ? 0 : 1);
-      } else {
+      } else if (sel.method === '梅花') {
         cast = window.MeihuaEngine.castFromTaipei(t.getFullYear(), t.getMonth() + 1, t.getDate(), t.getHours(), t.getMinutes());
         side = cast.relation === '比和' ? null : (cast.pick === '體' ? 0 : 1); src = '時間起卦　' + cast.lunarText;
+      } else { // 求籤（六十甲子）：瀏覽器儀式抽籤 → 查凍結籤詩庫與判讀表
+        const db = window.__qiuqianDB, tabs = window.__qiuqianTables;
+        if (!db) throw new Error('籤詩庫尚未載入，請稍候再試');
+        const r = qiuqianManualRitual();
+        if (r.aborted) { side = null; cast = { qiuqian: true, aborted: r.aborted, log: r.log }; src = '求籤·擲筊（神示改日）'; }
+        else {
+          const en = db.entries.find(x => x.n === r.lot) || null;
+          let vd = null;
+          if (tabs) { const l3 = tabs.layer3 && tabs.layer3.byLot[r.lot], l1 = tabs.layer1 && tabs.layer1.byLot[r.lot]; vd = (l3 && l3.verdict) || (l1 && l1.verdict) || null; }
+          side = vd === '吉' ? 0 : (vd === '凶' ? 1 : null);   // 吉→大/主、凶→小/客（同 directionFor；中平→棄）
+          cast = { qiuqian: true, lot: r.lot, entry: en, verdict: vd, log: r.log }; src = '求籤　第' + r.lot + '籤 ' + (en ? en.ganzhi : '');
+        }
       }
       const entry = {
         ts: new Date().toISOString(), officialId: g.officialId, matchup: g.awayTeam + '＠' + g.homeTeam,
@@ -234,11 +274,14 @@
       const TRI = { 乾: '☰', 兌: '☱', 離: '☲', 震: '☳', 巽: '☴', 坎: '☵', 艮: '☶', 坤: '☷' };
       let glyph;
       if (sel.method === '六爻') glyph = (TRI[cast.hexUp] || esc(cast.hexUp || '')) + (TRI[cast.hexLow] || esc(cast.hexLow || '')) + (cast.moving && cast.moving.length ? '　動' + cast.moving.join('·') : '　六爻安靜');
-      else glyph = (TRI[cast['上卦']] || '') + (TRI[cast['下卦']] || '') + '　動' + cast.moving;
+      else if (sel.method === '梅花') glyph = (TRI[cast['上卦']] || '') + (TRI[cast['下卦']] || '') + '　動' + cast.moving;
+      else glyph = cast.aborted ? '⤫ 神示改日（棄場）' : ('第 ' + cast.lot + ' 籤　' + (cast.entry ? esc(cast.entry.ganzhi) : ''));
       const stamp = t.toTimeString().slice(0, 8);
       const anim = sel.method === '六爻'
         ? `<div class="dv-anim"><div class="dv-coins"><div class="dv-coin">錢</div><div class="dv-coin">錢</div><div class="dv-coin">錢</div></div><div class="dv-animlbl">三錢六擲中…</div></div>`
-        : `<div class="dv-anim"><div class="dv-yaostack">${[0, 1, 2, 3, 4, 5].map(i => `<div class="dv-yao${i % 3 === 1 ? ' broken' : ''}" style="animation-delay:${(i * 0.16).toFixed(2)}s"></div>`).join('')}</div><div class="dv-animlbl">梅花起卦中…</div></div>`;
+        : sel.method === '梅花'
+        ? `<div class="dv-anim"><div class="dv-yaostack">${[0, 1, 2, 3, 4, 5].map(i => `<div class="dv-yao${i % 3 === 1 ? ' broken' : ''}" style="animation-delay:${(i * 0.16).toFixed(2)}s"></div>`).join('')}</div><div class="dv-animlbl">梅花起卦中…</div></div>`
+        : `<div class="dv-anim"><div class="dv-coins"><div class="dv-coin dv-jiao">筊</div><div class="dv-coin dv-jiao" style="animation-delay:.12s">筊</div></div><div class="dv-animlbl">擲筊求籤中…</div></div>`;
       const resultHTML =
         `<div class="dv-card${side == null ? ' dv-abstain' : ''}"><div class="dv-dim">${esc(entry.matchup)}　${esc(entry.gameTime)}　${market}｜${sel.method}<span class="dv-okbadge">起卦完成 ✓ ${stamp}</span></div>
          <div class="dv-glyph">${glyph}</div>
@@ -414,7 +457,7 @@
           <div class="dvp-note">先選比賽與市場、再起卦；一次問一個方向，想算三盤就起三次卦。</div>
           <label class="dvp-lbl">比賽</label><select id="dv-game"></select>
           <label class="dvp-lbl">市場</label><div class="dv-opts" id="dv-mkt"><span class="dv-opt on" data-v="大小">大小分</span><span class="dv-opt" data-v="讓分">讓分</span><span class="dv-opt" data-v="獨贏">獨贏</span></div>
-          <label class="dvp-lbl">起卦法</label><div class="dv-opts" id="dv-mtd"><span class="dv-opt on" data-v="六爻">六爻搖卦（隨機）</span><span class="dv-opt" data-v="梅花">梅花起卦（依當下時刻）</span></div>
+          <label class="dvp-lbl">起卦法</label><div class="dv-opts" id="dv-mtd"><span class="dv-opt on" data-v="六爻">六爻搖卦（隨機）</span><span class="dv-opt" data-v="梅花">梅花起卦（依當下時刻）</span><span class="dv-opt" data-v="求籤">求籤（六十甲子）</span></div>
           <button id="dv-go">起　卦</button><div id="dv-result"></div>
         </div></div>
         <div id="dv-p-auto" style="display:none"></div>
@@ -441,6 +484,9 @@
     try {
       await loadScript('./lunar.js'); await loadEngine('./meihua_engine.js'); await loadEngine('./liuyao_engine.js');
       if (!window.MeihuaEngine || !window.LiuyaoEngine) throw new Error('engine global missing');
+      // 求籤籤詩庫＋凍結判讀表（手動求籤用；失敗不阻斷六爻/梅花）
+      try { window.__qiuqianDB = await (await fetch('divination_lab/qiuqian_db.json?v=' + V)).json(); } catch (e) { window.__qiuqianDB = null; }
+      try { const t1 = await (await fetch('divination_lab/qiuqian_layer_tables.json?v=' + V)).json(); const t3 = await (await fetch('divination_lab/qiuqian_layer3_table.json?v=' + V)).json(); window.__qiuqianTables = { layer1: t1.layer1, layer3: t3.layer3 }; } catch (e) { window.__qiuqianTables = null; }
       if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', buildUI); else buildUI();
     } catch (e) { console.error('[divination-addon] 載入失敗', e); }
   })();
