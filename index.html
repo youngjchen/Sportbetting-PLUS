@@ -2595,13 +2595,15 @@ function renderCardB(it){
   const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"⇅ 顛倒":"顛倒"; flipB.title="標記平台顛倒（台彩 vs STAKE 受讓方相反）— 點一下切換"; flipB.onclick=()=>{ snapshot(); it.platformFlip=!it.platformFlip; save(); render(); };
   // 曾經顛倒（收盤前已收斂一致）→ 靛藍徽章標示，讓賽前/已結算的收斂場也能一眼辨識（非互動）
   const wasB = (!it.platformFlip && it.flipVanished) ? (()=>{ const b=document.createElement("span"); b.className="bbadge was"; b.textContent="曾顛倒"; b.title="曾經顛倒，收盤前已收斂一致（在結算視窗的『顛倒場狀態』設定）— 點頂部右鍵可修改"; return b; })() : null;
+  // 賽前讓分方曾對調（preGameSwap）→ 紫徽章。與「顛倒(收盤仍相反)」「曾顛倒(已收斂)」是三種不同訊號，故獨立標記（僅在非顛倒/非曾顛倒時顯示，避免重複）
+  const swapB = (it.preGameSwap && !it.platformFlip && !it.flipVanished) ? (()=>{ const b=document.createElement("span"); b.className="bbadge"; b.style.cssText="background:#4a2f6b;color:#e9d5ff;border-color:#8a5cb0"; b.textContent="曾對調"; b.title="賽前讓分方曾對調（preGameSwap）—「顛倒＝收盤仍相反、避主場」「曾顛倒＝已收斂、偏主場」「曾對調＝賽前換過邊、偏主場」是三種不同訊號"; return b; })() : null;
   // 賽前▸輸入：開結算視窗填賠率
   const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
   const preB = document.createElement("button"); preB.className="bbadge"+(hasOdds?" done":""); preB.textContent = hasOdds?"賽前 ✓":"賽前▸輸入"; preB.title="輸入賽前賠率 / 開結算視窗"; preB.onclick=()=>openSettleModal(it);
   // collapse + delete
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除"; delB.onclick=()=>{ snapshot(); state.items=state.items.filter(x=>x.id!==it.id); save(); render(); };
-  head.append(flipB); if(wasB) head.append(wasB); head.append(preB, colB, delB);
+  head.append(flipB); if(wasB) head.append(wasB); if(swapB) head.append(swapB); head.append(preB, colB, delB);
   head.title = "右鍵 → 開結算視窗";
   head.addEventListener("contextmenu", (e)=>{ e.preventDefault(); openSettleModal(it); });  // 右鍵點卡片頂部＝開結算
   el.appendChild(head);
@@ -2617,6 +2619,8 @@ function renderCardB(it){
     const bn=document.createElement("div"); bn.className="bflipbanner was";
     bn.innerHTML="<span class='ic'>⇄</span>平台曾顛倒：收盤前已收斂一致";
     el.appendChild(bn);
+  } else if(it.preGameSwap){                                // 賽前讓分方曾對調（非顛倒/非曾顛倒）→ 紫色左框，與另兩類區分
+    el.style.boxShadow="inset 4px 0 0 #8a5cb0";
   }
 
   if(!it.collapsed){
