@@ -7,6 +7,8 @@ on:
     - cron: '11,41 12-23 * * *'   # UTC 12–23 = 台北 20:00–07:59
     - cron: '11,41 0-4 * * *'     # UTC 0–4  = 台北 08:00–12:59
   workflow_dispatch: {}
+  push:
+    paths: ['.github/workflows/qiuqian-cast.yml']   # 自測觸發：只在本檔變更時跑一次（v1.2 熵源釘選下手動/推送觸發永久無害）
 permissions:
   contents: write
 concurrency:
