@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260707b';
+  const V = '20260707c';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -351,7 +351,7 @@
     const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中（即時對 MLB 官方結果結算）…</div></div>';
     const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
     const res = await resolveOutcomes(list);
-    const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花');
+    const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花'), qiu = list.filter(e => e.method === '求籤');
     let machine = { n: 0, ab: 0, big: 0, missed: 0 };
     try { const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json(); arr.forEach(e => { if (e.failedAt) return; if (e.market) return; /* v1.3 exploratory 另冊，不入本表 */ if (e.missedWindow) { machine.missed++; return; } machine.n++; if (e.pick == null) machine.ab++; else if (e.pick === '大') machine.big++; }); } catch (e) {}
     const mDec = machine.n - machine.ab, mBig = mDec ? (100 * machine.big / mDec).toFixed(1) + '%' : '—';
@@ -361,6 +361,7 @@
       <div class="dv-sec"><table class="dv-stat"><thead><tr><th>來源</th><th>起卦數</th><th>棄場</th><th>已完賽</th><th>命中</th><th>命中率</th></tr></thead><tbody>
         ${statRows('人・六爻搖卦', liu, res)}
         ${statRows('人・梅花起卦', mei, res)}
+        ${statRows('人・求籤', qiu, res)}
         <tr><td>機器・六爻（實驗 L）</td><td>${machine.n}</td><td>${machine.ab}</td><td colspan="3" class="dv-mask">🔒 遮蔽至開盒（協議 §9，2027 季後）</td></tr>
       </tbody></table><div class="dvp-note" style="margin-top:8px">三市場（獨贏／讓分／大小）分開列命中率——手動卦樣本小，各市場再拆更小，看看即可，統計上不可推論。</div></div>
       <div class="dvp-h" style="font-size:16px">押向分布</div>
@@ -382,14 +383,18 @@
     const res = await resolveOutcomes(list);
     const latest = {}, counts = {};
     list.forEach((e, i) => { const k = e.method + '|' + e.officialId + '|' + e.market; if (!(k in latest)) latest[k] = i; counts[k] = (counts[k] || 0) + 1; });
-    // 金字：同場同市場，兩法「最新卦」皆有表態且同向（雙棄場不算同讖）
+    // 金字：同場同市場，三法（六爻/梅花/求籤）最新卦中，任兩法以上有表態且同向 → 同向那幾法標金字（棄場不算）
     const gold = new Set();
+    const bySlot = {};
     for (const k in latest) {
-      if (!k.startsWith('六爻|')) continue;
-      const other = '梅花' + k.slice(2);
-      if (!(other in latest)) continue;
-      const a = list[latest[k]], b = list[latest[other]];
-      if (a.side != null && a.side === b.side) { gold.add(k); gold.add(other); }
+      const e = list[latest[k]]; if (e.side == null) continue;
+      const parts = k.split('|'); const slot = parts[1] + '|' + parts[2];   // officialId|market
+      (bySlot[slot] = bySlot[slot] || []).push({ side: e.side, key: k });
+    }
+    for (const slot in bySlot) {
+      const sideCount = {};
+      bySlot[slot].forEach(x => sideCount[x.side] = (sideCount[x.side] || 0) + 1);
+      bySlot[slot].forEach(x => { if (sideCount[x.side] >= 2) gold.add(x.key); });   // 該向有≥2法 → 標金字
     }
     const section = (method, title) => {
       const games = {};
@@ -410,8 +415,8 @@
         (rows ? `<div style="overflow-x:auto"><table class="dv-gt"><thead><tr><th>比賽（點列展開詳解／刪除）</th><th>獨贏</th><th>讓分</th><th>大小分</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="dv-empty">還沒有紀錄</div>') + '</div>';
     };
     box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">手動卦紀錄</div>
-      <div class="dvp-note">一場一排、市場固定序（獨贏／讓分／大小分），最新比賽在上；格內為該市場「最新」一卦，×N＝重複起卦次數。<span class="dv-gold">金字＝六爻與梅花同讖</span>（趣味標記——兩次獨立隨機同向，統計上約半數機率）；✓✗＝已完賽命中結果。點比賽列展開每一筆卦的詳解與單筆刪除。</div>
-      ${section('六爻', '六爻搖卦')}${section('梅花', '梅花起卦')}
+      <div class="dvp-note">一場一排、市場固定序（獨贏／讓分／大小分），最新比賽在上；格內為該市場「最新」一卦，×N＝重複起卦次數。<span class="dv-gold">金字＝多法同讖</span>（六爻／梅花／求籤任兩法以上最新卦同向；趣味標記，獨立隨機同向約半數機率）；✓✗＝已完賽命中結果。點比賽列展開每一筆卦的詳解與單筆刪除。</div>
+      ${section('六爻', '六爻搖卦')}${section('梅花', '梅花起卦')}${section('求籤', '求籤（六十甲子）')}
       ${list.length ? '<button class="dv-danger" id="dv-clear">清空所有手動紀錄</button>' : ''}</div>`;
     const c = document.getElementById('dv-clear'); if (c) c.onclick = () => { if (confirm('清空所有手動卦紀錄？')) { localStorage.removeItem(LS_KEY); renderHist(); } };
     box.querySelectorAll('.dv-grow').forEach(tr => tr.onclick = () => {
