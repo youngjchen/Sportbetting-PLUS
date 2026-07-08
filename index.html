@@ -5058,15 +5058,15 @@ function collectCrossTab(leagueFilter){
   const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&g.flipState&&g.awayScore!=null&&g.homeScore!=null);
   const d1 = g => g.flipState==="flipped"?"flipped":((""+g.flipState).indexOf("converged")===0?"converged":"aligned");
   const diverge = g => { if(g.closeOddsAway==null||g.closeOddsHome==null) return null; const low=g.closeOddsAway<g.closeOddsHome?"away":"home"; return low!==g.hdFav; }; // STAKE收盤低賠方≠台彩讓分方
-  const B = ()=>({n:0,hw:0,hwN:0,cov:0,covN:0,ov:0,ovN:0,swap:0,dv:0,dvN:0,games:[]});
-  const rows={flipped:B(),converged:B(),aligned:B()};
-  for(const g of gs){ const o=rows[d1(g)]; o.n++; o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,preGameSwap:g.preGameSwap});
+  const B = ()=>({n:0,hw:0,hwN:0,cov:0,covN:0,ov:0,ovN:0,games:[]});
+  const acc = (o,g)=>{ o.n++;
+    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,preGameSwap:g.preGameSwap});
     if(g.awayScore!==g.homeScore){o.hwN++; if(g.homeScore>g.awayScore)o.hw++;}                 // 主勝
     if(g.hdResult==="fav_cover"){o.covN++;o.cov++;} else if(g.hdResult==="fav_nocover")o.covN++; // 台彩讓分方過盤
     if(g.totResult==="over"){o.ovN++;o.ov++;} else if(g.totResult==="under")o.ovN++;            // 開大
-    if(g.preGameSwap)o.swap++;
-    const d=diverge(g); if(d!=null){o.dvN++; if(d)o.dv++;}
-  }
+  };
+  const rows={flipped:B(),converged:B(),swap:B()};   // 顛倒/收斂互斥；swap(曾對調)獨立累積、可與前兩者重疊
+  for(const g of gs){ const k=d1(g); if(k!=="aligned") acc(rows[k],g); if(g.preGameSwap) acc(rows.swap,g); }
   return rows;
 }
 function renderReviewPage(){
@@ -5105,34 +5105,32 @@ function renderReviewPage(){
   // ---- ◆ 顛倒／收斂／背離 交叉分層（乾淨前瞻，過渡期與下方 ⑤⑥ 並行）----
   {
     const ct = collectCrossTab(leagueF);
-    const info = rvInfo("用「收盤時台彩 vs STAKE 讓分方的關係」把每場乾淨分三類（每場恰好一類、零重複）：<br><b>顛倒</b>＝收盤兩盤讓分方仍相反；<b>收斂</b>＝曾相反、收盤已一致；<b>一致</b>＝標記過但兩盤同向。<br>每格看三個率——主勝、台彩讓分方過盤、開大。基準：主勝≈53%、讓分方過盤≈40%、開大≈50%。<br><b>預註冊（唯一事前假設）：</b>「顛倒場主勝率 < 53%（避主場）」——需 flipped 累積 ≥ 60 場、且主勝率 95% CI 上緣 < 50% 才算成立；其餘格為中性觀察、不預設方向、不得事後挑格當訊號。<b>任何格 < 30 場都是雜訊。</b><br>點每一行可展開該類所有比賽核對（明細內標註曾對調／背離）。");
+    const info = rvInfo("每場依「收盤時台彩 vs STAKE 讓分方」分兩種互斥狀態：<b>顛倒</b>＝收盤兩盤讓分方仍相反；<b>收斂</b>＝賽前曾相反、收盤已收成一致。<br><b>賽前曾對調</b>是另一條獨立線（賽前讓分方換過邊的過程），與顛倒／收斂會重疊——同一場可能既顛倒又曾對調，所以三行加起來會超過總場數，這是正常的（過程 vs 結果）。<br>每格看主勝、台彩讓分方過盤、開大三個率。基準：主勝≈53%、讓分方過盤≈40%、開大≈50%。<br>此表用 flipState 乾淨鍵，與下方 ⑤⑥（舊布林鍵）分類方式不同，數字本就不會一致——⑤⑥ 是過渡，兩邊並行累積。<br>預註冊唯一事前假設：顛倒場主勝率 < 53%（避主場），需顛倒累積 ≥ 60 場、主勝 95%CI 上緣 < 50% 才成立；其餘中性觀察、不挑格當訊號。點每行展開該類所有比賽核對。");
     const pc = (x,n)=> n?Math.round(100*x/n)+"%":"—";
-    const tot = ct.flipped.n+ct.converged.n+ct.aligned.n;
-    html += `<div class="rv-section"><div class="rv-head">◆ 顛倒／收斂／背離 交叉分層 <span class="rv-sub">乾淨前瞻，與下方 ⑤⑥ 並行累積</span>${info.icon}</div>${info.pop}`;
-    if(!tot){
-      html += `<div class="rv-empty">尚無 flipState 標記的結算場。<br>從今起每在結算視窗設定「顛倒場狀態」的場就乾淨累積；舊資料無此欄，走下方 ⑤⑥ 過渡。</div>`;
+    const shown = ct.flipped.n+ct.converged.n+ct.swap.n;
+    html += `<div class="rv-section"><div class="rv-head">◆ 顛倒／收斂／對調 統計 <span class="rv-sub">乾淨前瞻，與 ⑤⑥ 並行</span>${info.icon}</div>${info.pop}`;
+    if(!shown){
+      html += `<div class="rv-empty">尚無 flipState 標記的結算場。從今起每在結算視窗設定「顛倒場狀態」的場就乾淨累積；舊資料走下方 ⑤⑥。</div>`;
     } else {
-      html += `<table class="rv-table"><thead><tr><th class="lbl">收盤台美讓分方</th><th>場數</th><th>主勝</th><th>讓分方過盤</th><th>開大</th></tr></thead><tbody>`;
-      const R=(lbl,desc,o)=>{
+      html += `<table class="rv-table"><thead><tr><th class="lbl">類別</th><th>場數</th><th>主勝</th><th>讓分方過盤</th><th>開大</th></tr></thead><tbody>`;
+      const R=(lbl,o)=>{
         const det = drillBlock(o.games, g=>{
           const hd=g.hdResult==="fav_cover"?`<span class="dr-hit">讓分方過</span>`:g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`:"—";
           const tt=g.totResult==="over"?"大":g.totResult==="under"?"小":"—";
           return `${hd}・${tt}${g.preGameSwap?"・曾對調":""}`;
         });
-        const low=o.n<30;
-        html += `<tr class="rv-row drill-toggle${low?" low-sample":""}"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
-          `<td class="lbl">${lbl}<div class="rv-sub" style="font-weight:400;margin-top:2px">${desc}${low?"（樣本<30，雜訊）":""}</div></td>`+
+        html += `<tr class="rv-row drill-toggle"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
+          `<td class="lbl">${lbl}</td>`+
           `<td>${o.n}</td>`+
           `<td>${pc(o.hw,o.hwN)} <span class="rv-samp">${o.hw}/${o.hwN}</span></td>`+
           `<td>${pc(o.cov,o.covN)} <span class="rv-samp">${o.cov}/${o.covN}</span></td>`+
           `<td>${pc(o.ov,o.ovN)} <span class="rv-samp">${o.ov}/${o.ovN}</span></td></tr>`;
         if(det.id) html += `<tr class="drill-tr"><td colspan="5" style="padding:0">${det.html}</td></tr>`;
       };
-      R("顛倒 flipped","收盤兩盤仍相反",ct.flipped);
-      R("收斂 converged","曾相反·收盤已一致",ct.converged);
-      R("一致 aligned","標記過·兩盤同向",ct.aligned);
+      R("顛倒",ct.flipped);
+      R("收斂",ct.converged);
+      R("賽前曾對調",ct.swap);
       html += `</tbody></table>`;
-      html += `<div style="font-size:12px;color:var(--ink-dim);margin-top:8px;line-height:1.7">「讓分方過盤」＝台彩讓分方過盤率。「曾對調（preGameSwap）」與「背離」是過程屬性，收在每行明細內（點行展開），不另立區塊——避免同場重複計算。此區乾淨前瞻累積，非下注依據；完整說明點標題 <span class="rv-info" style="pointer-events:none">i</span>。</div>`;
     }
     html += `</div>`;
   }
