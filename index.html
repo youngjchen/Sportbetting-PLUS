@@ -961,6 +961,7 @@
         <button id="importDataBtn">📂 匯入備份檔</button>
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
         <button id="clearOldDates">🧹 清除已結算的舊日期</button>
+        <button id="flipBackfillBtn">🩹 補顛倒狀態（點不到的舊場）</button>
         <div class="sep"></div>
         <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
       </div>
@@ -1134,6 +1135,22 @@
         <button class="btn" id="importCancel">關閉</button>
         <span class="grow"></span>
         <button class="btn" id="importConfirmBtn" disabled style="background:var(--lit);color:#1a1205;border-color:var(--lit);opacity:.5;">確認匯入</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="flipBackfill" class="modal-overlay">
+    <div class="box" style="max-width:720px;width:94%;max-height:88vh;display:flex;flex-direction:column;">
+      <h3 style="margin:0 0 6px;font-size:16px;">🩹 補顛倒狀態（板上已清、點不到的舊場）</h3>
+      <div style="color:var(--ink-dim);font-size:12px;margin-bottom:10px;line-height:1.7;">
+        這些是<b>已結算但卡片被清掉</b>、你在板上點不到的場，且<b>缺顛倒狀態</b>或<b>標「無顛倒」卻有勾對調</b>（可能漏設）。直接在下面補，改完會自動存到本機。<br>
+        ⚠ 補完記得到「⋯ → ☁ 上傳盤面到 GitHub」上傳，否則跨裝置與統計看不到。
+      </div>
+      <div id="flipBackfillList" style="overflow:auto;flex:1 1 auto;border:1px solid var(--line);border-radius:8px;padding:6px;background:rgba(0,0,0,.2);"></div>
+      <div class="modal-actions" style="margin-top:10px;">
+        <button class="btn" id="flipBackfillClose">關閉</button>
+        <span class="grow"></span>
+        <span id="flipBackfillStat" style="color:var(--ink-dim);font-size:12px;"></span>
       </div>
     </div>
   </div>
@@ -6015,6 +6032,79 @@ function applyFlipState(it, fs){
   it.platformFlip = (it.flipState === "flipped");
   it.flipVanished = (it.flipState === "converged_intl" || it.flipState === "converged_lottery" || it.flipState === "converged_unknown");
 }
+// ===== 補顛倒狀態面板：處理「卡片已清、板上點不到」的舊場（缺 flipState 或 none 卻有對調）=====
+const FLIP_BF_OPTS = [
+  ["none","無顛倒"],
+  ["flipped","收盤仍顛倒（國際≠台彩）"],
+  ["converged_intl","曾顛倒→國際貼向台彩，收斂一致"],
+  ["converged_lottery","曾顛倒→台彩貼向國際，收斂一致"],
+  ["converged_unknown","曾顛倒→收斂一致（方向未記）"]
+];
+function collectFlipBackfill(){
+  const boards = doc.boards||{};
+  const games = doc.games||[];
+  // 前瞻追蹤期起點 = 有 flipState 的最早日期；早於此＝舊匯入史料（使用者已定不回補），排除
+  let eraStart = "9999-99-99";
+  for(const g of games){ if(g.flipState && g.date && g.date < eraStart) eraStart = g.date; }
+  const cardExists = (g)=>{
+    const b = boards[g.date]; if(!b) return false;
+    return (b.items||[]).some(x=>x.type==="match" && ((x.away===g.awayTeam&&x.home===g.homeTeam)||(x.awayTeam===g.awayTeam&&x.homeTeam===g.homeTeam)));
+  };
+  return games.filter(g=>
+    g.awayScore!=null && g.homeScore!=null && !g.swapNoneOk &&
+    g.date >= eraStart &&
+    !cardExists(g) &&
+    (!g.flipState || (g.flipState==="none" && g.preGameSwap))
+  ).sort((a,b)=>{
+    // 疑似漏標（標 none 卻有對調）排最前，其餘依日期
+    const ma=(a.flipState==="none"&&a.preGameSwap)?0:1, mb=(b.flipState==="none"&&b.preGameSwap)?0:1;
+    if(ma!==mb) return ma-mb;
+    return a.date<b.date?-1:a.date>b.date?1:0;
+  });
+}
+function renderFlipBackfill(){
+  const list = $("#flipBackfillList"); if(!list) return;
+  const games = collectFlipBackfill();
+  const stat = $("#flipBackfillStat"); if(stat) stat.textContent = "待補 "+games.length+" 場";
+  if(!games.length){ list.innerHTML = `<div style="padding:20px;text-align:center;color:var(--ink-dim);">沒有需要補的舊場 ✓</div>`; return; }
+  list.innerHTML = games.map(g=>{
+    const favTeam = g.hdFav==="away" ? g.awayTeam : g.homeTeam;
+    const cur = g.flipState || "";
+    const isSwapNone = (g.flipState==="none" && g.preGameSwap);
+    const flag = !g.flipState
+      ? `<span style="color:var(--ink-dim);font-size:11px;">尚未設定</span>`
+      : (isSwapNone ? `<span style="color:#e0a020;font-size:11px;">⚠ 標無顛倒卻有對調</span>` : "");
+    const opts = FLIP_BF_OPTS.map(([v,l])=>`<option value="${v}"${cur===v?" selected":""}>${esc(l)}</option>`).join("");
+    const okBtn = isSwapNone ? `<button class="fb-ok" data-sid="${esc(String(g.sid||""))}" style="margin-left:8px;font-size:11px;padding:3px 8px;background:transparent;border:1px solid var(--line);border-radius:5px;color:var(--ink-dim);cursor:pointer;">✓ 確認無顛倒、不再提醒</button>` : "";
+    return `<div class="fb-row" style="padding:8px 6px;border-bottom:1px solid var(--line);">
+      <div style="font-size:13px;margin-bottom:5px;">
+        <b>${esc(g.date)}</b> ${esc((g.league||"").toUpperCase())}　${esc(g.awayTeam)} ${g.awayScore}-${g.homeScore} ${esc(g.homeTeam)}
+        　<span style="color:var(--ink-dim);">你讓：${esc(favTeam)} -${g.hdVal??"?"}</span>　${flag}
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <select class="fb-sel" data-sid="${esc(String(g.sid||""))}" style="flex:1 1 auto;padding:6px 8px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:13px;">
+          <option value=""${cur===""?" selected":""} disabled>— 選顛倒狀態 —</option>
+          ${opts}
+        </select>${okBtn}
+      </div>
+    </div>`;
+  }).join("");
+  const findG = (sid)=> (doc.games||[]).find(x=>String(x.sid)===String(sid));
+  list.querySelectorAll(".fb-sel").forEach(sel=> sel.onchange = ()=>{
+    const g = findG(sel.getAttribute("data-sid")); if(!g || !sel.value) return;
+    applyFlipState(g, sel.value); g.swapNoneOk = false; save();
+    renderFlipBackfill(); if(typeof render==="function"){ try{ render(); }catch(_){} }
+  });
+  list.querySelectorAll(".fb-ok").forEach(btn=> btn.onclick = ()=>{
+    const g = findG(btn.getAttribute("data-sid")); if(!g) return;
+    g.swapNoneOk = true; save();
+    renderFlipBackfill(); if(typeof render==="function"){ try{ render(); }catch(_){} }
+  });
+}
+function openFlipBackfill(){ closeMore(); renderFlipBackfill(); const m=$("#flipBackfill"); if(m) m.classList.add("show"); }
+$("#flipBackfillBtn") && ($("#flipBackfillBtn").onclick = openFlipBackfill);
+$("#flipBackfillClose") && ($("#flipBackfillClose").onclick = ()=>{ const m=$("#flipBackfill"); if(m) m.classList.remove("show"); });
+$("#flipBackfill") && ($("#flipBackfill").addEventListener("click", e=>{ if(e.target.id==="flipBackfill"){ e.currentTarget.classList.remove("show"); } }));
 // 讀「賽前讓分線變動」兩格 → 衍生 縮線(shrink)/放線(grow)/null（縮＝幅度變小，用 abs 比較，正負皆可）
 function readSettleHdMove(it){
   const o=parseFloat($("#settleOpenHd")?.value), c=parseFloat($("#settleCloseHd")?.value);
