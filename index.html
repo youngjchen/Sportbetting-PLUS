@@ -374,7 +374,7 @@
   .rv-note{color:var(--ink-dim);font-size:13px;line-height:1.7;margin:0 0 14px;}
   .rv-table{width:100%;border-collapse:separate;border-spacing:0;font-size:15.5px;color:var(--ink);max-width:none;}
   .rv-table th,.rv-table td{padding:11px 16px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap;}
-  .rv-table th{color:var(--ink-dim);font-weight:600;font-size:12px;letter-spacing:.06em;text-transform:uppercase;}
+  .rv-table th{color:var(--ink-dim);font-weight:600;font-size:13.5px;letter-spacing:.04em;text-transform:uppercase;}
   .rv-table td.lbl,.rv-table th.lbl{text-align:left;font-weight:700;font-size:16px;}
   .rv-bar-wrap{display:flex;align-items:center;gap:10px;justify-content:flex-end;}
   .rv-bar{width:120px;height:10px;border-radius:6px;background:#1b232e;overflow:hidden;flex:0 0 auto;}
@@ -386,12 +386,12 @@
   .rv-tug-legend .lg{display:flex;align-items:center;gap:5px;}
   .rv-tug-legend .sw{width:10px;height:10px;border-radius:3px;}
   .drill{margin:2px 0 10px;border-left:2px solid var(--line);padding-left:10px;max-height:280px;overflow:auto;}
-  .drill-row{display:flex;align-items:center;gap:16px;padding:6px 2px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.04);}
+  .drill-row{display:flex;align-items:center;gap:16px;padding:9px 4px;font-size:15.5px;border-bottom:1px solid rgba(255,255,255,.05);}
   .drill-row:last-child{border-bottom:none;}
-  .drill-row .dr-date{color:var(--ink-dim);font-family:"Oswald";flex:0 0 auto;width:40px;}
+  .drill-row .dr-date{color:var(--ink-dim);font-family:"Oswald";flex:0 0 auto;width:48px;font-size:15px;}
   .drill-row .dr-match{flex:0 1 auto;min-width:0;color:var(--ink);}
   .drill-row .dr-match b{font-family:"Oswald";color:var(--lit);}
-  .drill-row .dr-role{flex:0 0 auto;color:var(--ink-dim);font-size:12px;}
+  .drill-row .dr-role{flex:0 0 auto;color:var(--ink);font-size:14.5px;}
   .drill-row .dr-hit{color:#28c76f;font-weight:700;}
   .drill-row .dr-miss{color:#ff3b5c;font-weight:700;}
   .drill-toggle{cursor:pointer;}
@@ -404,7 +404,7 @@
   .rv-pct.lo{color:var(--conflict);}
   .rv-pct.mid{color:#aeb9c8;}
   .rv-pct.low-sample{color:#5b6b80;}
-  .rv-samp{font-family:"Oswald";font-size:13px;color:var(--ink-dim);}
+  .rv-samp{font-family:"Oswald";font-size:15px;color:var(--ink-dim);}
   .rv-row.low-sample td{opacity:.7;}
   .rv-row.flag td.lbl{color:var(--lit);}
   .rv-empty{color:var(--ink-dim);font-size:14px;padding:22px 4px;line-height:1.7;}
@@ -1151,6 +1151,46 @@
         <button class="btn" id="flipBackfillClose">關閉</button>
         <span class="grow"></span>
         <span id="flipBackfillStat" style="color:var(--ink-dim);font-size:12px;"></span>
+      </div>
+    </div>
+  </div>
+
+  <div id="histEdit" class="modal-overlay">
+    <div class="box" style="max-width:470px;width:94%;max-height:90vh;overflow:auto;">
+      <h3 style="margin:0 0 4px;font-size:16px;">編輯歷史比賽</h3>
+      <div id="histEditSub" style="color:var(--ink-dim);font-size:13px;margin-bottom:14px;line-height:1.6;"></div>
+      <div style="display:flex;flex-direction:column;gap:13px;font-size:15px;">
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">比分</span>
+          <input id="heAScore" type="number" inputmode="numeric" min="0" max="99" style="width:56px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;"> <span id="heAName" style="font-size:13px;color:var(--ink-dim);"></span>
+          <span style="margin:0 2px">:</span>
+          <input id="heHScore" type="number" inputmode="numeric" min="0" max="99" style="width:56px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;"> <span id="heHName" style="font-size:13px;color:var(--ink-dim);"></span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">顛倒狀態</span>
+          <select id="heFlip" style="flex:1;padding:7px 8px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:14px;"></select>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">賽前對調</span>
+          <label style="display:flex;align-items:center;gap:7px;cursor:pointer;"><input type="checkbox" id="heSwap" style="width:18px;height:18px;cursor:pointer;">讓分方賽前換過邊</label>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">讓分方</span>
+          <select id="heHdFav" style="padding:6px 8px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:14px;"><option value="away">客隊讓</option><option value="home">主隊讓</option></select>
+          <span style="color:var(--ink-dim);">線</span><input id="heHdVal" type="number" step="0.5" style="width:64px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">大小基準</span>
+          <input id="heTotVal" type="number" step="0.5" style="width:64px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">收盤獨贏</span>
+          <span style="color:var(--ink-dim);font-size:13px;">客</span><input id="heCloseA" type="number" step="0.01" style="width:70px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
+          <span style="color:var(--ink-dim);font-size:13px;">主</span><input id="heCloseH" type="number" step="0.01" style="width:70px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">下注獨贏</span>
+          <span style="color:var(--ink-dim);font-size:13px;">客</span><input id="heFlipA" type="number" step="0.01" style="width:70px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
+          <span style="color:var(--ink-dim);font-size:13px;">主</span><input id="heFlipH" type="number" step="0.01" style="width:70px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
+        </div>
+      </div>
+      <div class="modal-actions" style="margin-top:18px;">
+        <button class="btn" id="heCancel">取消</button>
+        <span class="grow"></span>
+        <button class="btn" id="heSave" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">儲存</button>
       </div>
     </div>
   </div>
@@ -5088,7 +5128,7 @@ function collectCrossTab(leagueFilter){
   const dv = g => divOf(g)===true;
   const B = ()=>({n:0,hw:0,hwN:0,cov:0,covN:0,ov:0,ovN:0,games:[]});
   const acc = (o,g)=>{ o.n++;
-    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g)});
+    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g),od:((g.closeOddsAway!=null&&g.closeOddsHome!=null)||(g.flipOddsAway!=null&&g.flipOddsHome!=null))});
     if(g.awayScore!==g.homeScore){o.hwN++; if(g.homeScore>g.awayScore)o.hw++;}                 // 主勝
     if(g.hdResult==="fav_cover"){o.covN++;o.cov++;} else if(g.hdResult==="fav_nocover")o.covN++; // 讓分方過盤
     if(g.totResult==="over"){o.ovN++;o.ov++;} else if(g.totResult==="under")o.ovN++;            // 開大
@@ -5155,7 +5195,7 @@ function renderReviewPage(){
         const hw=g.aScore===g.hScore?"和":(g.hScore>g.aScore?"<b>主勝</b>":"客勝");
         const hd=g.hdResult==="fav_cover"?`<span class="dr-hit">過盤</span>`:g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`:"—";
         const tt=g.totResult==="over"?"大":g.totResult==="under"?"小":"—";
-        const dv=g.dv===true?"背離":g.dv===false?"":"背離?";
+        const dv=g.dv===true?"背離":g.dv===false?"":(g.od?"熱門不明":"缺賠率");
         return `${hw}・讓分${hd}・開${tt}${dv?`・<span style="color:var(--ink-dim)">${dv}</span>`:""}`;
       };
       const ROW=(lbl,o)=>{
@@ -5463,7 +5503,7 @@ function renderReviewPage(){
     const all = (doc.games||[]).filter(g=> leagueF==="all" || g.league===leagueF)
                   .slice().sort((a,b)=> (a.date<b.date?1:-1));
     html += `<div class="rv-section rv-collapse">`;
-    html += `<div class="rv-head rv-clhead" onclick="this.parentNode.classList.toggle('open')" style="cursor:pointer;user-select:none"><span class="rv-cltri">▸</span> ⑧ 全部比賽紀錄 <span class="rv-sub">核對結算有沒有漏（共 ${all.length} 場）· 點此展開／收合</span></div>`;
+    html += `<div class="rv-head rv-clhead" onclick="this.parentNode.classList.toggle('open')" style="cursor:pointer;user-select:none"><span class="rv-cltri">▸</span> ⑧ 全部比賽紀錄 <span class="rv-sub">核對＋補寫（共 ${all.length} 場）· 點標題展開／收合，展開後點任一場可編輯（連被清掉的舊場也能補）</span></div>`;
     html += `<div class="rv-clbody">`;
     if(!all.length){
       html += `<div class="rv-empty">還沒有任何已結算的比賽。</div>`;
@@ -5476,9 +5516,9 @@ function renderReviewPage(){
                   :g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`
                   :g.hdResult==="push"?"推":"—";
         const tot = g.totResult==="over"?"大":g.totResult==="under"?"小":g.totResult==="push"?"推":"—";
-        html += `<tr class="rv-row">`+
-                `<td class="lbl" style="white-space:nowrap">${(g.date||"").slice(5)} <span style="color:var(--ink-dim);font-size:10px">${LG[g.league]||""}</span></td>`+
-                `<td style="text-align:left">${esc(g.awayTeam)} <b style="font-family:Oswald;color:var(--lit)">${sc}</b> ${esc(g.homeTeam)}${g.platformFlip?` <span style="color:#a06bff;font-size:10px">顛</span>`:""}</td>`+
+        html += `<tr class="rv-row" data-hsid="${esc(String(g.sid||""))}" style="cursor:pointer" title="點擊編輯這場（比分／顛倒狀態／讓分／大小／賠率）">`+
+                `<td class="lbl" style="white-space:nowrap">${(g.date||"").slice(5)} <span style="color:var(--ink-dim);font-size:12.5px">${LG[g.league]||""}</span></td>`+
+                `<td style="text-align:left;font-size:15px">${esc(g.awayTeam)} <b style="font-family:Oswald;color:var(--lit)">${sc}</b> ${esc(g.homeTeam)}${g.platformFlip?` <span style="color:#a06bff;font-size:12.5px">顛</span>`:""}</td>`+
                 `<td>${hd}</td>`+
                 `<td>${tot}</td>`+
                 `</tr>`;
@@ -6127,6 +6167,63 @@ function openFlipBackfill(){ closeMore(); renderFlipBackfill(); const m=$("#flip
 $("#flipBackfillBtn") && ($("#flipBackfillBtn").onclick = openFlipBackfill);
 $("#flipBackfillClose") && ($("#flipBackfillClose").onclick = ()=>{ const m=$("#flipBackfill"); if(m) m.classList.remove("show"); });
 $("#flipBackfill") && ($("#flipBackfill").addEventListener("click", e=>{ if(e.target.id==="flipBackfill"){ e.currentTarget.classList.remove("show"); } }));
+
+// ===== 歷史比賽編輯（A：從 ⑧ 全部比賽紀錄點一場，就地改、保留原日期+sid、不走每日結算流程）=====
+let _histSid = null;
+function openHistEdit(sid){
+  const g = (doc.games||[]).find(x=>String(x.sid)===String(sid)); if(!g){ return; }
+  _histSid = String(sid);
+  $("#histEditSub").innerHTML = `<b>${esc(g.awayTeam)}</b>（客） vs <b>${esc(g.homeTeam)}</b>（主）　·　${esc(g.date)}　${esc((g.league||"").toUpperCase())}`;
+  $("#heAName").textContent = g.awayTeam; $("#heHName").textContent = g.homeTeam;
+  $("#heAScore").value = g.awayScore!=null?g.awayScore:"";
+  $("#heHScore").value = g.homeScore!=null?g.homeScore:"";
+  $("#heFlip").innerHTML = FLIP_BF_OPTS.map(([v,l])=>`<option value="${v}"${(g.flipState||"none")===v?" selected":""}>${esc(l)}</option>`).join("");
+  $("#heSwap").checked = !!g.preGameSwap;
+  $("#heHdFav").value = g.hdFav==="away"?"away":"home";
+  $("#heHdVal").value = g.hdVal!=null?g.hdVal:"";
+  $("#heTotVal").value = g.totVal!=null?g.totVal:"";
+  $("#heCloseA").value = g.closeOddsAway!=null?g.closeOddsAway:"";
+  $("#heCloseH").value = g.closeOddsHome!=null?g.closeOddsHome:"";
+  $("#heFlipA").value = g.flipOddsAway!=null?g.flipOddsAway:"";
+  $("#heFlipH").value = g.flipOddsHome!=null?g.flipOddsHome:"";
+  $("#histEdit").classList.add("show");
+}
+function closeHistEdit(){ const m=$("#histEdit"); if(m) m.classList.remove("show"); _histSid=null; }
+function saveHistEdit(){
+  const g = (doc.games||[]).find(x=>String(x.sid)===String(_histSid)); if(!g){ closeHistEdit(); return; }
+  const numOrNull = v=>{ const n=parseFloat(v); return isNaN(n)?null:n; };
+  const intOrNull = v=>{ const n=parseInt(v,10); return isNaN(n)?null:n; };
+  g.awayScore = intOrNull($("#heAScore").value);
+  g.homeScore = intOrNull($("#heHScore").value);
+  applyFlipState(g, $("#heFlip").value);
+  g.preGameSwap = !!($("#heSwap") && $("#heSwap").checked);
+  g.hdFav = $("#heHdFav").value==="away"?"away":"home";
+  g.hdVal = numOrNull($("#heHdVal").value);
+  g.totVal = numOrNull($("#heTotVal").value);
+  g.closeOddsAway = numOrNull($("#heCloseA").value);
+  g.closeOddsHome = numOrNull($("#heCloseH").value);
+  g.flipOddsAway = numOrNull($("#heFlipA").value);
+  g.flipOddsHome = numOrNull($("#heFlipH").value);
+  // 依比分+線重算 讓分/大小 結果（與結算同義；相等＝push 不列入過盤/開大統計）
+  if(g.awayScore!=null && g.homeScore!=null){
+    const as=g.awayScore, hs=g.homeScore;
+    if(g.totVal==null){ g.totResult=null; }
+    else { const t=as+hs; g.totResult = t===g.totVal ? "push" : (t>g.totVal?"over":"under"); }
+    if(g.hdVal==null){ g.hdResult=null; }
+    else { const favA=g.hdFav==="away"; const fav=favA?as:hs, und=favA?hs:as, m=fav-und; g.hdResult = m===g.hdVal ? "push" : (m>g.hdVal?"fav_cover":"fav_nocover"); }
+  }
+  bumpGamesVersion(); save();
+  closeHistEdit();
+  if(typeof renderReviewPage==="function"){ try{ renderReviewPage(); }catch(_){} }   // ⑧ 就地重繪→交叉表即時反映
+}
+$("#heCancel") && ($("#heCancel").onclick = closeHistEdit);
+$("#heSave") && ($("#heSave").onclick = saveHistEdit);
+$("#histEdit") && ($("#histEdit").addEventListener("click", e=>{ if(e.target.id==="histEdit") closeHistEdit(); }));
+// ⑧ 全部比賽紀錄：點一列→開歷史編輯（委派，撐過 innerHTML 重繪）
+$("#reviewBody") && $("#reviewBody").addEventListener("click", e=>{
+  const row = e.target.closest("tr[data-hsid]");
+  if(row){ const sid=row.getAttribute("data-hsid"); if(sid) openHistEdit(sid); }
+});
 // 讀「賽前讓分線變動」兩格 → 衍生 縮線(shrink)/放線(grow)/null（縮＝幅度變小，用 abs 比較，正負皆可）
 function readSettleHdMove(it){
   const o=parseFloat($("#settleOpenHd")?.value), c=parseFloat($("#settleCloseHd")?.value);
