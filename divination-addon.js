@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260708a';
+  const V = '20260708b';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -90,8 +90,11 @@
   .dv-stat th:first-child,.dv-stat td:first-child{text-align:left}
   .dv-stat th{color:var(--ink-dim);font-size:13px;font-weight:600;letter-spacing:.04em}
   .dv-stat tr:not(.dv-subrow) td:first-child{font-weight:700;font-size:16px}
-  .dv-stat td:last-child:not(.dv-mask){font-weight:800;font-size:17.5px;color:var(--lit)}
-  .dv-stat tr.dv-subrow td{color:var(--ink-dim)}
+  .dv-stat td.hr-high{font-weight:800;font-size:17.5px;color:var(--lit)}
+  .dv-stat td.hr-mid{font-weight:700;font-size:17px;color:var(--ink)}
+  .dv-stat td.hr-low{font-weight:600;font-size:16.5px;color:var(--ink-dim)}
+  .dv-stat td.hr-none{color:var(--ink-dim)}
+  .dv-stat tr.dv-subrow td:first-child{color:var(--ink-dim)}
   .dv-htabs{display:flex;gap:8px;margin:10px 0 18px;flex-wrap:wrap}
   .dv-htab{padding:9px 20px;border:1px solid var(--line);border-radius:10px;color:var(--ink-dim);cursor:pointer;font-size:15.5px;background:var(--panel)}
   .dv-htab.on{border-color:var(--lit);color:var(--lit);background:var(--panel-2)}
@@ -337,7 +340,8 @@
     let settled = 0, hit = 0;
     casts.forEach(e => { const o = hitOf(e, res[e.officialId]); if (o != null) { settled++; hit += o; } });
     const hr = settled ? (100 * hit / settled).toFixed(1) + '%' : '—';
-    return `<tr><td>${esc(title)}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td>${hr}</td></tr>`;
+    const hrCls = settled ? (hit / settled >= 0.6 ? 'hr-high' : (hit / settled >= 0.5 ? 'hr-mid' : 'hr-low')) : 'hr-none';
+    return `<tr><td>${esc(title)}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td class="${hrCls}">${hr}</td></tr>`;
   }
   // Q3：一個 method 展開為「總＋三市場」四列（獨贏/讓分/大小分開看命中率）
   function statRows(title, casts, res) {
@@ -348,8 +352,9 @@
       let settled = 0, hit = 0;
       arr.forEach(e => { const o = hitOf(e, res[e.officialId]); if (o != null) { settled++; hit += o; } });
       const hr = settled ? (100 * hit / settled).toFixed(1) + '%' : '—';
+      const hrCls = settled ? (hit / settled >= 0.6 ? 'hr-high' : (hit / settled >= 0.5 ? 'hr-mid' : 'hr-low')) : 'hr-none';
       const c = main ? '' : ' class="dv-subrow"';
-      return `<tr${c}><td>${main ? esc(title) : '<span class="dv-subm">' + esc(lbl) + '</span>'}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td>${hr}</td></tr>`;
+      return `<tr${c}><td>${main ? esc(title) : '<span class="dv-subm">' + esc(lbl) + '</span>'}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td class="${hrCls}">${hr}</td></tr>`;
     }).join('');
   }
 
