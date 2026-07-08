@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260708b';
+  const V = '20260709a';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -357,6 +357,32 @@
       return `<tr${c}><td>${main ? esc(title) : '<span class="dv-subm">' + esc(lbl) + '</span>'}</td><td>${n}</td><td>${ab}</td><td>${settled}</td><td>${settled ? hit + '／' + settled : '—'}</td><td class="${hrCls}">${hr}</td></tr>`;
     }).join('');
   }
+  // 共識（多法同讖）命中率：同場同市場，六爻/梅花/求籤中最新卦「≥2 法同向」＝一個共識選向；看多法同讖準不準。
+  function consensusStats(list, res) {
+    const latest = {};
+    list.forEach((e, i) => { const k = e.method + '|' + e.officialId + '|' + e.market; if (!(k in latest)) latest[k] = i; });
+    const bySlot = {};
+    for (const k in latest) { const e = list[latest[k]]; if (e.side == null) continue; const slot = e.officialId + '|' + e.market; (bySlot[slot] = bySlot[slot] || []).push(e); }
+    const mk = () => ({ n: 0, settled: 0, hit: 0 });
+    const out = { all: mk(), market: { 獨贏: mk(), 讓分: mk(), 大小: mk() }, three: mk(), two: mk() };
+    for (const slot in bySlot) {
+      const casts = bySlot[slot];
+      const sideCount = {}; casts.forEach(e => sideCount[e.side] = (sideCount[e.side] || 0) + 1);
+      let side = null, cnt = 0; for (const s in sideCount) { if (sideCount[s] > cnt) { cnt = sideCount[s]; side = s; } }
+      if (cnt < 2) continue;                                    // 少於兩法同向＝無共識
+      const rep = casts.find(e => String(e.side) === String(side));
+      const o = hitOf(rep, res[rep.officialId]);
+      const bump = b => { b.n++; if (o != null) { b.settled++; b.hit += o; } };
+      bump(out.all); bump(out.market[rep.market] || (out.market[rep.market] = mk()));
+      bump(cnt >= 3 ? out.three : out.two);
+    }
+    return out;
+  }
+  function consRow(lbl, b, sub) {
+    const hr = b.settled ? (100 * b.hit / b.settled).toFixed(1) + '%' : '—';
+    const cls = b.settled ? (b.hit / b.settled >= 0.6 ? 'hr-high' : (b.hit / b.settled >= 0.5 ? 'hr-mid' : 'hr-low')) : 'hr-none';
+    return `<tr${sub ? ' class="dv-subrow"' : ''}><td>${sub ? '<span class="dv-subm">└ ' + esc(lbl) + '</span>' : '<b>' + esc(lbl) + '</b>'}</td><td>${b.n}</td><td>${b.settled}</td><td>${b.settled ? b.hit + '／' + b.settled : '—'}</td><td class="${cls}">${hr}</td></tr>`;
+  }
 
   async function renderStats() {
     const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中（即時對 MLB 官方結果結算）…</div></div>';
@@ -366,6 +392,7 @@
     let machine = { n: 0, ab: 0, big: 0, missed: 0 };
     try { const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json(); arr.forEach(e => { if (e.failedAt) return; if (e.market) return; /* v1.3 exploratory 另冊，不入本表 */ if (e.missedWindow) { machine.missed++; return; } machine.n++; if (e.pick == null) machine.ab++; else if (e.pick === '大') machine.big++; }); } catch (e) {}
     const mDec = machine.n - machine.ab, mBig = mDec ? (100 * machine.big / mDec).toFixed(1) + '%' : '—';
+    const cs = consensusStats(list, res);
     box.innerHTML = `<div class="dvp-wrap">
       <div class="dvp-h">興趣統計（人 vs 機器）</div>
       <div class="dvp-note">手動卦是興趣紀錄，不入實驗；此處純為好玩。命中率<b>即時對 MLB 官方結果結算</b>（比賽結束數分鐘內生效，與板上手動結算、爬蟲快照無關）；樣本通常很小，僅供參考。</div>
@@ -375,6 +402,17 @@
         ${statRows('人・求籤', qiu, res)}
         <tr><td>機器・六爻（實驗 L）</td><td>${machine.n}</td><td>${machine.ab}</td><td colspan="3" class="dv-mask">🔒 遮蔽至開盒（協議 §9，2027 季後）</td></tr>
       </tbody></table><div class="dvp-note" style="margin-top:8px">三市場（獨贏／讓分／大小）分開列命中率——手動卦樣本小，各市場再拆更小，看看即可，統計上不可推論。</div></div>
+      <div class="dvp-h" style="font-size:16px">共識（多法同讖）命中率</div>
+      <div class="dvp-note">只算「同場同市場，六爻／梅花／求籤中<b>≥2 法最新卦同向</b>」的共識選向——多法同時指同一邊時，準不準。棄場不算；命中率即時對 MLB 官方結果。</div>
+      <div class="dv-sec"><table class="dv-stat"><thead><tr><th>共識選向</th><th>共識數</th><th>已完賽</th><th>命中</th><th>命中率</th></tr></thead><tbody>
+        ${consRow('全部共識', cs.all)}
+        ${consRow('獨贏', cs.market['獨贏'], true)}
+        ${consRow('讓分', cs.market['讓分'], true)}
+        ${consRow('大小', cs.market['大小'], true)}
+        ${consRow('3 法全同', cs.three)}
+        ${consRow('2 法同', cs.two)}
+      </tbody></table>
+      <div class="dvp-note" style="margin-top:8px">獨立隨機來源就算「同向」也還是隨機——三法同源同引擎、同向約半數機率；共識命中率高<b>不代表</b>有預測力，小樣本尤其別當真。</div></div>
       <div class="dvp-h" style="font-size:16px">押向分布</div>
       <div class="dvp-note">機器六爻押大率 ${mBig}（有表態 ${mDec} 卦${machine.missed ? '；另漏卦 ' + machine.missed + ' 場棄場留痕' : ''}）。理論值：六爻押大約 51.8%、棄場約 12.6%。</div>
       <div class="dvp-note">🔒 <b>機器卦命中率為什麼不顯示？</b>不是故障——凍結協議 §9 明文「命中率對照在分析日前遮蔽」（分析日＝2027 季後）。即時盯命中率會誘發偷看、中途起念改規則，正是當初審核堵掉的漏洞；試車期照樣遮，養成乾淨習慣。手動卦不受此限（本來就不入實驗）。</div>
