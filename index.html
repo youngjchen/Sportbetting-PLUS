@@ -2385,9 +2385,10 @@ function renderCard(it){
       if(side==="give") return favCovered ? "hit" : "miss";
       if(side==="recv") return favCovered ? "miss" : "hit";
     }
-    if(market==="tot"){  // side: "over" | "under"
-      if(s.tot==="push") return "void";
-      return (s.tot===side) ? "hit" : "miss";
+    if(market==="tot"){  // side: "over" | "under" — B：命中用成交線 myTot（歷史無→市場 tot）
+      const st = (s.myTot!=null) ? s.myTot : s.tot;
+      if(st==="push") return "void";
+      return (st===side) ? "hit" : "miss";
     }
     return null;
   }
@@ -2800,7 +2801,7 @@ function renderCardB(it){
     const out=(market,side)=>{
       if(market==="ml"){ if(s.ml==="tie") return "void"; return s.ml===side?"hit":"miss"; }
       if(market==="hd"){ const cov=(s.hd==="cover"); return side==="give"?(cov?"hit":"miss"):(cov?"miss":"hit"); }
-      if(market==="tot"){ if(s.tot==="push") return "void"; return s.tot===side?"hit":"miss"; }
+      if(market==="tot"){ const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="push") return "void"; return st===side?"hit":"miss"; }
       return null;
     };
     const mark=o=> o==="hit"?"✓":(o==="miss"?"✗":"－");
@@ -2897,10 +2898,10 @@ function todayHitRate(){
       if(it.hdRecv.lights>=3){ r.any++; (cov?r.hd.miss++:r.hd.hit++); }
     }
     // 大小（push 不列入）
-    if(s.tot==="over"||s.tot==="under"){
-      if(it.over.lights>=3){ r.any++; (s.tot==="over"?r.tot.hit++:r.tot.miss++); }
-      if(it.under.lights>=3){ r.any++; (s.tot==="under"?r.tot.hit++:r.tot.miss++); }
-    }
+    { const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="over"||st==="under"){   // B：命中用成交線 myTot
+      if(it.over.lights>=3){ r.any++; (st==="over"?r.tot.hit++:r.tot.miss++); }
+      if(it.under.lights>=3){ r.any++; (st==="under"?r.tot.hit++:r.tot.miss++); }
+    } }
   });
   return r;
 }
@@ -4430,7 +4431,7 @@ function collectPicks(scope, leagueFilter, marketFilter){
                       ? (g.awayScore>g.homeScore?"away":(g.homeScore>g.awayScore?"home":"tie"))
                       : null);
     const favCovered = (g.hdResult==="fav_cover");
-    const totRes = g.totResult; // "over"|"under"|"push"
+    const totRes = (g.myTotResult!=null) ? g.myTotResult : g.totResult; // B：命中用成交線 myTotResult 優先，歷史無→市場 totResult（收盤）
 
     // ---- conflict detection (mirror the card's logic) ----
     // same-zone conflict: both sides of one market were lit -> no clear judgement, exclude that market.
@@ -5815,6 +5816,11 @@ function openSettleModal(it){
       <span style="color:var(--ink-dim);">→</span>
       <input id="settleCloseHd" type="number" inputmode="decimal" step="0.5" placeholder="收盤" style="width:62px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.closeHdLine!=null?it.closeHdLine:""}">
     </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
+      <span style="color:var(--ink-dim);">我的大小成交線（與市場基準不同才填）</span>
+      <input id="settleMyTotLine" type="number" inputmode="decimal" step="0.5" placeholder="如 7.5" style="width:70px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotLine!=null?it.myTotLine:""}">
+      <span style="color:var(--ink-dim);font-size:11px;">命中率／燈號用此線判；市場大小過盤率仍用上方「基準」（收盤線）</span>
+    </div>
   `;
   body.appendChild(flipWrap);
   // 即時判讀：盤口隱含、市場方向、模型差距、ERA 驗證
@@ -6024,6 +6030,8 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
   if(_hv!==undefined) it.hdVal = (_hv==="" ? "" : _hv);
   if(_tv!==undefined) it.totVal = (_tv==="" ? "" : _tv);
+  const _mtl0 = $("#settleMyTotLine")?.value;   // B：暫存也記我的大小成交線
+  if(_mtl0!==undefined) it.myTotLine = (_mtl0==="" || isNaN(parseFloat(_mtl0))) ? null : parseFloat(_mtl0);
   const _sea = parseFloat($("#settleEraAway")?.value), _seh = parseFloat($("#settleEraHome")?.value);
   it.eraAway = isNaN(_sea) ? null : _sea;
   it.eraHome = isNaN(_seh) ? null : _seh;
@@ -6056,6 +6064,19 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   if(!picks.ml){ alert("請選擇獨贏結果（含「和」）。"); return; }
   if(!picks.hd){ alert("請選擇讓分結果。"); return; }
   if(!picks.tot){ alert("請選擇大小分結果。"); return; }
+  // B：我的大小成交線 → picks.myTot（個人命中／燈號用）；未填或＝市場基準 → 同市場結果 picks.tot。市場大小過盤(totResult)不受影響。
+  {
+    const _mtl = $("#settleMyTotLine")?.value;
+    const mtl = (_mtl==="" || _mtl==null || isNaN(parseFloat(_mtl))) ? null : parseFloat(_mtl);
+    it.myTotLine = mtl;
+    const mkBasis = parseFloat(it.totVal);
+    if(mtl!=null && mtl!==mkBasis){
+      const tr = picks.awayScore + picks.homeScore;
+      picks.myTot = (tr!==mtl) ? (tr>mtl?"over":"under") : picks.tot;   // 總分壓在成交線上＝比照市場
+    } else {
+      picks.myTot = picks.tot;
+    }
+  }
   // 顛倒場狀態：讀下拉、反寫卡片(維持卡片按鈕/標籤同步)
   applyFlipState(it, ($("#settleFlipState") && $("#settleFlipState").value) || "none");
   picks.flipState = it.flipState; picks.platformFlip = it.platformFlip;
@@ -6161,6 +6182,8 @@ function applySettlement(it, picks, delta){
     hdFav: it.hdFav,
     hdVal: (function(){ const v = parseFloat(it.hdVal); return isNaN(v) ? null : v; })(),
     totVal: (function(){ const v = parseFloat(it.totVal); return isNaN(v) ? null : v; })(),
+    myTotLine: (function(){ const v = parseFloat(it.myTotLine); return isNaN(v) ? null : v; })(),   // B：我的大小成交線（市場基準 totVal 不變）
+    myTotResult: (picks.myTot || totResult),   // B：成交線結果（命中／燈號用）；未填成交線或歷史場 → =市場 totResult，不汙染
     eraAway: (it.eraAway!=null && !isNaN(it.eraAway)) ? it.eraAway : null,
     eraHome: (it.eraHome!=null && !isNaN(it.eraHome)) ? it.eraHome : null,
     hdResult,
