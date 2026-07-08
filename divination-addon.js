@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260707c';
+  const V = '20260708a';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -85,10 +85,16 @@
   .dv-item .dv-sub{color:var(--ink-dim);font-size:13px;margin-top:3px}
   .dv-empty{color:var(--ink-dim);text-align:center;padding:36px 0;font-size:15px;line-height:1.8}
   .dv-danger{background:none;border:1px solid #6b3a3a;color:#c98;border-radius:10px;padding:9px 16px;cursor:pointer;font-size:13.5px;margin-top:16px}
-  .dv-stat{width:100%;border-collapse:collapse;font-size:15px;margin:4px 0 10px;color:var(--ink)}
-  .dv-stat th,.dv-stat td{padding:9px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
+  .dv-stat{width:100%;border-collapse:collapse;font-size:16.5px;margin:4px 0 12px;color:var(--ink)}
+  .dv-stat th,.dv-stat td{padding:11px 12px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}
   .dv-stat th:first-child,.dv-stat td:first-child{text-align:left}
-  .dv-stat th{color:var(--ink-dim);font-size:12.5px;font-weight:600;letter-spacing:.04em}
+  .dv-stat th{color:var(--ink-dim);font-size:13px;font-weight:600;letter-spacing:.04em}
+  .dv-stat tr:not(.dv-subrow) td:first-child{font-weight:700;font-size:16px}
+  .dv-stat td:last-child:not(.dv-mask){font-weight:800;font-size:17.5px;color:var(--lit)}
+  .dv-stat tr.dv-subrow td{color:var(--ink-dim)}
+  .dv-htabs{display:flex;gap:8px;margin:10px 0 18px;flex-wrap:wrap}
+  .dv-htab{padding:9px 20px;border:1px solid var(--line);border-radius:10px;color:var(--ink-dim);cursor:pointer;font-size:15.5px;background:var(--panel)}
+  .dv-htab.on{border-color:var(--lit);color:var(--lit);background:var(--panel-2)}
   .dv-sec{margin:0 0 30px}
   .dv-gt{width:100%;border-collapse:collapse;font-size:15.5px;color:var(--ink);min-width:560px}
   .dv-gt th{color:var(--ink-dim);font-size:12.5px;font-weight:600;text-align:left;padding:8px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
@@ -416,8 +422,15 @@
     };
     box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">手動卦紀錄</div>
       <div class="dvp-note">一場一排、市場固定序（獨贏／讓分／大小分），最新比賽在上；格內為該市場「最新」一卦，×N＝重複起卦次數。<span class="dv-gold">金字＝多法同讖</span>（六爻／梅花／求籤任兩法以上最新卦同向；趣味標記，獨立隨機同向約半數機率）；✓✗＝已完賽命中結果。點比賽列展開每一筆卦的詳解與單筆刪除。</div>
-      ${section('六爻', '六爻搖卦')}${section('梅花', '梅花起卦')}${section('求籤', '求籤（六十甲子）')}
+      <div class="dv-htabs"><span class="dv-htab on" data-m="六爻">六爻搖卦</span><span class="dv-htab" data-m="梅花">梅花起卦</span><span class="dv-htab" data-m="求籤">求籤</span></div>
+      <div class="dv-hsec" data-m="六爻">${section('六爻', '六爻搖卦')}</div>
+      <div class="dv-hsec" data-m="梅花" style="display:none">${section('梅花', '梅花起卦')}</div>
+      <div class="dv-hsec" data-m="求籤" style="display:none">${section('求籤', '求籤（六十甲子）')}</div>
       ${list.length ? '<button class="dv-danger" id="dv-clear">清空所有手動紀錄</button>' : ''}</div>`;
+    box.querySelectorAll('.dv-htab').forEach(t => t.onclick = () => {
+      box.querySelectorAll('.dv-htab').forEach(x => x.classList.toggle('on', x === t));
+      box.querySelectorAll('.dv-hsec').forEach(s => s.style.display = (s.dataset.m === t.dataset.m) ? '' : 'none');
+    });
     const c = document.getElementById('dv-clear'); if (c) c.onclick = () => { if (confirm('清空所有手動卦紀錄？')) { localStorage.removeItem(LS_KEY); renderHist(); } };
     box.querySelectorAll('.dv-grow').forEach(tr => tr.onclick = () => {
       const det = tr.nextElementSibling;
