@@ -5070,31 +5070,44 @@ function renderC1Tracker(leagueF){
   return `<div class="rv-section"><div class="rv-head">⓪c 神刻奇門 C1</div><div style="padding:8px;font-size:12px;color:#ff5d5d">C1 區塊發生錯誤（已隔離，不影響其他區）：${(e&&e.message)||e}</div></div>`;
  }
 }
-// 異常指標統計（乾淨前瞻，flipState 場）。專業設計：三個異常都是「正交的二元屬性」，不是互斥類別——
-// 故不做重疊分類行，改兩層：(A)每個異常「有 vs 無」互補對比（可歸因單一維度）；(B)異常數 0-3 疊加分層（劑量反應，看疊加是否放大偏離）。
+// 異常組合統計（乾淨前瞻，flipState 場）。主軸互斥三態(顛倒/收斂/皆非)，每組再拆對調×背離組合，
+// 各給三市場命中率。正常場(皆非且無異常)=基準、不列入表。背離用「收盤→下注」後備鏈+0.10緩衝。
 function collectCrossTab(leagueFilter){
   const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&g.flipState&&g.awayScore!=null&&g.homeScore!=null);
-  const flip = g => g.flipState==="flipped";                                     // 收盤仍顛倒（台美讓分方相反）
-  const swap = g => !!g.preGameSwap;                                             // 賽前讓分方曾對調
-  const hasOdds = g => g.closeOddsAway!=null && g.closeOddsHome!=null;
-  const diverge = g => hasOdds(g) && ((g.closeOddsAway<g.closeOddsHome?"away":"home")!==g.hdFav); // STAKE收盤低賠方≠台彩讓分方
+  const flip = g => g.flipState==="flipped";
+  const conv = g => /^converged/.test(g.flipState);
+  const swap = g => !!g.preGameSwap;
+  const divOf = g => {                                                            // 是/否/null(不可判)
+    let a,b;
+    if(g.closeOddsAway!=null&&g.closeOddsHome!=null){a=g.closeOddsAway;b=g.closeOddsHome;}
+    else if(g.flipOddsAway!=null&&g.flipOddsHome!=null){a=g.flipOddsAway;b=g.flipOddsHome;}
+    else return null;
+    if(Math.abs(a-b)<0.10) return null;                                           // 無明確熱門→不可判
+    return (a<b?"away":"home")!==g.hdFav;
+  };
+  const dv = g => divOf(g)===true;
   const B = ()=>({n:0,hw:0,hwN:0,cov:0,covN:0,ov:0,ovN:0,games:[]});
   const acc = (o,g)=>{ o.n++;
-    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),sw:swap(g),dv:hasOdds(g)?diverge(g):null});
+    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g)});
     if(g.awayScore!==g.homeScore){o.hwN++; if(g.homeScore>g.awayScore)o.hw++;}                 // 主勝
-    if(g.hdResult==="fav_cover"){o.covN++;o.cov++;} else if(g.hdResult==="fav_nocover")o.covN++; // 台彩讓分方過盤
+    if(g.hdResult==="fav_cover"){o.covN++;o.cov++;} else if(g.hdResult==="fav_nocover")o.covN++; // 讓分方過盤
     if(g.totResult==="over"){o.ovN++;o.ov++;} else if(g.totResult==="under")o.ovN++;            // 開大
   };
-  const dim = { flip:{y:B(),n:B()}, swap:{y:B(),n:B()}, diverge:{y:B(),n:B(),unk:0} };          // (A)三異常 有/無 互補
-  const cnt = [B(),B(),B(),B()];                                                                 // (B)異常數 0/1/2/3
+  const mk = ()=>({ solo:B(), swap:B(), div:B(), both:B(), all:B() });
+  const grp = { flip:mk(), conv:mk() };
+  const other = { swapOnly:B(), divOnly:B(), bothOD:B() };
   for(const g of gs){
-    acc(flip(g)?dim.flip.y:dim.flip.n, g);
-    acc(swap(g)?dim.swap.y:dim.swap.n, g);
-    if(hasOdds(g)) acc(diverge(g)?dim.diverge.y:dim.diverge.n, g); else dim.diverge.unk++;       // 背離僅有賠率場可判
-    let c=0; if(flip(g))c++; if(swap(g))c++; if(hasOdds(g)&&diverge(g))c++;
-    acc(cnt[c], g);
+    const s=swap(g), d=dv(g);
+    if(flip(g)||conv(g)){
+      const G = flip(g) ? grp.flip : grp.conv;
+      acc(G.all, g);
+      if(s&&d) acc(G.both,g); else if(s) acc(G.swap,g); else if(d) acc(G.div,g); else acc(G.solo,g);
+    } else {
+      if(s&&d) acc(other.bothOD,g); else if(s) acc(other.swapOnly,g); else if(d) acc(other.divOnly,g);
+      // 全正常(!s&&!d)=基準，不列入表
+    }
   }
-  return {dim, cnt, total:gs.length};
+  return { grp, other, total:gs.length };
 }
 function renderReviewPage(){
   const body = $("#reviewBody"); if(!body) return;
@@ -5129,41 +5142,49 @@ function renderReviewPage(){
   }
   html += `</div></div>`;
 
-  // ---- ◆ 異常指標統計（乾淨前瞻，與下方 ⑤⑥ 並行）----
+  // ---- ◆ 異常組合統計（三組 × 組合 × 三市場，無基準）----
   {
     const ct = collectCrossTab(leagueF);
-    const info = rvInfo("三個異常指標各自是「有／沒有」的二元屬性、彼此正交（可同時或單獨出現），不是互斥類別——所以不做重疊分類行。<br><b>顛倒</b>＝收盤台美讓分方仍相反；<b>賽前對調</b>＝賽前讓分方換過邊；<b>背離</b>＝STAKE 收盤低賠方≠讓分方（僅有填賠率的場可判）。<br><b>表一</b>：每個異常「有 vs 無」互補對比（兩列相加＝總數），這樣才能乾淨歸因是「哪一個異常」帶來偏差、而非被重疊污染。<br><b>表二</b>：把每場同時出現幾個異常（0～3）分層，看異常疊加是否放大對基準的偏離（劑量反應）——這是「多種異常同時出現」的正解，不是把它們硬塞同一格。<br>基準：主勝≈53%、讓分方過盤≈40%、開大≈50%。任何格 <30 場都是雜訊。用 flipState 乾淨鍵，與下方 ⑤⑥ 舊布林鍵數字本就不同。點每行展開明細（標註各場帶哪些異常）。");
+    const info = rvInfo("只統計<b>異常場</b>，正常場（無任何異常）不列、只當背景基準。<br><b>顛倒</b>＝收盤台美讓分方仍相反；<b>收斂</b>＝曾相反、收盤貼回一致；<b>對調</b>＝賽前讓分方換過邊；<b>背離</b>＝STAKE 收盤低賠方≠讓分方（缺收盤賠率時改用下注賠率；賠率差&lt;0.10 無明確熱門則不列入背離）。<br>顛倒／收斂各自再拆「單獨／＋對調／＋背離／＋兩者」，每格給三市場命中率（分子/分母）。<b>點任一列</b>看該格逐場明細。<br>任何格 &lt;30 場都是雜訊，僅供觀察。");
     const pc = (x,n)=> n?Math.round(100*x/n)+"%":"—";
-    html += `<div class="rv-section"><div class="rv-head">◆ 異常指標統計 <span class="rv-sub">顛倒／對調／背離，乾淨前瞻</span>${info.icon}</div>${info.pop}`;
+    html += `<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">顛倒／收斂／其他異常 × 三市場</span>${info.icon}</div>${info.pop}`;
     if(!ct.total){
-      html += `<div class="rv-empty">尚無 flipState 標記的結算場。從今起每在結算視窗設定「顛倒場狀態」的場就乾淨累積；舊資料走下方 ⑤⑥。</div>`;
+      html += `<div class="rv-empty">尚無 flipState 標記的結算場。每在結算視窗設「顛倒場狀態」就會累積。</div>`;
     } else {
-      const tag = g => [g.fl?"顛倒":"",g.sw?"對調":"",g.dv===true?"背離":""].filter(Boolean).join("·")||"無異常";
       const roleFn = g=>{
-        const hd=g.hdResult==="fav_cover"?`<span class="dr-hit">讓分方過</span>`:g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`:"—";
+        const hw=g.aScore===g.hScore?"和":(g.hScore>g.aScore?"<b>主勝</b>":"客勝");
+        const hd=g.hdResult==="fav_cover"?`<span class="dr-hit">過盤</span>`:g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`:"—";
         const tt=g.totResult==="over"?"大":g.totResult==="under"?"小":"—";
-        return `${hd}・${tt}・<b>${tag(g)}</b>`;
+        const dv=g.dv===true?"背離":g.dv===false?"":"背離?";
+        return `${hw}・讓分${hd}・開${tt}${dv?`・<span style="color:var(--ink-dim)">${dv}</span>`:""}`;
       };
-      const R=(lbl,o,sub)=>{
+      const ROW=(lbl,o)=>{
+        if(!o.n) return `<tr class="rv-row"><td class="lbl" style="color:var(--ink-dim)">${lbl}</td><td>0</td><td>—</td><td>—</td><td>—</td></tr>`;
         const det=drillBlock(o.games, roleFn);
-        html += `<tr class="rv-row drill-toggle"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
-          `<td class="lbl">${lbl}${sub?`<div class="rv-sub" style="font-weight:400;margin-top:1px">${sub}</div>`:""}</td>`+
-          `<td>${o.n}</td><td>${pc(o.hw,o.hwN)} <span class="rv-samp">${o.hw}/${o.hwN}</span></td>`+
+        let h=`<tr class="rv-row drill-toggle"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
+          `<td class="lbl">${lbl}</td><td>${o.n}</td>`+
+          `<td>${pc(o.hw,o.hwN)} <span class="rv-samp">${o.hw}/${o.hwN}</span></td>`+
           `<td>${pc(o.cov,o.covN)} <span class="rv-samp">${o.cov}/${o.covN}</span></td>`+
           `<td>${pc(o.ov,o.ovN)} <span class="rv-samp">${o.ov}/${o.ovN}</span></td></tr>`;
-        if(det.id) html += `<tr class="drill-tr"><td colspan="5" style="padding:0">${det.html}</td></tr>`;
+        if(det.id) h+=`<tr class="drill-tr"><td colspan="5" style="padding:0">${det.html}</td></tr>`;
+        return h;
       };
-      html += `<div class="rv-head" style="font-size:14px;margin-top:4px">表一　各異常「有 vs 無」對比</div>`;
-      html += `<table class="rv-table"><thead><tr><th class="lbl">指標</th><th>場數</th><th>主勝</th><th>讓分方過盤</th><th>開大</th></tr></thead><tbody>`;
-      R("顛倒 · 有",ct.dim.flip.y); R("顛倒 · 無",ct.dim.flip.n);
-      R("對調 · 有",ct.dim.swap.y); R("對調 · 無",ct.dim.swap.n);
-      R("背離 · 有",ct.dim.diverge.y); R("背離 · 無",ct.dim.diverge.n);
-      html += `</tbody></table>`;
-      if(ct.dim.diverge.unk) html += `<div style="font-size:11px;color:var(--ink-dim);margin:2px 0 10px">另有 ${ct.dim.diverge.unk} 場未填 STAKE 收盤獨贏賠率、背離無法判定，未列入背離對比。</div>`;
-      html += `<div class="rv-head" style="font-size:14px;margin-top:14px">表二　同時幾個異常（疊加）</div>`;
-      html += `<table class="rv-table"><thead><tr><th class="lbl">異常數</th><th>場數</th><th>主勝</th><th>讓分方過盤</th><th>開大</th></tr></thead><tbody>`;
-      R("0 個（乾淨）",ct.cnt[0]); R("1 個",ct.cnt[1]); R("2 個",ct.cnt[2]); R("3 個（全中）",ct.cnt[3]);
-      html += `</tbody></table>`;
+      const groupTbl=(name,G)=>{
+        const a=G.all;
+        let h=`<div class="rv-head" style="font-size:14px;margin-top:14px">${name}　<span class="rv-sub">${a.n} 場　主勝 ${pc(a.hw,a.hwN)}・讓分過盤 ${pc(a.cov,a.covN)}・開大 ${pc(a.ov,a.ovN)}</span></div>`;
+        h+=`<table class="rv-table"><thead><tr><th class="lbl">組合</th><th>場數</th><th>主勝</th><th>讓分過盤</th><th>開大</th></tr></thead><tbody>`;
+        h+=ROW("單獨",G.solo)+ROW("＋對調",G.swap)+ROW("＋背離",G.div)+ROW("＋對調＋背離",G.both);
+        return h+`</tbody></table>`;
+      };
+      html += groupTbl("顛倒", ct.grp.flip);
+      html += groupTbl("收斂", ct.grp.conv);
+      const o=ct.other;
+      if(o.swapOnly.n||o.divOnly.n||o.bothOD.n){
+        html += `<div class="rv-head" style="font-size:14px;margin-top:14px">其他異常　<span class="rv-sub">非顛倒非收斂，但有對調或背離</span></div>`;
+        html += `<table class="rv-table"><thead><tr><th class="lbl">組合</th><th>場數</th><th>主勝</th><th>讓分過盤</th><th>開大</th></tr></thead><tbody>`;
+        html += ROW("只對調",o.swapOnly)+ROW("只背離",o.divOnly)+ROW("對調＋背離",o.bothOD);
+        html += `</tbody></table>`;
+      }
     }
     html += `</div>`;
   }
