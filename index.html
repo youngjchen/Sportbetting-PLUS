@@ -6056,8 +6056,8 @@ function collectFlipBackfill(){
     !cardExists(g) &&
     (!g.flipState || (g.flipState==="none" && g.preGameSwap))
   ).sort((a,b)=>{
-    // 疑似漏標（標 none 卻有對調）排最前，其餘依日期
-    const ma=(a.flipState==="none"&&a.preGameSwap)?0:1, mb=(b.flipState==="none"&&b.preGameSwap)?0:1;
+    // 有點過「曾對調」的（疑漏顛倒狀態，同 6/28）排最前，其餘依日期
+    const ma=a.preGameSwap?0:1, mb=b.preGameSwap?0:1;
     if(ma!==mb) return ma-mb;
     return a.date<b.date?-1:a.date>b.date?1:0;
   });
@@ -6070,12 +6070,13 @@ function renderFlipBackfill(){
   list.innerHTML = games.map(g=>{
     const favTeam = g.hdFav==="away" ? g.awayTeam : g.homeTeam;
     const cur = g.flipState || "";
-    const isSwapNone = (g.flipState==="none" && g.preGameSwap);
-    const flag = !g.flipState
-      ? `<span style="color:var(--ink-dim);font-size:11px;">尚未設定</span>`
-      : (isSwapNone ? `<span style="color:#e0a020;font-size:11px;">⚠ 標無顛倒卻有對調</span>` : "");
+    const flag = (!g.flipState && g.preGameSwap)
+      ? `<span style="color:#e0a020;font-size:11px;">⚠ 有對調、缺顛倒狀態</span>`
+      : (!g.flipState
+        ? `<span style="color:var(--ink-dim);font-size:11px;">尚未設定</span>`
+        : ((g.flipState==="none" && g.preGameSwap) ? `<span style="color:#e0a020;font-size:11px;">⚠ 標無顛倒卻有對調</span>` : ""));
     const opts = FLIP_BF_OPTS.map(([v,l])=>`<option value="${v}"${cur===v?" selected":""}>${esc(l)}</option>`).join("");
-    const okBtn = isSwapNone ? `<button class="fb-ok" data-sid="${esc(String(g.sid||""))}" style="margin-left:8px;font-size:11px;padding:3px 8px;background:transparent;border:1px solid var(--line);border-radius:5px;color:var(--ink-dim);cursor:pointer;">✓ 確認無顛倒、不再提醒</button>` : "";
+    const okBtn = g.preGameSwap ? `<button class="fb-ok" data-sid="${esc(String(g.sid||""))}" style="margin-left:8px;font-size:11px;padding:3px 8px;background:transparent;border:1px solid var(--line);border-radius:5px;color:var(--ink-dim);cursor:pointer;">✓ 確認無顛倒、不再提醒</button>` : "";
     return `<div class="fb-row" style="padding:8px 6px;border-bottom:1px solid var(--line);">
       <div style="font-size:13px;margin-bottom:5px;">
         <b>${esc(g.date)}</b> ${esc((g.league||"").toUpperCase())}　${esc(g.awayTeam)} ${g.awayScore}-${g.homeScore} ${esc(g.homeTeam)}
