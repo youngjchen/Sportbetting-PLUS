@@ -227,18 +227,41 @@
       var lineLine = lineBits.length
         ? ('運彩盤口：' + lineBits.join('／') + '（已帶入，台彩盤口非 STAKE，可改）')
         : '運彩盤口：賽前未抓到';
-      var flipColor = flip.state === 'flip' ? '#ffb02e' : '#8aa0b4';
-
       var el = document.createElement('div');
       el.className = 'ps-banner';
-      el.style.cssText = 'background:#13202c;border:1px solid #214055;border-left:3px solid #3aa0ff;border-radius:8px;padding:9px 11px;margin-bottom:12px;font-size:12.5px;line-height:1.75;color:#cfe3f2;';
-      el.innerHTML =
-        '<div style="font-weight:700;color:#7ec3ff;margin-bottom:2px;">玩運彩 ' + norm(g.date) + '（' + statusTxt + '）　藍框=自動填，可改</div>'
-        + '<div>' + scoreLine + '</div>'
-        + '<div>' + eraLine + '</div>'
-        + '<div>' + lineLine + '</div>'
-        + '<div style="margin-top:2px;">顛倒判定：<b style="color:' + flipColor + ';">' + flip.text + '</b>'
-        + (flip.state === 'flip' ? '　<span style="color:#8aa0b4;">（勾選由你決定）</span>' : '') + '</div>';
+      el.style.cssText = 'margin-bottom:12px;';
+
+      // 疑顛倒 → 唯一需要「第一眼看到」的警示：紅色膠囊，其餘狀態不干擾版面
+      var warnHtml = '';
+      if (flip.state === 'flip') {
+        warnHtml =
+          '<div title="' + esc(flip.text) + '" style="display:flex;align-items:center;gap:8px;'
+          + 'background:rgba(255,107,107,.12);border:1px solid rgba(255,107,107,.55);border-radius:8px;'
+          + 'padding:8px 11px;margin-bottom:10px;font-size:13px;font-weight:700;color:#ff8a8a;">'
+          + '<span>⚠ 疑顛倒場</span>'
+          + '<span style="font-weight:400;color:#d3a3a3;">運彩讓分方與你相反 · 勾選由你決定</span>'
+          + '</div>';
+      }
+
+      // 自動帶入的明細＝確認性資訊，收進可摺疊 <details>，預設收合，不再霸佔版面頂端
+      var flipDetail = (flip.state === 'flip')
+        ? ''                                                          // 已在上方膠囊呈現
+        : '<div>顛倒判定：' + esc(flip.text) + '</div>';
+      var foldHtml =
+        '<details class="ps-fold" style="font-size:12px;color:#8aa0b4;">'
+        + '<summary style="cursor:pointer;color:#7c93a8;list-style:disclosure-closed;">'
+        +   '玩運彩 ' + norm(g.date) + '（' + statusTxt + '）· 已自動帶入，點看說明'
+        + '</summary>'
+        + '<div style="margin-top:6px;line-height:1.75;padding-left:2px;">'
+        +   '<div>藍框＝自動填入的值，可直接改</div>'
+        +   '<div>' + scoreLine + '</div>'
+        +   '<div>' + eraLine + '</div>'
+        +   '<div>' + lineLine + '</div>'
+        +   flipDetail
+        + '</div>'
+        + '</details>';
+
+      el.innerHTML = warnHtml + foldHtml;
       body.insertBefore(el, body.firstChild);
     }
 
