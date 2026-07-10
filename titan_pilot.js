@@ -37,7 +37,11 @@ function loadLeagueTeams() {
   if (!m) throw new Error('index.js 中找不到 LEAGUE_TEAMS');
   const sb = {}; vm.createContext(sb);
   vm.runInContext('T=' + m[1], sb);
-  return sb.T;
+  const T = sb.T;
+  // 玩運彩頁面短名補充（extractTwoTeams 用正向包含，index.js 字典缺這些頁面寫法）
+  const extra = { kbo: { 'LG雙子': ['雙子'], 'NC恐龍': ['恐龍'], 'SSG登陸者': ['登陸者'], 'KT巫師': ['巫師'], '韓華鷹': ['華老鷹'], '培證英雄': ['英雄'] } };
+  for (const lg of Object.keys(extra)) for (const std of Object.keys(extra[lg])) if (T[lg] && T[lg][std]) T[lg][std].push(...extra[lg][std]);
+  return T;
 }
 function resolveName(teams, league, titanName) {
   const dict = teams[league]; if (!dict || !titanName) return null;
@@ -319,11 +323,362 @@ function stageLabel() {
   console.log(rep.join('\n'));
 }
 
+// ============================================================================
+// v2 修正（2026-07-11）：pregame feed 的 lotteryHandicap 實測為「開盤一次性快照」
+// （287/287 場零變動、距開賽中位 16.2h）→ 不可當台彩收盤。
+// 台彩收盤權威源改為玩運彩「賽事結果頁」(playsport.cc/gamesData/result)，
+// 判定改端點代數：intl 開/收（bet365 序列）× 台彩 開（feed 首值）/收（playsport）。
+// ============================================================================
+const PS_HEADERS = { 'User-Agent': HEADERS['User-Agent'], 'Referer': 'https://www.playsport.cc/', 'Accept-Language': 'zh-TW,zh;q=0.9' };
+const PS_URL = (aid, ymd) => `https://www.playsport.cc/gamesData/result?allianceid=${aid}&gametime=${ymd}`;
+const psGap = () => sleep(4000 + Math.floor(Math.random() * 3000));
+
+// 每場=兩個 tr[gameid]，但隊名擠在同一個 td-teaminfo（含比分「7 V.S. 1 海盜 國民」）
+// → 用「位置序」抽兩個已知隊名（同 playsport_totals.js 法）；讓分格全文自帶「客-1.5, 1.75」
+// → 方向直接讀 客/主 前綴，不賭列序。
+function extractTwoTeams(teams, league, text) {
+  const dict = teams[league]; if (!dict) return [null, null];
+  const found = [];
+  for (const std of Object.keys(dict)) {
+    let best = -1;
+    for (const alias of dict[std]) { const i = text.indexOf(alias); if (i >= 0 && (best < 0 || i < best)) best = i; }
+    if (best >= 0) found.push([best, std]);
+  }
+  found.sort((a, b) => a[0] - b[0]);
+  return [found[0] && found[0][1], found[1] && found[1][1]];
+}
+function parsePsDay(html, league, teams) {
+  const cheerio = require('cheerio');
+  const $ = cheerio.load(html);
+  const byGame = {};
+  $('table.gamedata-results tr[gameid]').each((i, tr) => { const $tr = $(tr); const gid = $tr.attr('gameid'); if (gid) (byGame[gid] = byGame[gid] || []).push($tr); });
+  const out = [];
+  for (const gid in byGame) {
+    const rows = byGame[gid];
+    let time = '', tot = null, hdAway = null, teamText = '';
+    rows.forEach(($tr) => {
+      const t = $tr.find('td.td-gameinfo h4').first().text().trim();
+      if (t && !time) { const m = /(AM|PM)?\s*(\d{1,2}):(\d{2})/i.exec(t); if (m) { let h = +m[2]; const ap = (m[1] || '').toUpperCase(); if (ap === 'PM' && h < 12) h += 12; if (ap === 'AM' && h === 12) h = 0; time = `${String(h).padStart(2, '0')}:${m[3]}`; } }
+      teamText += ' ' + $tr.find('td.td-teaminfo').text().replace(/\s+/g, ' ').trim();
+      const tv = $tr.find('td.td-bank-bet02 .data-wrap > strong').first().text().trim(); if (tv && tot == null) tot = tv;
+      if (hdAway == null) {
+        const cellTxt = $tr.find('td.td-bank-bet01').text().replace(/\s+/g, '');
+        const hm = /([客主])(受讓)?([+-]?\d+(?:\.\d+)?)/.exec(cellTxt);
+        if (hm) { let v = parseFloat(hm[3]); if (hm[2]) v = Math.abs(v); /* 受讓=拿分,對客=正 */ if (hm[1] === '主') v = -v; hdAway = v; }
+      }
+    });
+    const [away, home] = extractTwoTeams(teams, league, teamText);
+    if (!away || !home || away === home) continue;
+    const sm = /(\d+)\s*V\.?S\.?\s*(\d+)/i.exec(teamText);            // 「7 V.S. 1」＝客分 V.S. 主分（客列在前）
+    out.push({ league, away, home, time, totLine: tot != null ? parseFloat(tot) : null, hdAwayLine: (hdAway != null && !isNaN(hdAway)) ? hdAway : null,
+      awayScore: sm ? parseInt(sm[1], 10) : null, homeScore: sm ? parseInt(sm[2], 10) : null });
+  }
+  return out;
+}
+
+async function stagePsProbe() {
+  const teams = loadLeagueTeams();
+  for (let aid = 1; aid <= 12; aid++) {
+    try {
+      const r = await axios.get(PS_URL(aid, '20260705'), { headers: PS_HEADERS, timeout: 20000, validateStatus: () => true });
+      if (r.status !== 200) { console.log(`aid=${aid} HTTP ${r.status}`); await psGap(); continue; }
+      const hits = {};
+      for (const lg of ['mlb', 'npb', 'kbo', 'cpbl']) hits[lg] = parsePsDay(r.data, lg, teams).length;
+      console.log(`aid=${aid} 解析場數:`, JSON.stringify(hits));
+    } catch (e) { console.log(`aid=${aid} ERR ${e.message}`); }
+    await psGap();
+  }
+}
+
+async function stagePsClose() {
+  const teams = loadLeagueTeams();
+  const AIDS = JSON.parse(process.env.PS_AIDS || '{"mlb":1}');   // 探測後由環境變數傳入
+  const { matches } = R('matches.json');
+  const days = [...new Set(matches.map(m => m.date))].sort();
+  const store = {};
+  for (const d of days) {
+    const ymd = d.replace(/-/g, '');
+    for (const [lg, aid] of Object.entries(AIDS)) {
+      const cacheF = path.join(CACHE, `ps_${aid}_${ymd}.html`);
+      let html;
+      if (fs.existsSync(cacheF) && fs.statSync(cacheF).size > 500) html = fs.readFileSync(cacheF, 'utf8');
+      else {
+        try { const r = await axios.get(PS_URL(aid, ymd), { headers: PS_HEADERS, timeout: 20000 }); html = r.data; fs.writeFileSync(cacheF, html); }
+        catch (e) { console.log(`  ❌ ${lg} ${d}: ${e.message}`); continue; }
+        await psGap();
+      }
+      for (const g of parsePsDay(html, lg, teams)) store[`${lg}|${d}|${g.away}|${g.home}`] = g;
+    }
+    console.log(`  ${d} 累計 ${Object.keys(store).length} 場`);
+  }
+  J('ps_close.json', store);
+  console.log(`psclose 完成：${Object.keys(store).length} 場`);
+}
+
+function stageLabel2() {
+  const { matches, unmatched, ambiguous } = R('matches.json');
+  const lot = R('lottery_series.json');       // 僅用「首值」＝台彩開盤
+  const ps = R('ps_close.json');              // 台彩收盤（權威）
+  const rows = [];
+  for (const m of matches) {
+    const year = m.date.slice(0, 4);
+    const startT = Date.parse(m.startTime.replace(' ', 'T') + ':00+08:00') / 1000;
+    const out = { ...m, auto: {}, note: [] };
+    let hdRows = null;
+    try { hdRows = parseChangeTable(fs.readFileSync(path.join(CACHE, `${m.titanId}_hd.txt`), 'utf8'), year); } catch (e) {}
+    const pre = (hdRows || []).filter(r => !r.live && r.t != null && r.t <= startT + 10 * 60);
+    const dirOf = L => L > 0 ? 'home' : (L < 0 ? 'away' : null);
+    const intlSeq = compressDir(pre.map(r => ({ t: r.t, dir: dirOf(r.line) })), startT);
+    const intlOpen = intlSeq.length ? intlSeq[0].dir : null;
+    const intlClose = intlSeq.length ? intlSeq[intlSeq.length - 1].dir : null;
+    const intlCloseLine = pre.length ? Math.abs(pre[pre.length - 1].line) : null;
+    const lotSer = (lot[m.sid] || []);
+    const lotOpen = lotSer.length ? lotSer[0].favSide : null;                       // feed 首值＝開盤
+    const psRec = ps[`${m.league}|${m.date}|${m.away}|${m.home}`] || null;
+    const lotClose = (psRec && psRec.hdAwayLine != null) ? (psRec.hdAwayLine < 0 ? 'away' : 'home') : null;   // 客線負=客讓
+    let ouClose = null;
+    try {
+      const ouRows = parseChangeTable(fs.readFileSync(path.join(CACHE, `${m.titanId}_ou.txt`), 'utf8'), year);
+      const ouPre = (ouRows || []).filter(r => !r.live && r.t != null && r.t <= startT + 10 * 60);
+      if (ouPre.length) ouClose = Math.abs(ouPre[ouPre.length - 1].line);
+    } catch (e) {}
+    let mlClose = null;
+    try {
+      const sb = {}; vm.createContext(sb); vm.runInContext(fs.readFileSync(path.join(CACHE, `${m.titanId}_ml.txt`), 'utf8'), sb);
+      const b = (sb.game || []).map(x => x.split('|')).find(c => (c[16] || '').toLowerCase().includes('36'));
+      if (b) mlClose = { home: parseFloat(b[8] || b[3]), away: parseFloat(b[9] || b[4]) };
+    } catch (e) {}
+    out.auto = {
+      intlOpen, intlClose, intlSwing: intlSeq.length > 1,
+      lotOpen, lotClose, lotSwing: (lotOpen && lotClose) ? lotOpen !== lotClose : null,
+      intlCloseLine, ouCloseLine: ouClose, psTotLine: psRec ? psRec.totLine : null, psHdAwayLine: psRec ? psRec.hdAwayLine : null,
+      mlCloseFav: (mlClose && Math.abs(mlClose.home - mlClose.away) >= 0.10) ? (mlClose.home < mlClose.away ? 'home' : 'away') : null
+    };
+    out.auto.divergeIntl = (out.auto.mlCloseFav && intlClose) ? (out.auto.mlCloseFav !== intlClose) : null;
+    // 端點代數（v2）：
+    if (!intlClose || !lotClose) out.auto.flipState = 'na';
+    else if (intlClose !== lotClose) out.auto.flipState = 'flipped';
+    else {
+      const intlFlipped = intlOpen && intlOpen !== intlClose;
+      const lotFlipped = lotOpen && lotOpen !== lotClose;
+      if (intlFlipped && !lotFlipped) out.auto.flipState = (lotOpen ? 'converged_intl' : 'converged_intl');       // 國際貼向台彩
+      else if (!intlFlipped && lotFlipped) out.auto.flipState = 'converged_lottery';                              // 台彩貼向國際
+      else if (intlFlipped && lotFlipped) out.auto.flipState = (intlOpen !== lotOpen) ? 'converged_unknown' : 'none'; // 同向對調→none（情境B）
+      else out.auto.flipState = (intlOpen && lotOpen && intlOpen !== lotOpen) ? 'converged_unknown' : 'none';
+    }
+    rows.push(out);
+  }
+  // ---- 對答案 v2 ----
+  const fam = s => /^converged/.test(s) ? 'converged' : s;
+  const judged = rows.filter(r => r.auto.flipState !== 'na');
+  const agree = judged.filter(r => fam(r.auto.flipState) === fam(r.hand.flipState)).length;
+  const dis = judged.filter(r => fam(r.auto.flipState) !== fam(r.hand.flipState));
+  const mtx = {};
+  for (const r of judged) { const k = fam(r.hand.flipState) + '→' + fam(r.auto.flipState); mtx[k] = (mtx[k] || 0) + 1; }
+  // 手標自洽（v2：hdFav vs 台彩收盤=playsport）
+  let sc = { flipped: { ok: 0, bad: 0 }, converged: { ok: 0, bad: 0 }, none: { ok: 0, bad: 0 } }; const scBad = [];
+  for (const r of judged) {
+    if (!r.hand.hdFav || !r.auto.lotClose) continue;
+    const f = fam(r.hand.flipState); const opp = r.hand.hdFav !== r.auto.lotClose;
+    const ok = (opp === (f === 'flipped'));
+    sc[f][ok ? 'ok' : 'bad']++;
+    if (!ok) scBad.push(`${r.date} ${r.away}@${r.home}［${r.league}］手標=${r.hand.flipState}｜你的讓分方=${r.hand.hdFav} vs 台彩收盤=${r.auto.lotClose}${opp ? '(相反)' : '(同向)'}`);
+  }
+  const rep = [];
+  rep.push(`# pilot 對答案報告 v2（2026-07-11，台彩收盤改用玩運彩結果頁後重跑）`);
+  rep.push(`\n> v1 缺陷（使用者抽查 3 場全中）：pregame feed 的台彩欄位＝開盤一次性快照（287/287 場零變動、距開賽中位 16.2h），被誤當收盤。v2 台彩收盤改玩運彩結果頁（權威），開盤仍用 feed 首值，判定改端點代數。`);
+  rep.push(`\n⚠ 軸聲明不變：自動判定＝bet365 vs 台彩，不代表 STAKE。\n`);
+  rep.push(`## 樣本：配對 ${rows.length}｜可判 ${judged.length}｜na ${rows.length - judged.length}（含玩運彩頁缺讓分線/隊名未識別）`);
+  rep.push(`\n## flipState 家族一致率：**${agree}/${judged.length}＝${(100 * agree / judged.length).toFixed(1)}%**`);
+  rep.push(`混淆矩陣（手標→自動）：${JSON.stringify(mtx)}`);
+  rep.push(`\n## 手標自洽性 v2（hdFav vs 玩運彩台彩收盤）`);
+  rep.push(`flipped 應相反：${sc.flipped.ok}自洽/${sc.flipped.bad}不自洽｜converged 應同向：${sc.converged.ok}/${sc.converged.bad}｜none 應同向：${sc.none.ok}/${sc.none.bad}`);
+  rep.push(scBad.length ? `不自洽清單（${scBad.length}）：\n${scBad.map(x => '- ' + x).join('\n')}` : '（零不自洽）');
+  rep.push(`\n## 家族不一致清單（${dis.length}）`);
+  for (const r of dis) rep.push(`- ${r.date} ${r.away}@${r.home}［${r.league}］手標=${r.hand.flipState}｜自動=${r.auto.flipState}（intl ${r.auto.intlOpen}→${r.auto.intlClose}${r.auto.intlSwing ? '·曾擺動' : ''}｜台彩 ${r.auto.lotOpen || '?'}→${r.auto.lotClose}）`);
+  fs.writeFileSync(path.join(DIR, 'PILOT_REPORT_v2.md'), rep.join('\n'));
+  J('labeled_v2.json', rows);
+  console.log(rep.slice(0, 12).join('\n'));
+  console.log(`（完整報告見 divination_lab/titan_pilot/PILOT_REPORT_v2.md）`);
+}
+
+// ============================================================================
+// 回補（4/1–6/26，國際軸）：titan bet365 hd/ou/ml + 玩運彩結果頁台彩收盤。
+// 台彩「開盤」歷史不存在（feed git 僅回到 6/22）→ 端點代數退化為三值：
+//   flipped（收盤相反，最強最乾淨）／none（收盤同向且 intl 全程未擺動）／
+//   intl_swung_close_same（intl 曾換邊、收盤同向＝converged_intl 或 同向對調，無台彩開盤不可分）
+// converged_lottery 在回補期＝不可偵測（結構限制，report 註明）。
+// ============================================================================
+const BF_DIR = path.join('divination_lab', 'titan_backfill');
+const BF_CACHE = path.join(BF_DIR, 'cache');
+const BF_LO = '2026-04-01', BF_HI = '2026-06-26';
+const BFJ = (f, v) => { fs.mkdirSync(BF_DIR, { recursive: true }); fs.writeFileSync(path.join(BF_DIR, f), JSON.stringify(v)); };
+const BFR = f => JSON.parse(fs.readFileSync(path.join(BF_DIR, f), 'utf8'));
+
+async function bfEnum() {
+  const teams = loadLeagueTeams();
+  const list = []; const keyCnt = {};
+  for (const lg of LEAGUES_CFG) {
+    for (const mo of [3, 4, 5, 6]) {
+      const url = `https://sports.titan007.com/jsData/baseball/matchResult/2026/l${lg.id}_1_2026_${mo}.js`;
+      try {
+        const res = await axios.get(url, { headers: HEADERS, timeout: 15000 });
+        const sb = {}; vm.createContext(sb); vm.runInContext(res.data, sb);
+        const dict = {}; (sb.arrTeam || []).forEach(t => { dict[t[0]] = t[2]; });
+        for (const m of (sb.arrData || [])) {
+          const time = String(m[2]); const date = time.slice(0, 10);
+          if (date < BF_LO || date > BF_HI) continue;
+          const home = resolveName(teams, lg.key, dict[m[3]] || ''), away = resolveName(teams, lg.key, dict[m[4]] || '');
+          if (!home || !away) continue;
+          const key = `${lg.key}|${date}|${away}|${home}`;
+          keyCnt[key] = (keyCnt[key] || 0) + 1;
+          list.push({ id: m[0], league: lg.key, date, time, away, home, key, schedHd: m[7] != null ? String(m[7]) : null, schedOu: m[8] != null ? String(m[8]) : null });
+        }
+      } catch (e) { console.log(`  ⚠️ ${url} ${e.message}`); }
+      await sleep(GAP_MS);
+    }
+    console.log(`  [${lg.key}] 累計 ${list.length}`);
+  }
+  for (const g of list) g.dh = keyCnt[g.key] > 1;                     // 雙重賽：playsport join 不可靠，標記
+  BFJ('bf_matches.json', list);
+  console.log(`bfenum 完成：${list.length} 場（雙重賽 ${list.filter(g => g.dh).length}）`);
+}
+
+async function bfFetch() {
+  fs.mkdirSync(BF_CACHE, { recursive: true });
+  const list = BFR('bf_matches.json');
+  let done = 0, skip = 0, fail = 0, i = 0;
+  for (const m of list) {
+    for (const [kind, url] of [
+      ['hd', `https://sports.titan007.com/ChangeDetail/handicap.aspx?id=${m.id}&companyid=8&t=2`],
+      ['ou', `https://sports.titan007.com/ChangeDetail/overunder.aspx?id=${m.id}&companyid=8&t=2`],
+      ['ml', `https://sports.titan007.com/jsData/baseball/1x2/${m.id}.js`]
+    ]) {
+      const f = path.join(BF_CACHE, `${m.id}_${kind}.txt`);
+      if (fs.existsSync(f) && fs.statSync(f).size > 100) { skip++; continue; }
+      try { const res = await axios.get(url, { headers: HEADERS, timeout: 15000 }); fs.writeFileSync(f, typeof res.data === 'string' ? res.data : JSON.stringify(res.data)); done++; }
+      catch (e) { fail++; }
+      await sleep(GAP_MS);
+    }
+    if (++i % 100 === 0) console.log(`  bf-fetch ${i}/${list.length}（抓${done} 快取${skip} 失敗${fail}）`);
+  }
+  console.log(`bffetch 完成：抓 ${done}、快取 ${skip}、失敗 ${fail}`);
+}
+
+async function bfPs() {
+  fs.mkdirSync(BF_CACHE, { recursive: true });
+  const teams = loadLeagueTeams();
+  const AIDS = { mlb: 1, npb: 2, kbo: 9, cpbl: 6 };
+  const store = {}; const days = [];
+  for (let d = new Date(BF_LO + 'T00:00:00Z'); d <= new Date(BF_HI + 'T00:00:00Z'); d = new Date(d.getTime() + 86400000)) days.push(d.toISOString().slice(0, 10));
+  let i = 0;
+  for (const d of days) {
+    const ymd = d.replace(/-/g, '');
+    for (const [lg, aid] of Object.entries(AIDS)) {
+      const cacheF = path.join(BF_CACHE, `ps_${aid}_${ymd}.html`);
+      let html = null;
+      if (fs.existsSync(cacheF) && fs.statSync(cacheF).size > 500) html = fs.readFileSync(cacheF, 'utf8');
+      else {
+        try { const r = await axios.get(PS_URL(aid, ymd), { headers: PS_HEADERS, timeout: 20000 }); html = r.data; fs.writeFileSync(cacheF, html); }
+        catch (e) { console.log(`  ❌ ps ${lg} ${d}: ${e.message}`); }
+        await psGap();
+      }
+      if (html) for (const g of parsePsDay(html, lg, teams)) store[`${lg}|${d}|${g.away}|${g.home}`] = g;
+    }
+    if (++i % 10 === 0) console.log(`  bf-ps ${i}/${days.length} 天（累計 ${Object.keys(store).length} 場）`);
+  }
+  BFJ('bf_ps.json', store);
+  console.log(`bfps 完成：${Object.keys(store).length} 場`);
+}
+
+function bfLabel() {
+  const list = BFR('bf_matches.json');
+  const ps = BFR('bf_ps.json');
+  const out = [];
+  for (const m of list) {
+    const year = m.date.slice(0, 4);
+    const startT = Date.parse(m.time.replace(' ', 'T') + ':00+08:00') / 1000;
+    let hdRows = null, ouRows = null, mlClose = null;
+    try { hdRows = parseChangeTable(fs.readFileSync(path.join(BF_CACHE, `${m.id}_hd.txt`), 'utf8'), year); } catch (e) {}
+    try { ouRows = parseChangeTable(fs.readFileSync(path.join(BF_CACHE, `${m.id}_ou.txt`), 'utf8'), year); } catch (e) {}
+    try {
+      const sb = {}; vm.createContext(sb); vm.runInContext(fs.readFileSync(path.join(BF_CACHE, `${m.id}_ml.txt`), 'utf8'), sb);
+      const b = (sb.game || []).map(x => x.split('|')).find(c => (c[16] || '').toLowerCase().includes('36'));
+      if (b) mlClose = { home: parseFloat(b[8] || b[3]), away: parseFloat(b[9] || b[4]) };
+    } catch (e) {}
+    const dirOf = L => L > 0 ? 'home' : (L < 0 ? 'away' : null);
+    const pre = (hdRows || []).filter(r => !r.live && r.t != null && r.t <= startT + 10 * 60);
+    const seq = compressDir(pre.map(r => ({ t: r.t, dir: dirOf(r.line) })), startT);
+    const intlOpen = seq.length ? seq[0].dir : null, intlClose = seq.length ? seq[seq.length - 1].dir : null;
+    const intlCloseLine = pre.length ? pre[pre.length - 1].line : null;                 // 帶符號
+    const ouPre = (ouRows || []).filter(r => !r.live && r.t != null && r.t <= startT + 10 * 60);
+    const ouClose = ouPre.length ? Math.abs(ouPre[ouPre.length - 1].line) : null;
+    const psRec = m.dh ? null : (ps[m.key] || null);                                    // 雙重賽不 join
+    const lotClose = (psRec && psRec.hdAwayLine != null) ? (psRec.hdAwayLine < 0 ? 'away' : 'home') : null;
+    const firstSeen = pre.length ? pre[0].t : null;
+    let flipStateIntl;
+    if (!intlClose || !lotClose) flipStateIntl = 'na';
+    else if (intlClose !== lotClose) flipStateIntl = 'flipped';
+    else flipStateIntl = (intlOpen && intlOpen !== intlClose) ? 'intl_swung_close_same' : 'none';
+    out.push({
+      id: m.id, league: m.league, date: m.date, time: m.time, away: m.away, home: m.home, dh: m.dh,
+      flipStateIntl, intlOpen, intlClose, intlSwing: seq.length > 1,
+      intlCloseLine, intlOuClose: ouClose, mlClose,
+      divergeIntl: (mlClose && intlClose && Math.abs(mlClose.home - mlClose.away) >= 0.10) ? ((mlClose.home < mlClose.away ? 'home' : 'away') !== intlClose) : null,
+      lotClose, lotHdAwayLine: psRec ? psRec.hdAwayLine : null, lotTotLine: psRec ? psRec.totLine : null,
+      awayScore: psRec ? psRec.awayScore : null, homeScore: psRec ? psRec.homeScore : null,
+      firstSeenT: firstSeen, startT
+    });
+  }
+  BFJ('bf_labeled.json', out);
+  // ---- 報告（三市場全列，無主勝特權）----
+  const settled = out.filter(g => g.awayScore != null && g.homeScore != null);
+  const cls = ['flipped', 'intl_swung_close_same', 'none', 'na'];
+  const rep = [`# 回補資料集報告（國際軸 bet365 vs 台彩，${BF_LO}~${BF_HI}，${new Date().toISOString().slice(0, 10)} 產出）`,
+    `\n⚠ 本資料集＝國際盤(bet365) vs 台彩軸。**不代表 STAKE**（使用者紅線）。converged_lottery 在回補期不可偵測（無台彩開盤史料）；intl_swung_close_same＝converged_intl 或同向對調（不可分）。`,
+    `\n總場數 ${out.length}（雙重賽排除 join ${out.filter(g => g.dh).length}）｜有比分 ${settled.length}`, ''];
+  const pc = (k, n) => n ? `${Math.round(100 * k / n)}% (${k}/${n})` : '—';
+  for (const lg of ['mlb', 'npb', 'kbo', 'cpbl', 'all']) {
+    const pool = lg === 'all' ? settled : settled.filter(g => g.league === lg);
+    if (!pool.length) continue;
+    rep.push(`## ${lg.toUpperCase()}（有比分 ${pool.length}）`);
+    rep.push(`| 類別 | 場數 | 主勝 | 讓分過盤(bet365收盤線) | 開大(bet365收盤線) | 背離(intl) |`);
+    rep.push(`|---|---|---|---|---|---|`);
+    for (const c of cls) {
+      const arr = pool.filter(g => g.flipStateIntl === c);
+      if (!arr.length) { rep.push(`| ${c} | 0 | — | — | — | — |`); continue; }
+      const wl = arr.filter(g => g.awayScore !== g.homeScore);
+      const hw = wl.filter(g => g.homeScore > g.awayScore).length;
+      let cov = 0, covN = 0, ov = 0, ovN = 0, dv = 0, dvN = 0;
+      for (const g of arr) {
+        if (g.intlCloseLine != null) {
+          const L = g.intlCloseLine; const margin = (L > 0 ? g.homeScore - g.awayScore : g.awayScore - g.homeScore);
+          const need = Math.abs(L);
+          if (margin !== need) { covN++; if (margin > need) cov++; }
+        }
+        if (g.intlOuClose != null) { const t = g.awayScore + g.homeScore; if (t !== g.intlOuClose) { ovN++; if (t > g.intlOuClose) ov++; } }
+        if (g.divergeIntl != null) { dvN++; if (g.divergeIntl) dv++; }
+      }
+      rep.push(`| ${c} | ${arr.length} | ${pc(hw, wl.length)} | ${pc(cov, covN)} | ${pc(ov, ovN)} | ${pc(dv, dvN)} |`);
+    }
+    rep.push('');
+  }
+  fs.writeFileSync(path.join(BF_DIR, 'BF_REPORT.md'), rep.join('\n'));
+  console.log(rep.join('\n'));
+}
+
 (async () => {
   const stage = process.argv[2];
   if (stage === 'enum') await stageEnum();
   else if (stage === 'fetch') await stageFetch();
   else if (stage === 'lottery') stageLottery();
   else if (stage === 'label') stageLabel();
-  else console.log('用法: node titan_pilot.js enum|fetch|lottery|label');
+  else if (stage === 'psprobe') await stagePsProbe();
+  else if (stage === 'psclose') await stagePsClose();
+  else if (stage === 'label2') stageLabel2();
+  else if (stage === 'bfenum') await bfEnum();
+  else if (stage === 'bffetch') await bfFetch();
+  else if (stage === 'bfps') await bfPs();
+  else if (stage === 'bflabel') bfLabel();
+  else console.log('用法: node titan_pilot.js enum|fetch|lottery|label|psprobe|psclose|label2|bfenum|bffetch|bfps|bflabel');
 })().catch(e => { console.error('FATAL', e); process.exit(1); });
