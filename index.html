@@ -5504,8 +5504,19 @@ function renderReviewPage(){
   {
     const all = (doc.games||[]).filter(g=> leagueF==="all" || g.league===leagueF)
                   .slice().sort((a,b)=> (a.date<b.date?1:-1));
+    // 缺資料標記：只標「前瞻追蹤期」（有顛倒狀態紀錄的最早日起），更早的舊匯入史料不標（使用者已定不回補）
+    let eraStart="9999-99-99"; for(const g of (doc.games||[])){ if(g.flipState && g.date && g.date<eraStart) eraStart=g.date; }
+    const missOf = g=>{
+      if(!(g.date>=eraStart)) return [];
+      const m=[];
+      if(!g.flipState) m.push("缺顛倒狀態");
+      const hasClose=g.closeOddsAway!=null&&g.closeOddsHome!=null, hasFlip=g.flipOddsAway!=null&&g.flipOddsHome!=null;
+      if(!hasClose&&!hasFlip) m.push("缺賠率");
+      return m;
+    };
+    const missCnt = all.reduce((s,g)=>s+(missOf(g).length?1:0),0);
     html += `<div class="rv-section rv-collapse">`;
-    html += `<div class="rv-head rv-clhead" onclick="this.parentNode.classList.toggle('open')" style="cursor:pointer;user-select:none"><span class="rv-cltri">▸</span> ⑧ 全部比賽紀錄 <span class="rv-sub">核對＋補寫（共 ${all.length} 場）· 點標題展開／收合，展開後點任一場可編輯（連被清掉的舊場也能補）</span></div>`;
+    html += `<div class="rv-head rv-clhead" onclick="this.parentNode.classList.toggle('open')" style="cursor:pointer;user-select:none"><span class="rv-cltri">▸</span> ⑧ 全部比賽紀錄 <span class="rv-sub">核對＋補寫（共 ${all.length} 場${missCnt?`，<span style="color:#e0a020">⚠ 缺資料 ${missCnt} 場</span>`:""}）· 點標題展開／收合，展開後點任一場可編輯（缺資料的場有橘標，點該場即可補）</span></div>`;
     html += `<div class="rv-clbody">`;
     if(!all.length){
       html += `<div class="rv-empty">還沒有任何已結算的比賽。</div>`;
@@ -5520,7 +5531,7 @@ function renderReviewPage(){
         const tot = g.totResult==="over"?"大":g.totResult==="under"?"小":g.totResult==="push"?"推":"—";
         html += `<tr class="rv-row" data-hsid="${esc(String(g.sid||""))}" style="cursor:pointer" title="點擊編輯這場（比分／顛倒狀態／讓分／大小／賠率）">`+
                 `<td class="lbl" style="white-space:nowrap">${(g.date||"").slice(5)} <span style="color:var(--ink-dim);font-size:12.5px">${LG[g.league]||""}</span></td>`+
-                `<td style="text-align:left;font-size:15px">${esc(g.awayTeam)} <b style="font-family:Oswald;color:var(--lit)">${sc}</b> ${esc(g.homeTeam)}${g.platformFlip?` <span style="color:#a06bff;font-size:12.5px">顛</span>`:""}</td>`+
+                `<td style="text-align:left;font-size:15px">${esc(g.awayTeam)} <b style="font-family:Oswald;color:var(--lit)">${sc}</b> ${esc(g.homeTeam)}${g.platformFlip?` <span style="color:#a06bff;font-size:12.5px">顛</span>`:""}${missOf(g).map(t=>` <span style="color:#e0a020;font-size:12.5px;border:1px solid rgba(224,160,32,.4);border-radius:4px;padding:0 5px;white-space:nowrap">${t}</span>`).join("")}</td>`+
                 `<td>${hd}</td>`+
                 `<td>${tot}</td>`+
                 `</tr>`;
