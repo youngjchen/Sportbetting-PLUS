@@ -1178,7 +1178,7 @@
           <span style="color:var(--ink-dim);">線</span><input id="heHdVal" type="number" step="0.5" style="width:64px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
         </div>
         <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">大小基準</span>
-          <input id="heTotVal" type="number" step="1" style="width:64px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
+          <input id="heTotVal" type="number" step="1" min="0.5" style="width:64px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
         </div>
         <div style="display:flex;align-items:center;gap:8px;"><span style="width:74px;color:var(--ink-dim);flex:0 0 auto;">收盤獨贏</span>
           <span style="color:var(--ink-dim);font-size:13px;">客</span><input id="heCloseA" type="number" step="0.01" style="width:70px;padding:6px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:15px;text-align:center;">
@@ -2825,7 +2825,7 @@ function renderCardB(it){
     const basis=document.createElement("span"); basis.className="basis";
     const tv = (it.totVal!=null && it.totVal!=="") ? it.totVal : "8.5";
     basis.innerHTML="基準 ";
-    const tinp=document.createElement("input"); tinp.type="number"; tinp.step="1"; tinp.min="0"; tinp.inputMode="decimal"; tinp.value=tv;  // number → 含上下鍵（級距 1）
+    const tinp=document.createElement("input"); tinp.type="number"; tinp.step="1"; tinp.min="0.5"; tinp.inputMode="decimal"; tinp.value=tv;  // 上下鍵 ±1 但對齊 .5 網格（8.5→9.5/7.5）
     tinp.onclick=(e)=>e.stopPropagation();
     tinp.oninput=()=>{ it.totVal = tinp.value.trim(); save(); };
     basis.appendChild(tinp);
@@ -5851,8 +5851,7 @@ function openSettleModal(it){
   // ---- score input row (top) ----
   const scoreRow = document.createElement("div"); scoreRow.className="settle-q score-row";
   const _awayFav = it.hdFav === "away";                                   // 讓分方 = it.hdFav
-  const _hdLine = (it.hdVal!=="" && it.hdVal!=null) ? it.hdVal : "1.5";
-  const _favTag = `<span class="hdtag">讓 −${esc(_hdLine)}</span>`;         // 顏色之外再給文字，避免只靠顏色分辨
+  const _favTag = `<span class="hdtag">讓</span>`;                          // 只標記讓分方（盤口數值不重覆塞）
   scoreRow.innerHTML = `
     <div class="qlabel">比分</div>
     <div class="score-inputs">
@@ -5916,7 +5915,7 @@ function openSettleModal(it){
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
       <span style="color:var(--ink-dim);">我的大小成交線</span>
-      <input id="settleMyTotLine" type="number" inputmode="decimal" step="1" placeholder="如 7.5" style="width:70px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotLine!=null?it.myTotLine:""}">
+      <input id="settleMyTotLine" type="number" inputmode="decimal" step="1" min="0.5" placeholder="如 7.5" style="width:70px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotLine!=null?it.myTotLine:""}">
       <span style="color:var(--ink-dim);font-size:11px;">命中率／燈號用此線判；市場大小過盤率仍用上方「基準」（收盤線）</span>
     </div>
   `;
@@ -5978,7 +5977,7 @@ function openSettleModal(it){
   function q(label, key, options, lineInput){
     const wrap = document.createElement("div"); wrap.className="settle-q"; wrap.dataset.key=key;
     const extra = lineInput
-      ? `<span class="qline">${lineInput.lbl} <input id="${lineInput.id}" type="number" inputmode="decimal" step="${lineInput.step||"0.5"}" value="${lineInput.value!=null?lineInput.value:""}" placeholder="${lineInput.ph||""}"></span>`
+      ? `<span class="qline">${lineInput.lbl} <input id="${lineInput.id}" type="number" inputmode="decimal" step="${lineInput.step||"0.5"}" min="${lineInput.min!=null?lineInput.min:""}" value="${lineInput.value!=null?lineInput.value:""}" placeholder="${lineInput.ph||""}"></span>`
       : "";
     wrap.innerHTML = `<div class="qlabel"><span>${label}</span>${extra}</div>`;
     const opts = document.createElement("div"); opts.className="opts";
@@ -6009,7 +6008,7 @@ function openSettleModal(it){
   q("大小分：兩隊總分大於基準？", "tot", [
     { label:"大", value:"over" },
     { label:"小", value:"under" }
-  ], { id:"settleTotVal", lbl:"基準", value:(it.totVal!=="" && it.totVal!=null) ? it.totVal : "8.5", step:"1" });
+  ], { id:"settleTotVal", lbl:"基準", value:(it.totVal!=="" && it.totVal!=null) ? it.totVal : "8.5", step:"1", min:"0.5" });
 
   // ---- auto-fill from score (default handicap = 1.5) ----
   function autoFillFromScore(){
@@ -6884,7 +6883,7 @@ function renderImportPreview(){
         html += `<label>讓分基準：<input type="number" class="imp-hdval" data-idx="${idx}" value="${m.hdVal}" step="0.5" min="0" max="20" style="width:64px;margin-left:4px;background:#1b232e;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px;text-align:center;"></label>`;
       }
       if(needTot){
-        html += `<label>大小基準：<input type="number" class="imp-totval" data-idx="${idx}" value="${m.totBasis}" step="1" min="0" max="30" style="width:64px;margin-left:4px;background:#1b232e;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px;text-align:center;"></label>`;
+        html += `<label>大小基準：<input type="number" class="imp-totval" data-idx="${idx}" value="${m.totBasis}" step="1" min="0.5" max="30" style="width:64px;margin-left:4px;background:#1b232e;color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:13px;text-align:center;"></label>`;
       }
       html += `<span style="flex:1 1 auto;"></span>`;
       html += `<button class="imp-fill-btn" data-idx="${idx}" style="padding:4px 12px;border-radius:6px;border:1px solid var(--lit);background:var(--lit);color:#1a1205;font-weight:700;cursor:pointer;">✓ 補上</button>`;
