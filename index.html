@@ -397,6 +397,18 @@
   .drill-toggle{cursor:pointer;}
   .drill-toggle::after{content:"▸";display:inline-block;margin-left:6px;color:var(--ink-dim);font-size:10px;transition:transform .15s;}
   .drill-toggle.drill-open::after{transform:rotate(90deg);}
+  /* ===== 國際軸標示器（bet365 vs 台彩）＋自主注標記 ===== */
+  .nvtag{position:relative;}
+  .nv-intl{display:inline-block;font-size:11.5px;border-radius:5px;padding:0 5px;margin-left:7px;line-height:1.6;cursor:pointer;flex:0 0 auto;}
+  .nv-intl.bo{color:#ffb35c;border:1px solid rgba(224,128,32,.55);}
+  .nv-intl.bi{color:#9daaff;border:1px solid rgba(107,123,255,.55);}
+  .nv-intl.bg{color:#5fd7bf;border:1px solid rgba(43,191,160,.55);}
+  .nvtip{position:absolute;z-index:60;top:calc(100% + 5px);left:6px;right:6px;background:#0e1620;border:1px solid #3aa0ff;border-radius:9px;padding:9px 11px;font-size:13px;line-height:1.75;box-shadow:0 8px 24px rgba(0,0,0,.5);text-align:left;white-space:normal;cursor:default;}
+  .intl-strip{display:flex;align-items:center;gap:8px;background:rgba(58,160,255,.07);border:1px solid rgba(58,160,255,.3);border-radius:8px;padding:6px 10px;margin:8px 6px 2px;font-size:13px;cursor:pointer;line-height:1.6;}
+  .intl-more{display:none;color:var(--ink-dim);font-size:12.5px;padding:5px 12px 2px;line-height:1.8;}
+  .intl-strip.open + .intl-more{display:block;}
+  .betchip{font-size:11.5px;border:1.5px dashed #4a5a70;border-radius:6px;color:var(--ink-dim);cursor:pointer;user-select:none;width:30px;text-align:center;line-height:1.7;flex:0 0 auto;margin-left:7px;}
+  .betchip.on{border:1.5px solid var(--lit);color:#1a1205;font-weight:700;background:var(--lit);box-shadow:0 0 8px var(--lit-glow);}
   tr.drill-toggle:hover{background:rgba(255,255,255,.03);}
   .rv-bar > span{display:block;height:100%;border-radius:6px;}
   .rv-pct{font-family:"Oswald";font-weight:700;font-size:17px;min-width:50px;display:inline-block;text-align:right;}
@@ -2787,7 +2799,13 @@ function renderCardB(it){
       const nm=document.createElement("span"); nm.className="bnm"; nm.title="點隊名／標籤＝減一盞燈";
       nm.innerHTML = esc(name)+(hv?` <span class="hv">${esc(hv)}</span>`:"");
       nm.onclick=()=>{ if(lightObj.lights>0){ snapshot(); lightObj.lights--; save(); render(); } };
-      row.append(b, nm, bLightsEl(lightObj), _firstEl(coverHTML));  // grid: 燈號/% 永遠對齊
+      const lightsEl = bLightsEl(lightObj);
+      // 「注」章：自主下注標記（燈式點亮、固定寬、與明牌燈分帳）；塞進燈號格內不動 grid 對齊
+      { const chip=document.createElement("span"); chip.className="betchip no-drag"+(lightObj.bet?" on":""); chip.textContent="注";
+        chip.title = lightObj.bet ? "已標記自主下注（點擊取消）" : "標記：這選項我實際下注了（與明牌燈分開統計）";
+        chip.onclick=(e)=>{ e.stopPropagation(); snapshot(); lightObj.bet=!lightObj.bet; save(); render(); };
+        lightsEl.appendChild(chip); }
+      row.append(b, nm, lightsEl, _firstEl(coverHTML));  // grid: 燈號/% 永遠對齊
       return row;
     }
     function mktSecHead(label, conflict, extras, cmtKey){
@@ -2823,6 +2841,21 @@ function renderCardB(it){
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
     ana.appendChild(hdWrap);
+    // 國際軸藍帶：只在異常場出現（色點=判定：橙 現在相反／靛 曾反已合／青綠 只換過邊），點一下展開軌跡
+    { const ist = (typeof intlFor==="function") ? intlFor(it) : null;
+      if(ist && ist.v){
+        const strip=document.createElement("div"); strip.className="intl-strip no-drag";
+        const dotc = ist.v==="flip"?"#e08020":(ist.v==="was"?"#6b7bff":"#2bbfa0");
+        strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
+          `<span>🌐 <b style="color:#3aa0ff">bet365 ${esc(ist.is==="home"?it.home:it.away)}讓${ist.il}</b>・`+
+          `<b style="color:#ffd08a">${ist.ls?("台彩 "+esc(ist.ls==="home"?it.home:it.away)+"讓"+(ist.ll!=null?ist.ll:"")):"台彩無資料"}</b></span>`;
+        const more=document.createElement("div"); more.className="intl-more no-drag";
+        more.innerHTML = (ist.sw?`⇄${ist.sw}＝bet365 讓分方今天換邊 ${ist.sw} 次：${esc(ist.tr||"")}`:`bet365 讓分方今天未換邊`)+
+          (ist.dv?`・<span style="color:#ff5d7a">背離（獨贏熱門 ${esc(ist.mf==="home"?it.home:it.away)}）</span>`:"")+
+          `<br>台彩側＝玩運彩開盤快照；此帶只讀國際軸資料，不會改卡片任何欄位。`;
+        strip.onclick=(e)=>{ e.stopPropagation(); strip.classList.toggle("open"); };
+        ana.appendChild(strip); ana.appendChild(more);
+      } }
 
     // 大小
     const totWrap=document.createElement("div"); totWrap.className="bmkt";
@@ -2947,7 +2980,7 @@ function collectSummary(){
 
 // 今日下注命中率（只看當天板上已結算、且該選項點 ≥3 燈的）。tie / push / 未決定 不列入。
 function todayHitRate(){
-  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, any:0 };
+  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, bet:{hit:0,miss:0}, any:0 };
   state.items.forEach(it=>{
     if(it.type!=="match" || !it.settled) return;
     const s = it.settled;
@@ -2955,6 +2988,8 @@ function todayHitRate(){
     if(s.ml==="away"||s.ml==="home"){
       if(it.mlAway.lights>=3){ r.any++; (s.ml==="away"?r.ml.hit++:r.ml.miss++); }
       if(it.mlHome.lights>=3){ r.any++; (s.ml==="home"?r.ml.hit++:r.ml.miss++); }
+      if(it.mlAway.bet){ (s.ml==="away"?r.bet.hit++:r.bet.miss++); }             // 自主注（不限燈數）
+      if(it.mlHome.bet){ (s.ml==="home"?r.bet.hit++:r.bet.miss++); }
     }
     // 讓分（過盤/沒過；成交線結果優先=對調場，push 不列入）
     if(s.hd==="cover"||s.hd==="nocover"){
@@ -2962,11 +2997,15 @@ function todayHitRate(){
       const rv = (s.myHdRecv!=null) ? s.myHdRecv : (s.hd==="cover"?"nocover":"cover");
       if(it.hdGive.lights>=3 && gv!=="push"){ r.any++; (gv==="cover"?r.hd.hit++:r.hd.miss++); }
       if(it.hdRecv.lights>=3 && rv!=="push"){ r.any++; (rv==="cover"?r.hd.hit++:r.hd.miss++); }
+      if(it.hdGive.bet && gv!=="push"){ (gv==="cover"?r.bet.hit++:r.bet.miss++); }
+      if(it.hdRecv.bet && rv!=="push"){ (rv==="cover"?r.bet.hit++:r.bet.miss++); }
     }
     // 大小（push 不列入）
     { const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="over"||st==="under"){   // B：命中用成交線 myTot
       if(it.over.lights>=3){ r.any++; (st==="over"?r.tot.hit++:r.tot.miss++); }
       if(it.under.lights>=3){ r.any++; (st==="under"?r.tot.hit++:r.tot.miss++); }
+      if(it.over.bet){ (st==="over"?r.bet.hit++:r.bet.miss++); }
+      if(it.under.bet){ (st==="under"?r.bet.hit++:r.bet.miss++); }
     } }
   });
   return r;
@@ -3037,7 +3076,7 @@ function renderSummary(){
                     `<span class="zrate">${rate}%</span>`;
       return r;
     };
-    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml]].forEach(([lab,m])=>{ const r=rowFor(lab,m); if(r) body.appendChild(r); });
+    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml],["自主注", zhan.bet]].forEach(([lab,m])=>{ const r=rowFor(lab,m); if(r) body.appendChild(r); });
     if(!body.children.length){ const e=document.createElement("div"); e.className="zhanempty"; e.textContent="今天還沒有已結算、且點 ≥3 燈的下注。"; body.appendChild(e); }
     const hint = document.createElement("div"); hint.className="zhanhint"; hint.textContent="只統計今天板上已結算、點 ≥3 燈的選項（和局／走盤不列入）。全季統計請看數據回顧。";
     body.appendChild(hint);
@@ -3148,6 +3187,25 @@ function navMatchState(it){
   if(it.closeOddsAway!=null && it.closeOddsHome!=null) c++;
   return c<=0 ? "st-empty" : ("st-odds"+c);
 }
+// ===== 國際軸標示器資料（data/intl_state.json，odds 爬蟲每輪產出；bet365 vs 台彩開盤）=====
+let __intl = null, __intlRaw = "";
+function intlFor(it){
+  if(!__intl || !__intl.games || !it || it.type!=="match") return null;
+  const lg = (typeof leagueOf==="function") ? leagueOf(it) : (it.league||"mlb");
+  return __intl.games[lg+"|"+doc.activeDate+"|"+it.away+"|"+it.home] || null;
+}
+async function loadIntlState(){
+  try{
+    const r = await fetch("data/intl_state.json?t="+Date.now(), {cache:"no-store"});
+    if(!r.ok) return;
+    const txt = await r.text();
+    if(txt===__intlRaw) return;                       // 沒變不重繪
+    __intlRaw = txt; __intl = JSON.parse(txt);
+    if(typeof render==="function") try{ render(); }catch(_){}
+  }catch(_){}
+}
+setTimeout(loadIntlState, 2500);                      // 開機後再抓，避免搶在初始化前重繪
+setInterval(loadIntlState, 5*60*1000);
 function renderMatchNav(){
   const el = document.getElementById("matchnav"); if(!el) return;
   if(document.querySelector("#reviewpage.show, #statspage.show")){ el.style.display="none"; return; }  // 回顧/統計頁開啟時隱藏導覽列
@@ -3160,11 +3218,12 @@ function renderMatchNav(){
   const flipTop = !!doc.navFlipTop;
   const showScore = !!doc.navShowScore;
   const isFlip = it => !!it.platformFlip;
+  const isAnom = it => isFlip(it) || !!(typeof intlFor==="function" && intlFor(it) && intlFor(it).v);   // 異常置頂＝手標異常＋國際軸異常
   const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   el.innerHTML = "";
   const head = document.createElement("div"); head.className="nvhead";
-  { const b=document.createElement("button"); b.textContent="顛倒置頂"; if(flipTop) b.classList.add("on");
-    b.title="把所有顛倒場標籤移到最上面";
+  { const b=document.createElement("button"); b.textContent="異常置頂"; if(flipTop) b.classList.add("on");
+    b.title="把所有異常場（顛倒／曾顛倒／對調＋國際軸 🌐）標籤移到最上面";
     b.onclick=()=>{ doc.navFlipTop=!doc.navFlipTop; save(); renderMatchNav(); };
     head.appendChild(b); }
   { const b2=document.createElement("button"); b2.textContent=showScore?"比分":"時間"; if(showScore) b2.classList.add("on");
@@ -3205,6 +3264,27 @@ function renderMatchNav(){
       const d=body.querySelector(".nvtag.dragging"); if(!d || d===t) return;
       const r=t.getBoundingClientRect(); body.insertBefore(d, (e.clientY-r.top)>r.height/2 ? t.nextSibling : t); });
     t.addEventListener("dragend", ()=>{ t.classList.remove("dragging"); if(_navDrag!=null){ _navDrag=null; commitNavOrder(); } });
+    // 國際軸徽章 🌐⇄N（純圖標；判定用顏色：橙=現在相反/靛=曾反已合/青綠=只換過邊）；點徽章看數字
+    { const ist = (typeof intlFor==="function") ? intlFor(it) : null;
+      if(ist && ist.v){
+        const bd=document.createElement("span");
+        bd.className="nv-intl no-drag "+(ist.v==="flip"?"bo":ist.v==="was"?"bi":"bg");
+        bd.textContent="🌐"+(ist.sw>0?("⇄"+ist.sw):"");
+        bd.onclick=(e)=>{ e.stopPropagation();
+          const old=t.querySelector(".nvtip"); if(old){ old.remove(); return; }
+          const tip=document.createElement("div"); tip.className="nvtip no-drag";
+          tip.onclick=(ev)=>ev.stopPropagation();
+          tip.innerHTML = `<b style="color:#3aa0ff">國際軸（bet365 vs 台彩開盤）</b><br>`+
+            `bet365：<b>${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}</b>${ist.sw?`　⇄${ist.sw}＝今天換邊 ${ist.sw} 次`:""}`+
+            (ist.ls?`<br>台彩(開盤)：<b>${esc(ist.ls==="home"?it.home:it.away)} 讓${ist.ll!=null?ist.ll:""}</b>`:`<br>台彩：無資料`)+
+            (ist.tr&&ist.sw?`<br><span style="color:var(--ink-dim)">${esc(ist.tr)}</span>`:"")+
+            (ist.dv?`<br><span style="color:#ff5d7a">背離：bet365 獨贏熱門（${esc(ist.mf==="home"?it.home:it.away)}）≠ 讓分方</span>`:"");
+          t.appendChild(tip);
+          setTimeout(()=>{ const h=(ev)=>{ if(!tip.contains(ev.target)&&ev.target!==bd){ tip.remove(); document.removeEventListener("pointerdown",h,true); } };
+            document.addEventListener("pointerdown",h,true); },0);
+        };
+        t.appendChild(bd);
+      } }
     return t;
   }
   function sec(label, extraCls, lgKey){ const s=document.createElement("div"); s.className="nvsec"+(extraCls?(" "+extraCls):""); s.textContent=label; if(lgKey) s.dataset.lg=lgKey; body.appendChild(s); }
@@ -3216,11 +3296,11 @@ function renderMatchNav(){
     });
     save(); render();
   }
-  if(flipTop){                                            // 顛倒場拉到最上面一區，其餘照聯盟分組(排除已列出的顛倒場)
-    const flips = matches.filter(isFlip).sort(cmpMatch);
-    if(flips.length){ sec("顛倒場","flipsec"); flips.forEach(it=>body.appendChild(tag(it))); }
+  if(flipTop){                                            // 異常場拉到最上面一區（手標＞國際軸），其餘照聯盟分組
+    const flips = matches.filter(isAnom).sort((a,b)=> (isFlip(b)-isFlip(a)) || cmpMatch(a,b));
+    if(flips.length){ sec("異常場","flipsec"); flips.forEach(it=>body.appendChild(tag(it))); }
     LGO.forEach(k=>{
-      const list = matches.filter(it=>leagueOf(it)===k && !isFlip(it)).sort(cmpMatch); if(!list.length) return;
+      const list = matches.filter(it=>leagueOf(it)===k && !isAnom(it)).sort(cmpMatch); if(!list.length) return;
       sec(LGL[k], null, k); list.forEach(it=>body.appendChild(tag(it)));
     });
   } else {                                                // 預設：照聯盟分組(顛倒場以紫色就地標示)
@@ -5961,6 +6041,21 @@ function openSettleModal(it){
     $("#settleFlipState") && $("#settleFlipState").addEventListener("change", _showMyHd);
     $("#settlePreSwap") && $("#settlePreSwap").addEventListener("change", _showMyHd);
   }
+  // 國際軸自動判：一行參考＋點擊展開證據；純顯示，下拉完全由使用者手選（幕後另存獨立欄位）
+  { const ist = (typeof intlFor==="function") ? intlFor(it) : null;
+    if(ist && (ist.v || ist.ls)){
+      const vTxt = ist.v==="flip" ? "目前兩邊相反" : ist.v==="was" ? "曾相反，現同向" : ist.v==="swap" ? "bet365 曾換邊，未見相反" : "無異常";
+      const bar=document.createElement("div");
+      bar.style.cssText="margin-top:12px;background:rgba(58,160,255,.08);border:1px solid rgba(58,160,255,.4);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;line-height:1.7;";
+      bar.innerHTML = `🌐 自動判（國際軸）：<b>${vTxt}</b><span style="float:right;color:var(--ink-dim)">▸</span>`+
+        `<div class="iad" style="display:none;margin-top:6px;color:var(--ink-dim);line-height:1.8">`+
+        `bet365：${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}${ist.sw?`（⇄${ist.sw}：${esc(ist.tr||"")}）`:""}`+
+        `<br>台彩(開盤)：${ist.ls?esc(ist.ls==="home"?it.home:it.away)+" 讓"+(ist.ll!=null?ist.ll:""):"無資料"}`+
+        (ist.dv?`<br>背離：bet365 獨贏熱門 ≠ 讓分方`:"")+
+        `<br>僅供參考（bet365 vs 台彩開盤軸）；已自動存獨立欄位分帳累積，下方顛倒狀態照你親眼所見選。</div>`;
+      bar.onclick=()=>{ const d=bar.querySelector(".iad"); d.style.display = d.style.display==="none" ? "block" : "none"; };
+      body.appendChild(bar);
+    } }
   // 即時判讀：盤口隱含、市場方向、模型差距、ERA 驗證
   function _updSettleOddsCalc(){
     const out = $("#settleOddsCalc"); if(!out) return;
@@ -6369,6 +6464,7 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   // 顛倒場狀態：讀下拉、反寫卡片(維持卡片按鈕/標籤同步)
   applyFlipState(it, ($("#settleFlipState") && $("#settleFlipState").value) || "none");
   picks.flipState = it.flipState; picks.platformFlip = it.platformFlip;
+  picks.intlState = (typeof intlFor==="function") ? (intlFor(it) || null) : null;   // 國際軸快照（幕後分帳，不影響手標）
   // Stake moneyline odds — now read for ANY game (divergence analysis no longer
   // limited to flip games). Blank = not recorded.
   {
@@ -6445,6 +6541,9 @@ function applySettlement(it, picks, delta){
   const lightsSnapshot = {
     mlAway: it.mlAway?.lights||0,
     mlHome: it.mlHome?.lights||0,
+    betAway: !!it.mlAway?.bet, betHome: !!it.mlHome?.bet,           // 自主注旗標（與燈分帳）
+    betGive: !!it.hdGive?.bet, betRecv: !!it.hdRecv?.bet,
+    betOver: !!it.over?.bet,   betUnder: !!it.under?.bet,
     hdGive: it.hdGive?.lights||0,   // favorite-covers side
     hdRecv: it.hdRecv?.lights||0,   // underdog-receives side
     over:   it.over?.lights||0,
@@ -6472,6 +6571,7 @@ function applySettlement(it, picks, delta){
     hdVal: (function(){ const v = parseFloat(it.hdVal); return isNaN(v) ? null : v; })(),
     totVal: (function(){ const v = parseFloat(it.totVal); return isNaN(v) ? null : v; })(),
     myTotLine: (function(){ const v = parseFloat(it.myTotLine); return isNaN(v) ? null : v; })(),   // B：我的大小成交線（市場基準 totVal 不變）
+    intlState: (picks.intlState || null),                                                            // 國際軸快照（bet365 vs 台彩開盤；前瞻分帳）
     myHdAwayLine: (picks.myHdAwayLine!=null ? picks.myHdAwayLine : null),                            // 讓分成交線（對調場；＋受讓／−讓）
     myHdHomeLine: (picks.myHdHomeLine!=null ? picks.myHdHomeLine : null),
     myHdGiveResult: (picks.myHdGive!=null ? picks.myHdGive : null),                                  // 讓槽成交結果 cover/nocover/push

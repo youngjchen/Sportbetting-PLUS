@@ -42,6 +42,7 @@ jobs:
             node index.js || true
             if [ -f data/odds_log.json ]; then
               git add data/odds_log.json
+              [ -f data/intl_state.json ] && git add data/intl_state.json
               if ! git diff --cached --quiet; then
                 git commit -m "odds update $(date -u +%FT%TZ)" || true
                 git pull --rebase --autostash || true

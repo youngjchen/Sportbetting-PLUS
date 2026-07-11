@@ -212,6 +212,28 @@ function parseHistoryTable(html) {
 
 function toNum(v) { const n = parseFloat(v); return isNaN(n) ? null : n; }
 
+// ---- 同表格的帶時間戳版（intl_state 專用；odds_log 格式凍結不動）--------------
+// 第4欄「变化时间」含「走地」字樣＝開賽後盤；盤口帶正負號（正=主讓、負=客讓）。
+function parseHistoryTableTs(html) {
+  const m = html.match(/id=['"]?odds2['"]?[\s\S]*?<table[^>]*>([\s\S]*?)<\/table>/i);
+  if (!m) return null;
+  const rows = [];
+  const rowRegex = /<tr[^>]*>([\s\S]*?)<\/tr>/gi;
+  let r;
+  while ((r = rowRegex.exec(m[1])) !== null) {
+    const cols = [];
+    const tdRegex = /<td[^>]*>([\s\S]*?)<\/td>/gi;
+    let td;
+    while ((td = tdRegex.exec(r[1])) !== null) cols.push(td[1].replace(/<[^>]+>/g, '').trim());
+    if (cols.length < 4 || isNaN(parseFloat(cols[0]))) continue;
+    const live = /走地/.test(cols[3]);
+    const tm = /(\d{1,2})-(\d{1,2})\s+(\d{1,2}):(\d{2})/.exec(cols[3]);
+    rows.push({ line: toNum(cols[1]), live, hhmm: tm ? `${tm[3].padStart(2, '0')}:${tm[4]}` : null, md: tm ? `${tm[1]}-${tm[2]}` : null });
+  }
+  rows.reverse();                                  // 由舊到新
+  return rows.length ? rows : null;
+}
+
 async function fetchMatchOdds(match) {
   const out = { ml: {}, hd: null, ou: null };
   try {
@@ -236,6 +258,7 @@ async function fetchMatchOdds(match) {
     const res = await axios.get(`${HANDICAP_URL}?id=${match.id}&companyid=8&t=2`, { headers: HEADERS, timeout: 15000 });
     const rows = parseHistoryTable(res.data);
     if (rows) out.hd = rows.map(x => ({ home: toNum(x.a), line: x.line, away: toNum(x.b) }));
+    out.hdTs = parseHistoryTableTs(res.data);      // intl_state 用（帶時間戳＋走地旗標）
   } catch (e) { console.log(`  ❌ 讓分: ${e.message}`); }
   try {
     const res = await axios.get(`${OVERUNDER_URL}?id=${match.id}&companyid=8&t=2`, { headers: HEADERS, timeout: 15000 });
@@ -347,10 +370,15 @@ async function run() {
     // 讓分/大小：未開賽 + grace 窗都補抓（保留最完整那份）——這正是亞洲場臨場才貼盤的救援
     if (odds.hd && (!e.hd.bet365 || odds.hd.length >= e.hd.bet365.length)) e.hd.bet365 = odds.hd;
     if (odds.ou && (!e.ou.bet365 || odds.ou.length >= e.ou.bet365.length)) e.ou.bet365 = odds.ou;
+    if (odds.hdTs) e._hdTs = odds.hdTs;            // 只掛在記憶體給 intl_state 用（下方 delete，不進 odds_log）
 
     log.matches[m.id] = e;
     await new Promise(r => setTimeout(r, REQUEST_GAP_MS));
   }
+
+  // ---- 國際軸標示器衍生檔 data/intl_state.json（bet365 vs 台彩開盤；失敗不影響主爬蟲）----
+  try { buildIntlState(log, stamp); } catch (e) { console.log('⚠️ intl_state 產出失敗（不影響 odds_log）：', e.message); }
+  for (const k of Object.keys(log.matches)) delete log.matches[k]._hdTs;   // 確保不寫進 odds_log
 
   log.lastUpdated = stamp;
   fs.mkdirSync(path.dirname(OUTPUT_FILE), { recursive: true });
@@ -367,6 +395,90 @@ async function run() {
     });
   }
   console.log(`==================================================\n`);
+}
+
+// ============================================================================
+// 國際軸標示器：把 bet365(讓分方向序列) × 台彩(玩運彩 feed 開盤方向) 濃縮成小檔給板上讀。
+// 語義誠實聲明：台彩側=pregame feed 的 lotteryHandicap＝「開盤快照」(2026-07-11 實證從不更新)，
+// 故 verdict 是「bet365 現況 vs 台彩開盤」的提示；嚴謹收盤對收盤版由 titan_pilot 管線離線產。
+// verdict: flip=現在相反(橙) / was=曾相反現同向(靛) / swap=只換過邊(青綠) / null=無異常(板上不顯示)
+// ============================================================================
+const INTL_FILE = path.join('data', 'intl_state.json');
+
+function feedCanon(name, league) {
+  if (!name) return null;
+  const direct = mapTeam(name, league);
+  if (direct) return direct;
+  const pairs = LEAGUE_PAIRS[league] || [];             // 反向包含：feed 短名(雙子)⊂別名(LG雙子)
+  for (const [alias, canon] of pairs) if (name.length >= 2 && alias.includes(name)) return canon;
+  return null;
+}
+
+function buildIntlState(log, stamp) {
+  // 台彩側：讀另一支爬蟲的 feed（同 repo checkout，新鮮度 ~20 分）
+  let lotMap = {};
+  try {
+    const feed = JSON.parse(fs.readFileSync(path.join('data', 'pregame_data.json'), 'utf8'));
+    const list = Array.isArray(feed) ? feed : Object.values(feed);
+    for (const g of list) {
+      const lh = g.lotteryHandicap;
+      if (!lh || lh.src !== '運彩' || !lh.favSide) continue;
+      const lg = String(g.league || '').toLowerCase();
+      const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
+      if (!away || !home) continue;
+      lotMap[`${lg}|${g.date}|${away}|${home}`] = { side: lh.favSide, line: lh.line != null ? lh.line : null };
+    }
+  } catch (e) { console.log('  ⚠️ intl_state：讀不到 pregame feed（' + e.message + '），台彩側全缺'); }
+
+  let prev = { games: {} };
+  try { prev = JSON.parse(fs.readFileSync(INTL_FILE, 'utf8')); } catch (e) {}
+  const games = prev.games || {};
+
+  for (const id of Object.keys(log.matches)) {
+    const e = log.matches[id];
+    if (!e._hdTs || !e.awayTeam || !e.homeTeam || !e.startISO) continue;
+    const date = e.startISO.slice(0, 10);
+    const key = `${e.league}|${date}|${e.awayTeam}|${e.homeTeam}`;
+    const pre = e._hdTs.filter(r => !r.live && r.line != null && r.line !== 0);
+    if (!pre.length) continue;
+    // 方向序列（正=主讓/負=客讓），連續同向壓縮 → 換邊次數與軌跡
+    const seq = [];
+    for (const r of pre) {
+      const dir = r.line > 0 ? 'home' : 'away';
+      const last = seq[seq.length - 1];
+      if (!last || last.dir !== dir) seq.push({ dir, hhmm: r.hhmm });
+    }
+    const cur = pre[pre.length - 1];
+    const intlSide = cur.line > 0 ? 'home' : 'away';
+    const lot = lotMap[key] || null;
+    const sideName = d => d === 'home' ? e.homeTeam : e.awayTeam;
+    let verdict = null, everOpp = false;
+    if (lot) {
+      everOpp = seq.some(s => s.dir !== lot.side);
+      if (intlSide !== lot.side) verdict = 'flip';
+      else if (everOpp) verdict = 'was';
+      else if (seq.length > 1) verdict = 'swap';
+    } else if (seq.length > 1) verdict = 'swap';
+    // 獨贏（bet365 decimal）判國際盤內背離
+    let mlFav = null, dv = null;
+    const b = e.ml && e.ml.bet365;
+    const lastMl = b && b.live && b.live.length ? b.live[b.live.length - 1] : (b && b.open ? b.open : null);
+    if (lastMl && lastMl.home != null && lastMl.away != null && Math.abs(lastMl.home - lastMl.away) >= 0.10) {
+      mlFav = lastMl.home < lastMl.away ? 'home' : 'away';
+      dv = mlFav !== intlSide;
+    }
+    games[key] = {
+      is: intlSide, il: Math.abs(cur.line), sw: Math.max(0, seq.length - 1),
+      tr: seq.map(s => (s.hhmm ? s.hhmm + ' ' : '') + sideName(s.dir)).join(' → '),
+      ls: lot ? lot.side : null, ll: lot ? lot.line : null,
+      mf: mlFav, dv, v: verdict, u: stamp
+    };
+  }
+  // 修剪：只留最近 3 天（板上只看今天；留兩天緩衝跨日結算）
+  const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  for (const k of Object.keys(games)) { const d = k.split('|')[1]; if (d && d < cutoff) delete games[k]; }
+  fs.writeFileSync(INTL_FILE, JSON.stringify({ updated: stamp, games }));
+  console.log(`🌐 intl_state：${Object.keys(games).length} 場（台彩側對上 ${Object.values(games).filter(g => g.ls).length}）`);
 }
 
 if (require.main === module) {
