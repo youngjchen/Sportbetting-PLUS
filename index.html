@@ -2319,7 +2319,7 @@ function renderCard(it){
 
   // ---- 讓分 / 受讓 ----
   const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
-  favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
+  favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 燈跟隊：換讓分方時兩槽燈互換，明牌燈不再被平台對調搬家
   el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null));
   { const r = pctRow(sectionPctHTML(it,"hd")); if(r) el.appendChild(r); }
   const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
@@ -2439,7 +2439,9 @@ function renderCard(it){
       if(s.ml==="tie") return "void";
       return (s.ml===side) ? "hit" : "miss";
     }
-    if(market==="hd"){   // side: "give"(讓方過盤) or "recv"(受讓方)
+    if(market==="hd"){   // side: "give"(讓方過盤) or "recv"(受讓方)；成交線結果優先（對調場），無→市場
+      const my = side==="give" ? s.myHdGive : s.myHdRecv;
+      if(my!=null){ if(my==="push") return "void"; return my==="cover" ? "hit" : "miss"; }
       const favCovered = (s.hd==="cover");
       if(side==="give") return favCovered ? "hit" : "miss";
       if(side==="recv") return favCovered ? "miss" : "hit";
@@ -2467,8 +2469,10 @@ function renderCard(it){
     const favSideS = it.hdFav, undSideS = it.hdFav==="away"?"home":"away";
     if(it.mlAway.lights>=3) resPill(it.away, it.mlAway.lights, outcomeFor("ml","away"));
     if(it.mlHome.lights>=3) resPill(it.home, it.mlHome.lights, outcomeFor("ml","home"));
-    if(it.hdGive.lights>=3) resPill(`${it[favSideS]}讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdGive.lights, outcomeFor("hd","give"));
-    if(it.hdRecv.lights>=3) resPill(`${it[undSideS]}受讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdRecv.lights, outcomeFor("hd","recv"));
+    const _dealG = favSideS==="away" ? it.settled.myHdAwayLine : it.settled.myHdHomeLine;
+    const _dealR = undSideS==="away" ? it.settled.myHdAwayLine : it.settled.myHdHomeLine;
+    if(it.hdGive.lights>=3) resPill(_dealG!=null?`${it[favSideS]} 成交${_dealG>0?"+"+_dealG:_dealG}`:`${it[favSideS]}讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdGive.lights, outcomeFor("hd","give"));
+    if(it.hdRecv.lights>=3) resPill(_dealR!=null?`${it[undSideS]} 成交${_dealR>0?"+"+_dealR:_dealR}`:`${it[undSideS]}受讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdRecv.lights, outcomeFor("hd","recv"));
     if(it.over.lights>=3)   resPill(`大分${it.totVal?` ${it.totVal}`:""}`, it.over.lights, outcomeFor("tot","over"));
     if(it.under.lights>=3)  resPill(`小分${it.totVal?` ${it.totVal}`:""}`, it.under.lights, outcomeFor("tot","under"));
   } else {
@@ -2808,7 +2812,7 @@ function renderCardB(it){
     // 讓分
     const hdWrap=document.createElement("div"); hdWrap.className="bmkt";
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方";
-    swap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; save(); render(); };
+    swap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 燈跟隊（同 favSwap）
     let flipHint=null;
     // 即時比對：工作流抓到的讓分熱門隊 ≠ 目前讓分方 → 疑顛倒（切換讓分方後會立刻消失）
     const feedFlip = !!(it.feedFavTeam && it.feedFavTeam !== it[it.hdFav]);
@@ -2859,7 +2863,7 @@ function renderCardB(it){
     }
     const out=(market,side)=>{
       if(market==="ml"){ if(s.ml==="tie") return "void"; return s.ml===side?"hit":"miss"; }
-      if(market==="hd"){ const cov=(s.hd==="cover"); return side==="give"?(cov?"hit":"miss"):(cov?"miss":"hit"); }
+      if(market==="hd"){ const my=side==="give"?s.myHdGive:s.myHdRecv; if(my!=null){ if(my==="push") return "void"; return my==="cover"?"hit":"miss"; } const cov=(s.hd==="cover"); return side==="give"?(cov?"hit":"miss"):(cov?"miss":"hit"); }
       if(market==="tot"){ const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="push") return "void"; return st===side?"hit":"miss"; }
       return null;
     };
@@ -2868,8 +2872,10 @@ function renderCardB(it){
     const fS=it.hdFav, uS=it.hdFav==="away"?"home":"away";
     if(it.mlAway.lights>=3) pill(it.away, it.mlAway.lights, out("ml","away"));
     if(it.mlHome.lights>=3) pill(it.home, it.mlHome.lights, out("ml","home"));
-    if(it.hdGive.lights>=3) pill(`${it[fS]}讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdGive.lights, out("hd","give"));
-    if(it.hdRecv.lights>=3) pill(`${it[uS]}受讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdRecv.lights, out("hd","recv"));
+    const _dG = fS==="away" ? s.myHdAwayLine : s.myHdHomeLine;
+    const _dR = uS==="away" ? s.myHdAwayLine : s.myHdHomeLine;
+    if(it.hdGive.lights>=3) pill(_dG!=null?`${it[fS]} 成交${_dG>0?"+"+_dG:_dG}`:`${it[fS]}讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdGive.lights, out("hd","give"));
+    if(it.hdRecv.lights>=3) pill(_dR!=null?`${it[uS]} 成交${_dR>0?"+"+_dR:_dR}`:`${it[uS]}受讓${it.hdVal?` ${it.hdVal}`:""}`, it.hdRecv.lights, out("hd","recv"));
     if(it.over.lights>=3)   pill(`大${it.totVal?` ${it.totVal}`:""}`, it.over.lights, out("tot","over"));
     if(it.under.lights>=3)  pill(`小${it.totVal?` ${it.totVal}`:""}`, it.under.lights, out("tot","under"));
     if(bs.children.length) el.appendChild(bs);
@@ -2950,11 +2956,12 @@ function todayHitRate(){
       if(it.mlAway.lights>=3){ r.any++; (s.ml==="away"?r.ml.hit++:r.ml.miss++); }
       if(it.mlHome.lights>=3){ r.any++; (s.ml==="home"?r.ml.hit++:r.ml.miss++); }
     }
-    // 讓分（過盤/沒過，無走盤）
+    // 讓分（過盤/沒過；成交線結果優先=對調場，push 不列入）
     if(s.hd==="cover"||s.hd==="nocover"){
-      const cov = (s.hd==="cover");
-      if(it.hdGive.lights>=3){ r.any++; (cov?r.hd.hit++:r.hd.miss++); }
-      if(it.hdRecv.lights>=3){ r.any++; (cov?r.hd.miss++:r.hd.hit++); }
+      const gv = (s.myHdGive!=null) ? s.myHdGive : (s.hd==="cover"?"cover":"nocover");
+      const rv = (s.myHdRecv!=null) ? s.myHdRecv : (s.hd==="cover"?"nocover":"cover");
+      if(it.hdGive.lights>=3 && gv!=="push"){ r.any++; (gv==="cover"?r.hd.hit++:r.hd.miss++); }
+      if(it.hdRecv.lights>=3 && rv!=="push"){ r.any++; (rv==="cover"?r.hd.hit++:r.hd.miss++); }
     }
     // 大小（push 不列入）
     { const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="over"||st==="under"){   // B：命中用成交線 myTot
@@ -4519,9 +4526,12 @@ function collectPicks(scope, leagueFilter, marketFilter){
       if(!(crossConflict && undSide==="home")) addPick("ml","home", ls.mlHome||0, hOut);
     }
     // hd / recv — skip if same-zone conflict; the 讓 leg is also dropped under cross-conflict
+    // 成交線結果（對調場）優先：myHdGiveResult/myHdRecvResult，歷史無→市場 hdResult
     if(g.hdResult!=null && !hdConflict){
-      if(!crossConflict) addPick("hd","give", ls.hdGive||0, favCovered?"hit":"miss");
-      addPick("hd","recv", ls.hdRecv||0, favCovered?"miss":"hit");
+      const gv = (g.myHdGiveResult!=null) ? g.myHdGiveResult : (favCovered?"cover":"nocover");
+      const rv = (g.myHdRecvResult!=null) ? g.myHdRecvResult : (favCovered?"nocover":"cover");
+      if(!crossConflict) addPick("hd","give", ls.hdGive||0, gv==="push"?"void":(gv==="cover"?"hit":"miss"));
+      addPick("hd","recv", ls.hdRecv||0, rv==="push"?"void":(rv==="cover"?"hit":"miss"));
     }
     // tot — skip if same-zone conflict
     if(totRes!=null && !totConflict){
@@ -5929,8 +5939,28 @@ function openSettleModal(it){
       <input id="settleMyTotLine" type="number" inputmode="decimal" step="1" min="0.5" placeholder="如 7.5" style="width:70px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotLine!=null?it.myTotLine:""}">
       <span style="color:var(--ink-dim);font-size:11px;">命中率／燈號用此線判；市場大小過盤率仍用上方「基準」（收盤線）</span>
     </div>
+    <div id="myHdWrap" style="display:${((fs0&&fs0!=="none")||it.preGameSwap||it.platformFlip||it.flipVanished)?"block":"none"};margin-top:10px;padding:8px 10px;border:1px solid rgba(224,160,32,.35);border-radius:8px;">
+      <div style="display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap;">
+        <span style="color:#e0a020;">讓分成交線（對調場用）</span>
+        <span style="color:var(--ink-dim);">${esc(it.away)}(客)</span>
+        <input id="settleMyHdAway" type="number" inputmode="decimal" step="0.5" placeholder="+1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdAwayLine!=null?it.myHdAwayLine:""}">
+        <span style="color:var(--ink-dim);">${esc(it.home)}(主)</span>
+        <input id="settleMyHdHome" type="number" inputmode="decimal" step="0.5" placeholder="-1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdHomeLine!=null?it.myHdHomeLine:""}">
+      </div>
+      <div style="color:var(--ink-dim);font-size:11px;margin-top:5px;line-height:1.6;">＋＝受讓、−＝讓（如你買馬林魚+1.5 就在馬林魚格填 +1.5；兩隊都買過就兩格都填）。該隊的燈與命中改用此線判；市場讓分過盤率仍用收盤。</div>
+    </div>
   `;
   body.appendChild(flipWrap);
+  // 讓分成交線欄位：平常收合，選了顛倒/收斂或勾了對調才浮出（結算卡保持乾淨）
+  {
+    const _showMyHd = ()=>{ const w=$("#myHdWrap"); if(!w) return;
+      const fsv = $("#settleFlipState") ? $("#settleFlipState").value : "none";
+      const sw = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
+      if(fsv!=="none" || sw) w.style.display="block";
+    };
+    $("#settleFlipState") && $("#settleFlipState").addEventListener("change", _showMyHd);
+    $("#settlePreSwap") && $("#settlePreSwap").addEventListener("change", _showMyHd);
+  }
   // 即時判讀：盤口隱含、市場方向、模型差距、ERA 驗證
   function _updSettleOddsCalc(){
     const out = $("#settleOddsCalc"); if(!out) return;
@@ -6273,6 +6303,9 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   if(_tv!==undefined) it.totVal = (_tv==="" ? "" : _tv);
   const _mtl0 = $("#settleMyTotLine")?.value;   // B：暫存也記我的大小成交線
   if(_mtl0!==undefined) it.myTotLine = (_mtl0==="" || isNaN(parseFloat(_mtl0))) ? null : parseFloat(_mtl0);
+  const _mha0 = $("#settleMyHdAway")?.value, _mhh0 = $("#settleMyHdHome")?.value;   // 讓分成交線（對調場）
+  if(_mha0!==undefined) it.myHdAwayLine = (_mha0==="" || isNaN(parseFloat(_mha0))) ? null : parseFloat(_mha0);
+  if(_mhh0!==undefined) it.myHdHomeLine = (_mhh0==="" || isNaN(parseFloat(_mhh0))) ? null : parseFloat(_mhh0);
   const _sea = parseFloat($("#settleEraAway")?.value), _seh = parseFloat($("#settleEraHome")?.value);
   it.eraAway = isNaN(_sea) ? null : _sea;
   it.eraHome = isNaN(_seh) ? null : _seh;
@@ -6317,6 +6350,21 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     } else {
       picks.myTot = picks.tot;
     }
+  }
+  // 讓分成交線（對調場）：每隊各自的成交線（＋受讓／−讓），該隊的燈與命中用它結算；市場 hdResult 不動。
+  {
+    const _mha = $("#settleMyHdAway")?.value, _mhh = $("#settleMyHdHome")?.value;
+    const mha = (_mha==="" || _mha==null || isNaN(parseFloat(_mha))) ? null : parseFloat(_mha);
+    const mhh = (_mhh==="" || _mhh==null || isNaN(parseFloat(_mhh))) ? null : parseFloat(_mhh);
+    it.myHdAwayLine = mha; it.myHdHomeLine = mhh;
+    picks.myHdAwayLine = mha; picks.myHdHomeLine = mhh;
+    const sideRes = (team, line)=>{ if(line==null) return null;
+      const diff = (team==="away" ? picks.awayScore-picks.homeScore : picks.homeScore-picks.awayScore) + line;
+      return diff===0 ? "push" : (diff>0 ? "cover" : "nocover");
+    };
+    const favT = it.hdFav==="away" ? "away" : "home", undT = favT==="away" ? "home" : "away";
+    picks.myHdGive = sideRes(favT, favT==="away"?mha:mhh);   // 讓槽（=結算時讓分方那隊）的成交結果；null=未填照市場
+    picks.myHdRecv = sideRes(undT, undT==="away"?mha:mhh);   // 受讓槽
   }
   // 顛倒場狀態：讀下拉、反寫卡片(維持卡片按鈕/標籤同步)
   applyFlipState(it, ($("#settleFlipState") && $("#settleFlipState").value) || "none");
@@ -6424,6 +6472,10 @@ function applySettlement(it, picks, delta){
     hdVal: (function(){ const v = parseFloat(it.hdVal); return isNaN(v) ? null : v; })(),
     totVal: (function(){ const v = parseFloat(it.totVal); return isNaN(v) ? null : v; })(),
     myTotLine: (function(){ const v = parseFloat(it.myTotLine); return isNaN(v) ? null : v; })(),   // B：我的大小成交線（市場基準 totVal 不變）
+    myHdAwayLine: (picks.myHdAwayLine!=null ? picks.myHdAwayLine : null),                            // 讓分成交線（對調場；＋受讓／−讓）
+    myHdHomeLine: (picks.myHdHomeLine!=null ? picks.myHdHomeLine : null),
+    myHdGiveResult: (picks.myHdGive!=null ? picks.myHdGive : null),                                  // 讓槽成交結果 cover/nocover/push
+    myHdRecvResult: (picks.myHdRecv!=null ? picks.myHdRecv : null),
     myTotResult: (picks.myTot || totResult),   // B：成交線結果（命中／燈號用）；未填成交線或歷史場 → =市場 totResult，不汙染
     eraAway: (it.eraAway!=null && !isNaN(it.eraAway)) ? it.eraAway : null,
     eraHome: (it.eraHome!=null && !isNaN(it.eraHome)) ? it.eraHome : null,
