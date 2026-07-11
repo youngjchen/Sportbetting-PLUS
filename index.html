@@ -342,6 +342,15 @@
   .sumrow .n{font-family:"Oswald";font-weight:700;color:var(--hot);font-size:14px;flex:0 0 auto;}
   .sumrow .n.warm{color:var(--lit);}
   #summary .sumempty{padding:14px;color:var(--ink-dim);font-size:12px;line-height:1.6;}
+  /* 同場選項併排；燈數改用字色強度（越亮＝越多燈），不再顯示 ●N */
+  .sumgrow{display:flex;align-items:baseline;gap:10px;padding:7px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.03);}
+  .sumgrow .gmt{color:var(--ink-dim);font-size:11px;flex:0 0 66px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .sumgrow .gpk{flex:1;display:flex;flex-wrap:wrap;gap:5px 12px;}
+  .sumgrow .sp{font-weight:700;white-space:nowrap;}
+  .sumgrow .sp .mk{color:var(--ink-dim);font-weight:500;font-size:11px;margin-left:4px;}
+  .sumgrow .sp .lw{color:#e0803a;font-size:11px;margin-left:4px;font-weight:600;}
+  .sumgrow .sp.n3{color:#b98a4c;} .sumgrow .sp.n4{color:#e0a020;}
+  .sumgrow .sp.n5{color:#ffc24a;} .sumgrow .sp.n6{color:#ffe487;text-shadow:0 0 10px rgba(255,210,80,.55);}
   .sumsec{padding:7px 14px 2px;font-family:"Oswald";font-size:10px;letter-spacing:.12em;color:var(--ink-dim);text-transform:uppercase;}
   .sumsec.collapsible{display:flex;align-items:center;justify-content:space-between;padding-right:14px;user-select:none;}
   .sumsec.collapsible:hover{color:var(--ink);}
@@ -3111,13 +3120,18 @@ function renderSummary(){
   if(fStrong.length){
     const t = document.createElement("div"); t.className="sumsec"; t.textContent="3 個以上（無衝突）";
     body.appendChild(t);
-    fStrong.forEach(s=>{
-      const r = document.createElement("div"); r.className="sumrow";
-      const low = (s.it && s.market) ? isLitSideLow(s.it, s.market) : false;
-      const lowWarn = low ? `<span class="lowwarn">⚠ 過盤率低</span>` : "";
-      r.innerHTML = `<span class="mt">${esc(s.matchName)}</span>`+
-                    `<span class="pk">${esc(s.pick)}<span class="mk">${esc(s.mk)}</span>${lowWarn}</span>`+
-                    `<span class="n${s.n>3?'':' warm'}">●${s.n}</span>`;
+    // 同場的不同選項併成一列（下注不必來回找）；燈數用字色強度表達，不再顯示 ●N
+    const byGame = new Map();
+    fStrong.forEach(s=>{ if(!byGame.has(s.matchName)) byGame.set(s.matchName, []); byGame.get(s.matchName).push(s); });
+    const games = [...byGame.values()].sort((a,b)=> Math.max(...b.map(x=>x.n)) - Math.max(...a.map(x=>x.n)));
+    games.forEach(sigs=>{
+      const r = document.createElement("div"); r.className="sumgrow";
+      const picks = sigs.slice().sort((a,b)=>b.n-a.n).map(s=>{
+        const low = (s.it && s.market) ? isLitSideLow(s.it, s.market) : false;
+        const nCls = s.n>=6 ? "n6" : s.n===5 ? "n5" : s.n===4 ? "n4" : "n3";
+        return `<span class="sp ${nCls}" title="${s.n} 燈">${esc(s.pick)}<span class="mk">${esc(s.mk)}</span>${low?'<span class="lw">⚠</span>':''}</span>`;
+      }).join("");
+      r.innerHTML = `<span class="gmt">${esc(sigs[0].matchName)}</span><span class="gpk">${picks}</span>`;
       body.appendChild(r);
     });
   }
@@ -3349,7 +3363,9 @@ function layoutRightColumns(){
     panel.style.left = (navRightEdge + PGAP) + "px";
     panel.style.right = EDGE + "px"; panel.style.width = "auto";
     panel.style.top = top + "px"; panel.style.bottom = EDGE + "px";
-    const body = panel.querySelector(".sumbody"); if(body) body.style.maxHeight = "none";
+    panel.style.display = "flex"; panel.style.flexDirection = "column";   // docking：讓 sumbody 內捲，不再撐出面板底部
+    const body = panel.querySelector(".sumbody");
+    if(body){ body.style.maxHeight = "none"; body.style.flex = "1 1 auto"; body.style.minHeight = "0"; body.style.overflowY = "auto"; }
   }
 }
 
