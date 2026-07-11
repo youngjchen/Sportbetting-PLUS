@@ -3254,9 +3254,14 @@ function renderMatchNav(){
     t.oncontextmenu=(e)=>{ e.preventDefault(); openSettleModal(it); };   // 右鍵標籤＝開結算
     t.onclick=()=>{
       const card = world.querySelector('.card[data-id="'+it.id+'"]');
-      if(card){ card.scrollIntoView({behavior:"smooth", block:"start"});
+      if(card && canvas){
+        // 一次到位：直接設 scrollTop（單幀完成）→ 不給週期性 render 的 scrollTop 還原打斷的機會
+        // （smooth 動畫途中被 render 還原＝之前「卡頓／沒到位就停」的根因）
+        const target = canvas.scrollTop + (card.getBoundingClientRect().top - canvas.getBoundingClientRect().top) - 10;
+        canvas.scrollTop = Math.max(0, target);
         t.classList.add("flash"); card.classList.add("navflash");
-        setTimeout(()=>{ t.classList.remove("flash"); card.classList.remove("navflash"); }, 1200); }
+        setTimeout(()=>{ t.classList.remove("flash"); card.classList.remove("navflash"); }, 1200);
+      }
     };
     t.addEventListener("dragstart", e=>{ _navDrag=it.id; t.classList.add("dragging");
       try{ e.dataTransfer.effectAllowed="move"; e.dataTransfer.setData("text/plain", String(it.id)); }catch(_){} });
@@ -7179,6 +7184,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260625dh3"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=1"></script><script src="./divination-addon.js?v=20260709a"></script>
+</script><script src="./odds-integration.js?v=20260625dh3"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=1"></script><script src="./divination-addon.js?v=20260712a"></script>
 </body>
 </html>

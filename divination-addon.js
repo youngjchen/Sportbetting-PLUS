@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260709a';
+  const V = '20260712a';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -242,8 +242,21 @@
     return { aborted: null, lot, log: yun.log.concat(que.log) };
   }
 
+  // 一事不二問防呆：同場＋同市場＋同起卦法已占過（含棄場）→ 鎖起卦鈕
+  function alreadyCast() {
+    if (!sel.game) return false;
+    try { const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+      return list.some(e => e.officialId === sel.game.officialId && e.market === sel.market && e.method === sel.method);
+    } catch (_) { return false; }
+  }
+  function refreshGoState() {
+    const btn = document.getElementById('dv-go'); if (!btn) return;
+    if (!sel.game) { btn.disabled = true; btn.textContent = '起　卦'; return; }
+    if (alreadyCast()) { btn.disabled = true; btn.textContent = '此場此法已占（一事不二問）'; }
+    else { btn.disabled = false; btn.textContent = '起　卦'; }
+  }
   async function doCast() {
-    if (!sel.game) return;
+    if (!sel.game || alreadyCast()) return;
     const g = sel.game, market = sel.market, btn = document.getElementById('dv-go');
     btn.disabled = true; btn.textContent = '起卦中…';
     try {
@@ -298,10 +311,10 @@
          <div class="dv-dim">隨機源：${esc(entry.source)}　｜　※ 興趣紀錄，不入實驗統計</div>
          <details class="dv-details"><summary>為什麼是這個結果？</summary><div class="dv-exp-body">${explainHTML(entry)}</div></details></div>`;
       document.getElementById('dv-result').innerHTML = anim;
-      setTimeout(() => { document.getElementById('dv-result').innerHTML = resultHTML; btn.disabled = false; btn.textContent = '起　卦'; }, 1150);
+      setTimeout(() => { document.getElementById('dv-result').innerHTML = resultHTML; refreshGoState(); }, 1150);   // 起卦後鎖此場此法
       return;
     } catch (e) { document.getElementById('dv-result').innerHTML = `<div class="dv-card">起卦失敗：${esc(e.message)}</div>`; }
-    btn.disabled = false; btn.textContent = '起　卦';
+    refreshGoState();
   }
 
   async function renderAuto() {
@@ -527,8 +540,8 @@
       </div></div>`));
     document.getElementById('divClose').onclick = () => document.getElementById('divpage').classList.remove('show');
     Object.keys(TABS).forEach(k => document.getElementById('divTab-' + k).onclick = () => switchTab(k));
-    document.getElementById('dv-game').onchange = (e) => { sel.game = games[+e.target.value] || null; };
-    const bind = (id, key) => document.getElementById(id).querySelectorAll('.dv-opt').forEach(o => o.onclick = () => { document.getElementById(id).querySelectorAll('.dv-opt').forEach(x => x.classList.toggle('on', x === o)); sel[key] = o.dataset.v; });
+    document.getElementById('dv-game').onchange = (e) => { sel.game = games[+e.target.value] || null; refreshGoState(); };
+    const bind = (id, key) => document.getElementById(id).querySelectorAll('.dv-opt').forEach(o => o.onclick = () => { document.getElementById(id).querySelectorAll('.dv-opt').forEach(x => x.classList.toggle('on', x === o)); sel[key] = o.dataset.v; refreshGoState(); });
     bind('dv-mkt', 'market'); bind('dv-mtd', 'method');
     document.getElementById('dv-go').onclick = doCast;
 
@@ -537,7 +550,7 @@
       const bar = document.getElementById('zoomctlBtns'); if (!bar) { if (tries++ < 20) return setTimeout(mount, 500); return; }
       if (document.getElementById('divQuickBtn')) return;
       const b = document.createElement('button'); b.className = 'fit'; b.id = 'divQuickBtn'; b.title = '占卜'; b.textContent = '卦'; bar.appendChild(b);
-      b.onclick = async () => { document.getElementById('divpage').classList.add('show'); switchTab('cast'); if (!gamesLoaded) { await fetchGames(); gamesLoaded = true; } };
+      b.onclick = async () => { document.getElementById('divpage').classList.add('show'); switchTab('cast'); if (!gamesLoaded) { await fetchGames(); gamesLoaded = true; } refreshGoState(); };
     })();
   }
 
