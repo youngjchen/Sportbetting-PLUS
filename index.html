@@ -2851,8 +2851,9 @@ function renderCardB(it){
           `<b style="color:#ffd08a">${ist.ls?("台彩 "+esc(ist.ls==="home"?it.home:it.away)+"讓"+(ist.ll!=null?ist.ll:"")):"台彩無資料"}</b></span>`;
         const more=document.createElement("div"); more.className="intl-more no-drag";
         more.innerHTML = (ist.sw?`⇄${ist.sw}＝bet365 讓分方今天換邊 ${ist.sw} 次：${esc(ist.tr||"")}`:`bet365 讓分方今天未換邊`)+
+          (ist.ltr?`<br>台彩換邊 ⇄${ist.lsw}：${esc(ist.ltr)}`:"")+
           (ist.dv?`・<span style="color:#ff5d7a">背離（獨贏熱門 ${esc(ist.mf==="home"?it.home:it.away)}）</span>`:"")+
-          `<br>台彩側＝玩運彩開盤快照；此帶只讀國際軸資料，不會改卡片任何欄位。`;
+          `<br>台彩側＝${ist.lsLive?"玩運彩盤中序列（現況）":"玩運彩開盤快照"}；此帶只讀國際軸資料，不會改卡片任何欄位。`;
         strip.onclick=(e)=>{ e.stopPropagation(); strip.classList.toggle("open"); };
         ana.appendChild(strip); ana.appendChild(more);
       } }
@@ -3274,10 +3275,11 @@ function renderMatchNav(){
           const old=t.querySelector(".nvtip"); if(old){ old.remove(); return; }
           const tip=document.createElement("div"); tip.className="nvtip no-drag";
           tip.onclick=(ev)=>ev.stopPropagation();
-          tip.innerHTML = `<b style="color:#3aa0ff">國際軸（bet365 vs 台彩開盤）</b><br>`+
+          tip.innerHTML = `<b style="color:#3aa0ff">國際軸（bet365 vs 台彩${ist.lsLive?"":"開盤"}）</b><br>`+
             `bet365：<b>${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}</b>${ist.sw?`　⇄${ist.sw}＝今天換邊 ${ist.sw} 次`:""}`+
-            (ist.ls?`<br>台彩(開盤)：<b>${esc(ist.ls==="home"?it.home:it.away)} 讓${ist.ll!=null?ist.ll:""}</b>`:`<br>台彩：無資料`)+
-            (ist.tr&&ist.sw?`<br><span style="color:var(--ink-dim)">${esc(ist.tr)}</span>`:"")+
+            (ist.ls?`<br>台彩${ist.lsLive?"":"(開盤)"}：<b>${esc(ist.ls==="home"?it.home:it.away)} 讓${ist.ll!=null?ist.ll:""}</b>${ist.lsw?`　⇄${ist.lsw}`:""}`:`<br>台彩：無資料`)+
+            (ist.tr&&ist.sw?`<br><span style="color:var(--ink-dim)">b365：${esc(ist.tr)}</span>`:"")+
+            (ist.ltr?`<br><span style="color:var(--ink-dim)">台彩：${esc(ist.ltr)}</span>`:"")+
             (ist.dv?`<br><span style="color:#ff5d7a">背離：bet365 獨贏熱門（${esc(ist.mf==="home"?it.home:it.away)}）≠ 讓分方</span>`:"");
           t.appendChild(tip);
           setTimeout(()=>{ const h=(ev)=>{ if(!tip.contains(ev.target)&&ev.target!==bd){ tip.remove(); document.removeEventListener("pointerdown",h,true); } };
@@ -6050,9 +6052,9 @@ function openSettleModal(it){
       bar.innerHTML = `🌐 自動判（國際軸）：<b>${vTxt}</b><span style="float:right;color:var(--ink-dim)">▸</span>`+
         `<div class="iad" style="display:none;margin-top:6px;color:var(--ink-dim);line-height:1.8">`+
         `bet365：${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}${ist.sw?`（⇄${ist.sw}：${esc(ist.tr||"")}）`:""}`+
-        `<br>台彩(開盤)：${ist.ls?esc(ist.ls==="home"?it.home:it.away)+" 讓"+(ist.ll!=null?ist.ll:""):"無資料"}`+
+        `<br>台彩${ist.lsLive?"":"(開盤)"}：${ist.ls?esc(ist.ls==="home"?it.home:it.away)+" 讓"+(ist.ll!=null?ist.ll:""):"無資料"}${ist.ltr?`（⇄${ist.lsw}：${esc(ist.ltr)}）`:""}`+
         (ist.dv?`<br>背離：bet365 獨贏熱門 ≠ 讓分方`:"")+
-        `<br>僅供參考（bet365 vs 台彩開盤軸）；已自動存獨立欄位分帳累積，下方顛倒狀態照你親眼所見選。</div>`;
+        `<br>僅供參考（bet365 vs 台彩${ist.lsLive?"":"開盤"}軸）；已自動存獨立欄位分帳累積，下方顛倒狀態照你親眼所見選。</div>`;
       bar.onclick=()=>{ const d=bar.querySelector(".iad"); d.style.display = d.style.display==="none" ? "block" : "none"; };
       body.appendChild(bar);
     } }

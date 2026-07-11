@@ -415,7 +415,7 @@ function feedCanon(name, league) {
 }
 
 function buildIntlState(log, stamp) {
-  // 台彩側：讀另一支爬蟲的 feed（同 repo checkout，新鮮度 ~20 分）
+  // 台彩側來源鏈：①lottery_series.json（盤中序列，2026-07-12 根治後的權威）②pregame feed 最新值（後備）
   let lotMap = {};
   try {
     const feed = JSON.parse(fs.readFileSync(path.join('data', 'pregame_data.json'), 'utf8'));
@@ -428,7 +428,18 @@ function buildIntlState(log, stamp) {
       if (!away || !home) continue;
       lotMap[`${lg}|${g.date}|${away}|${home}`] = { side: lh.favSide, line: lh.line != null ? lh.line : null };
     }
-  } catch (e) { console.log('  ⚠️ intl_state：讀不到 pregame feed（' + e.message + '），台彩側全缺'); }
+  } catch (e) { console.log('  ⚠️ intl_state：讀不到 pregame feed（' + e.message + '）'); }
+  let serMap = {};
+  try {
+    const ser = JSON.parse(fs.readFileSync(fs.existsSync(path.join('data', 'lottery_series.json')) ? path.join('data', 'lottery_series.json') : 'lottery_series.json', 'utf8'));
+    for (const oid of Object.keys(ser.games || {})) {
+      const g = ser.games[oid];
+      const lg = String(g.league || '').toLowerCase();
+      const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
+      if (!away || !home || !g.pts || !g.pts.length) continue;
+      serMap[`${lg}|${g.date}|${away}|${home}`] = g.pts;
+    }
+  } catch (e) { /* 序列檔尚未存在（部署初期）→ 全走 feed 後備 */ }
 
   let prev = { games: {} };
   try { prev = JSON.parse(fs.readFileSync(INTL_FILE, 'utf8')); } catch (e) {}
@@ -438,26 +449,45 @@ function buildIntlState(log, stamp) {
     const e = log.matches[id];
     if (!e._hdTs || !e.awayTeam || !e.homeTeam || !e.startISO) continue;
     const date = e.startISO.slice(0, 10);
+    const year = date.slice(0, 4);
     const key = `${e.league}|${date}|${e.awayTeam}|${e.homeTeam}`;
     const pre = e._hdTs.filter(r => !r.live && r.line != null && r.line !== 0);
     if (!pre.length) continue;
-    // 方向序列（正=主讓/負=客讓），連續同向壓縮 → 換邊次數與軌跡
+    const sideName = d => d === 'home' ? e.homeTeam : e.awayTeam;
+    // bet365 方向序列（正=主讓/負=客讓）＋epoch（md+hhmm → +08:00）
     const seq = [];
     for (const r of pre) {
       const dir = r.line > 0 ? 'home' : 'away';
+      let t = null;
+      if (r.md && r.hhmm) { const [mo, dy] = r.md.split('-'); t = Date.parse(`${year}-${String(mo).padStart(2, '0')}-${String(dy).padStart(2, '0')}T${r.hhmm}:00+08:00`) / 1000 || null; }
       const last = seq[seq.length - 1];
-      if (!last || last.dir !== dir) seq.push({ dir, hhmm: r.hhmm });
+      if (!last || last.dir !== dir) seq.push({ dir, hhmm: r.hhmm, t });
     }
     const cur = pre[pre.length - 1];
     const intlSide = cur.line > 0 ? 'home' : 'away';
-    const lot = lotMap[key] || null;
-    const sideName = d => d === 'home' ? e.homeTeam : e.awayTeam;
+    // 台彩：序列優先（現況＋軌跡＋換邊數），feed 後備（單點）
+    const pts = serMap[key] || null;
+    const lotSeq = [];
+    if (pts) for (const p of pts) {
+      const last = lotSeq[lotSeq.length - 1];
+      if (!last || last.dir !== p.side) lotSeq.push({ dir: p.side, t: Date.parse(p.t) / 1000 || null, line: p.line });
+    }
+    const lot = lotSeq.length ? { side: lotSeq[lotSeq.length - 1].dir, line: pts[pts.length - 1].line, live: true }
+              : (lotMap[key] ? { side: lotMap[key].side, line: lotMap[key].line, live: false } : null);
     let verdict = null, everOpp = false;
     if (lot) {
-      everOpp = seq.some(s => s.dir !== lot.side);
+      if (lotSeq.length) {
+        // 雙序列交叉：合併事件時間軸，任一區間兩側同時有值且相反 → 曾相反
+        const evts = [...seq.map(s => s.t), ...lotSeq.map(s => s.t)].filter(t => t != null).sort((a, b) => a - b);
+        const at = (sq, t) => { let c = null; for (const s of sq) { if (s.t != null && s.t <= t) c = s.dir; else if (s.t != null) break; } return c; };
+        for (const t of evts) { const a = at(seq, t), b2 = at(lotSeq, t); if (a && b2 && a !== b2) { everOpp = true; break; } }
+        if (!everOpp) everOpp = seq.some(s => s.dir !== lot.side) && lotSeq.length === 1;   // 台彩無變動時退回單邊比對
+      } else {
+        everOpp = seq.some(s => s.dir !== lot.side);              // feed 後備：只能對台彩單點比
+      }
       if (intlSide !== lot.side) verdict = 'flip';
       else if (everOpp) verdict = 'was';
-      else if (seq.length > 1) verdict = 'swap';
+      else if (seq.length > 1 || lotSeq.length > 1) verdict = 'swap';
     } else if (seq.length > 1) verdict = 'swap';
     // 獨贏（bet365 decimal）判國際盤內背離
     let mlFav = null, dv = null;
@@ -467,10 +497,13 @@ function buildIntlState(log, stamp) {
       mlFav = lastMl.home < lastMl.away ? 'home' : 'away';
       dv = mlFav !== intlSide;
     }
+    const twHM = t => { const d = new Date((t + 8 * 3600) * 1000); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); };
     games[key] = {
       is: intlSide, il: Math.abs(cur.line), sw: Math.max(0, seq.length - 1),
       tr: seq.map(s => (s.hhmm ? s.hhmm + ' ' : '') + sideName(s.dir)).join(' → '),
       ls: lot ? lot.side : null, ll: lot ? lot.line : null,
+      lsLive: !!(lot && lot.live), lsw: Math.max(0, lotSeq.length - 1),
+      ltr: lotSeq.length > 1 ? lotSeq.map(s => (s.t ? twHM(s.t) + ' ' : '') + sideName(s.dir)).join(' → ') : null,
       mf: mlFav, dv, v: verdict, u: stamp
     };
   }

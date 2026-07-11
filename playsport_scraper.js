@@ -181,6 +181,45 @@ function saveAtomic(data) {
   fs.renameSync(tmp, OUTPUT_FILE);
 }
 
+// ============================================================
+// 台彩讓分方「序列」紀錄 lottery_series.json（2026-07-12 根治：feed 只有最新值，
+// 序列檔累積每次變動點 → 國際軸標示器/顛倒判定才有台彩盤中軌跡）。
+// 只記賽前(status=upcoming)且 src='運彩' 的點；同值不重複；同 feed 保存天數修剪。
+// ============================================================
+const SERIES_FILE = 'lottery_series.json';
+function loadSeries() {
+  for (const p of ['data/lottery_series.json', SERIES_FILE]) {
+    try { const o = JSON.parse(fs.readFileSync(p, 'utf8')); if (o && o.games) return o; } catch (_) {}
+  }
+  return { games: {} };
+}
+function recordSeries(fresh, keepDays) {
+  const store = loadSeries();
+  const now = new Date().toISOString();
+  for (const g of fresh) {
+    if (g.status !== 'upcoming') continue;                      // 開賽後 preview 消失，雙保險只記賽前
+    const hd = g.lotteryHandicap;
+    if (!hd || hd.src !== '運彩' || !hd.favSide) continue;
+    const e = store.games[g.officialId] || { league: g.league, date: g.date, awayTeam: g.awayTeam, homeTeam: g.homeTeam, pts: [] };
+    e.league = g.league; e.date = g.date; e.awayTeam = g.awayTeam; e.homeTeam = g.homeTeam;
+    const last = e.pts[e.pts.length - 1];
+    if (!last || last.side !== hd.favSide || last.line !== (hd.line == null ? null : hd.line)) {
+      e.pts.push({ t: now, side: hd.favSide, line: hd.line == null ? null : hd.line });
+    }
+    store.games[g.officialId] = e;
+  }
+  const cutoff = new Date(Date.now() - keepDays * 86400000);
+  for (const k of Object.keys(store.games)) {
+    const d = new Date((store.games[k].date || '') + 'T00:00:00');
+    if (!isNaN(d) && d < cutoff) delete store.games[k];
+  }
+  store.updated = now;
+  const tmp = SERIES_FILE + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(store), 'utf8');
+  fs.renameSync(tmp, SERIES_FILE);
+  return store;
+}
+
 // 讀既有累積檔（Actions 會把 data/pregame_data.json checkout 進來；本機則讀根目錄）
 function loadStore() {
   for (const p of ['data/pregame_data.json', OUTPUT_FILE]) {
@@ -201,10 +240,11 @@ function mergeStore(existing, fresh, keepDays) {
       merged[k] = keepPre(g[k], prev[k]);
     merged.awayPitcher = g.awayPitcher || prev.awayPitcher;
     merged.homePitcher = g.homePitcher || prev.homePitcher;
-    // 讓分盤口：優先保留賽前運彩盤口(真正的讓分方)；賽後的 過盤 結果不可覆蓋它
+    // 讓分盤口：新一次的「賽前運彩盤」＝最新值（解凍：跟上盤中變動，2026-07-12）；
+    // 沒抓到新賽前值(已開賽/已結束)→保留最後一筆賽前值；賽後 src='過盤' 永不覆蓋賽前值。
     const isLine = (hd) => hd && hd.src === '運彩';
-    merged.lotteryHandicap = isLine(prev.lotteryHandicap) ? prev.lotteryHandicap
-                           : (isLine(g.lotteryHandicap) ? g.lotteryHandicap
+    merged.lotteryHandicap = isLine(g.lotteryHandicap) ? g.lotteryHandicap
+                           : (isLine(prev.lotteryHandicap) ? prev.lotteryHandicap
                            : (g.lotteryHandicap || prev.lotteryHandicap));
     byId.set(g.officialId, merged);
   }
@@ -237,9 +277,14 @@ async function run(argv) {
   }
   const merged = mergeStore(loadStore(), fresh, KEEP_DAYS);
   saveAtomic(merged);
+  try {                                                          // 序列檔失敗不影響主輸出
+    const s = recordSeries(fresh, KEEP_DAYS);
+    const withPts = Object.values(s.games).filter((g) => g.pts.length > 1).length;
+    console.log(`📈 台彩序列：${Object.keys(s.games).length} 場（有變動 ${withPts} 場）→ ${SERIES_FILE}`);
+  } catch (e) { console.log('⚠️ 台彩序列寫入失敗（不影響 pregame_data）：' + e.message); }
   const withEra = merged.filter((g) => (g.awayERA || 0) > 0 || (g.homeERA || 0) > 0).length;
   console.log(`\n✅ 本次抓 ${fresh.length} 場；累積保存 ${merged.length} 場（含 ERA ${withEra} 場）→ ${OUTPUT_FILE}\n`);
   return merged;
 }
 if (require.main === module) run().catch((e) => { console.error('未預期錯誤：', e); process.exitCode = 1; });
-module.exports = { parseArgs, twDate, extractGames, resolveHandicap, saveAtomic, loadStore, mergeStore, run, ALL_LEAGUES };
+module.exports = { parseArgs, twDate, extractGames, resolveHandicap, saveAtomic, loadStore, mergeStore, recordSeries, loadSeries, run, ALL_LEAGUES };
