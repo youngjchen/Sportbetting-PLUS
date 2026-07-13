@@ -1,0 +1,31 @@
+# 小六壬前瞻起卦工作流（divination-lab 實驗 S）— 由 xiaoliuren_cast_daily.js 執行。
+# 雙臂皆釘選於「開賽前 240 分」的排定時刻/信標脈衝 → 觸發時機不影響卦象，兩天回補窗根絕漏卦。
+# 分鐘取 23,53 與 liuyao-cast(7,37)、qiuqian-cast(11,41) 錯峰。此檔只能用編輯工具改，勿用 PowerShell（BOM 會讓 Actions 拒收）。
+name: xiaoliuren-cast
+on:
+  schedule:
+    - cron: '23,53 12-23 * * *'   # UTC 12–23 = 台北 20:00–07:59
+    - cron: '23,53 0-4 * * *'     # UTC 0–4  = 台北 08:00–12:59
+  workflow_dispatch: {}
+  push:
+    branches: [main]                                 # 限主分支：tag push 不套 paths 過濾（GitHub 怪癖），會以 detached HEAD 跑而在 push 步驟失敗
+    paths: ['.github/workflows/xiaoliuren-cast.yml']  # 自測觸發：只在本檔變更時跑一次（熵源釘選下手動/推送觸發永久無害）
+permissions:
+  contents: write
+concurrency:
+  group: xiaoliuren-cast
+  cancel-in-progress: false
+jobs:
+  cast:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: |
+          git config user.name "xiaoliuren-bot"
+          git config user.email "xiaoliuren-bot@users.noreply.github.com"
+      - run: node xiaoliuren_cast_daily.js --commit
+      - run: git pull --rebase && git push
