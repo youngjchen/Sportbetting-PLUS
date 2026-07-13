@@ -8,7 +8,7 @@
    ============================================================ */
 (function () {
   'use strict';
-  const V = '20260712a';
+  const V = '20260713a';
   const LS_KEY = 'dvManualCasts';
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -130,7 +130,10 @@
   .dv-coin.dv-jiao{border-radius:50% 50% 42% 42%}
   #divpage .dv-poem{font-size:17px;line-height:1.85;color:var(--ink);margin:6px 0 10px;letter-spacing:.04em}
   .dv-abstain .dv-verdict{color:var(--ink-dim)}
-  .dv-okbadge{display:inline-block;border:1px solid var(--lit);color:var(--lit);border-radius:8px;padding:2px 10px;font-size:12.5px;margin-left:8px}`;
+  .dv-okbadge{display:inline-block;border:1px solid var(--lit);color:var(--lit);border-radius:8px;padding:2px 10px;font-size:12.5px;margin-left:8px}
+  .dv-pals{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+  .dv-pal{padding:9px 14px;border:1px solid var(--line);border-radius:9px;color:var(--ink-dim);font-size:15.5px;letter-spacing:.08em;animation:dvpal .9s steps(1) infinite}
+  @keyframes dvpal{0%,15%{color:var(--lit);border-color:var(--lit)}16%,100%{color:var(--ink-dim);border-color:var(--line)}}`;
 
   let games = [], sel = { game: null, market: '大小', method: '六爻' }, gamesLoaded = false;
   const h = (html) => { const d = document.createElement('div'); d.innerHTML = html; return d.firstElementChild; };
@@ -167,6 +170,12 @@
       ${(en.officialStoryTitles && en.officialStoryTitles.length) ? `<p><b>典故</b>　${esc(en.officialStoryTitles.join('、'))}<br><span class="dv-dim">${esc(en.officialStoryGist || '')}</span></p>` : ''}
       <p>本場判讀：<b>${vtxt}</b>　<span class="dv-dim">（依凍結判讀表；此為興趣紀錄，不入實驗統計）</span></p>
       <p class="dv-dim">求籤程序：擲筊 ${esc((c.log || []).join(' '))}</p>`;
+    }
+    if (e.method === '小六壬') {
+      const vtxt = c.verdict === '吉' ? `吉 → 斷 <b>${esc(homeRep)}</b>` : (c.verdict === '凶' ? `凶 → 斷 <b>${esc(awayRep)}</b>` : '空亡＝落空無表態 → <b>棄場</b>（不代為決定方向）');
+      return `<p>以起課當下農曆：月 ${c.nMonth}、日 ${c.nDay}、時支序 ${c.nHour}。掌訣三步：正月起大安順數至本月 → <b>月宮 ${esc(c.monthPalace)}</b>（主起因）；月宮上起初一順數至本日 → <b>日宮 ${esc(c.dayPalace)}</b>（主經過）；日宮上起子時順數至本時 → <b>時宮 ${esc(c.palace)}</b>（主結果，成敗以此裁決）。</p>
+      <p>時宮 ${esc(c.palace)} 屬「<b>${esc(c.verdict)}</b>」：${vtxt}。</p>
+      <p class="dv-dim">時刻起課的本質：同一時辰內對任何比賽起課都得同一宮——它是時間的函數，跟問哪場無關。另提醒：實驗 S 已開盒，小六壬時間盤與信標報數盤在 1.6 萬場回測皆為 null（上行 ≥1.49pp／0.48pp 被排除），此為興趣紀錄。</p>`;
     }
     if (e.method === '六爻') {
       const sw = ZHI_WX[c.shiZhi], yw = ZHI_WX[c.yingZhi], ctx = e.ctx || {};
@@ -270,6 +279,15 @@
       } else if (sel.method === '梅花') {
         cast = window.MeihuaEngine.castFromTaipei(t.getFullYear(), t.getMonth() + 1, t.getDate(), t.getHours(), t.getMinutes());
         side = cast.relation === '比和' ? null : (cast.pick === '體' ? 0 : 1); src = '時間起卦　' + cast.lunarText;
+      } else if (sel.method === '小六壬') { // 掌訣時刻起課：農曆(月+日+時−3)%6 → 時宮吉凶（實驗 S 同式；曆法同梅花凍結層）
+        const n = window.MeihuaEngine.numbersFromTaipei(t.getFullYear(), t.getMonth() + 1, t.getDate(), t.getHours(), t.getMinutes());
+        const P = ['大安', '留連', '速喜', '赤口', '小吉', '空亡'];
+        const JI6 = { 大安: '吉', 留連: '凶', 速喜: '吉', 赤口: '凶', 小吉: '吉', 空亡: '空亡' };
+        const idx = (((n.nMonth + n.nDay + n.nHour - 3) % 6) + 6) % 6;
+        const palace = P[idx], vd = JI6[palace];
+        side = vd === '吉' ? 0 : (vd === '凶' ? 1 : null);   // 吉→大/主、凶→小/客；空亡→棄場
+        cast = { xlr: true, palace, verdict: vd, nMonth: n.nMonth, nDay: n.nDay, nHour: n.nHour, monthPalace: P[(((n.nMonth - 1) % 6) + 6) % 6], dayPalace: P[(((n.nMonth + n.nDay - 2) % 6) + 6) % 6] };
+        src = '掌訣時刻起課　' + n.lunarText;
       } else { // 求籤（六十甲子）：瀏覽器儀式抽籤 → 查凍結籤詩庫與判讀表
         const db = window.__qiuqianDB, tabs = window.__qiuqianTables;
         if (!db) throw new Error('籤詩庫尚未載入，請稍候再試');
@@ -297,12 +315,15 @@
       let glyph;
       if (sel.method === '六爻') glyph = (TRI[cast.hexUp] || esc(cast.hexUp || '')) + (TRI[cast.hexLow] || esc(cast.hexLow || '')) + (cast.moving && cast.moving.length ? '　動' + cast.moving.join('·') : '　六爻安靜');
       else if (sel.method === '梅花') glyph = (TRI[cast['上卦']] || '') + (TRI[cast['下卦']] || '') + '　動' + cast.moving;
+      else if (sel.method === '小六壬') glyph = '時宮　' + cast.palace;
       else glyph = cast.aborted ? '⤫ 神示改日（棄場）' : ('第 ' + cast.lot + ' 籤　' + (cast.entry ? esc(cast.entry.ganzhi) : ''));
       const stamp = t.toTimeString().slice(0, 8);
       const anim = sel.method === '六爻'
         ? `<div class="dv-anim"><div class="dv-coins"><div class="dv-coin">錢</div><div class="dv-coin">錢</div><div class="dv-coin">錢</div></div><div class="dv-animlbl">三錢六擲中…</div></div>`
         : sel.method === '梅花'
         ? `<div class="dv-anim"><div class="dv-yaostack">${[0, 1, 2, 3, 4, 5].map(i => `<div class="dv-yao${i % 3 === 1 ? ' broken' : ''}" style="animation-delay:${(i * 0.16).toFixed(2)}s"></div>`).join('')}</div><div class="dv-animlbl">梅花起卦中…</div></div>`
+        : sel.method === '小六壬'
+        ? `<div class="dv-anim"><div class="dv-pals">${['大安', '留連', '速喜', '赤口', '小吉', '空亡'].map((p, i) => `<span class="dv-pal" style="animation-delay:${(i * 0.15).toFixed(2)}s">${p}</span>`).join('')}</div><div class="dv-animlbl">月上起日、日上起時…</div></div>`
         : `<div class="dv-anim"><div class="dv-coins"><div class="dv-coin dv-jiao">筊</div><div class="dv-coin dv-jiao" style="animation-delay:.12s">筊</div></div><div class="dv-animlbl">擲筊求籤中…</div></div>`;
       const resultHTML =
         `<div class="dv-card${side == null ? ' dv-abstain' : ''}"><div class="dv-dim">${esc(entry.matchup)}　${esc(entry.gameTime)}　${market}｜${sel.method}<span class="dv-okbadge">起卦完成 ✓ ${stamp}</span></div>
@@ -341,10 +362,20 @@
           : `<div class="dv-item"><b>已起籤 ✓</b>　${esc(e.matchup || e.gamePk)}［${MK[e.market] || esc(e.market)}］<div class="dv-sub">起籤 ${esc(String(e.castAt).slice(5, 16))}Z｜<span class="dv-mask">🔒 籤號與判讀遮蔽至開盒</span>｜beacon ${esc(String(e.beaconTS).slice(5, 16))}｜${esc(e.phase)}</div></div>`).join('');
         qHtml = qRows || '<div class="dv-empty">排程尚未產生籤——第一批將在下一個比賽日窗口出現</div>';
       } catch (e) { qHtml = '<div class="dv-empty">排程尚未產生籤（ledger 檔尚未建立）</div>'; }
+      let sHtml;
+      try {
+        const sArr = await (await fetch('data/xiaoliuren_casts.json?nocache=' + Date.now())).json();
+        const pk = (p, pal) => p ? `押 ${p}（${pal}）` : `棄場（${pal}·空亡）`;
+        sHtml = sArr.slice(-45).reverse().map(e =>
+          `<div class="dv-item"><b>時盤 ${pk(e.timePicks && e.timePicks.totals, e.timePalace)}｜數盤 ${e.randStatus === 'cast' ? pk(e.randPicks && e.randPicks.totals, e.randPalace) : (e.randStatus === 'missedPulse' ? '信標斷檔（棄場留痕）' : esc(e.randStatus))}</b>　${esc(e.matchup || e.gamePk)}<div class="dv-sub">卜 ${esc(String(e.castAt).slice(5, 16))}Z｜錨 ${esc(String(e.anchorUtc).slice(5, 16))}Z（開賽−240 分）｜${esc(e.phase)}</div></div>`).join('')
+          || '<div class="dv-empty">排程尚未產生卦——第一批將在下一個比賽日窗口出現</div>';
+      } catch (e) { sHtml = '<div class="dv-empty">排程尚未產生卦（ledger 檔尚未建立）</div>'; }
       box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">機器卦（實驗 L・六爻・大小分）</div>
         <div class="dvp-note">排程在每場開打前 40–180 分鐘自動搖卦（NIST 隨機信標），一場一卦永不重抽；錯過窗口的比賽記「漏卦」棄場留痕。2026 剩餘賽季＝試車；2027 全季＝正式樣本，季後才開盒。${xN ? `另有 v1.3 獨贏/讓分 exploratory 卦 ${xN} 筆（遮蔽中，不列示）。` : ''}</div>${rows || '<div class="dv-empty">排程尚未產生卦——第一批將在下一個比賽日窗口出現</div>'}
         <div class="dvp-h" style="margin-top:36px">機器籤（實驗 Q・六十甲子籤・三市場）</div>
-        <div class="dvp-note">照北港朝天宮官方線上求籤程序機械執行：允筊三聖杯 → 抽籤 → 確筊三聖杯；任一筊階段連五非聖即插問「弟子是否改日再問」，得聖＝棄場留痕。籤號與判讀遮蔽至開盒（協議 §9 同 L）。</div>${qHtml}</div>`;
+        <div class="dvp-note">照北港朝天宮官方線上求籤程序機械執行：允筊三聖杯 → 抽籤 → 確筊三聖杯；任一筊階段連五非聖即插問「弟子是否改日再問」，得聖＝棄場留痕。籤號與判讀遮蔽至開盒（協議 §9 同 L）。</div>${qHtml}
+        <div class="dvp-h" style="margin-top:36px">機器小六壬（實驗 S・前瞻・雙臂）</div>
+        <div class="dvp-note">凍結後 out-of-sample 累積：每場以「開賽前 240 分」為錨，時盤＝該刻農曆掌訣起課、數盤＝該刻 NIST 信標脈衝報數起課，一場一卦永不重卜；此處列大小分主檢方向（讓分／獨贏為同宮投影）。<b>回測 1.6 萬場已開盒＝雙臂 null</b>（RESULTS_S_v1）；前瞻命中率統計遮蔽至申報分析日，卦象本身公開（repo 有時間戳公證）。</div>${sHtml}</div>`;
     } catch (e) { box.innerHTML = '<div class="dvp-wrap"><div class="dvp-h">機器卦</div><div class="dv-empty">排程尚未產生卦（ledger 檔尚未建立）</div></div>'; }
   }
 
@@ -401,9 +432,11 @@
     const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中（即時對 MLB 官方結果結算）…</div></div>';
     const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
     const res = await resolveOutcomes(list);
-    const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花'), qiu = list.filter(e => e.method === '求籤');
+    const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花'), qiu = list.filter(e => e.method === '求籤'), xlr = list.filter(e => e.method === '小六壬');
     let machine = { n: 0, ab: 0, big: 0, missed: 0 };
     try { const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json(); arr.forEach(e => { if (e.failedAt) return; if (e.market) return; /* v1.3 exploratory 另冊，不入本表 */ if (e.missedWindow) { machine.missed++; return; } machine.n++; if (e.pick == null) machine.ab++; else if (e.pick === '大') machine.big++; }); } catch (e) {}
+    let mS = null;
+    try { const sArr = await (await fetch('data/xiaoliuren_casts.json?nocache=' + Date.now())).json(); mS = { n: 0, tAb: 0, rMiss: 0 }; sArr.forEach(e => { mS.n++; if (e.timeVerdict === '空亡') mS.tAb++; if (e.randStatus !== 'cast') mS.rMiss++; }); } catch (e) {}
     const mDec = machine.n - machine.ab, mBig = mDec ? (100 * machine.big / mDec).toFixed(1) + '%' : '—';
     const cs = consensusStats(list, res);
     box.innerHTML = `<div class="dvp-wrap">
@@ -413,28 +446,30 @@
         ${statRows('人・六爻搖卦', liu, res)}
         ${statRows('人・梅花起卦', mei, res)}
         ${statRows('人・求籤', qiu, res)}
+        ${statRows('人・小六壬', xlr, res)}
         <tr><td>機器・六爻（實驗 L）</td><td>${machine.n}</td><td>${machine.ab}</td><td colspan="3" class="dv-mask">🔒 遮蔽至開盒（協議 §9，2027 季後）</td></tr>
+        ${mS ? `<tr><td>機器・小六壬（實驗 S 前瞻）</td><td>${mS.n}</td><td>${mS.tAb}</td><td colspan="3" class="dv-mask">🔒 命中率遮蔽至申報分析日（回測已開盒＝雙臂 null）</td></tr>` : ''}
       </tbody></table><div class="dvp-note" style="margin-top:8px">三市場（獨贏／讓分／大小）分開列命中率——手動卦樣本小，各市場再拆更小，看看即可，統計上不可推論。</div></div>
       <div class="dvp-h" style="font-size:16px">共識（多法同讖）命中率</div>
-      <div class="dvp-note">只算「同場同市場，六爻／梅花／求籤中<b>≥2 法最新卦同向</b>」的共識選向——多法同時指同一邊時，準不準。棄場不算；命中率即時對 MLB 官方結果。</div>
+      <div class="dvp-note">只算「同場同市場，六爻／梅花／求籤／小六壬中<b>≥2 法最新卦同向</b>」的共識選向——多法同時指同一邊時，準不準。棄場不算；命中率即時對 MLB 官方結果。實驗 S 開盒的跨臂數據先打預防針：兩臂同向率 52.07%＝獨立隨機理論值、同向場命中 50.28%＝共識不加分。</div>
       <div class="dv-sec"><table class="dv-stat"><thead><tr><th>共識選向</th><th>共識數</th><th>已完賽</th><th>命中</th><th>命中率</th></tr></thead><tbody>
         ${consRow('全部共識', cs.all)}
         ${consRow('獨贏', cs.market['獨贏'], true)}
         ${consRow('讓分', cs.market['讓分'], true)}
         ${consRow('大小', cs.market['大小'], true)}
-        ${consRow('3 法全同', cs.three)}
+        ${consRow('≥3 法同', cs.three)}
         ${consRow('2 法同', cs.two)}
       </tbody></table>
       <div class="dvp-note" style="margin-top:8px">獨立隨機來源就算「同向」也還是隨機——三法同源同引擎、同向約半數機率；共識命中率高<b>不代表</b>有預測力，小樣本尤其別當真。</div></div>
       <div class="dvp-h" style="font-size:16px">押向分布</div>
-      <div class="dvp-note">機器六爻押大率 ${mBig}（有表態 ${mDec} 卦${machine.missed ? '；另漏卦 ' + machine.missed + ' 場棄場留痕' : ''}）。理論值：六爻押大約 51.8%、棄場約 12.6%。</div>
+      <div class="dvp-note">機器六爻押大率 ${mBig}（有表態 ${mDec} 卦${machine.missed ? '；另漏卦 ' + machine.missed + ' 場棄場留痕' : ''}）。理論值：六爻押大約 51.8%、棄場約 12.6%；小六壬時間盤押大 60.07%、報數盤 60% 整、空亡棄場約 1/6（回測認證）。</div>
       <div class="dvp-note">🔒 <b>機器卦命中率為什麼不顯示？</b>不是故障——凍結協議 §9 明文「命中率對照在分析日前遮蔽」（分析日＝2027 季後）。即時盯命中率會誘發偷看、中途起念改規則，正是當初審核堵掉的漏洞；試車期照樣遮，養成乾淨習慣。手動卦不受此限（本來就不入實驗）。</div>
       <div class="dv-sec dv-dim" style="line-height:1.9">
         <p><b>專業提醒（不是討好）：</b></p>
         <p>1. 人的六爻和機器的六爻用的是<b>同一支引擎、同一種隨機品質</b>，差別只在起卦時刻。理論上兩者押向分布應該一致；若看到差異，在樣本小的時候<b>純屬隨機</b>，不代表「人比較準」或「機器比較準」。</p>
         <p>2. 梅花和六爻是不同系統，分布本就不同（梅花約 54.7% 押大），不能直接比高下。</p>
         <p>3. 命中率要等比賽打完才有意義，而且手動卦樣本太小、又是想到才占（選擇性occasion），統計上不可推論。<b>唯一有推論力的是機器卦的 2027 正式樣本。</b></p>
-        <p>4. 提醒你已知的結論：梅花在 1.6 萬場回測是<b>乾淨的 null（不準）</b>；六爻的強先驗也是 null。這個統計頁看看分布可以，別拿來下注。</p>
+        <p>4. 提醒你已知的結論：梅花在 1.6 萬場回測是<b>乾淨的 null（不準）</b>；小六壬雙臂（時間盤＋信標報數盤）也在 1.6 萬場開盒為 <b>null</b>（上行 ≥1.49pp／0.48pp 被排除，讓分獨贏 exploratory 亦 null）；六爻的強先驗也是 null。這個統計頁看看分布可以，別拿來下注。</p>
       </div></div>`;
   }
 
@@ -477,11 +512,12 @@
         (rows ? `<div style="overflow-x:auto"><table class="dv-gt"><thead><tr><th>比賽（點列展開詳解／刪除）</th><th>獨贏</th><th>讓分</th><th>大小分</th></tr></thead><tbody>${rows}</tbody></table></div>` : '<div class="dv-empty">還沒有紀錄</div>') + '</div>';
     };
     box.innerHTML = `<div class="dvp-wrap"><div class="dvp-h">手動卦紀錄</div>
-      <div class="dvp-note">一場一排、市場固定序（獨贏／讓分／大小分），最新比賽在上；格內為該市場「最新」一卦，×N＝重複起卦次數。<span class="dv-gold">金字＝多法同讖</span>（六爻／梅花／求籤任兩法以上最新卦同向；趣味標記，獨立隨機同向約半數機率）；✓✗＝已完賽命中結果。點比賽列展開每一筆卦的詳解與單筆刪除。</div>
-      <div class="dv-htabs"><span class="dv-htab on" data-m="六爻">六爻搖卦</span><span class="dv-htab" data-m="梅花">梅花起卦</span><span class="dv-htab" data-m="求籤">求籤</span></div>
+      <div class="dvp-note">一場一排、市場固定序（獨贏／讓分／大小分），最新比賽在上；格內為該市場「最新」一卦，×N＝重複起卦次數。<span class="dv-gold">金字＝多法同讖</span>（六爻／梅花／求籤／小六壬任兩法以上最新卦同向；趣味標記，獨立隨機同向約半數機率）；✓✗＝已完賽命中結果。點比賽列展開每一筆卦的詳解與單筆刪除。</div>
+      <div class="dv-htabs"><span class="dv-htab on" data-m="六爻">六爻搖卦</span><span class="dv-htab" data-m="梅花">梅花起卦</span><span class="dv-htab" data-m="求籤">求籤</span><span class="dv-htab" data-m="小六壬">小六壬</span></div>
       <div class="dv-hsec" data-m="六爻">${section('六爻', '六爻搖卦')}</div>
       <div class="dv-hsec" data-m="梅花" style="display:none">${section('梅花', '梅花起卦')}</div>
       <div class="dv-hsec" data-m="求籤" style="display:none">${section('求籤', '求籤（六十甲子）')}</div>
+      <div class="dv-hsec" data-m="小六壬" style="display:none">${section('小六壬', '小六壬（掌訣）')}</div>
       ${list.length ? '<button class="dv-danger" id="dv-clear">清空所有手動紀錄</button>' : ''}</div>`;
     box.querySelectorAll('.dv-htab').forEach(t => t.onclick = () => {
       box.querySelectorAll('.dv-htab').forEach(x => x.classList.toggle('on', x === t));
@@ -531,7 +567,7 @@
           <div class="dvp-note">先選比賽與市場、再起卦；一次問一個方向，想算三盤就起三次卦。</div>
           <label class="dvp-lbl">比賽</label><select id="dv-game"></select>
           <label class="dvp-lbl">市場</label><div class="dv-opts" id="dv-mkt"><span class="dv-opt on" data-v="大小">大小分</span><span class="dv-opt" data-v="讓分">讓分</span><span class="dv-opt" data-v="獨贏">獨贏</span></div>
-          <label class="dvp-lbl">起卦法</label><div class="dv-opts" id="dv-mtd"><span class="dv-opt on" data-v="六爻">六爻搖卦（隨機）</span><span class="dv-opt" data-v="梅花">梅花起卦（依當下時刻）</span><span class="dv-opt" data-v="求籤">求籤（六十甲子）</span></div>
+          <label class="dvp-lbl">起卦法</label><div class="dv-opts" id="dv-mtd"><span class="dv-opt on" data-v="六爻">六爻搖卦（隨機）</span><span class="dv-opt" data-v="梅花">梅花起卦（依當下時刻）</span><span class="dv-opt" data-v="求籤">求籤（六十甲子）</span><span class="dv-opt" data-v="小六壬">小六壬（掌訣・依當下時刻）</span></div>
           <button id="dv-go">起　卦</button><div id="dv-result"></div>
         </div></div>
         <div id="dv-p-auto" style="display:none"></div>
