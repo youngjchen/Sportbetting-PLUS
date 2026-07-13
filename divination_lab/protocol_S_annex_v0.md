@@ -73,8 +73,27 @@
 - Ledger：`xiaoliuren_casts_time.json`（16,273 條）＋`xiaoliuren_casts_rand.json`（回補中）——均無結果欄。
 - 分析腳本（凍結後另建）：`--frozen-sha256` 守門，對不上拒跑（M 慣例）。
 
+## §8 分析合約（凍結——分析腳本必須逐字實作，敵意審 W1/W2 補）
+
+**主終點（confirmatory，大小分）判定式，凍結：**
+- 每臂每場的 `pick ∈ {大, 小, null}`。**`null`（空亡棄場）一律排除於分子與分母之外**（不得計為輸、不得計為押大）。
+- `over := totalRuns > totLine`（全 .5 線、無 push）。
+- `hit := (pick=='大' && over) || (pick=='小' && !over)`。
+- 命中率 = Σhit / Σ(pick≠null)。
+
+**虛無值 p₀，凍結：**
+- `q :=` 全合格樣本（16,273，含 2022）中 `over` 的比率＝**市場無條件開大率，單一常數，雙臂共用**。**不得**按宮位/空亡/年代條件化 q（防偷看，回應使用者 ②）。
+- `p₀_臂 = f_臂 · q + (1 − f_臂) · (1 − q)`，其中 `f_臂` = 該臂凍結之「有表態中押大」比率：**S-time f=0.6007、S-rand f=0.5949**（來自 §5、§5.1 實測，凍結鎖值）。
+- 主檢＝二項雙尾（命中率 vs p₀）＋置換共同主檢（同日同時辰共宮之叢集依賴）；α 各臂 2.5%（Bonferroni）。TOST ±5pp。
+
+**跨臂比較，凍結：**
+- **主檢＝各臂各自對自己的 p₀**（不受 2022 缺失影響）。
+- 「S-time 與 S-rand 是否一致」＝**限共同場集（both cast）的 exploratory 次要分析**，不設 α（回應使用者 ②）。
+
+**檢定力（MCAR 下，供 statistical-analyst）：** S-time 有效 n=13,476（16,273−2,797 空亡）；S-rand 有效 n=11,341。兩者皆遠超偵測 53% 所需 ~2,178。2022 於 S-rand 近乎全缺→**S-rand 分年代次要分析在 2022 格標「樣本不足、不判讀」**。
+
 ## §7 待辦（凍結前）
 
-1. S-rand 回補完成＋實測押注面對理論值覈對（±2pp 內）。
-2. 敵意審查（/adversarial-reviewer 或 code-review max）：引擎＋映射＋守門＋本附錄。
-3. FREEZE_MANIFEST_S（引擎/認證/回補/兩 ledger/本附錄 SHA256）→ tag → 凍結分析腳本 → 單一分析日開盒。
+1. ✅ S-rand 回補完成＋實測押注面對理論覈對（cast 空亡 16.54%/押大 59.49%，±0.5pp 通過，2026-07-12）。
+2. ✅ 敵意審（2026-07-12，CONCERNS；W1/W2 已補入 §8，W3/N2 內建於前瞻 workflow）。
+3. FREEZE_MANIFEST_S（引擎/認證/回補/兩 ledger/cert 輸出/本附錄＋曆法依賴 SHA256）→ tag `divination-freeze-S-v1` → 凍結分析腳本（`--frozen-sha256` 守門）→ 單一分析日開盒。
