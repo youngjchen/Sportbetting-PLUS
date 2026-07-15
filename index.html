@@ -728,6 +728,14 @@
   #moreMenu button:hover{background:var(--panel-2);}
   #moreMenu button.danger:hover{color:var(--danger);}
   #moreMenu .sep{height:1px;background:var(--line);margin:4px 2px;}
+  /* 儲存空間量表：圖標＋條＋一個數字。條本身就是訊息，顏色是第二層，文字只留百分比。 */
+  #stgauge{display:flex;align-items:center;gap:7px;padding:6px 10px 7px;cursor:default;}
+  #stgauge .sgicon{font-size:13px;line-height:1;}
+  #stgauge .sgbar{flex:1 1 auto;height:6px;border-radius:3px;background:#22303e;overflow:hidden;}
+  #stgauge .sgfill{height:100%;width:0;border-radius:3px;background:var(--ok,#3fb950);transition:width .25s,background .25s;}
+  #stgauge .sgpct{font-size:11px;color:var(--ink-dim);min-width:30px;text-align:right;font-variant-numeric:tabular-nums;}
+  #stgauge.warn .sgfill{background:#e0a020;} #stgauge.warn .sgpct{color:#e0a020;}
+  #stgauge.crit .sgfill{background:#e5534b;} #stgauge.crit .sgpct{color:#ff8a80;}
   #moreMenu .colrow{display:flex;align-items:center;gap:5px;padding:4px 10px 6px;}
   #moreMenu .colrow .collabel{font-size:12px;color:var(--ink-dim);margin-right:2px;}
   #moreMenu .colbtn{
@@ -979,6 +987,7 @@
         <button id="statsBtn">📊 隊伍統計</button>
         <button id="reviewBtn">🔍 燈號回顧</button>
         <div class="sep"></div>
+        <div id="stgauge" title="本機儲存空間用量"><span class="sgicon">💾</span><span class="sgbar"><span class="sgfill"></span></span><span class="sgpct">—</span></div>
         <!-- 很少使用：備份與清理 -->
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
@@ -2026,7 +2035,13 @@ let _saveTimer = null;
 // CompressionStream 是非同步，故寫入改「120ms 去抖 + 非同步壓縮」；save() 呼叫端不需 await。
 // 關頁／切背景時若還有未落地的變更 → 同步寫未壓縮版保命（下次載入會自動轉回壓縮）。
 let _persistJSON = null, _persistTimer = null;
+/* 讀取失敗閂鎖：load() 讀不出本機盤面時鎖死所有寫入。
+   為什麼必要：load() 失敗會讓 doc 停在空白初始值，接著使用者隨便點一下就觸發 save()，
+   空盤面把「其實還躺在 localStorage、還救得回來」的資料整包蓋掉。
+   ＝把一次可回復的讀取失敗，升級成不可回復的資料毀滅。寧可不存，也不要蓋。 */
+let _loadBlocked = false;
 function save(){
+  if(_loadBlocked) return;
   syncStateToDoc();
   doc.layoutCols = layoutCols;
   doc.pctWindow = pctWindow;
@@ -2053,12 +2068,21 @@ async function persistFlush(){
   updateSaveBadge(ok);
 }
 function persistEmergency(){                          // 同步、不壓縮：關頁前保命
-  if(_persistJSON == null) return;
-  try{ localStorage.setItem(LS_KEY, _persistJSON); _persistJSON = null; }catch(_){}
+  if(_loadBlocked || _persistJSON == null) return;
+  try{ localStorage.setItem(LS_KEY, _persistJSON); _persistJSON = null; }
+  catch(e){
+    // 以前這裡是 catch(_){} 靜默吞掉。這是關頁／切背景前的【最後一次】寫入機會，
+    // 而且寫的是未壓縮版（比 gz 大 2.2 倍）＝最容易爆配額的那一次，偏偏最沒有人看著。
+    // 手機切到背景 → pagehide → 這裡爆掉 → 無聲 → 系統回收分頁 → 今天的東西就沒了。
+    // ＝使用者回報「手機盤面放久會自己消失」的機制。至少要把記號留到下次開啟。
+    try{ sessionStorage.setItem("board_emergency_fail", String(Date.now())); }catch(_){}
+    updateSaveBadge(false);                           // 只是切分頁的話，回來就會看到常駐紅banner
+  }
 }
 window.addEventListener("pagehide", persistEmergency);
 document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden") persistEmergency(); });
 function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTimeout(save, 250); }
+let _loadErr = null;                                  // 讀取失敗的原因（要講給使用者聽，不能吞掉）
 function loadDocFromString(str){
   try{
     const d = JSON.parse(str);
@@ -2074,17 +2098,22 @@ function loadDocFromString(str){
       if(!doc.recent) doc.recent = [];
       return true;
     }
-  }catch(e){}
+    _loadErr = "內容解析得出來，但裡面沒有 boards（不是盤面備份檔？）";
+  }catch(e){ _loadErr = "JSON 解析失敗（" + e.message + "）"; }
   return false;
 }
 async function load(){
-  let loaded=false;
+  let loaded=false, hadRaw=false;
   // 1) localStorage (primary, works on GitHub Pages / Safari)
   try{
     let s = localStorage.getItem(LS_KEY);
-    if(s && s.slice(0,3)==="gz:"){ try{ s = await b64ToStr(s.slice(3)); }catch(_){ s = null; } }   // 壓縮版；解不開就往下走備援
+    hadRaw = !!(s && s.length > 2);                   // 記住「本機原本有東西」→ 讀不出來就不能當成新使用者
+    if(s && s.slice(0,3)==="gz:"){
+      try{ s = await b64ToStr(s.slice(3)); }
+      catch(err){ _loadErr = "壓縮內容解不開（" + err.message + "）"; s = null; }
+    }
     if(s) loaded = loadDocFromString(s);
-  }catch(e){}
+  }catch(e){ _loadErr = "讀取 localStorage 失敗（" + e.message + "）"; }
   // 2) preview-env storage (only in this builder; ignored on GitHub Pages)
   if(!loaded && window.storage){
     try{ const r = await window.storage.get("board_doc_v2", false); if(r && r.value) loaded = loadDocFromString(r.value); }catch(_){}
@@ -2093,6 +2122,27 @@ async function load(){
   if(!loaded){
     try{ const old = localStorage.getItem("board_state"); if(old){ const s=JSON.parse(old); if(s&&s.items){ doc={version:2,activeDate:todayStr(),boards:{[todayStr()]:{items:s.items,summaryPos:s.summaryPos||null}}}; loaded=true; } } }catch(_){}
   }
+  // ── 守門：本機明明有資料卻讀不出來 → 鎖死寫入，別讓空盤面把它蓋掉。
+  //    「讀不出來」幾乎都是可回復的（原始位元組還在），「被空盤面蓋掉」則永久。
+  if(hadRaw && !loaded){
+    _loadBlocked = true;
+    updateSaveBadge(false, "loadfail");               // 同時擋住 github-sync 的上傳／下載
+    setTimeout(function(){
+      alert("⚠ 讀不出本機盤面\n原因：" + (_loadErr || "未知") +
+            "\n\n你的原始資料還在瀏覽器裡，沒有被動到。\n為了避免空白盤面覆蓋掉它，已【鎖住自動儲存】——" +
+            "現在做的任何更動都不會被寫入。\n\n處理方式：\n" +
+            "· 「⋯ → 📂 匯入備份檔」還原一份備份，或\n" +
+            "· 「⋯ → ↺ 還原自動備份」試試瀏覽器內的自動快照\n\n" +
+            "（不要清快取／不要重灌，那會把還救得回來的資料弄掉）");
+    }, 400);
+  }
+  // 上次關頁前的保命寫入失敗過（多半是手機切背景時爆配額）→ 回來時要看得到，不能靜靜過去
+  try{
+    if(sessionStorage.getItem("board_emergency_fail")){
+      sessionStorage.removeItem("board_emergency_fail");
+      updateSaveBadge(false);
+    }
+  }catch(_){}
   loadActiveBoard();
 }
 
@@ -4309,16 +4359,26 @@ function importData(){
 
 /* tiny "saved" indicator */
 let _badgeTimer=null;
-function updateSaveBadge(ok){
+/* mode："quota"＝寫不進去（預設）／"loadfail"＝讀不出來。兩者的正確處置相反，訊息不能共用：
+   寫不進去 → 記憶體裡是好資料，要趕快「匯出」搶救；
+   讀不出來 → 記憶體裡是【空盤面】，這時叫人匯出等於匯出一個空檔還以為備份好了，比沒訊息更糟。 */
+function updateSaveBadge(ok, mode){
   window.__boardSaveOK = (ok !== false);   // 給 github-sync 守門：存檔失敗時 localStorage 是舊資料，不可上傳／下載
   const b=$("#saveBadge"); if(!b) return;
   if(ok===false){
     // 常駐不自動消失：這代表「你現在做的每一步都沒被存下來」，10 秒後隱藏會讓使用者
     // 在毫不知情下丟掉整天資料（2026-07-13 事故根因之一）。必須一直擋在眼前直到存檔恢復。
-    b.textContent="⚠ 儲存失敗（空間已滿）— 資料未存！請立即「⋯ → 匯出備份檔」";
+    if(mode==="loadfail"){
+      b.textContent="⛔ 讀不出本機盤面 — 已鎖住儲存以保護原始資料，請「⋯ → 📂 匯入備份檔」";
+      b.title="讀取失敗：畫面上是空盤面，你的原始資料還在瀏覽器裡沒被動到。點擊：開啟匯入";
+      b.onclick=()=>{ const x=$("#importDataBtn"); if(x) x.click(); };
+    }else{
+      b.textContent="⚠ 儲存失敗（空間已滿）— 資料未存！請立即「⋯ → 匯出備份檔」";
+      b.title="點擊：立即匯出備份";
+      b.onclick=()=>{ const x=$("#exportDataBtn"); if(x) x.click(); };
+    }
     b.style.background="#7a1f1f"; b.style.color="#ffd9d9";
-    b.style.cursor="pointer"; b.title="點擊：立即匯出備份";
-    b.onclick=()=>{ const x=$("#exportDataBtn"); if(x) x.click(); };
+    b.style.cursor="pointer";
     b.classList.add("show");
     if(_badgeTimer){ clearTimeout(_badgeTimer); _badgeTimer=null; }
     return;
@@ -4353,7 +4413,10 @@ $("#clearOldDates") && ($("#clearOldDates").onclick = ()=>{
   }
   if(!confirm(`將清除 ${removable.length} 個已結算的舊日期，只是把畫面上的日期分頁移除。\n\n你的回顧數據（所有比賽紀錄）完全不受影響，仍保留在統計裡。\n\n確定清除？`)) return;
   snapshot();
-  removable.forEach(d=> delete doc.boards[d]);
+  // 墓碑：記住「這台明確清掉過這些日期」。沒有這個，跨裝置合併(github-sync mergeDocs)會把
+  // 清掉的日期從雲端整天搬回來，等於默默撤銷你剛按的清除。
+  doc.purgedDates = doc.purgedDates || [];
+  removable.forEach(d=>{ delete doc.boards[d]; if(doc.purgedDates.indexOf(d)<0) doc.purgedDates.push(d); });
   if(!doc.boards[doc.activeDate]){ doc.activeDate = Object.keys(doc.boards).sort().pop() || today; loadActiveBoard(); }
   save(); render(); buildDateBar();
   alert(`已清除 ${removable.length} 個舊日期。回顧數據不受影響。`);
@@ -4477,12 +4540,40 @@ $("#batchSettleBtn") && ($("#batchSettleBtn").onclick = startBatchSettle);
 
 /* overflow menu */
 function closeMore(){ $("#moreMenu").classList.remove("show"); }
+/* 儲存空間量表。localStorage 有自己的 ~5MB 上限，跟 navigator.storage.estimate()
+   回報的 origin 總配額（含 IndexedDB/Cache）是兩回事，所以直接量 localStorage 本身。
+   字串在 localStorage 是 UTF-16 → 每字元 2 bytes，key 也算。 */
+const LS_QUOTA_BYTES = 5 * 1024 * 1024;
+function lsUsedBytes(){
+  let n = 0;
+  try{ for(let i=0;i<localStorage.length;i++){ const k=localStorage.key(i); n += (k.length + (localStorage.getItem(k)||"").length) * 2; } }
+  catch(_){ return null; }
+  return n;
+}
+function updateStorageGauge(){
+  const el = $("#stgauge"); if(!el) return;
+  const used = lsUsedBytes();
+  const fill = el.querySelector(".sgfill"), pctEl = el.querySelector(".sgpct");
+  if(used == null){ pctEl.textContent = "?"; el.title = "讀不到 localStorage"; return; }
+  const r = used / LS_QUOTA_BYTES;
+  fill.style.width = Math.min(100, r*100).toFixed(1) + "%";
+  pctEl.textContent = Math.round(r*100) + "%";
+  el.classList.toggle("warn", r >= 0.60 && r < 0.85);
+  el.classList.toggle("crit", r >= 0.85);
+  const mb = b => (b/1048576).toFixed(2) + " MB";
+  const docRaw = (()=>{ try{ return (localStorage.getItem(LS_KEY)||"").length*2; }catch(_){ return 0; } })();
+  el.title = `本機儲存空間：${mb(used)} / ${mb(LS_QUOTA_BYTES)}（${Math.round(r*100)}%）\n` +
+             `　其中盤面主檔 ${mb(docRaw)}${(()=>{ try{ return (localStorage.getItem(LS_KEY)||"").slice(0,3)==="gz:" ? "（已壓縮）" : "（未壓縮）"; }catch(_){ return ""; } })()}\n` +
+             (r >= 0.85 ? "⚠ 快滿了：滿了會存不進去＝資料不會被保存。請「🧹 清除已結算的舊日期」或先匯出備份。"
+                        : "滿了會導致存檔失敗（資料不會被保存），這裡隨時看得到餘裕。");
+}
 $("#moreBtn").onclick = (e)=>{
   e.stopPropagation();
   const menu = $("#moreMenu");
   const willShow = !menu.classList.contains("show");
   menu.classList.toggle("show");
   if(willShow){
+    updateStorageGauge();
     // header is CSS-zoomed by uiScale; vh-based max-height miscomputes under zoom,
     // so set an explicit pixel cap = (real viewport below the menu top) / zoom.
     const z = uiScale || 1;

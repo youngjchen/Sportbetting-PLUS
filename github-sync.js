@@ -6,7 +6,9 @@
    設定（選項A：public repo）：
      - 寫入需 fine-grained PAT，「只」給「本 repo」的 Contents 讀寫，存在該裝置 localStorage。
      - 讀取公開 repo 不需權杖。
-     - 單一寫者、後寫覆蓋（你早上電腦、下午手機，不會同時寫）。
+     - 上傳與下載【都是合併(union)，不是覆蓋】。2026-07-15 之前是「單一寫者、後寫覆蓋」，
+       但該假設在真實使用下不成立（電腦結算白天場、手機結算晚上場都很正常），
+       實測造成 5 場已結算比賽＋一整天的卡片消失。見 mergeDocs() 的註解。
      - doc 以 gzip 壓縮（瀏覽器內建 CompressionStream），省空間並避開 Contents API ~1MB 上限。
    用法：index.html 末尾加 <script src="./github-sync.js"></script>
    ============================================================ */
@@ -56,6 +58,70 @@
     return await gunzipBytes(u);
   }
 
+  /* ── 合併：雲端 ∪ 本機 ──────────────────────────────────────────────
+     為什麼不能直接覆蓋（本檔原本的「單一寫者、後寫覆蓋」假設）：
+     2026-07-15 實測到真實損失 —— 14:06 電腦上傳(2547 場)，21:42 手機上傳(2545 場)，
+     手機那包整個蓋掉電腦的，7/14 已結算的 5 場（含手填 STAKE 賠率）＋7/15 整天 9 張卡就這樣沒了。
+     「兩台裝置各自結算不同場次」是常態不是意外（電腦結算白天場、手機結算晚上場），
+     假設一開始就不成立。改成 union：同一場衝突時本機優先（上傳者＝現在在編輯的那台）。
+
+     鍵：
+      · games → sid 優先、date+teams 後備（＝板上自己的 upsert 規則 index.html:1853-1858；
+        實測 2545 筆零撞鍵，雙重賽也沒撞）。同一場在兩台各自結算會拿到不同 sid，故一定要有後備鍵。
+      · 卡片 → away|home|gameTime。★ 不能用 id：卡片 id 是每台裝置各自從 1 起算的計數器
+        （index.html: let uid = 1），跨裝置必撞 → 搬過來的卡一定要重新配號。 */
+  function gkeyOf(g) { return g.date + '|' + g.awayTeam + '|' + g.homeTeam; }
+  function ikeyOf(i) { return (i.away || '') + '|' + (i.home || '') + '|' + (i.gameTime || ''); }
+  function mergeDocs(cloud, local) {
+    if (!local || !local.boards) return { doc: cloud, addedG: 0, addedC: 0 };
+    if (!cloud || !cloud.boards) return { doc: local, addedG: 0, addedC: 0 };
+    var M = JSON.parse(JSON.stringify(local));            // 以本機為底（純量設定跟著上傳者走）
+    M.games = (local.games || []).slice();
+    var sids = {}, keys = {}, addedG = 0, addedC = 0;
+    M.games.forEach(function (g) { sids[g.sid] = 1; keys[gkeyOf(g)] = 1; });
+    (cloud.games || []).forEach(function (g) {
+      if (sids[g.sid] || keys[gkeyOf(g)]) return;         // 同一場：本機版本優先
+      M.games.push(g); sids[g.sid] = 1; keys[gkeyOf(g)] = 1; addedG++;
+    });
+    M.games.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+    // 已結算的卡片【要】合併：結算後卡片會留在板上（使用者就是靠它回顧），上面有手點的燈號，
+    // 是重建不回來的東西。先前這裡擋掉已結算的卡，實測會丟掉另一台的燈號 → 已移除。
+    // 但「🧹 清除已結算的舊日期」是明確的使用者動作（整天 delete doc.boards[d]），
+    // 合併不該把它撤銷 → 用日期墓碑記住，union 時跳過。
+    var purged = {};
+    ((local.purgedDates) || []).forEach(function (d) { purged[d] = 1; });
+    Object.keys(cloud.boards || {}).forEach(function (d) {
+      var cb = cloud.boards[d]; if (!cb || !cb.items) return;
+      if (purged[d] && !M.boards[d]) return;              // 這台清掉過這天 → 不要從雲端搬回來
+      M.boards[d] = M.boards[d] || { items: [], summaryPos: cb.summaryPos || null };
+      M.boards[d].items = M.boards[d].items || [];
+      var have = {}, maxId = 0;
+      M.boards[d].items.forEach(function (i) { have[ikeyOf(i)] = 1; if (+i.id > maxId) maxId = +i.id; });
+      cb.items.forEach(function (it) {
+        if (it.type !== 'match') return;                  // 只合併比賽卡；自由擺放的隊徽不碰（純裝飾、且無穩定身分）
+        if (have[ikeyOf(it)]) return;                     // 同一場的卡：本機優先
+        var c = JSON.parse(JSON.stringify(it));
+        c.id = ++maxId;                                   // ★ 重新配號（見上方註解）
+        M.boards[d].items.push(c); have[ikeyOf(c)] = 1; addedC++;
+      });
+      M.boards[d].items.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+    });
+    var tomb = {};
+    ((local.purgedDates) || []).concat((cloud.purgedDates) || []).forEach(function (d) { tomb[d] = 1; });
+    M.purgedDates = Object.keys(tomb);
+    M.gamesVersion = (M.gamesVersion || 0) + 1;
+    return { doc: M, addedG: addedG, addedC: addedC };
+  }
+  // 讀雲端現況（公開 repo 免權杖）。回傳 null＝雲端還沒有檔案；throw＝讀取失敗（呼叫端要當回事）
+  async function fetchCloudDoc(pat) {
+    var headers = { 'Accept': 'application/vnd.github.raw' };
+    if (pat) headers['Authorization'] = 'Bearer ' + pat;
+    var r = await fetch(API + '?ref=' + BRANCH + '&t=' + Date.now(), { headers: headers });
+    if (r.status === 404) return null;
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return JSON.parse(await gunzipBytes(new Uint8Array(await r.arrayBuffer())));
+  }
+
   function toast(msg) {
     var t = document.getElementById('gh-toast');
     if (!t) {
@@ -78,9 +144,21 @@
     try { doc = await localDocPlain(); } catch (e) { alert('讀取本機盤面失敗：' + e.message); return; }
     if (!doc) { alert('本機沒有盤面資料可上傳。'); return; }
     var pat = ensurePAT(); if (!pat) return;
-    toast('上傳中…');
+    toast('讀取雲端並合併中…');
     try {
-      var content = b64encode(await gzipStr(doc));
+      // 先把雲端那份合併進來，再寫回去。直接覆蓋會吃掉另一台裝置的結算成果（見 mergeDocs 註解）。
+      var localDoc = JSON.parse(doc), merged = null;
+      try {
+        var cloudDoc = await fetchCloudDoc(pat);
+        merged = mergeDocs(cloudDoc, localDoc);
+      } catch (e) {
+        if (!confirm('讀不到雲端現況（' + e.message + '），沒辦法合併。\n\n' +
+          '要「直接覆蓋」雲端嗎？如果另一台裝置有你這台沒有的結算，會被蓋掉。\n\n' +
+          '確定＝覆蓋　取消＝先不要上傳（建議）')) { toast('已取消上傳'); return; }
+        merged = { doc: localDoc, addedG: 0, addedC: 0 };
+      }
+      if (merged.addedG || merged.addedC) toast('從雲端合併回 ' + merged.addedG + ' 場結算、' + merged.addedC + ' 張卡…');
+      var content = b64encode(await gzipStr(JSON.stringify(merged.doc)));
       var sha = null;
       var head = await fetch(API + '?ref=' + BRANCH + '&t=' + Date.now(),
         { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github+json' } });
@@ -94,7 +172,14 @@
         headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github+json' },
         body: JSON.stringify(body)
       });
-      if (put.ok) { toast('已上傳盤面到 GitHub ✓'); }
+      if (put.ok) {
+        toast('已上傳 ✓' + (merged.addedG || merged.addedC ? '（合併回 ' + merged.addedG + ' 場結算、' + merged.addedC + ' 張卡）' : ''));
+        // 合併結果也寫回本機，否則這台會一直缺另一台的資料，下次又要重合併一次
+        if (merged.addedG || merged.addedC) {
+          try { localStorage.setItem(DOC_KEY, JSON.stringify(merged.doc)); setTimeout(function () { location.reload(); }, 1200); }
+          catch (e) { alert('雲端已更新，但合併結果寫不回本機（' + e.message + '）。請先清理空間再「☁ 從 GitHub 載入盤面」。'); }
+        }
+      }
       else {
         var txt = await put.text(); console.warn('[GitHub同步] 上傳失敗', put.status, txt);
         if (put.status === 401 || put.status === 403) { setPAT(''); alert('上傳失敗：權杖權限不足，已清除。請重設權杖（Contents 讀寫）。'); }
@@ -110,20 +195,25 @@
       alert('⚠ 危險：本機儲存空間已滿，畫面上今天的資料還沒被存下來。\n現在從雲端載入會用「舊資料」覆蓋，今天的東西會全部消失。\n\n請先「⋯ → 匯出備份檔」保住現在的資料，再清理空間。');
       return;
     }
-    if (!confirm('從 GitHub 載入盤面會「覆蓋」這台裝置目前的盤面，確定？')) return;
-    toast('載入中…');
+    if (!confirm('從 GitHub 把雲端盤面「合併」進這台裝置。\n\n' +
+      '同一場比賽兩邊都有 → 保留這台的版本；雲端多出來的結算與卡片會補進來。\n' +
+      '這台的東西不會被刪掉。確定？')) return;
+    toast('載入並合併中…');
     try {
       var pat = getPAT();
-      var headers = { 'Accept': 'application/vnd.github.raw' };   // 直接拿檔案位元組（公開 repo 免權杖）
-      if (pat) headers['Authorization'] = 'Bearer ' + pat;       // 有權杖就帶（提高速率上限）
-      var r = await fetch(API + '?ref=' + BRANCH + '&t=' + Date.now(), { headers: headers });
-      if (r.status === 404) { alert('GitHub 上還沒有盤面（先在電腦按「☁ 上傳盤面到 GitHub」）。'); return; }
-      if (!r.ok) { alert('讀取失敗（HTTP ' + r.status + '）。'); return; }
-      var json = await gunzipBytes(new Uint8Array(await r.arrayBuffer()));
-      JSON.parse(json);                                          // 驗證是合法 JSON 再寫入
-      localStorage.setItem(DOC_KEY, json);
-      toast('已載入，重新整理中…');
-      setTimeout(function () { location.reload(); }, 600);
+      var cloudDoc;
+      try { cloudDoc = await fetchCloudDoc(pat); }
+      catch (e) { alert('讀取失敗（' + e.message + '）。'); return; }
+      if (cloudDoc === null) { alert('GitHub 上還沒有盤面（先在電腦按「☁ 上傳盤面到 GitHub」）。'); return; }
+      // 原本這裡是 localStorage.setItem(DOC_KEY, json) 直接覆蓋 → 這台還沒上傳的結算會人間蒸發。
+      // 與 upload 走同一支 mergeDocs，兩個方向都是 union，才不會有「哪邊先按」決定誰活下來的問題。
+      var localDoc = null;
+      try { var lp = await localDocPlain(); if (lp) localDoc = JSON.parse(lp); } catch (e) { localDoc = null; }
+      var merged = mergeDocs(cloudDoc, localDoc);
+      if (!merged.doc || !merged.doc.boards) { alert('合併結果不合法，已中止，沒有動到這台的資料。'); return; }
+      localStorage.setItem(DOC_KEY, JSON.stringify(merged.doc));
+      toast('已合併（從雲端補回 ' + merged.addedG + ' 場結算、' + merged.addedC + ' 張卡），重新整理中…');
+      setTimeout(function () { location.reload(); }, 1200);
     } catch (err) { console.warn('[GitHub同步]', err); alert('載入失敗：' + err.message); }
   }
 
@@ -157,5 +247,5 @@
   else injectButtons();
 
   // 供測試
-  window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, localDocPlain: localDocPlain, upload: upload, download: download };
+  window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, localDocPlain: localDocPlain, upload: upload, download: download, mergeDocs: mergeDocs };
 })();
