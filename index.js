@@ -414,6 +414,75 @@ function feedCanon(name, league) {
   return null;
 }
 
+// 還原一筆條目的「國際盤方向序列」。
+// 優先 iseq（含 epoch → 可做雙序列交叉比對）；舊條目沒有 iseq，退回解析已存的 tr 字串。
+// 為何反推出來的 t 一律留 null：tr 只存 HH:MM 沒有月日，而 bet365 常在賽前一天就貼線，
+// 硬套比賽日期會差一天 → 寧可缺時間（交叉偵測不觸發＝保守，退回單邊比對）也不要造假時間（會誤判「曾相反」）。
+function seqOf(e, awayTeam, homeTeam) {
+  if (e.iseq && e.iseq.length) return e.iseq.map(s => ({ dir: s.d, t: s.t }));
+  const single = () => (e.is ? [{ dir: e.is, t: null }] : []);
+  if (!e.tr) return single();
+  const out = [];
+  for (const tok of String(e.tr).split(' → ')) {
+    const m = tok.match(/^(\d{2}:\d{2})\s+(.*)$/);
+    const nm = m ? m[2] : tok;
+    const dir = nm === homeTeam ? 'home' : (nm === awayTeam ? 'away' : null);
+    if (!dir) return single();                               // 隊名對不上（改名等）→ 不硬猜
+    out.push({ dir, t: null });
+  }
+  return out.length ? out : single();
+}
+
+// 「兩側曾經相反過」是單向閂鎖：曾為真就永遠為真，不該因為之後用較差的資料重算而消失。
+// 舊條目沒存 eo → 從當時的 verdict 反推（was＝偵測到曾相反；flip＝當下就相反，自然也曾相反）。
+// 沒有這個閂鎖，補算 pass 會把 8 場裡的 7 場從 was 打成 swap（實測），修一場壞七場。
+function eoOf(e) { return !!(e && (e.eo != null ? e.eo : (e.v === 'was' || e.v === 'flip'))); }
+
+// 依「當下」的台彩序列，重算一筆 intl_state 條目的台彩側欄位（ls/ll/lsLive/lsw/ltr）與 verdict。
+// 設計成純函式＋可重入：新條目建立時呼叫一次，之後每輪對所有既有條目再呼叫一次（見 buildIntlState 補算 pass）。
+// e 需已有 is（國際盤最終側）；iseq/tr 擇一提供方向序列；key 提供隊名。
+function applyLot(e, key, serMap, lotMap) {
+  const parts = key.split('|');
+  const awayTeam = parts[2], homeTeam = parts[3];
+  const sideName = d => (d === 'home' ? homeTeam : awayTeam);
+  const twHM = t => { const d = new Date((t + 8 * 3600) * 1000); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); };
+  const seq = seqOf(e, awayTeam, homeTeam);
+  const intlSide = e.is;
+  // 台彩：序列優先（現況＋軌跡＋換邊數），feed 後備（單點）
+  const pts = serMap[key] || null;
+  const lotSeq = [];
+  if (pts) for (const p of pts) {
+    const last = lotSeq[lotSeq.length - 1];
+    if (!last || last.dir !== p.side) lotSeq.push({ dir: p.side, t: Date.parse(p.t) / 1000 || null, line: p.line });
+  }
+  const lot = lotSeq.length ? { side: lotSeq[lotSeq.length - 1].dir, line: pts[pts.length - 1].line, live: true }
+            : (lotMap[key] ? { side: lotMap[key].side, line: lotMap[key].line, live: false } : null);
+  let verdict = null, everOpp = eoOf(e);                       // 閂鎖：帶著既有事實進來，只會加不會減
+  if (lot && intlSide) {
+    if (!everOpp) {                                            // 已latch住就不必再偵測
+      if (lotSeq.length) {
+        // 雙序列交叉：合併事件時間軸，任一區間兩側同時有值且相反 → 曾相反
+        const evts = [...seq.map(s => s.t), ...lotSeq.map(s => s.t)].filter(t => t != null).sort((a, b) => a - b);
+        const at = (sq, t) => { let c = null; for (const s of sq) { if (s.t != null && s.t <= t) c = s.dir; else if (s.t != null) break; } return c; };
+        for (const t of evts) { const a = at(seq, t), b2 = at(lotSeq, t); if (a && b2 && a !== b2) { everOpp = true; break; } }
+        if (!everOpp) everOpp = seq.some(s => s.dir !== lot.side) && lotSeq.length === 1;   // 台彩無變動時退回單邊比對
+      } else {
+        everOpp = seq.some(s => s.dir !== lot.side);            // feed 後備：只能對台彩單點比
+      }
+    }
+    if (intlSide !== lot.side) { verdict = 'flip'; everOpp = true; }   // 現在就相反 → 當然「曾」相反
+    else if (everOpp) verdict = 'was';
+    else if (seq.length > 1 || lotSeq.length > 1) verdict = 'swap';
+  } else if (seq.length > 1) verdict = 'swap';
+  e.eo = everOpp;
+  e.ls = lot ? lot.side : null;
+  e.ll = lot ? lot.line : null;
+  e.lsLive = !!(lot && lot.live);
+  e.lsw = Math.max(0, lotSeq.length - 1);
+  e.ltr = lotSeq.length > 1 ? lotSeq.map(s => (s.t ? twHM(s.t) + ' ' : '') + sideName(s.dir)).join(' → ') : null;
+  e.v = verdict;
+}
+
 function buildIntlState(log, stamp) {
   // 台彩側來源鏈：①lottery_series.json（盤中序列，2026-07-12 根治後的權威）②pregame feed 最新值（後備）
   let lotMap = {};
@@ -465,30 +534,6 @@ function buildIntlState(log, stamp) {
     }
     const cur = pre[pre.length - 1];
     const intlSide = cur.line > 0 ? 'home' : 'away';
-    // 台彩：序列優先（現況＋軌跡＋換邊數），feed 後備（單點）
-    const pts = serMap[key] || null;
-    const lotSeq = [];
-    if (pts) for (const p of pts) {
-      const last = lotSeq[lotSeq.length - 1];
-      if (!last || last.dir !== p.side) lotSeq.push({ dir: p.side, t: Date.parse(p.t) / 1000 || null, line: p.line });
-    }
-    const lot = lotSeq.length ? { side: lotSeq[lotSeq.length - 1].dir, line: pts[pts.length - 1].line, live: true }
-              : (lotMap[key] ? { side: lotMap[key].side, line: lotMap[key].line, live: false } : null);
-    let verdict = null, everOpp = false;
-    if (lot) {
-      if (lotSeq.length) {
-        // 雙序列交叉：合併事件時間軸，任一區間兩側同時有值且相反 → 曾相反
-        const evts = [...seq.map(s => s.t), ...lotSeq.map(s => s.t)].filter(t => t != null).sort((a, b) => a - b);
-        const at = (sq, t) => { let c = null; for (const s of sq) { if (s.t != null && s.t <= t) c = s.dir; else if (s.t != null) break; } return c; };
-        for (const t of evts) { const a = at(seq, t), b2 = at(lotSeq, t); if (a && b2 && a !== b2) { everOpp = true; break; } }
-        if (!everOpp) everOpp = seq.some(s => s.dir !== lot.side) && lotSeq.length === 1;   // 台彩無變動時退回單邊比對
-      } else {
-        everOpp = seq.some(s => s.dir !== lot.side);              // feed 後備：只能對台彩單點比
-      }
-      if (intlSide !== lot.side) verdict = 'flip';
-      else if (everOpp) verdict = 'was';
-      else if (seq.length > 1 || lotSeq.length > 1) verdict = 'swap';
-    } else if (seq.length > 1) verdict = 'swap';
     // 獨贏（bet365 decimal）判國際盤內背離
     let mlFav = null, dv = null;
     const b = e.ml && e.ml.bet365;
@@ -497,15 +542,29 @@ function buildIntlState(log, stamp) {
       mlFav = lastMl.home < lastMl.away ? 'home' : 'away';
       dv = mlFav !== intlSide;
     }
-    const twHM = t => { const d = new Date((t + 8 * 3600) * 1000); return String(d.getUTCHours()).padStart(2, '0') + ':' + String(d.getUTCMinutes()).padStart(2, '0'); };
+    const prevEo = eoOf(games[key]);                        // 覆蓋前先接住閂鎖（台彩序列會被修剪，證據可能已不在）
     games[key] = {
       is: intlSide, il: Math.abs(cur.line), sw: Math.max(0, seq.length - 1),
       tr: seq.map(s => (s.hhmm ? s.hhmm + ' ' : '') + sideName(s.dir)).join(' → '),
-      ls: lot ? lot.side : null, ll: lot ? lot.line : null,
-      lsLive: !!(lot && lot.live), lsw: Math.max(0, lotSeq.length - 1),
-      ltr: lotSeq.length > 1 ? lotSeq.map(s => (s.t ? twHM(s.t) + ' ' : '') + sideName(s.dir)).join(' → ') : null,
-      mf: mlFav, dv, v: verdict, u: stamp
+      iseq: seq.map(s => ({ d: s.dir, t: s.t })),          // 機器可讀的國際盤方向序列 → 供離開抓取窗後補算台彩側
+      ls: null, ll: null, lsLive: false, lsw: 0, ltr: null,
+      mf: mlFav, dv, eo: prevEo, v: null, u: stamp
     };
+    applyLot(games[key], key, serMap, lotMap);              // 台彩側 + verdict
+  }
+
+  // ── 補算 pass：對「所有」既有條目重算台彩側。
+  // 為什麼必要：台彩序列由另一支爬蟲寫入，常在本爬蟲的抓取窗關閉後才補上晚段換邊
+  // （實例 2026-07-14 富邦@台鋼：本檔 16:25 凍結時序列只有 1 點，16:33/16:52 兩次換邊
+  //  永遠沒被寫進去 → 板上顯示「無變動」＝紀錄看似消失）。序列是持久的，故每輪重算。
+  // 不能用「有沒有 iseq」當守門：已凍結的舊條目永遠不會再進窗補上 iseq，而它們正是要救的對象
+  // → seqOf() 會從 tr 反推方向序列，只要有 is 就能重算。
+  for (const key of Object.keys(games)) {
+    const e = games[key];
+    if (!e || !e.is) continue;
+    const before = e.lsw + '|' + e.v + '|' + e.ls;
+    applyLot(e, key, serMap, lotMap);
+    if (before !== e.lsw + '|' + e.v + '|' + e.ls) e.u = stamp;
   }
   // 修剪：只留最近 3 天（板上只看今天；留兩天緩衝跨日結算）
   const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
@@ -518,4 +577,4 @@ if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
 
-module.exports = { mapTeam, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS };
+module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS };
