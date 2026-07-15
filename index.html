@@ -4197,17 +4197,36 @@ function exportData(){
 const LS_LAST_BACKUP = "sportbetting_plus_lastbackup";
 const LS_AUTO_SLOT   = "sportbetting_plus_autobackup";
 const BACKUP_REMIND_DAYS = 7;
-function autoBackupSnapshot(){
+// 自動備份槽：壓縮後再存。未壓縮時它是「整份 doc 的第二份副本」，與主檔一起把
+// localStorage 5MB 配額吃爆（實測兩份＝4.98MB）→ save() 靜默失敗＝當天資料遺失。
+// gzip 後約 1/8；本函式在 5 分鐘計時器上跑，async 無妨。
+async function gzToB64(str){
+  const buf = new Uint8Array(await new Response(new Blob([str]).stream().pipeThrough(new CompressionStream("gzip"))).arrayBuffer());
+  let bin=""; const CH=0x8000;
+  for(let i=0;i<buf.length;i+=CH) bin += String.fromCharCode.apply(null, buf.subarray(i,i+CH));
+  return btoa(bin);
+}
+async function b64ToStr(b64){
+  const bin = atob(b64); const u = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i);
+  return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream("gzip"))).text();
+}
+async function autoBackupSnapshot(){
   try{
     syncStateToDoc();
     const payload = JSON.stringify({ at: Date.now(), doc });
-    localStorage.setItem(LS_AUTO_SLOT, payload);
+    let toStore = payload;
+    if(typeof CompressionStream === "function"){
+      try{ toStore = "gz:" + await gzToB64(payload); }catch(_){ toStore = payload; }
+    }
+    localStorage.setItem(LS_AUTO_SLOT, toStore);
   }catch(_){}
 }
-function restoreFromAutoSlot(){
+async function restoreFromAutoSlot(){
   try{
-    const raw = localStorage.getItem(LS_AUTO_SLOT);
+    let raw = localStorage.getItem(LS_AUTO_SLOT);
     if(!raw){ alert("目前沒有自動備份槽的存檔。"); return; }
+    if(raw.slice(0,3)==="gz:"){ try{ raw = await b64ToStr(raw.slice(3)); }catch(e){ alert("自動備份槽解壓失敗："+e.message); return; } }
     const obj = JSON.parse(raw);
     if(!obj || !obj.doc){ alert("自動備份槽的內容讀不出來。"); return; }
     const when = obj.at ? new Date(obj.at).toLocaleString() : "未知時間";
@@ -4263,15 +4282,20 @@ function importData(){
 /* tiny "saved" indicator */
 let _badgeTimer=null;
 function updateSaveBadge(ok){
+  window.__boardSaveOK = (ok !== false);   // 給 github-sync 守門：存檔失敗時 localStorage 是舊資料，不可上傳／下載
   const b=$("#saveBadge"); if(!b) return;
   if(ok===false){
-    b.textContent="⚠ 儲存失敗（空間已滿）— 請立即匯出備份";
+    // 常駐不自動消失：這代表「你現在做的每一步都沒被存下來」，10 秒後隱藏會讓使用者
+    // 在毫不知情下丟掉整天資料（2026-07-13 事故根因之一）。必須一直擋在眼前直到存檔恢復。
+    b.textContent="⚠ 儲存失敗（空間已滿）— 資料未存！請立即「⋯ → 匯出備份檔」";
     b.style.background="#7a1f1f"; b.style.color="#ffd9d9";
+    b.style.cursor="pointer"; b.title="點擊：立即匯出備份";
+    b.onclick=()=>{ const x=$("#exportDataBtn"); if(x) x.click(); };
     b.classList.add("show");
-    if(_badgeTimer) clearTimeout(_badgeTimer);
-    _badgeTimer=setTimeout(()=>b.classList.remove("show"), 10000);
+    if(_badgeTimer){ clearTimeout(_badgeTimer); _badgeTimer=null; }
     return;
   }
+  b.onclick=null; b.style.cursor=""; b.title="";
   b.style.background=""; b.style.color="";
   b.textContent="已儲存 ✓"; b.classList.add("show");
   if(_badgeTimer) clearTimeout(_badgeTimer);
@@ -7200,6 +7224,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260625dh3"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=1"></script><script src="./divination-addon.js?v=20260713a"></script>
+</script><script src="./odds-integration.js?v=20260625dh3"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260713a"></script><script src="./divination-addon.js?v=20260713a"></script>
 </body>
 </html>

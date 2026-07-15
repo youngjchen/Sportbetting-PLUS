@@ -59,6 +59,11 @@
 
   async function upload() {
     if (window.closeMore) try { window.closeMore(); } catch (e) {}
+    // 守門：本機儲存失敗(配額爆掉)時 localStorage 是「舊資料」，上傳等於把舊的推上雲端蓋掉好的。
+    if (window.__boardSaveOK === false) {
+      alert('⚠ 不能上傳：本機儲存空間已滿，localStorage 裡是「舊資料」，現在上傳會把雲端的蓋成舊的。\n\n請先「⋯ → 匯出備份檔」保住現在的資料，再清理空間。');
+      return;
+    }
     var doc = '';
     try { doc = localStorage.getItem(DOC_KEY) || ''; } catch (e) {}
     if (!doc) { alert('本機沒有盤面資料可上傳。'); return; }
@@ -90,6 +95,11 @@
 
   async function download() {
     if (window.closeMore) try { window.closeMore(); } catch (e) {}
+    // 守門：儲存失敗時，畫面上的資料只活在記憶體、雲端是舊的 → 載入＝當天資料直接蒸發（使用者實際踩過）
+    if (window.__boardSaveOK === false) {
+      alert('⚠ 危險：本機儲存空間已滿，畫面上今天的資料還沒被存下來。\n現在從雲端載入會用「舊資料」覆蓋，今天的東西會全部消失。\n\n請先「⋯ → 匯出備份檔」保住現在的資料，再清理空間。');
+      return;
+    }
     if (!confirm('從 GitHub 載入盤面會「覆蓋」這台裝置目前的盤面，確定？')) return;
     toast('載入中…');
     try {
