@@ -2020,6 +2020,12 @@ let venueMode = "split";
 const LS_KEY = "sportbetting_plus_doc_v2";
 let _saveTimer = null;
 // debounced + immediate save to localStorage (and preview storage if present)
+// 盤面持久化：主檔壓縮存放（gz:base64）。未壓縮時 doc 1.25M 字元＝UTF-16 2.5MB，
+// 且 games 以每日 ~20 場成長（≈4.8MB/年）→ 幾個月內必定撞爆 5MB 配額＝當天資料靜默遺失。
+// 壓縮後 ~0.28MB（8.8x），成長也同步壓縮 → 8 年以上餘裕。
+// CompressionStream 是非同步，故寫入改「120ms 去抖 + 非同步壓縮」；save() 呼叫端不需 await。
+// 關頁／切背景時若還有未落地的變更 → 同步寫未壓縮版保命（下次載入會自動轉回壓縮）。
+let _persistJSON = null, _persistTimer = null;
 function save(){
   syncStateToDoc();
   doc.layoutCols = layoutCols;
@@ -2027,13 +2033,31 @@ function save(){
   doc.trendThreshold = trendThreshold;
   doc.uiScale = uiScale;
   doc.venueMode = venueMode;
-  const json = JSON.stringify(doc);
+  _persistJSON = JSON.stringify(doc);
+  if(window.storage){ try{ window.storage.set("board_doc_v2", _persistJSON, false); }catch(_){} }
+  if(_persistTimer) clearTimeout(_persistTimer);
+  _persistTimer = setTimeout(persistFlush, 120);
+}
+async function persistFlush(){
+  _persistTimer = null;
+  const json = _persistJSON; if(json == null) return;
   let ok = true;
-  try{ localStorage.setItem(LS_KEY, json); }catch(e){ ok = false; }
-  // also write to preview-env storage when available (harmless on GitHub Pages)
-  if(window.storage){ try{ window.storage.set("board_doc_v2", json, false); }catch(_){} }
+  try{
+    let payload = json;
+    if(typeof CompressionStream === "function"){
+      try{ payload = "gz:" + await gzToB64(json); }catch(_){ payload = json; }
+    }
+    localStorage.setItem(LS_KEY, payload);
+    if(_persistJSON === json) _persistJSON = null;   // 期間又改過就留著等下一輪
+  }catch(e){ ok = false; }
   updateSaveBadge(ok);
 }
+function persistEmergency(){                          // 同步、不壓縮：關頁前保命
+  if(_persistJSON == null) return;
+  try{ localStorage.setItem(LS_KEY, _persistJSON); _persistJSON = null; }catch(_){}
+}
+window.addEventListener("pagehide", persistEmergency);
+document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden") persistEmergency(); });
 function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTimeout(save, 250); }
 function loadDocFromString(str){
   try{
@@ -2056,7 +2080,11 @@ function loadDocFromString(str){
 async function load(){
   let loaded=false;
   // 1) localStorage (primary, works on GitHub Pages / Safari)
-  try{ const s = localStorage.getItem(LS_KEY); if(s) loaded = loadDocFromString(s); }catch(e){}
+  try{
+    let s = localStorage.getItem(LS_KEY);
+    if(s && s.slice(0,3)==="gz:"){ try{ s = await b64ToStr(s.slice(3)); }catch(_){ s = null; } }   // 壓縮版；解不開就往下走備援
+    if(s) loaded = loadDocFromString(s);
+  }catch(e){}
   // 2) preview-env storage (only in this builder; ignored on GitHub Pages)
   if(!loaded && window.storage){
     try{ const r = await window.storage.get("board_doc_v2", false); if(r && r.value) loaded = loadDocFromString(r.value); }catch(_){}

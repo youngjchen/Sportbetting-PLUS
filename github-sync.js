@@ -45,6 +45,16 @@
     return new TextDecoder().decode(await new Response(stream).arrayBuffer());
   }
   function b64encode(bytes) { var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }
+  // 本機主檔自 2026-07-13 起以 "gz:"+base64(gzip) 存放（省 localStorage 配額）。
+  // 雲端格式維持「gzip(純 JSON)」不變 → 上傳前先還原成純 JSON，跨裝置與分析腳本都不受影響。
+  async function localDocPlain() {
+    var raw = '';
+    try { raw = localStorage.getItem(DOC_KEY) || ''; } catch (e) { return ''; }
+    if (raw.slice(0, 3) !== 'gz:') return raw;
+    var bin = atob(raw.slice(3)); var u = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+    return await gunzipBytes(u);
+  }
 
   function toast(msg) {
     var t = document.getElementById('gh-toast');
@@ -65,7 +75,7 @@
       return;
     }
     var doc = '';
-    try { doc = localStorage.getItem(DOC_KEY) || ''; } catch (e) {}
+    try { doc = await localDocPlain(); } catch (e) { alert('讀取本機盤面失敗：' + e.message); return; }
     if (!doc) { alert('本機沒有盤面資料可上傳。'); return; }
     var pat = ensurePAT(); if (!pat) return;
     toast('上傳中…');
@@ -147,5 +157,5 @@
   else injectButtons();
 
   // 供測試
-  window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, upload: upload, download: download };
+  window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, localDocPlain: localDocPlain, upload: upload, download: download };
 })();
