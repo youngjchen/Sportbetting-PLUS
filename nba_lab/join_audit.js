@@ -20,21 +20,34 @@ const byTri = {}; for (const t of tmap.teams) byTri[t.tricode] = t;
 const psDict = tmap.psNameDict;
 
 // 官方: 每 GAME_ID 兩列(隊/對手) → 一場一筆 {dateUS, homeTri, awayTri, homePts, awayPts}
-const offGames = {};
-for (const r of off) {
-  const g = offGames[r.GAME_ID] = offGames[r.GAME_ID] || { id: r.GAME_ID, dateUS: r.GAME_DATE, st: r.SEASON_TYPE };
-  const isHome = r.MATCHUP.includes(' vs. ');
-  if (isHome) { g.homeTri = r.TEAM_ABBREVIATION; g.homePts = r.PTS; } else { g.awayTri = r.TEAM_ABBREVIATION; g.awayPts = r.PTS; }
+const offRaw = {};
+for (const r of off) (offRaw[r.GAME_ID] = offRaw[r.GAME_ID] || []).push(r);
+const offList = [];
+for (const gid in offRaw) {
+  const rows = offRaw[gid]; if (rows.length !== 2) continue;
+  const vs = rows.find(r => r.MATCHUP.includes(' vs. '));
+  let home, away, neutral = false;
+  if (vs) { home = vs; away = rows.find(r => r !== vs); }
+  else {
+    // 中立場(墨西哥城/NBA盃/歐洲賽): 兩列皆 "@" 互為鏡像 → 任取列0解析 "X @ Y",Y=名義主場
+    // 主客真偽由後續比分雙假設檢定裁定,任意指派無害
+    neutral = true;
+    const m = /@\s+([A-Z]{3})/.exec(rows[0].MATCHUP);
+    home = m && rows[1].TEAM_ABBREVIATION === m[1] ? rows[1] : rows[0];
+    away = home === rows[0] ? rows[1] : rows[0];
+  }
+  offList.push({ id: gid, dateUS: home.GAME_DATE, st: home.SEASON_TYPE, neutral,
+    homeTri: home.TEAM_ABBREVIATION, homePts: home.PTS, awayTri: away.TEAM_ABBREVIATION, awayPts: away.PTS });
 }
-const offList = Object.values(offGames).filter(g => g.homeTri && g.awayTri);
 
 // 官方日期=美國日 → 台灣日通常 +1（GMT+8 上午）；titan timeBJ 已是 GMT+8
-// 官方 join 鍵: 兩隊 tricode + 美國日/台灣日 ±1 天容忍
+// 官方 join 鍵: 兩隊 tricode + ±1 天容忍;同鍵存「候選清單」防連日同對戰重賽碰撞(last-win 曾造成 9 場錯配)
 const offKey = {};
 for (const g of offList) {
   for (const dd of [0, 1]) {
     const d = new Date(g.dateUS + 'T00:00:00Z'); d.setUTCDate(d.getUTCDate() + dd);
-    offKey[`${d.toISOString().slice(0, 10)}|${g.awayTri}|${g.homeTri}`] = g;
+    const k = `${d.toISOString().slice(0, 10)}|${g.awayTri}|${g.homeTri}`;
+    (offKey[k] = offKey[k] || []).push(g);
   }
 }
 
@@ -45,14 +58,15 @@ for (const tg of titan.games) {
   const A = byTitanId[tg.teamA], B = byTitanId[tg.teamB];
   if (!A || !B) continue;
   const d = tg.timeBJ.slice(0, 10);
-  // 假設A: teamA=主 → key = date|away(B)|home(A)
-  const gA = offKey[`${d}|${B.tricode}|${A.tricode}`];
-  // 假設B: teamA=客
-  const gB = offKey[`${d}|${A.tricode}|${B.tricode}`];
-  const g = gA || gB; if (!g) continue;
+  // 假設A: teamA=主 → 候選中找比分精確吻合者;假設B 同理(候選清單防連日重賽錯配)
+  const candA = offKey[`${d}|${B.tricode}|${A.tricode}`] || [];
+  const candB = offKey[`${d}|${A.tricode}|${B.tricode}`] || [];
+  if (!candA.length && !candB.length) continue;
   joined++;
-  if (gA && +tg.scoreA === +gA.homePts && +tg.scoreB === +gA.awayPts) { hypA++; joinedGames.push({ tg, off: gA, homeIsA: true }); }
-  else if (gB && +tg.scoreA === +gB.awayPts && +tg.scoreB === +gB.homePts) { hypB++; joinedGames.push({ tg, off: gB, homeIsA: false }); }
+  const gA = candA.find(g => +tg.scoreA === +g.homePts && +tg.scoreB === +g.awayPts);
+  const gB = candB.find(g => +tg.scoreA === +g.awayPts && +tg.scoreB === +g.homePts);
+  if (gA) { hypA++; joinedGames.push({ tg, off: gA, homeIsA: true }); }
+  else if (gB) { hypB++; joinedGames.push({ tg, off: gB, homeIsA: false }); }
   else scoreMismatch++;
 }
 const homeIsA = hypA >= hypB;   // 實證方向

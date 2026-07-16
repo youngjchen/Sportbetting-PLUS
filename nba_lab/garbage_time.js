@@ -56,7 +56,12 @@ function processGame(gid, homeTeamId, awayTeamId) {
   let ok = 0, miss = 0, gtPossTotal = 0, allPossTotal = 0;
   for (const gid in byGame) {
     const pair = byGame[gid]; if (pair.length !== 2) continue;
-    const home = pair.find(r => r.MATCHUP.includes(' vs. ')), away = pair.find(r => r.MATCHUP.includes(' @ '));
+    let home = pair.find(r => r.MATCHUP.includes(' vs. ')), away = pair.find(r => r !== home);
+    if (!home) {   // 中立場兩列皆 "@"(墨西哥城/NBA盃/歐洲賽): "X @ Y" 取 Y=名義主場;效率計算對稱,指派無害
+      const m = /@\s+([A-Z]{3})/.exec(pair[0].MATCHUP);
+      home = m && pair[1].TEAM_ABBREVIATION === m[1] ? pair[1] : pair[0];
+      away = home === pair[0] ? pair[1] : pair[0];
+    }
     if (!home || !away) continue;
     const agg = processGame(gid, home.TEAM_ID, away.TEAM_ID);
     if (!agg) { miss++; continue; }
