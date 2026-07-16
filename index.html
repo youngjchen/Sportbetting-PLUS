@@ -923,6 +923,7 @@
 <body>
   <header>
     <div class="logo"><span class="dot"></span>排盤板</div>
+    <a href="nba.html" title="切換到 NBA 排盤板" style="display:inline-flex;align-items:center;gap:5px;margin:0 4px 0 2px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-dim);text-decoration:none;white-space:nowrap;">🏀 NBA</a>
     <div class="lgnav" id="lgnav">
       <button class="leaguejump" data-lg="mlb" title="跳到 MLB"><span class="lgdot" style="background:var(--mlb)"></span>MLB</button>
       <button class="leaguejump" data-lg="npb" title="跳到 日職"><span class="lgdot" style="background:var(--npb)"></span>日職</button>
@@ -6182,17 +6183,21 @@ function openSettleModal(it){
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
       <span style="color:var(--ink-dim);">我的大小成交線</span>
       <input id="settleMyTotLine" type="number" inputmode="decimal" step="1" min="0.5" placeholder="如 7.5" style="width:70px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotLine!=null?it.myTotLine:""}">
-      <span style="color:var(--ink-dim);font-size:11px;">命中率／燈號用此線判；市場大小過盤率仍用上方「基準」（收盤線）</span>
+      <span style="color:var(--ink-dim);">賠率</span>
+      <input id="settleMyTotOdds" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="1.90" style="width:60px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotOdds!=null?it.myTotOdds:""}">
+      <span style="color:var(--ink-dim);font-size:11px;">命中率／燈號用此線判；市場過盤率仍用「基準」。賠率＝成交賠率，只有實際下注才填（真 ROI／CLV 用）</span>
     </div>
-    <div id="myHdWrap" style="display:${((fs0&&fs0!=="none")||it.preGameSwap||it.platformFlip||it.flipVanished)?"block":"none"};margin-top:10px;padding:8px 10px;border:1px solid rgba(224,160,32,.35);border-radius:8px;">
+    <div id="myHdWrap" style="display:${((fs0&&fs0!=="none")||it.preGameSwap||it.platformFlip||it.flipVanished||(it.hdGive&&it.hdGive.bet)||(it.hdRecv&&it.hdRecv.bet))?"block":"none"};margin-top:10px;padding:8px 10px;border:1px solid rgba(224,160,32,.35);border-radius:8px;">
       <div style="display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap;">
-        <span style="color:#e0a020;">讓分成交線（對調場用）</span>
+        <span style="color:#e0a020;">讓分成交線（對調場／有下注用）</span>
         <span style="color:var(--ink-dim);">${esc(it.away)}(客)</span>
         <input id="settleMyHdAway" type="number" inputmode="decimal" step="0.5" placeholder="+1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdAwayLine!=null?it.myHdAwayLine:""}">
+        <input id="settleMyHdAwayOdds" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="賠率" style="width:58px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdAwayOdds!=null?it.myHdAwayOdds:""}">
         <span style="color:var(--ink-dim);">${esc(it.home)}(主)</span>
         <input id="settleMyHdHome" type="number" inputmode="decimal" step="0.5" placeholder="-1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdHomeLine!=null?it.myHdHomeLine:""}">
+        <input id="settleMyHdHomeOdds" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="賠率" style="width:58px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdHomeOdds!=null?it.myHdHomeOdds:""}">
       </div>
-      <div style="color:var(--ink-dim);font-size:11px;margin-top:5px;line-height:1.6;">＋＝受讓、−＝讓（如你買馬林魚+1.5 就在馬林魚格填 +1.5；兩隊都買過就兩格都填）。該隊的燈與命中改用此線判；市場讓分過盤率仍用收盤。</div>
+      <div style="color:var(--ink-dim);font-size:11px;margin-top:5px;line-height:1.6;">＋＝受讓、−＝讓（如你買馬林魚+1.5 就在馬林魚格填 +1.5；兩隊都買過就兩格都填）。線旁小格＝成交賠率，只有實際下注才填。該隊的燈與命中改用此線判；市場讓分過盤率仍用收盤。</div>
     </div>
   `;
   body.appendChild(flipWrap);
@@ -6201,7 +6206,8 @@ function openSettleModal(it){
     const _showMyHd = ()=>{ const w=$("#myHdWrap"); if(!w) return;
       const fsv = $("#settleFlipState") ? $("#settleFlipState").value : "none";
       const sw = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
-      if(fsv!=="none" || sw) w.style.display="block";
+      const bet = !!((it.hdGive&&it.hdGive.bet)||(it.hdRecv&&it.hdRecv.bet));   // 有注章的卡也浮出（成交線+賠率記錄用）
+      if(fsv!=="none" || sw || bet) w.style.display="block";
     };
     $("#settleFlipState") && $("#settleFlipState").addEventListener("change", _showMyHd);
     $("#settlePreSwap") && $("#settlePreSwap").addEventListener("change", _showMyHd);
@@ -6566,6 +6572,13 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   const _mha0 = $("#settleMyHdAway")?.value, _mhh0 = $("#settleMyHdHome")?.value;   // 讓分成交線（對調場）
   if(_mha0!==undefined) it.myHdAwayLine = (_mha0==="" || isNaN(parseFloat(_mha0))) ? null : parseFloat(_mha0);
   if(_mhh0!==undefined) it.myHdHomeLine = (_mhh0==="" || isNaN(parseFloat(_mhh0))) ? null : parseFloat(_mhh0);
+  // 成交賠率（只有實際下注才填;範圍守門 1.01~50 防髒值,超界視同未填）
+  const _oddsParse = (v)=>{ const x=parseFloat(v); return (isNaN(x)||x<1.01||x>50) ? null : x; };
+  const _mto0 = $("#settleMyTotOdds")?.value;
+  if(_mto0!==undefined) it.myTotOdds = (_mto0==="") ? null : _oddsParse(_mto0);
+  const _mhao0 = $("#settleMyHdAwayOdds")?.value, _mhho0 = $("#settleMyHdHomeOdds")?.value;
+  if(_mhao0!==undefined) it.myHdAwayOdds = (_mhao0==="") ? null : _oddsParse(_mhao0);
+  if(_mhho0!==undefined) it.myHdHomeOdds = (_mhho0==="") ? null : _oddsParse(_mhho0);
   const _sea = parseFloat($("#settleEraAway")?.value), _seh = parseFloat($("#settleEraHome")?.value);
   it.eraAway = isNaN(_sea) ? null : _sea;
   it.eraHome = isNaN(_seh) ? null : _seh;
@@ -6603,6 +6616,8 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     const _mtl = $("#settleMyTotLine")?.value;
     const mtl = (_mtl==="" || _mtl==null || isNaN(parseFloat(_mtl))) ? null : parseFloat(_mtl);
     it.myTotLine = mtl;
+    const _op = (v)=>{ const x=parseFloat(v); return (isNaN(x)||x<1.01||x>50) ? null : x; };   // 成交賠率守門
+    it.myTotOdds = _op($("#settleMyTotOdds")?.value); picks.myTotOdds = it.myTotOdds;
     const mkBasis = parseFloat(it.totVal);
     if(mtl!=null && mtl!==mkBasis){
       const tr = picks.awayScore + picks.homeScore;
@@ -6618,6 +6633,9 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     const mhh = (_mhh==="" || _mhh==null || isNaN(parseFloat(_mhh))) ? null : parseFloat(_mhh);
     it.myHdAwayLine = mha; it.myHdHomeLine = mhh;
     picks.myHdAwayLine = mha; picks.myHdHomeLine = mhh;
+    const _op2 = (v)=>{ const x=parseFloat(v); return (isNaN(x)||x<1.01||x>50) ? null : x; };
+    it.myHdAwayOdds = _op2($("#settleMyHdAwayOdds")?.value); it.myHdHomeOdds = _op2($("#settleMyHdHomeOdds")?.value);
+    picks.myHdAwayOdds = it.myHdAwayOdds; picks.myHdHomeOdds = it.myHdHomeOdds;
     const sideRes = (team, line)=>{ if(line==null) return null;
       const diff = (team==="away" ? picks.awayScore-picks.homeScore : picks.homeScore-picks.awayScore) + line;
       return diff===0 ? "push" : (diff>0 ? "cover" : "nocover");
@@ -6739,6 +6757,9 @@ function applySettlement(it, picks, delta){
     intlState: (picks.intlState || null),                                                            // 國際軸快照（bet365 vs 台彩開盤；前瞻分帳）
     myHdAwayLine: (picks.myHdAwayLine!=null ? picks.myHdAwayLine : null),                            // 讓分成交線（對調場；＋受讓／−讓）
     myHdHomeLine: (picks.myHdHomeLine!=null ? picks.myHdHomeLine : null),
+    myTotOdds: (picks.myTotOdds!=null ? picks.myTotOdds : null),                                     // 成交賠率（只有實際下注才填;真ROI/CLV 用）
+    myHdAwayOdds: (picks.myHdAwayOdds!=null ? picks.myHdAwayOdds : null),
+    myHdHomeOdds: (picks.myHdHomeOdds!=null ? picks.myHdHomeOdds : null),
     myHdGiveResult: (picks.myHdGive!=null ? picks.myHdGive : null),                                  // 讓槽成交結果 cover/nocover/push
     myHdRecvResult: (picks.myHdRecv!=null ? picks.myHdRecv : null),
     myTotResult: (picks.myTot || totResult),   // B：成交線結果（命中／燈號用）；未填成交線或歷史場 → =市場 totResult，不汙染
