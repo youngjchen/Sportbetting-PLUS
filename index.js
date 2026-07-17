@@ -372,6 +372,24 @@ function handleScheduleMove(log, e, m, dhCount, stamp) {
   return 'follow';
 }
 
+// 搬場過的 id：Titan007 的 ChangeDetail 變動表【永久】帶著舊場的列（2026-07-17 實測
+// id=172742 搬場後表＝新場 3 列＋舊場 4 列）。把「同 id 歸檔條目」的列從表尾剝掉，
+// 否則「取較長表」規則每一輪都會把舊場汙染吃回來。對「本輪抓到的表」與「已存的表」
+// 都要剝 —— 後者讓中途被汙染過的存檔也能自我修復。
+function stripArchivedRows(rows, log, id, key) {
+  if (!Array.isArray(rows) || !rows.length) return rows;
+  const prefix = String(id) + '@';
+  for (const k of Object.keys(log.matches || {})) {
+    if (!k.startsWith(prefix)) continue;
+    const old = log.matches[k] && log.matches[k][key] && log.matches[k][key].bet365;
+    if (!Array.isArray(old) || !old.length || rows.length < old.length) continue;
+    if (JSON.stringify(rows.slice(rows.length - old.length)) === JSON.stringify(old)) {
+      rows = rows.slice(0, rows.length - old.length);
+    }
+  }
+  return rows;
+}
+
 async function run() {
   const stamp = nowTaiwanISO();
   console.log(`\n==================== ${stamp} ====================`);
@@ -399,6 +417,11 @@ async function run() {
 
     const e = log.matches[m.id] || { id: m.id, firstSeen: stamp, ml: {}, hd: { bet365: null }, ou: { bet365: null } };
     if (log.matches[m.id]) handleScheduleMove(log, e, m, dhCount, stamp);   // 同 id 換時間：雙重賽拆場/改期跟隨
+    // 搬場過的 id：先把歸檔舊場的列從抓到的表/已存的表剝掉（見 stripArchivedRows 註解）
+    if (odds.hd) { odds.hd = stripArchivedRows(odds.hd, log, m.id, 'hd'); if (!odds.hd.length) odds.hd = null; }
+    if (odds.ou) { odds.ou = stripArchivedRows(odds.ou, log, m.id, 'ou'); if (!odds.ou.length) odds.ou = null; }
+    if (e.hd && Array.isArray(e.hd.bet365)) { const s = stripArchivedRows(e.hd.bet365, log, m.id, 'hd'); e.hd.bet365 = s.length ? s : null; }
+    if (e.ou && Array.isArray(e.ou.bet365)) { const s = stripArchivedRows(e.ou.bet365, log, m.id, 'ou'); e.ou.bet365 = s.length ? s : null; }
     e.league = m.league;
     e.time = m.time;
     e.startISO = m.startISO;
@@ -630,4 +653,4 @@ if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
 
-module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadPregamePairCount, MOVE_MIN };
+module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadPregamePairCount, MOVE_MIN, stripArchivedRows };
