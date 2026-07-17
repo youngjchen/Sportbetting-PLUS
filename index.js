@@ -321,6 +321,57 @@ function loadLog() {
   }
 }
 
+// ---- 同 id 開賽時間大改 = Titan007 把整列搬去別場（雙重賽）或真改期 -----------
+// 2026-07-17 實例：光芒@紅襪官方雙重賽(01:35/07:10)，Titan007 只給一列 id=172742，
+// 先掛在 01:35，開賽前幾小時整列搬到 07:10 → 兩場的賠率史被縫在同一條目、
+// 板上跟著 oddsId 把 01:35 卡片的時間改成 07:10（一天兩張 07:10 卡）。
+// 判定：時間平移 ≥ MOVE_MIN 才算「搬場」（雙重賽兩場至少差 2 小時；一般微調 <1 小時）。
+const MOVE_MIN = 100;
+function scheduleMove(oldISO, newISO) {
+  const a = Date.parse(oldISO), b = Date.parse(newISO);
+  if (isNaN(a) || isNaN(b)) return false;
+  return Math.abs(b - a) >= MOVE_MIN * 60 * 1000;
+}
+
+// 玩運彩 feed：同聯盟同日同對戰的官方場次數（≥2 = 雙重賽）。讀不到就回空表（一律當改期處理）。
+function loadPregamePairCount() {
+  const map = {};
+  try {
+    const feed = JSON.parse(fs.readFileSync(path.join('data', 'pregame_data.json'), 'utf8'));
+    const list = Array.isArray(feed) ? feed : Object.values(feed);
+    for (const g of list) {
+      const lg = String(g.league || '').toLowerCase();
+      const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
+      if (!away || !home || !g.date) continue;
+      const key = `${lg}|${g.date}|${[away, home].sort().join('|')}`;
+      map[key] = (map[key] || 0) + 1;
+    }
+  } catch (_) { /* pregame feed 缺 → 保守不拆場 */ }
+  return map;
+}
+
+// 處理搬場：雙重賽 → 舊場整包歸檔成獨立條目（id 加 @HHMM 後綴；板上仍能以 日期+兩隊+時間
+// 對到、盤口動向與曾顛倒紀錄不失憶）、新場歸零重新累積；非雙重賽（真改期）→ 沿用同一條目。
+// 回傳：'split' / 'follow' / null（沒有搬場）。
+function handleScheduleMove(log, e, m, dhCount, stamp) {
+  if (!e || !e.startISO || !m.startISO || !scheduleMove(e.startISO, m.startISO)) return null;
+  const oldDate = String(e.startISO).slice(0, 10);
+  const pairKey = `${e.league}|${oldDate}|${[e.awayTeam || '', e.homeTeam || ''].sort().join('|')}`;
+  if ((dhCount[pairKey] || 0) >= 2) {
+    const hhmm = String(e.startISO).slice(11, 16).replace(':', '');
+    const archId = `${m.id}@${hhmm}`;
+    log.matches[archId] = Object.assign({}, e, { id: archId, movedTo: m.startISO, archivedAt: stamp });
+    delete log.matches[archId]._hdTs;
+    e.firstSeen = stamp;
+    e.ml = {}; e.hd = { bet365: null }; e.ou = { bet365: null };
+    delete e._hdTs;
+    console.log(`  ↔️ [${e.league}] id:${m.id} 開賽 ${e.startISO} → ${m.startISO}（官方雙重賽）→ 舊場歸檔 ${archId}、新場歸零`);
+    return 'split';
+  }
+  console.log(`  🕒 [${e.league}] id:${m.id} 開賽 ${e.startISO} → ${m.startISO}（改期，沿用同一條目）`);
+  return 'follow';
+}
+
 async function run() {
   const stamp = nowTaiwanISO();
   console.log(`\n==================== ${stamp} ====================`);
@@ -335,6 +386,7 @@ async function run() {
   const log = loadLog();
   if (!log.matches) log.matches = {};
   const unmapped = [];
+  const dhCount = loadPregamePairCount();   // 雙重賽判定用（同 id 搬場時拆條目）
 
   for (const m of upcoming) {
     const homeTeam = mapTeam(m.homeRaw, m.league);
@@ -346,6 +398,7 @@ async function run() {
     const odds = await fetchMatchOdds(m);
 
     const e = log.matches[m.id] || { id: m.id, firstSeen: stamp, ml: {}, hd: { bet365: null }, ou: { bet365: null } };
+    if (log.matches[m.id]) handleScheduleMove(log, e, m, dhCount, stamp);   // 同 id 換時間：雙重賽拆場/改期跟隨
     e.league = m.league;
     e.time = m.time;
     e.startISO = m.startISO;
@@ -577,4 +630,4 @@ if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
 
-module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS };
+module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadPregamePairCount, MOVE_MIN };

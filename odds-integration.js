@@ -80,22 +80,58 @@
   function fmtOu(v) { var n = parseFloat(v); if (isNaN(n)) return String(v || "—"); return "" + n; }
 
   /* ---- 開球時間工具：雙重賽(同日同對戰兩場)用開球時間區分 ---- */
+  // TOL_MIN：兩個時間差在此內視為「同一場」。雙重賽兩場至少差 2 小時以上（比賽本身就要打 2.5h+），
+  // 而來源的時間微調（如 Titan007 給 07:07、官方 07:15）都在 1 小時內 → 120 分是安全分界，
+  // 與 pregame-integration.js findGame 的 TOL 同值。
+  var TOL_MIN = 120;
   function hhmmToMin(s) { var m = /(\d{1,2}):(\d{2})/.exec(s == null ? "" : String(s)); return m ? (+m[1]) * 60 + (+m[2]) : null; }
   function gStartHHMM(g) { return g && g.startISO ? String(g.startISO).slice(11, 16) : (g && g.time ? (String(g.time).match(/\d{1,2}:\d{2}/) || [""])[0] : ""); }
-  // 多個候選(雙重賽)時，用卡片開球時間(it.gameTime)挑最接近的那場；單一候選則照舊回傳
+  function minDiff(a, b) { var x = hhmmToMin(a), y = hhmmToMin(b); return (x == null || y == null) ? null : Math.abs(x - y); }
+  // 官方/玩運彩的開球時間（__psFusion 融合資料：MLB=官方 API、其他=玩運彩）。
+  // Titan007 的時間偶有錯（2026-07-17 白襪@藍鳥給 07:07、官方 07:15）→ 卡片顯示時間以這裡為權威。
+  function tmMatch(b, s) { b = String(b == null ? "" : b).trim(); s = String(s == null ? "" : s).trim(); return !!b && !!s && (b === s || b.indexOf(s) >= 0 || s.indexOf(b) >= 0); }
+  function pregameTimesFor(away, home, dateKey) {
+    try {
+      var ps = (window.__psFusion && window.__psFusion.getData) ? window.__psFusion.getData() : null;
+      if (!ps || !ps.length) return [];
+      var out = [];
+      for (var i = 0; i < ps.length; i++) {
+        var p = ps[i];
+        if (String(p.date || "").slice(0, 10) !== dateKey) continue;
+        if (!(tmMatch(away, p.awayTeam) && tmMatch(home, p.homeTeam))) continue;
+        var m = String(p.gameTime || p.time || "").match(/\d{1,2}:\d{2}/);
+        if (m) out.push(m[0].length === 4 ? "0" + m[0] : m[0]);
+      }
+      return out;
+    } catch (e) { return []; }
+  }
+  // 這場 feed 比賽的「權威顯示時間」：官方/玩運彩裡挑離 Titan 時間 ≤TOL 的最近場次；沒有→用 Titan 的
+  function authTimeFor(g, dateKey) {
+    var titanT = gStartHHMM(g) || "";
+    var cands = pregameTimesFor(g.awayTeam, g.homeTeam, dateKey);
+    var best = null, bd = Infinity;
+    for (var i = 0; i < cands.length; i++) {
+      var d = minDiff(cands[i], titanT);
+      if (d != null && d < bd) { bd = d; best = cands[i]; }
+    }
+    return (best && bd <= TOL_MIN) ? best : titanT;
+  }
+  // 多個候選(雙重賽)時，用卡片開球時間(it.gameTime)挑最接近的那場；差超過 TOL 寧可不配（絕不錯配）。
+  // 單一候選照舊回傳（真改期時要能跟隨）。
   function pickByTime(cands, it) {
     if (cands.length <= 1) return cands[0] || null;
     var want = hhmmToMin(it && it.gameTime);
     if (want == null) return cands[0];                       // 卡片未記開球時間 → 退回第一場(盡力)
-    var best = cands[0], bd = Infinity;
+    var best = null, bd = Infinity;
     for (var i = 0; i < cands.length; i++) {
       var t = hhmmToMin(gStartHHMM(cands[i])); if (t == null) continue;
       var d = Math.abs(t - want); if (d < bd) { bd = d; best = cands[i]; }
     }
-    return best;
+    return (best && bd <= TOL_MIN) ? best : null;
   }
   // 純函式：給「盤面已有卡片」與「當天 feed 的場」，回傳「還要新增哪幾場」(雙重賽會回該對戰缺的每一場)
-  // 唯一鍵＝對戰＋開球時間；盤面舊卡若有 gameTime 依時間扣除，沒 gameTime 的舊卡每場扣一張。
+  // 唯一鍵＝對戰＋開球時間；時間差 ≤TOL 視為同一場（吸收 Titan/官方之間的分鐘級差異，避免重複排卡）；
+  // 沒記時間的舊卡每場扣一張。
   function gamesToAdd(existingItems, feedGames) {
     function pk(a, b) { return [a, b].sort().join("|"); }
     var byPair = {};
@@ -107,22 +143,31 @@
     var out = [];
     Object.keys(byPair).forEach(function (key) {
       var games = byPair[key].slice().sort(function (a, b) { return (hhmmToMin(gStartHHMM(a)) || 0) - (hhmmToMin(gStartHHMM(b)) || 0); });
-      var haveTimes = {}, noTime = 0;
+      var cardTimes = [], noTime = 0;
       (existingItems || []).forEach(function (it) {
         if (!it || it.type !== "match" || pk(it.away, it.home) !== key) return;
-        if (it.gameTime) haveTimes[it.gameTime] = true; else noTime++;
+        var t = hhmmToMin(it.gameTime);
+        if (t != null) cardTimes.push({ t: t, used: false }); else noTime++;
       });
       games.forEach(function (g) {
-        var hhmm = gStartHHMM(g);
-        if (hhmm && haveTimes[hhmm]) return;                  // 這場(時間相符)已在盤面
+        var gm = hhmmToMin(gStartHHMM(g));
+        if (gm != null) {
+          var best = null, bd = Infinity;
+          cardTimes.forEach(function (c) { if (!c.used) { var d = Math.abs(c.t - gm); if (d < bd) { bd = d; best = c; } } });
+          if (best && bd <= TOL_MIN) { best.used = true; return; }   // 這場已有卡（±TOL 內）
+        }
         if (noTime > 0) { noTime--; return; }                 // 有沒記時間的舊卡 → 視為已涵蓋一場
-        haveTimes[hhmm] = true; out.push(g);
+        out.push(g);
       });
     });
     return out;
   }
 
-  /* ---- 對應這張卡的比賽（唯一鍵：先認 oddsId，再 日期＋兩隊＋開球時間；主客顛倒也認） ---- */
+  /* ---- 對應這張卡的比賽（唯一鍵：先認 oddsId，再 日期＋兩隊＋開球時間；主客顛倒也認） ----
+     oddsId 直配加「時間檢核」：Titan007 會把同一列搬去另一場（2026-07-17 光芒@紅襪雙重賽，
+     id=172742 從 01:35 整列搬到 07:10）→ 卡片記的開球時間與 id 對到的場差超過 TOL 時，
+     id 只降級為普通候選，交給開球時間分辨；否則 01:35 的卡會吃到 07:10 場的賠率、
+     連卡片時間都被改寫（一天兩張 07:10 卡的事故根因）。 */
   function feedGameFor(it) {
     if (!feed || !feed.matches || typeof doc === "undefined" || !doc.activeDate) return null;
     var dateKey = doc.activeDate, ms = feed.matches, cands = [];
@@ -130,11 +175,22 @@
       var g = ms[id];
       if (!g.homeTeam || !g.awayTeam) continue;
       if ((g.startISO || "").slice(0, 10) !== dateKey) continue;
-      if (it.oddsId != null && String(g.id) === String(it.oddsId)) return g;   // 直配 Titan007 id(最穩)
-      if ((g.homeTeam === it.home && g.awayTeam === it.away) ||
-          (g.homeTeam === it.away && g.awayTeam === it.home)) cands.push(g);
+      var teamsOk = (g.homeTeam === it.home && g.awayTeam === it.away) ||
+                    (g.homeTeam === it.away && g.awayTeam === it.home);
+      if (it.oddsId != null && String(g.id) === String(it.oddsId)) {
+        var dt = minDiff(it.gameTime, gStartHHMM(g));
+        if (dt == null || dt <= TOL_MIN) return g;             // 時間相符(或無從比對) → 直配(最穩)
+        if (!teamsOk) { cands.push(g); continue; }             // 時間差太大 → 降級為候選
+      }
+      if (teamsOk) cands.push(g);
     }
-    return pickByTime(cands, it);                              // 雙重賽用開球時間區分；單場照舊
+    var picked = pickByTime(cands, it);                        // 雙重賽用開球時間區分
+    if (!picked) return null;
+    // 唯一候選但時間差超過 TOL：官方顯示這天該對戰 ≥2 場（雙重賽）→ 那是別場，寧可回 null
+    // （Titan 常只列雙重賽其中一場）；官方單場 → 真改期，跟隨（syncFlipFlags 會更新卡片時間）。
+    var d = minDiff(it.gameTime, gStartHHMM(picked));
+    if (d != null && d > TOL_MIN && pregameTimesFor(it.away, it.home, dateKey).length >= 2) return null;
+    return picked;
   }
 
   /* ---- 資料裡有哪些聯盟（優先用 g.league，隊名沒對上也認得） ---- */
@@ -381,10 +437,9 @@
     state.items.forEach(function (it) {
       if (it.type !== "match") return;
       var g = feedGameFor(it); if (!g) return;
-      // 開球時間：startISO 取 HH:MM（fallback g.time 末段），存到卡片給標頭顯示
-      var t = null;
-      if (g.startISO && g.startISO.length >= 16) t = g.startISO.slice(11, 16);
-      else if (g.time && /\d{1,2}:\d{2}/.test(g.time)) t = g.time.match(/\d{1,2}:\d{2}/)[0];
+      // 開球時間：以官方/玩運彩為權威（±TOL 內修正 Titan 的怪時間，如藍鳥主場 07:07→官方 07:15），
+      // 沒對到才用 Titan 的。feedGameFor 已保證 g 與卡片時間相符（或單場改期），這裡放心跟隨。
+      var t = (typeof doc !== "undefined" && doc.activeDate) ? authTimeFor(g, doc.activeDate) : gStartHHMM(g);
       if (t && it.gameTime !== t) { it.gameTime = t; changed = true; }
       var fav = feedFavTeam(g), cardFav = it[it.hdFav];
       // 記錄工作流判定的讓分熱門隊，讓卡片可即時比對（切換讓分方後提示會即時更新）
@@ -392,6 +447,53 @@
       var flip = !!(fav && cardFav && fav !== cardFav);
       if (!!it.autoHdFlip !== flip) { it.autoHdFlip = flip; changed = true; }
     });
+    return changed;
+  }
+
+  /* ---- 重複卡自癒：同對戰同開球時間出現 ≥2 張卡（唯一鍵被 Titan007 搬列事故破壞的殘局）----
+     2026-07-17 事故：01:35 卡被改成 07:10 → 一天兩張 07:10 光芒@紅襪。
+     修法：從 feed（含歸檔舊場）∪ 官方/玩運彩 收齊這天該對戰的全部場次時間，
+     找出「沒有任何卡覆蓋」的缺時間，把最舊的重複卡改回去（事發時先建立的那張才是被改走的原場）。 */
+  function healDupCards() {
+    if (typeof state === "undefined" || !state.items || typeof doc === "undefined" || !doc.activeDate) return false;
+    var dateKey = doc.activeDate, changed = false;
+    function pk(a, b) { return [a, b].sort().join("|"); }
+    var groups = {};
+    state.items.forEach(function (it) {
+      if (!it || it.type !== "match" || !it.gameTime) return;
+      var k = pk(it.away, it.home) + "|" + it.gameTime;
+      (groups[k] = groups[k] || []).push(it);
+    });
+    Object.keys(groups).forEach(function (k) {
+      var dup = groups[k];
+      if (dup.length < 2) return;
+      var away = dup[0].away, home = dup[0].home;
+      // 這天該對戰的完整場次時間：odds feed（含歸檔場）∪ 官方/玩運彩
+      var times = {};
+      for (var id in (feed.matches || {})) {
+        var g = feed.matches[id];
+        if (!g || !g.homeTeam || !g.awayTeam) continue;
+        if ((g.startISO || "").slice(0, 10) !== dateKey) continue;
+        var ok = (g.homeTeam === home && g.awayTeam === away) || (g.homeTeam === away && g.awayTeam === home);
+        if (!ok) continue;
+        var t = gStartHHMM(g); if (t) times[t] = g;
+      }
+      pregameTimesFor(away, home, dateKey).forEach(function (t) { if (!(t in times)) times[t] = null; });
+      var all = state.items.filter(function (it) { return it && it.type === "match" && pk(it.away, it.home) === pk(away, home); });
+      var missing = Object.keys(times).filter(function (t) {
+        return !all.some(function (c) { var d = minDiff(c.gameTime, t); return d != null && d <= TOL_MIN; });
+      }).sort();
+      if (!missing.length) return;
+      dup.sort(function (a, b) { return (+a.id || 0) - (+b.id || 0); });
+      for (var i = 0; i < missing.length && i < dup.length - 1; i++) {
+        var card = dup[i], t2 = missing[i], g2 = times[t2];
+        card.gameTime = t2;
+        card.oddsId = g2 ? g2.id : null;
+        changed = true;
+        try { console.log("[賠率] 修復重複卡：", away, "@", home, "其中一張改回", t2); } catch (e) {}
+      }
+    });
+    if (changed) badge("已修復雙重賽卡片時間 ✓");
     return changed;
   }
 
@@ -430,7 +532,7 @@
       state.items.push({
         id: uid++, type: "match", x: 0, y: 0,
         away: g.awayTeam, home: g.homeTeam, awayColor: col, homeColor: col,
-        gameTime: gStartHHMM(g) || "", oddsId: g.id,         // 唯一鍵：開球時間(配對用) + Titan007 id
+        gameTime: authTimeFor(g, target) || "", oddsId: g.id, // 唯一鍵：開球時間(官方為權威) + Titan007 id
         mlAway: { lights: 0 }, mlHome: { lights: 0 },
         hdFav: (fav === g.awayTeam ? "away" : "home"), hdVal: "",
         hdGive: { lights: 0 }, hdRecv: { lights: 0 },
@@ -478,9 +580,10 @@
         if (!j || !j.matches) throw new Error("空檔");
         var changed = (j.lastUpdated !== feed.lastUpdated);
         feed = j;
+        var healed = healDupCards();                       // 先修殘局（重複卡），再同步旗標
         var flipChanged = syncFlipFlags();
-        if (flipChanged && typeof save === "function") save();
-        if ((force || ((changed || flipChanged) && !anyModalOpen() && !editingNow())) && typeof render === "function") render();
+        if ((healed || flipChanged) && typeof save === "function") save();
+        if ((force || ((changed || healed || flipChanged) && !anyModalOpen() && !editingNow())) && typeof render === "function") render();
         updateOddsStamp();
         return { ok: true, lastUpdated: j.lastUpdated, changed: changed };
       });
@@ -519,6 +622,6 @@
   else boot();
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, _setFeed: function (f) { feed = f; } };
   }
 })();
