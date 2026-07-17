@@ -39,14 +39,27 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           END=$(( SECONDS + 19500 ))          # 約 5h25m，安全落在 350 分鐘 timeout 內
           while [ "$SECONDS" -lt "$END" ]; do
+            # 每輪【先】同步到遠端最新，再抓：
+            #  1) 中途 push 上 main 的程式碼修復/資料修補，本輪 5 分鐘內就生效（不用等下一個 run）；
+            #  2) 清掉上一輪殘留的 rebase/衝突狀態。
+            # 2026-07-17 實測教訓：舊版「commit 完才 pull --rebase」，撞到手動 push 的
+            # odds_log 資料修補 → rebase 衝突、|| true 吞掉 → worktree 從此卡在衝突狀態，
+            # 之後每輪 loadLog 解析失敗改寫全新檔、push 全部靜默失敗，賠率停更直到本輪結束。
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
             node index.js || true
             if [ -f data/odds_log.json ]; then
               git add data/odds_log.json
               [ -f data/intl_state.json ] && git add data/intl_state.json
               if ! git diff --cached --quiet; then
                 git commit -m "odds update $(date -u +%FT%TZ)" || true
-                git pull --rebase --autostash || true
-                git push || true
+                # push 失敗多半是同分鐘別的 workflow 推了其它檔（pregame 等）→ rebase 一次再推；
+                # 再不行就放掉，下一輪 reset --hard 會以遠端最新重來（只損失一個 5 分鐘樣本）。
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
               fi
             fi
             sleep 300                           # 5 分鐘
