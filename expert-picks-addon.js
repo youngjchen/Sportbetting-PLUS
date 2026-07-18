@@ -80,9 +80,23 @@
     };
   }
 
-  /* ---- 樣式（膠囊沿用板子 .bbadge 底，加琥珀識別色；點擊不變形不位移）---- */
+  /* ---- 樣式（膠囊沿用板子 .bbadge 底，加琥珀識別色；點擊不變形不位移）----
+     每列明牌膠囊＝固定 64px 網格欄（燈號後、注之前）。關鍵：欄位是「固定插進 grid 模板」的，
+     且每一列（含零明牌的列）都渲染佔位格 → 所有列/所有卡片的欄位 x 座標恆等，不可能歪
+     （2026-07-18 使用者對 DEMO 的一致性要求）。原模板 28|minmax(88,126)|max-content|24|48，
+     實測內容 381px、卡內餘裕 ~100px → 插 64px 安全不溢出。 */
   var css = document.createElement('style');
   css.textContent =
+    // .card 前綴＝特異度 (0,2,0)：板子主樣式表比本 add-on 晚掛進 head（實測 sheet#5 vs #3），
+    // 同特異度會輸在來源順序 → 用特異度贏，不用 !important。
+    '.card .bmkt-row{grid-template-columns:28px minmax(88px,126px) max-content 64px 24px 48px;}' +
+    '.ep-cell{width:64px;display:flex;justify-content:flex-start;align-items:center;}' +
+    '.ep-cell .ep-n{display:inline-flex;align-items:center;gap:2px;font-family:Oswald;font-weight:700;' +
+      'font-size:12.5px;letter-spacing:.02em;color:#ffcf8a;background:rgba(255,176,46,.10);' +
+      'border:1px solid rgba(255,176,46,.42);border-radius:999px;padding:1px 8px;cursor:pointer;' +
+      'white-space:nowrap;font-variant-numeric:tabular-nums;}' +
+    '.ep-cell .ep-n:hover{background:rgba(255,176,46,.2);}' +
+    '.ep-cell .ep-n .st{color:#ffd873;font-size:11px;}' +
     '.bbadge.ep-badge{border-color:rgba(255,179,71,.55)!important;color:#ffcf8a!important;}' +
     '.bbadge.ep-badge:hover{background:rgba(255,179,71,.14)!important;}' +
     '.bbadge.ep-badge.ep-done{border-color:rgba(255,179,71,.25)!important;color:#8a7a5e!important;}' +
@@ -167,26 +181,48 @@
     if (b) { b.textContent = txt; b.classList.add('show'); setTimeout(function () { b.classList.remove('show'); }, 1700); }
   }
 
-  /* ---- 掛進卡片渲染：標頭膠囊【明牌 ×N】（與 顛倒/賽前 同一排，2026-07-18 使用者指定）---- */
+  /* ---- 掛進卡片渲染 ----
+     1) 每個市場列插「固定 64px 明牌格」：一定插（沒明牌＝空格），grid 欄數恆定 → 永不歪。
+        列序固定＝renderCardB 的產出順序：獨贏客/主、讓/受讓、大/小。
+     2) 標頭膠囊【明牌 ×N】維持（總覽＋面板入口）。 */
+  var ROW_OPTS = ['mlAway', 'mlHome', 'hdGive', 'hdRecv', 'over', 'under'];
   function decorate(it) {
     try {
-      if (!data || !data.picks || typeof doc === 'undefined' || !doc.activeDate) return;
       var cardEl = (typeof world !== 'undefined' ? world : document).querySelector('.card[data-id="' + it.id + '"]');
-      if (!cardEl || cardEl.querySelector('.ep-badge')) return;
+      if (!cardEl) return;
+      var rows = cardEl.querySelectorAll('.bmkt-row');
+      if (!rows.length) return;                                  // 已結算卡等無市場列 → 不動
+      var dateKey = (typeof doc !== 'undefined' && doc && doc.activeDate) || null;
+      var picks = (data && data.picks && dateKey) ? picksForCard(it, dateKey, data.picks) : [];
+      var agg = aggregate(it, picks);
+      var byOpt = {};
+      agg.rows.forEach(function (r) { byOpt[r.opt] = r; });
+      var openIt = function (ev) {
+        ev.stopPropagation();
+        openPanel(it, aggregate(it, picksForCard(it, dateKey, data.picks)), ev.clientX, ev.clientY);
+      };
+      rows.forEach(function (row, i) {
+        if (row.querySelector('.ep-cell')) return;               // 重繪防重
+        var cell = document.createElement('span');
+        cell.className = 'ep-cell no-drag';
+        var g = byOpt[ROW_OPTS[i]];
+        if (g) {
+          var stars = g.list.filter(function (p) { return weightOf(p) > 1; }).length;
+          cell.innerHTML = '<span class="ep-n" title="明牌 ' + g.list.length + ' 人' + (stars ? '（70%+ ' + stars + ' 人）' : '') + ' — 點看名單">🎯' + g.list.length +
+            (stars ? '<span class="st">⭐' + stars + '</span>' : '') + '</span>';
+          cell.firstChild.onclick = openIt;
+        }
+        row.insertBefore(cell, row.children[3] || null);         // 燈號後、注之前（第 4 欄）
+      });
+      // 標頭總覽膠囊
+      if (!picks.length || cardEl.querySelector('.ep-badge')) return;
       var head = cardEl.querySelector('.bhead');
       if (!head) return;
-      var picks = picksForCard(it, doc.activeDate, data.picks);
-      if (!picks.length) return;
-      var agg = aggregate(it, picks);
       var pill = document.createElement('button');
       pill.className = 'bbadge ep-badge' + (agg.totalNewWeight ? '' : ' ep-done');
       pill.textContent = '明牌 ×' + agg.total;
       pill.title = '找高手明牌（本季 60%↑ 合格者）— 點看名單與套用' + (agg.totalNewWeight ? '' : '（已全部套用）');
-      pill.onclick = function (ev) {
-        ev.stopPropagation();
-        openPanel(it, aggregate(it, picksForCard(it, doc.activeDate, data.picks)), ev.clientX, ev.clientY);
-      };
-      // 插在「賽前」膠囊前（顛倒那一排）；找不到就放在收合鈕前
+      pill.onclick = openIt;
       var preB = null;
       head.querySelectorAll('button.bbadge').forEach(function (b) { if (!preB && /^賽前/.test(b.textContent)) preB = b; });
       head.insertBefore(pill, preB || head.querySelector('.bico'));
