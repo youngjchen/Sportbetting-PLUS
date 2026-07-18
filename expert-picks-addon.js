@@ -127,8 +127,9 @@
       });
     });
     html += '<div class="ep-ft"><button class="ep-apply"' + (agg.totalNewWeight ? '' : ' disabled') + '>⚡ 套用（+' + agg.totalNewWeight + ' 燈）</button></div>' +
-      '<div class="ep-note">60~69% 每人 +1 燈、' + W2_WP + '%↑ 每人 +2 燈（上限 5 燈），已套用過的不重複；' +
-      '門檻＝本季 ' + esc(((data || {}).thresholds || {}).wp || 60) + '%↑ 且 ≥' + esc(((data || {}).thresholds || {}).minBets || 30) + ' 注（免費附贈單同樣過門檻）。可用復原(↩)反悔。</div>';
+      '<div class="ep-note">60~69% 每人 +1 燈、' + W2_WP + '%↑ 每人 +2 燈；燈號走板子原生 0~12 刻度' +
+      '（滿 5 轉紅、超 10 轉紫），已套用過的不重複。門檻＝本季 ' + esc(((data || {}).thresholds || {}).wp || 60) + '%↑ 且 ≥' +
+      esc(((data || {}).thresholds || {}).minBets || 30) + ' 注（免費附贈單、追蹤名單同一把尺）。可用復原(↩)反悔。</div>';
     p.innerHTML = html;
     document.body.appendChild(p);
     var vw = window.innerWidth || 1200, vh = window.innerHeight || 800, r = p.getBoundingClientRect();
@@ -144,7 +145,9 @@
           var key = pk.uid + '|' + rr.opt;
           if (it.expertApplied[key]) return;
           it[rr.opt] = it[rr.opt] || { lights: 0 };
-          it[rr.opt].lights = Math.min(5, (it[rr.opt].lights || 0) + weightOf(pk));
+          // 板子原生燈號刻度 0~12（index.html bLightSlots：1-5 琥珀、6-10 轉紅、11-12 轉紫）
+          // → 13 人 vs 6 人在卡面上顏色可分，不再被 5 封頂壓扁（2026-07-18 使用者回報）。
+          it[rr.opt].lights = Math.min(12, (it[rr.opt].lights || 0) + weightOf(pk));
           it.expertApplied[key] = 1;
         });
       });

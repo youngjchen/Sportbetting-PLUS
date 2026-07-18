@@ -96,11 +96,14 @@ function loadWhitelist() {
      只抓該聯盟、只抓今天、榜單用快取。30 分 cron × 30 分寬的窗 = 每個開賽群恰好命中一次。
    · skip：其他時段 → 零請求收工（對站方禮貌的關鍵：頻率高的是「檢查」，不是「抓取」）。
    同聯盟 45 分鐘內不重複 final（lastFinal 記在輸出檔）。 */
-const FULL_HOURS = [0, 9, 12, 15, 18, 21];
-function decideMode(nowMs, sched, lastFinal, eventName) {
+// full 觸發改「距上次 full ≥ FULL_GAP_H 小時」而非鐘面整點：GitHub cron 實測延遲 25~55 分
+// 且大量丟檔（2026-07-18：16:33→16:58、18:03→18:40、15:33/16:03/17:03 直接消失），
+// 看鐘面的判斷會被延遲打穿；看間隔則不管哪個 tick 活著到場都能接棒。約 8 輪 full/天。
+const FULL_GAP_H = 3;
+function decideMode(nowMs, sched, lastFinal, eventName, lastFullAt) {
   if (eventName === 'workflow_dispatch') return { mode: 'full' };
-  const tw = new Date(nowMs + 8 * 3600e3);
-  if (FULL_HOURS.indexOf(tw.getUTCHours()) >= 0 && tw.getUTCMinutes() < 20) return { mode: 'full' };
+  const lastFull = lastFullAt ? Date.parse(lastFullAt) : 0;
+  if (nowMs - lastFull >= FULL_GAP_H * 3600e3) return { mode: 'full' };
   // 終盤窗 [25,70] 分＋40 分防重複：正常命中賽前 40~70 分（抓完+上傳 ≈ 賽前 35 分資料就緒，
   // 板上 5 分刷新 → 賽前 20 分穩到手，2026-07-18 使用者要求的下注緩衝）；
   // GitHub cron 延遲時 25~40 分的兜底檔仍會補抓，不會整群漏掉。
@@ -236,11 +239,45 @@ function parseExpertPage(html) {
   return out;
 }
 
+/* ---- 個人戰績頁（季）解析：榜外白名單的合格判定源 ----
+   使用者 2026-07-18：白名單一樣只吃合格市場（不是全抓）。榜單抓不到的人
+   （注數<30 或榜外），用 /member/{uid}/record/winRate?during=season&allianceid=N
+   的分市場戰績表判定：國際盤表(universe-tablecon)/運彩盤表(bank-tablecon)，
+   列＝讓分盤/大小盤/不讓分/主推(無文字標籤列)，欄＝勝場/敗場/勝率/獲利。 */
+function parseRecordStats(html) {
+  const $ = cheerio.load(html);
+  const out = [];
+  const TABLES = [{ sel: 'table.universe-tablecon', mode: 2 }, { sel: 'table.bank-tablecon', mode: 1 }];
+  for (const { sel, mode } of TABLES) {
+    $(sel).each((_, tbl) => {
+      const $t = $(tbl);
+      if ($t.parents('table').length) return;
+      if (!/勝場/.test($t.text())) return;                 // 個人「預測」頁同名表格 → 跳過
+      $t.find('tr').each((_, tr) => {
+        const c = $(tr).children('td,th').map((i, x) => $(x).text().replace(/\s+/g, ' ').trim()).get();
+        if (c.length < 4) return;
+        const w = parseInt(c[1], 10), l = parseInt(c[2], 10);
+        if (isNaN(w) || isNaN(l)) return;
+        let kind = null;
+        if (/讓分盤/.test(c[0])) kind = 'hd';
+        else if (/大小盤/.test(c[0])) kind = 'ou';
+        else if (/不讓分/.test(c[0])) kind = 'ml';
+        else if (/總勝率/.test(c[0])) return;
+        else if (!c[0] || $(tr).find('img[alt="主推"]').length) kind = 'main';   // 主推列用圖示、無文字
+        if (!kind) return;
+        const total = w + l;
+        out.push({ mode: mode, kind: kind, w: w, l: l, total: total, wp: total ? Math.round(100 * w / total) : 0 });
+      });
+    });
+  }
+  return { stats: out, nickname: $('.memberidname').first().text().trim() || null };
+}
+
 /* ---- 主流程 ---- */
 async function run() {
   const stamp = new Date(Date.now() + 8 * 3600e3).toISOString().replace('Z', '+08:00');
   const prev = loadPrev();
-  const decision = decideMode(Date.now(), loadScheduleTimes(), (prev && prev.lastFinal) || {}, process.env.GITHUB_EVENT_NAME || '');
+  const decision = decideMode(Date.now(), loadScheduleTimes(), (prev && prev.lastFinal) || {}, process.env.GITHUB_EVENT_NAME || '', prev && prev.lastFullAt);
   console.log(`==================== expert_picks ${stamp} mode=${decision.mode}${decision.leagues ? '(' + decision.leagues.join(',') + ')' : ''} ====================`);
   if (decision.mode === 'skip') {
     console.log('· 非整點全掃時段、也沒有 35~65 分內開打的比賽 → 本輪不抓（對站方零請求）');
@@ -312,6 +349,33 @@ async function run() {
     }
   }
 
+  // 榜外白名單 → 個人戰績頁(季)判定合格市場（60%+30注同一把尺）；結果進 qual/mainQual
+  // （會一起存進 qualCache，final 模式直接沿用、不重抓）
+  if (!useCache) {
+    for (const { id: aid, lg } of targets) {
+      for (const uid of WL[lg] || []) {
+        if (perAlliance[aid] && perAlliance[aid].has(uid)) continue;   // 榜上已有身分 → 用榜單數字
+        let rec;
+        try { rec = parseRecordStats(await getHTML(`${BASE}/member/${encodeURIComponent(uid)}/record/winRate?during=${DURING}&allianceid=${aid}`)); }
+        catch (e) { console.log(`  ⚠️ 戰績頁 ${uid} a${aid}: ${e.message}`); await sleep(jitter()); continue; }
+        let best = 0;
+        for (const s of rec.stats) {
+          if (s.wp < THRESH_WP || s.total < MIN_BETS) continue;
+          if (s.kind === 'main') mainQual[`${uid}|${aid}|${s.mode}`] = { wp: s.wp, total: s.total };
+          else {
+            const gt = gtOf(s.mode, s.kind);
+            if (gt == null) continue;
+            qual[`${uid}|${aid}|${s.mode}|${gt}`] = { wp: s.wp, w: s.w, l: s.l, total: s.total, label: '追蹤·' + QUAL_GT[s.mode][gt] };
+          }
+          if (s.wp > best) best = s.wp;
+        }
+        if (best) (perAlliance[aid] = perAlliance[aid] || new Map()).set(uid, best);
+        if (rec.nickname && !nick[uid]) nick[uid] = rec.nickname;
+        await sleep(jitter());
+      }
+    }
+  }
+
   const picks = [];
   const coverage = {};
   for (const { id: aid, lg } of targets) {
@@ -328,10 +392,9 @@ async function run() {
           const gt = gtOf(p.mode, p.kind);
           const q = gt != null ? qual[`${uid}|${aid}|${p.mode}|${gt}`] : null;
           const mq = p.main ? mainQual[`${uid}|${aid}|${p.mode}`] : null;
-          // 追蹤名單語義：榜上有任何合格身分 → 照 60% 教義只吃合格市場；
-          // 完全不在榜上（注數<30 或排名外）→ 視為使用者人工審核，全吃、標「追蹤名單」。
-          const isWL = (WL[lg] || []).indexOf(uid) >= 0 && !(perAlliance[aid] && perAlliance[aid].has(uid));
-          if (!q && !mq && !isWL) continue;
+          // 60% 教義一體適用：榜上合格看榜單、榜外白名單看戰績頁(已灌進 qual/mainQual)，
+          // 兩者都沒有 → 不吃（使用者 2026-07-18 確認：白名單也只吃合格市場）。
+          if (!q && !mq) continue;
           const src = q || mq;
           picks.push({
             league: lg, date: date, time: p.time,
@@ -339,8 +402,8 @@ async function run() {
             market: boardMarket(p.mode, p.kind),
             team: p.team ? (feedCanon(p.team, lg) || p.team) : null,
             side: p.side, line: p.line,
-            srcMode: p.mode, srcLabel: q ? q.label : (mq ? '主推' : '追蹤名單'),
-            wp: src ? src.wp : null, total: src ? src.total : null,
+            srcMode: p.mode, srcLabel: q ? q.label : '主推',
+            wp: src.wp, total: src.total,
             main: p.main, free: p.free, result: p.result,
             uid: uid, nickname: nick[uid] || uid,
           });
@@ -369,6 +432,7 @@ async function run() {
 
   const out = {
     updated: stamp, mode: decision.mode, during: DURING, thresholds: { wp: THRESH_WP, minBets: MIN_BETS },
+    lastFullAt: decision.mode === 'full' ? stamp : ((prev && prev.lastFullAt) || null),
     counts: { qualified: Object.keys(qual).length, mainQualified: Object.keys(mainQual).length, picks: merged.length, newThisRun: dedup.length },
     coverage: coverage,
     lastFinal: lastFinal,
@@ -383,4 +447,4 @@ async function run() {
 if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_HOURS };
+module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H };

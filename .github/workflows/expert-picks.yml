@@ -3,12 +3,12 @@ name: expert-picks
 on:
   workflow_dispatch:
   schedule:
-    # 每 30 分鐘一次（:03/:33 錯開其他爬蟲），但腳本自己決定本輪模式（見 expert_picks.js decideMode）：
-    #  · full＝台灣 0/9/12/15/18/21 點：打榜單＋全聯盟＋今明兩天（00:03 吃 MLB 半夜貼單）
-    #  · final＝有比賽 35~65 分鐘後開打：賽前終盤確認，只抓該聯盟今天、榜單用快取（吃臨場貼單/偷改單）
-    #  · skip＝其他時段：對站方零請求
-    # → 頻率高的是「檢查」不是「抓取」，禮貌與即時性兼顧。
-    - cron: '3,33 * * * *'
+    # 每 15 分鐘一次（GitHub cron 實測延遲 25~55 分＋大量丟檔，加密=買「有 tick 活著到場」的機會；
+    # skip 檔對站方零請求）。腳本自決模式（見 expert_picks.js decideMode）：
+    #  · full＝距上次 full ≥3 小時（不看鐘面→延遲免疫；約 8 輪/天，含 MLB 半夜檔）
+    #  · final＝有比賽 25~70 分鐘後開打：賽前終盤確認（只該聯盟/只今天/榜單快取；40 分防重複）
+    #  · skip＝其他：零請求
+    - cron: '3,18,33,48 * * * *'
 
 concurrency:
   group: expert-picks
