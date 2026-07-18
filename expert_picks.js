@@ -76,6 +76,85 @@ function twDate(offsetDays) {
   return `${tw.getUTCFullYear()}-${p(tw.getUTCMonth() + 1)}-${p(tw.getUTCDate())}`;
 }
 
+/* ---- 追蹤名單白名單（data/expert_whitelist.json，使用者可直接編輯）---- */
+const WHITELIST_FILE = path.join('data', 'expert_whitelist.json');
+function loadWhitelist() {
+  const out = {};
+  for (const { lg } of ALLIANCES) out[lg] = [];
+  try {
+    const j = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
+    for (const { lg } of ALLIANCES) if (Array.isArray(j[lg])) out[lg] = j[lg].filter(x => typeof x === 'string' && x);
+  } catch (_) {}
+  return out;
+}
+
+/* ---- 排程感知：決定本輪模式（純函式，供測試）----
+   cron 每 30 分打一次（:03/:33），腳本自己決定要不要做事：
+   · full：台灣 0/9/12/15/18/21 點的 :03 檔（或手動 dispatch）→ 打榜單＋全聯盟＋今明兩天。
+     00:03 那檔就是吃「MLB 半夜貼單」的主力。
+   · final：某聯盟有比賽將在 35~65 分鐘後開打 → 賽前終盤確認（吃臨場貼單＋半夜偷改單），
+     只抓該聯盟、只抓今天、榜單用快取。30 分 cron × 30 分寬的窗 = 每個開賽群恰好命中一次。
+   · skip：其他時段 → 零請求收工（對站方禮貌的關鍵：頻率高的是「檢查」，不是「抓取」）。
+   同聯盟 45 分鐘內不重複 final（lastFinal 記在輸出檔）。 */
+const FULL_HOURS = [0, 9, 12, 15, 18, 21];
+function decideMode(nowMs, sched, lastFinal, eventName) {
+  if (eventName === 'workflow_dispatch') return { mode: 'full' };
+  const tw = new Date(nowMs + 8 * 3600e3);
+  if (FULL_HOURS.indexOf(tw.getUTCHours()) >= 0 && tw.getUTCMinutes() < 20) return { mode: 'full' };
+  // 終盤窗 [25,70] 分＋40 分防重複：正常命中賽前 40~70 分（抓完+上傳 ≈ 賽前 35 分資料就緒，
+  // 板上 5 分刷新 → 賽前 20 分穩到手，2026-07-18 使用者要求的下注緩衝）；
+  // GitHub cron 延遲時 25~40 分的兜底檔仍會補抓，不會整群漏掉。
+  const lgs = new Set();
+  for (const g of sched || []) {
+    const dm = (g.startMs - nowMs) / 60000;
+    if (dm >= 25 && dm <= 70) {
+      const last = lastFinal && lastFinal[g.lg] ? Date.parse(lastFinal[g.lg]) : 0;
+      if (nowMs - last >= 40 * 60000) lgs.add(g.lg);
+    }
+  }
+  if (lgs.size) return { mode: 'final', leagues: [...lgs] };
+  return { mode: 'skip' };
+}
+
+// 官方賽程（玩運彩 feed：今明兩天all場次）→ [{lg, startMs}]
+function loadScheduleTimes() {
+  const out = [];
+  try {
+    const feed = JSON.parse(fs.readFileSync(path.join('data', 'pregame_data.json'), 'utf8'));
+    for (const g of (Array.isArray(feed) ? feed : Object.values(feed))) {
+      const lg = String(g.league || '').toLowerCase();
+      const t = (String(g.time || '').match(/\d{1,2}:\d{2}/) || [])[0];
+      if (!lg || !g.date || !t) continue;
+      const ms = Date.parse(`${g.date}T${t}:00+08:00`);
+      if (!isNaN(ms)) out.push({ lg: lg, startMs: ms });
+    }
+  } catch (_) {}
+  return out;
+}
+
+function loadPrev() {
+  try { return JSON.parse(fs.readFileSync(OUT, 'utf8')); } catch (_) { return null; }
+}
+
+// 合併：本輪掃過的 (league|date) 以新結果為準（高手改單/撤單跟著更新），其餘沿用上一輪
+function mergePicks(prevPicks, newPicks, scopes) {
+  return (prevPicks || []).filter(p => !scopes.has(p.league + '|' + p.date)).concat(newPicks);
+}
+
+// 從快取的合格表重建「每聯盟 uid→最佳勝率」（final 模式不打榜單）
+function rosterFromQual(qual, mainQual, aid) {
+  const m = new Map();
+  const eat = obj => {
+    for (const [k, v] of Object.entries(obj || {})) {
+      const parts = k.split('|');
+      if (String(parts[1]) !== String(aid)) continue;
+      if ((v && v.wp) > (m.get(parts[0]) || 0)) m.set(parts[0], v.wp);
+    }
+  };
+  eat(qual); eat(mainQual);
+  return m;
+}
+
 // 玩運彩時間 → 24h "HH:MM"。
 // ⚠ 站方對亞洲下午/晚場用「PM 13:00」「PM 17:00」這種【24 小時制混用 PM 前綴】的格式
 //   （2026-07-18 日職頁原始碼證實）——PM 且時數 ≥13 時「不可」再加 12，
@@ -160,13 +239,28 @@ function parseExpertPage(html) {
 /* ---- 主流程 ---- */
 async function run() {
   const stamp = new Date(Date.now() + 8 * 3600e3).toISOString().replace('Z', '+08:00');
-  console.log(`==================== expert_picks ${stamp} ====================`);
-  const qual = {};        // `${uid}|${aid}|${mode}|${gt}` -> {wp,w,l,total,label}
-  const mainQual = {};    // `${uid}|${aid}|${mode}` -> {wp,total}
-  const nick = {};        // uid -> nickname
-  const perAlliance = {}; // aid -> Map(uid -> bestWp)
+  const prev = loadPrev();
+  const decision = decideMode(Date.now(), loadScheduleTimes(), (prev && prev.lastFinal) || {}, process.env.GITHUB_EVENT_NAME || '');
+  console.log(`==================== expert_picks ${stamp} mode=${decision.mode}${decision.leagues ? '(' + decision.leagues.join(',') + ')' : ''} ====================`);
+  if (decision.mode === 'skip') {
+    console.log('· 非整點全掃時段、也沒有 35~65 分內開打的比賽 → 本輪不抓（對站方零請求）');
+    return;
+  }
+  const WL = loadWhitelist();
+  const targets = decision.mode === 'full' ? ALLIANCES : ALLIANCES.filter(a => decision.leagues.indexOf(a.lg) >= 0);
+  const dates = decision.mode === 'full' ? { today: twDate(0), tomorrow: twDate(1) } : { today: twDate(0) };
 
-  for (const { id: aid } of ALLIANCES) {
+  let qual = {};          // `${uid}|${aid}|${mode}|${gt}` -> {wp,w,l,total,label}
+  let mainQual = {};      // `${uid}|${aid}|${mode}` -> {wp,total}
+  let nick = {};          // uid -> nickname
+  const perAlliance = {}; // aid -> Map(uid -> bestWp)
+  const cacheFresh = prev && prev.qualCache && prev.qualCache.at && (Date.now() - Date.parse(prev.qualCache.at)) < 12 * 3600e3;
+  const useCache = decision.mode === 'final' && cacheFresh;
+  if (useCache) {
+    qual = prev.qualCache.qual || {}; mainQual = prev.qualCache.mainQual || {}; nick = prev.qualCache.nick || {};
+    for (const { id: aid } of targets) perAlliance[aid] = rosterFromQual(qual, mainQual, aid);
+    console.log(`· 榜單用快取（${prev.qualCache.at}），終盤確認只抓個人頁`);
+  } else for (const { id: aid } of targets) {
     perAlliance[aid] = new Map();
     for (const mode of [2, 1]) {
       for (let page = 0; page < MAX_PAGES; page++) {
@@ -219,10 +313,12 @@ async function run() {
   }
 
   const picks = [];
-  const dates = { today: twDate(0), tomorrow: twDate(1) };
-  for (const { id: aid, lg } of ALLIANCES) {
-    const uids = [...perAlliance[aid].entries()].sort((a, b) => b[1] - a[1]).slice(0, EXPERT_CAP).map(x => x[0]);
-    console.log(`[a${aid} ${lg}] 合格高手 ${perAlliance[aid].size} 名，抓前 ${uids.length} 名`);
+  const coverage = {};
+  for (const { id: aid, lg } of targets) {
+    const uids = [...(perAlliance[aid] || new Map()).entries()].sort((a, b) => b[1] - a[1]).slice(0, EXPERT_CAP).map(x => x[0]);
+    for (const w of WL[lg] || []) if (uids.indexOf(w) < 0) uids.push(w);   // 追蹤名單必抓、不占名額
+    coverage[lg] = { qualified: (perAlliance[aid] || new Map()).size, fetched: uids.length, whitelist: (WL[lg] || []).length };
+    console.log(`[a${aid} ${lg}] 合格 ${coverage[lg].qualified} 名，抓 ${uids.length} 名（含追蹤名單 ${coverage[lg].whitelist}）`);
     for (const uid of uids) {
       for (const [day, date] of Object.entries(dates)) {
         let html;
@@ -232,7 +328,10 @@ async function run() {
           const gt = gtOf(p.mode, p.kind);
           const q = gt != null ? qual[`${uid}|${aid}|${p.mode}|${gt}`] : null;
           const mq = p.main ? mainQual[`${uid}|${aid}|${p.mode}`] : null;
-          if (!q && !mq) continue;                        // 非合格市場、也不是合格主推 → 不吃
+          // 追蹤名單語義：榜上有任何合格身分 → 照 60% 教義只吃合格市場；
+          // 完全不在榜上（注數<30 或排名外）→ 視為使用者人工審核，全吃、標「追蹤名單」。
+          const isWL = (WL[lg] || []).indexOf(uid) >= 0 && !(perAlliance[aid] && perAlliance[aid].has(uid));
+          if (!q && !mq && !isWL) continue;
           const src = q || mq;
           picks.push({
             league: lg, date: date, time: p.time,
@@ -240,8 +339,8 @@ async function run() {
             market: boardMarket(p.mode, p.kind),
             team: p.team ? (feedCanon(p.team, lg) || p.team) : null,
             side: p.side, line: p.line,
-            srcMode: p.mode, srcLabel: q ? q.label : `主推`,
-            wp: src.wp, total: src.total,
+            srcMode: p.mode, srcLabel: q ? q.label : (mq ? '主推' : '追蹤名單'),
+            wp: src ? src.wp : null, total: src ? src.total : null,
             main: p.main, free: p.free, result: p.result,
             uid: uid, nickname: nick[uid] || uid,
           });
@@ -259,17 +358,29 @@ async function run() {
     seen.add(k); dedup.push(p);
   }
 
+  // 合併上一輪：本輪掃過的 (league,date) 用新結果整批取代，其餘沿用；只留昨天以後（歷史在 git）
+  const scopes = new Set();
+  for (const { lg } of targets) for (const date of Object.values(dates)) scopes.add(lg + '|' + date);
+  const cutoff = twDate(-1);
+  const merged = mergePicks(prev && prev.picks, dedup, scopes).filter(p => p.date >= cutoff);
+
+  const lastFinal = Object.assign({}, (prev && prev.lastFinal) || {});
+  if (decision.mode === 'final') for (const lg of decision.leagues) lastFinal[lg] = stamp;
+
   const out = {
-    updated: stamp, during: DURING, thresholds: { wp: THRESH_WP, minBets: MIN_BETS },
-    counts: { qualified: Object.keys(qual).length, mainQualified: Object.keys(mainQual).length, picks: dedup.length },
-    picks: dedup,
+    updated: stamp, mode: decision.mode, during: DURING, thresholds: { wp: THRESH_WP, minBets: MIN_BETS },
+    counts: { qualified: Object.keys(qual).length, mainQualified: Object.keys(mainQual).length, picks: merged.length, newThisRun: dedup.length },
+    coverage: coverage,
+    lastFinal: lastFinal,
+    qualCache: useCache ? prev.qualCache : { at: stamp, qual: qual, mainQual: mainQual, nick: nick },
+    picks: merged,
   };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, JSON.stringify(out, null, 1));
-  console.log(`✅ 寫入 ${OUT}：合格市場 ${out.counts.qualified}、合格主推 ${out.counts.mainQualified}、明牌 ${dedup.length} 筆`);
+  console.log(`✅ 寫入 ${OUT}（${decision.mode}）：本輪 ${dedup.length} 筆、合併後 ${merged.length} 筆、合格市場 ${out.counts.qualified}、合格主推 ${out.counts.mainQualified}`);
 }
 
 if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS };
+module.exports = { parsePick, parseExpertPage, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_HOURS };

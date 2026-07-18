@@ -15,7 +15,7 @@
   var REPO = 'youngjchen/Sportbetting-PLUS';
   var FEED_URL = 'https://raw.githubusercontent.com/' + REPO + '/main/data/expert_picks.json';
   var FEED_FALLBACK = './data/expert_picks.json';
-  var REFRESH_MS = 10 * 60 * 1000;
+  var REFRESH_MS = 5 * 60 * 1000;   // 賽前終盤資料要在開賽前 20 分到板上 → 5 分刷新（檔案僅 ~200KB）
   var TOL_MIN = 120;
   var data = null;
 
@@ -122,7 +122,7 @@
         html += '<div class="ep-row"><span class="nm">' + esc(pk.nickname) + '</span>' +
           (pk.main ? '<span class="ep-main">主推</span>' : '') +
           '<span class="src">' + esc(pk.srcLabel) + (pk.free ? '·免費附贈' : '') + '</span>' +
-          '<span class="wp">' + esc(pk.wp) + '%' + (weightOf(pk) > 1 ? '＝+2燈' : '') + '</span>' +
+          '<span class="wp">' + (pk.wp != null ? esc(pk.wp) + '%' + (weightOf(pk) > 1 ? '＝+2燈' : '') : '追蹤') + '</span>' +
           (done ? '<span class="done">已套用</span>' : '') + '</div>';
       });
     });
