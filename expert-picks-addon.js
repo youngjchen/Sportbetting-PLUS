@@ -119,12 +119,8 @@
     '#ep-panel .ep-row .wp{margin-left:auto;font-family:Oswald;color:#28c76f;}' +
     '#ep-panel .ep-row .done{color:#5b6b80;font-size:10.5px;}' +
     '#ep-panel .ep-main{color:#ffb347;font-size:11px;}' +
-    '#ep-panel .ep-ft{display:flex;gap:8px;padding:10px 12px;border-top:1px solid #2a3340;}' +
-    '#ep-panel .ep-apply{flex:1;height:38px;border:0;border-radius:9px;background:#ffb347;color:#151a22;' +
-      'font-weight:800;font-size:13px;cursor:pointer;}' +
-    '#ep-panel .ep-apply:disabled{opacity:.45;cursor:default;}' +
-    '#ep-panel .ep-apply:active{opacity:.85;}' +
-    '#ep-panel .ep-note{padding:0 12px 10px;color:#6f7f92;font-size:10.5px;line-height:1.5;}';
+    '#ep-panel .ep-row .tm{font-family:Oswald;font-size:11px;color:#6f7f92;letter-spacing:.02em;}' +
+    '#ep-panel{padding-bottom:8px;}';
   document.head.appendChild(css);
 
   /* ---- 面板 ---- */
@@ -136,44 +132,23 @@
     agg.rows.forEach(function (r) {
       html += '<div class="ep-sec">' + esc(OPT_LABEL[r.opt](it)) + ' ×' + r.list.length + '</div>';
       r.list.forEach(function (pk) {
-        var done = (it.expertApplied || {})[pk.uid + '|' + r.opt];
+        // 主推榜合格者 srcLabel 就是「主推」→ 不跟主推徽章重複顯示
+        var srcTxt = (pk.main && pk.srcLabel === '主推') ? '' : String(pk.srcLabel || '');
+        if (pk.free) srcTxt += (srcTxt ? '·' : '') + '免費附贈';
         html += '<div class="ep-row"><span class="nm">' + esc(pk.nickname) + '</span>' +
+          (pk.at ? '<span class="tm">' + esc(String(pk.at).slice(11, 16)) + '</span>' : '') +
           (pk.main ? '<span class="ep-main">主推</span>' : '') +
-          '<span class="src">' + esc(pk.srcLabel) + (pk.free ? '·免費附贈' : '') + '</span>' +
-          '<span class="wp">' + (pk.wp != null ? esc(pk.wp) + '%' + (weightOf(pk) > 1 ? '＝+2燈' : '') : '追蹤') + '</span>' +
-          (done ? '<span class="done">已套用</span>' : '') + '</div>';
+          (srcTxt ? '<span class="src">' + esc(srcTxt) + '</span>' : '') +
+          '<span class="wp">' + (pk.wp != null ? esc(pk.wp) + '%' : '追蹤') + '</span></div>';
       });
     });
-    html += '<div class="ep-ft"><button class="ep-apply"' + (agg.totalNewWeight ? '' : ' disabled') + '>⚡ 套用（+' + agg.totalNewWeight + ' 燈）</button></div>' +
-      '<div class="ep-note">60~69% 每人 +1 燈、' + W2_WP + '%↑ 每人 +2 燈；燈號走板子原生 0~12 刻度' +
-      '（滿 5 轉紅、超 10 轉紫），已套用過的不重複。門檻＝本季 ' + esc(((data || {}).thresholds || {}).wp || 60) + '%↑ 且 ≥' +
-      esc(((data || {}).thresholds || {}).minBets || 30) + ' 注（免費附贈單、追蹤名單同一把尺）。可用復原(↩)反悔。</div>';
     p.innerHTML = html;
     document.body.appendChild(p);
     var vw = window.innerWidth || 1200, vh = window.innerHeight || 800, r = p.getBoundingClientRect();
     p.style.left = Math.max(8, Math.min(vw - r.width - 8, x - r.width / 2)) + 'px';
     p.style.top = Math.max(8, Math.min(vh - r.height - 8, y + 12)) + 'px';
     p.querySelector('.ep-x').onclick = closePanel;
-    var btn = p.querySelector('.ep-apply');
-    btn.onclick = function () {
-      if (typeof snapshot === 'function') try { snapshot(); } catch (e) {}
-      it.expertApplied = it.expertApplied || {};
-      agg.rows.forEach(function (rr) {
-        rr.list.forEach(function (pk) {
-          var key = pk.uid + '|' + rr.opt;
-          if (it.expertApplied[key]) return;
-          it[rr.opt] = it[rr.opt] || { lights: 0 };
-          // 板子原生燈號刻度 0~12（index.html bLightSlots：1-5 琥珀、6-10 轉紅、11-12 轉紫）
-          // → 13 人 vs 6 人在卡面上顏色可分，不再被 5 封頂壓扁（2026-07-18 使用者回報）。
-          it[rr.opt].lights = Math.min(12, (it[rr.opt].lights || 0) + weightOf(pk));
-          it.expertApplied[key] = 1;
-        });
-      });
-      if (typeof save === 'function') save();
-      if (typeof render === 'function') render();
-      closePanel();
-      badge('已套用高手明牌 ✓');
-    };
+    // 套用鈕已移除（2026-07-19 使用者拍板：明牌不進燈號、與手動燈徹底分帳）
     setTimeout(function () {
       document.addEventListener('pointerdown', function h(ev) {
         if (!p.contains(ev.target)) { closePanel(); document.removeEventListener('pointerdown', h); }
@@ -223,9 +198,9 @@
       var head = cardEl.querySelector('.bhead');
       if (!head) return;
       var pill = document.createElement('button');
-      pill.className = 'bbadge ep-badge' + (agg.totalNewWeight ? '' : ' ep-done');
+      pill.className = 'bbadge ep-badge';
       pill.textContent = '明牌 ×' + agg.total;
-      pill.title = '找高手明牌（本季 60%↑ 合格者）— 點看名單與套用' + (agg.totalNewWeight ? '' : '（已全部套用）');
+      pill.title = '高手明牌 — 點看名單';
       pill.onclick = openIt;
       var preB = null;
       head.querySelectorAll('button.bbadge').forEach(function (b) { if (!preB && /^賽前/.test(b.textContent)) preB = b; });

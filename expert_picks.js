@@ -414,11 +414,16 @@ async function run() {
   }
 
   // 去重：同人同場同市場同邊（today/tomorrow 頁重疊、或讓分+主推雙重身分）
+  // at＝這筆單「首次被抓到」的時間（沿用上一輪同鍵的 at）；高手改單＝新鍵＝新時間 → 板上可辨識更新
+  const prevAt = {};
+  for (const p of (prev && prev.picks) || []) {
+    prevAt[[p.uid, p.league, p.date, p.away, p.home, p.time, p.market, p.team || p.side].join('|')] = p.at;
+  }
   const seen = new Set(), dedup = [];
   for (const p of picks) {
     const k = [p.uid, p.league, p.date, p.away, p.home, p.time, p.market, p.team || p.side].join('|');
     if (seen.has(k)) continue;
-    seen.add(k); dedup.push(p);
+    seen.add(k); p.at = prevAt[k] || stamp; dedup.push(p);
   }
 
   // 合併上一輪：本輪掃過的 (league,date) 用新結果整批取代，其餘沿用；只留昨天以後（歷史在 git）

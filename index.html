@@ -6163,6 +6163,12 @@ function openSettleModal(it){
   body.appendChild(scoreRow);
 
   // ---- platform-flip toggle (defaults to the card's pre-game flip mark) ----
+  // 讓分成交線依「注」自動帶入（2026-07-19）：讓方＝−盤口、受讓＝＋盤口；
+  // 顛倒場下不同邊時使用者再手改。只在欄位還沒存值時當預設。
+  const _hdL = Math.abs(parseFloat(it.hdVal));
+  const _gA = it.hdFav === "away";   // 讓方是否為客隊
+  const _defHdA = (!isNaN(_hdL)) ? ((_gA ? (it.hdGive && it.hdGive.bet) : (it.hdRecv && it.hdRecv.bet)) ? (_gA ? -_hdL : _hdL) : null) : null;
+  const _defHdH = (!isNaN(_hdL)) ? ((_gA ? (it.hdRecv && it.hdRecv.bet) : (it.hdGive && it.hdGive.bet)) ? (_gA ? _hdL : -_hdL) : null) : null;
   const flipWrap = document.createElement("div"); flipWrap.className="settle-q";
   const fs0 = cardFlipState(it);
   const _fopt = (v,l)=>`<option value="${v}"${fs0===v?" selected":""}>${l}</option>`;
@@ -6218,19 +6224,17 @@ function openSettleModal(it){
       <input id="settleMyTotLine" type="number" inputmode="decimal" step="1" min="0.5" placeholder="如 7.5" style="width:70px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotLine!=null?it.myTotLine:""}">
       <span style="color:var(--ink-dim);">賠率</span>
       <input id="settleMyTotOdds" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="1.90" style="width:60px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myTotOdds!=null?it.myTotOdds:""}">
-      <span style="color:var(--ink-dim);font-size:11px;">命中率／燈號用此線判；市場過盤率仍用「基準」。賠率＝成交賠率，只有實際下注才填（真 ROI／CLV 用）</span>
     </div>
     <div id="myHdWrap" style="display:${((fs0&&fs0!=="none")||it.preGameSwap||it.platformFlip||it.flipVanished||(it.hdGive&&it.hdGive.bet)||(it.hdRecv&&it.hdRecv.bet))?"block":"none"};margin-top:10px;padding:8px 10px;border:1px solid rgba(224,160,32,.35);border-radius:8px;">
-      <div style="display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap;">
-        <span style="color:#e0a020;">讓分成交線（對調場／有下注用）</span>
-        <span style="color:var(--ink-dim);">${esc(it.away)}(客)</span>
-        <input id="settleMyHdAway" type="number" inputmode="decimal" step="0.5" placeholder="+1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdAwayLine!=null?it.myHdAwayLine:""}">
+      <div style="color:#e0a020;font-size:13px;margin-bottom:7px;">讓分成交線</div>
+      <div style="display:grid;grid-template-columns:minmax(92px,max-content) 66px 58px;gap:7px 8px;align-items:center;font-size:13px;">
+        <span style="color:var(--ink-dim);white-space:nowrap;">${esc(it.away)}(客)</span>
+        <input id="settleMyHdAway" type="number" inputmode="decimal" step="0.5" placeholder="+1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdAwayLine!=null?it.myHdAwayLine:(_defHdA!=null?_defHdA:"")}">
         <input id="settleMyHdAwayOdds" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="賠率" style="width:58px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdAwayOdds!=null?it.myHdAwayOdds:""}">
-        <span style="color:var(--ink-dim);">${esc(it.home)}(主)</span>
-        <input id="settleMyHdHome" type="number" inputmode="decimal" step="0.5" placeholder="-1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdHomeLine!=null?it.myHdHomeLine:""}">
+        <span style="color:var(--ink-dim);white-space:nowrap;">${esc(it.home)}(主)</span>
+        <input id="settleMyHdHome" type="number" inputmode="decimal" step="0.5" placeholder="-1.5" style="width:66px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdHomeLine!=null?it.myHdHomeLine:(_defHdH!=null?_defHdH:"")}">
         <input id="settleMyHdHomeOdds" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="賠率" style="width:58px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.myHdHomeOdds!=null?it.myHdHomeOdds:""}">
       </div>
-      <div style="color:var(--ink-dim);font-size:11px;margin-top:5px;line-height:1.6;">＋＝受讓、−＝讓（如你買馬林魚+1.5 就在馬林魚格填 +1.5；兩隊都買過就兩格都填）。線旁小格＝成交賠率，只有實際下注才填。該隊的燈與命中改用此線判；市場讓分過盤率仍用收盤。</div>
     </div>
   `;
   body.appendChild(flipWrap);
@@ -7397,6 +7401,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep8"></script>
+</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep9"></script>
 </body>
 </html>
