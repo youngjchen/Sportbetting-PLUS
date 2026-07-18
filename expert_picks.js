@@ -27,7 +27,10 @@ const BASE = 'https://www.playsport.cc';
 const DURING = 'season';
 const THRESH_WP = 60;          // 勝率門檻（%）
 const MIN_BETS = 30;           // 最少注數
-const EXPERT_CAP = 25;         // 每聯盟最多抓的高手數（依最佳勝率排序）
+// 個人頁抓取名額（每聯盟，依最佳勝率排序）。合格名單本身不受此限（勝率榜翻頁到 120 名、
+// 主推榜也翻頁），這個上限只管「每輪去抓幾個人的個人頁」——2026-07-18 使用者反映遺珠
+// 後由 25 調到 40（MLB 合格 124 人仍抓不完；再放大就要考慮站方流量禮貌）。
+const EXPERT_CAP = 40;
 const MAX_PAGES = 4;           // 勝率榜最多翻 4 頁（120 名）
 const ALLIANCES = [
   { id: 1, lg: 'mlb' }, { id: 2, lg: 'npb' }, { id: 6, lg: 'cpbl' }, { id: 9, lg: 'kbo' },
@@ -73,12 +76,17 @@ function twDate(offsetDays) {
   return `${tw.getUTCFullYear()}-${p(tw.getUTCMonth() + 1)}-${p(tw.getUTCDate())}`;
 }
 
-// "AM 07:40"/"PM 10:05" → "07:40"/"22:05"（AM 12→00、PM 12→12）
+// 玩運彩時間 → 24h "HH:MM"。
+// ⚠ 站方對亞洲下午/晚場用「PM 13:00」「PM 17:00」這種【24 小時制混用 PM 前綴】的格式
+//   （2026-07-18 日職頁原始碼證實）——PM 且時數 ≥13 時「不可」再加 12，
+//   否則變 25:00 → 板上 ±120 分配對全滅（日職/韓職膠囊消失事故的根因）。
+// 規則：PM 且 h<12 → +12（PM 10:05→22:05）；PM 且 h≥12 → 原樣（PM 13:00→13:00）；
+//       AM 12→00；其餘原樣。
 function toHHMM(txt) {
   const m = /(AM|PM)\s*(\d{1,2}):(\d{2})/i.exec(txt || '');
   if (!m) { const n = /(\d{1,2}):(\d{2})/.exec(txt || ''); return n ? `${n[1].padStart(2, '0')}:${n[2]}` : null; }
   let h = +m[2];
-  if (/PM/i.test(m[1]) && h !== 12) h += 12;
+  if (/PM/i.test(m[1]) && h < 12) h += 12;
   if (/AM/i.test(m[1]) && h === 12) h = 0;
   return `${String(h).padStart(2, '0')}:${m[3]}`;
 }
@@ -183,11 +191,17 @@ async function run() {
         if (!more) break;
       }
     }
-    // 主推榜（rankers 以 mode 為鍵）
-    try {
-      const j = await getJSON(`${BASE}/billboard/mainPrediction?allianceid=${aid}&during=${DURING}`);
+    // 主推榜（rankers 以 mode 為鍵）；也翻頁抓到 60% 線下為止（防遺珠），
+    // 用「第一名 uid 重複」當迴圈保險（不確定端點是否支援 page 時不會重複計）。
+    let firstUid = null;
+    for (let page = 0; page < MAX_PAGES; page++) {
+      let j;
+      try { j = await getJSON(`${BASE}/billboard/mainPrediction?allianceid=${aid}&during=${DURING}&page=${page}`); }
+      catch (e) { console.log(`  ⚠️ mainPred a${aid} p${page}: ${e.message}`); break; }
+      let more = false, pageFirst = null;
       for (const [mode, rows] of Object.entries((j && j.rankers) || {})) {
         for (const r of rows || []) {
+          if (pageFirst == null) pageFirst = r.userid;
           if (r.winpercentage >= THRESH_WP && r.total_game >= MIN_BETS) {
             mainQual[`${r.userid}|${aid}|${mode}`] = { wp: r.winpercentage, total: r.total_game };
             nick[r.userid] = r.nickname;
@@ -195,9 +209,13 @@ async function run() {
             if (r.winpercentage > b) perAlliance[aid].set(r.userid, r.winpercentage);
           }
         }
+        if ((rows || []).length === 30 && rows[29].winpercentage >= THRESH_WP) more = true;
       }
-    } catch (e) { console.log(`  ⚠️ mainPred a${aid}: ${e.message}`); }
-    await sleep(jitter());
+      await sleep(jitter());
+      if (page === 0) firstUid = pageFirst;
+      else if (pageFirst === firstUid) break;               // 端點不吃 page 參數 → 同一頁，停
+      if (!more) break;
+    }
   }
 
   const picks = [];
