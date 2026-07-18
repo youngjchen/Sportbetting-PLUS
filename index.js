@@ -352,15 +352,31 @@ function loadPregamePairCount() {
 
 // 處理搬場：雙重賽 → 舊場整包歸檔成獨立條目（id 加 @HHMM 後綴；板上仍能以 日期+兩隊+時間
 // 對到、盤口動向與曾顛倒紀錄不失憶）、新場歸零重新累積；非雙重賽（真改期）→ 沿用同一條目。
+// officialTimes（可選）：搬場本身就是消歧義事件——新時間認領一個官方時刻後，
+// 若恰剩一個沒人認領的官方時刻、而舊時間又對不上任何官方時刻（Titan 一開始就標錯，
+// 2026-07-18 海盜@守護者 G1 官方 01:10、Titan 標 04:10 實例）→ 歸檔標籤直接吸附過去，
+// 免得歸檔掛著不存在的時段、板上對不到。
 // 回傳：'split' / 'follow' / null（沒有搬場）。
-function handleScheduleMove(log, e, m, dhCount, stamp) {
+function handleScheduleMove(log, e, m, dhCount, stamp, officialTimes) {
   if (!e || !e.startISO || !m.startISO || !scheduleMove(e.startISO, m.startISO)) return null;
   const oldDate = String(e.startISO).slice(0, 10);
   const pairKey = `${e.league}|${oldDate}|${[e.awayTeam || '', e.homeTeam || ''].sort().join('|')}`;
   if ((dhCount[pairKey] || 0) >= 2) {
-    const hhmm = String(e.startISO).slice(11, 16).replace(':', '');
-    const archId = `${m.id}@${hhmm}`;
-    log.matches[archId] = Object.assign({}, e, { id: archId, movedTo: m.startISO, archivedAt: stamp });
+    let archISO = e.startISO;
+    const O = officialTimes && officialTimes[pairKey] ? [...officialTimes[pairKey]] : [];
+    if (O.length) {
+      const near = (t, o) => Math.abs(minOfHHMM(hhmmOf(t)) - minOfHHMM(o)) <= SNAP_TOL;
+      const free = O.filter(o => !near(m.startISO, o));           // 扣掉新時間認領的時刻
+      if (free.length === 1 && !O.some(o => near(e.startISO, o))) {
+        archISO = `${oldDate}T${free[0]}:00+08:00`;
+        console.log(`  🧲 [${e.league}] id:${m.id} 歸檔標籤吸附 ${hhmmOf(e.startISO)} → ${free[0]}（官方時刻）`);
+      }
+    }
+    const archId = `${m.id}@${hhmmOf(archISO).replace(':', '')}`;
+    log.matches[archId] = Object.assign({}, e, {
+      id: archId, startISO: archISO, time: `${oldDate} ${hhmmOf(archISO)}`,
+      titanTime: e.time, movedTo: m.startISO, archivedAt: stamp
+    });
     delete log.matches[archId]._hdTs;
     e.firstSeen = stamp;
     e.ml = {}; e.hd = { bet365: null }; e.ou = { bet365: null };
@@ -370,6 +386,97 @@ function handleScheduleMove(log, e, m, dhCount, stamp) {
   }
   console.log(`  🕒 [${e.league}] id:${m.id} 開賽 ${e.startISO} → ${m.startISO}（改期，沿用同一條目）`);
   return 'follow';
+}
+
+// ---- 官方時刻表與時間吸附 --------------------------------------------------
+// 為什麼：Titan007 的開賽時間會錯——小錯如白襪@藍鳥給 07:07(官方 07:15)、
+// 大錯如 2026-07-18 海盜@守護者雙重賽 G1 給 04:10(官方 01:10、台彩/STAKE 都是 01:10)。
+// 時間是雙重賽的唯一鍵，錯的時間會讓卡片對不到台彩盤/比分/自動結算。
+// 權威源：MLB=官方 statsapi(玩運彩對 MLB 出過 04:10 幽靈場，不可信)；其他聯盟=玩運彩。
+const MLB_TEAM_CN = { 108: '天使', 109: '響尾蛇', 110: '金鶯', 111: '紅襪', 112: '小熊', 113: '紅人', 114: '守護者', 115: '落磯', 116: '老虎', 117: '太空人', 118: '皇家', 119: '道奇', 120: '國民', 121: '大都會', 133: '運動家', 134: '海盜', 135: '教士', 136: '水手', 137: '巨人', 138: '紅雀', 139: '光芒', 140: '遊騎兵', 141: '藍鳥', 142: '雙城', 143: '費城人', 144: '勇士', 145: '白襪', 146: '馬林魚', 147: '洋基', 158: '釀酒人' };   // 與 pregame-integration.js TEAM_CN 同步
+function pairKeyOf(lg, date, a, h) { return `${lg}|${date}|${[a, h].sort().join('|')}`; }
+
+async function loadOfficialTimes() {
+  const map = {};   // pairKey -> Set('HH:MM')
+  const add = (k, t) => { (map[k] = map[k] || new Set()).add(t); };
+  try {   // 玩運彩：非 MLB 聯盟
+    const feed = JSON.parse(fs.readFileSync(path.join('data', 'pregame_data.json'), 'utf8'));
+    for (const g of (Array.isArray(feed) ? feed : Object.values(feed))) {
+      const lg = String(g.league || '').toLowerCase();
+      if (lg === 'mlb') continue;
+      const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
+      const t = (String(g.time || '').match(/\d{1,2}:\d{2}/) || [])[0];
+      if (!away || !home || !g.date || !t) continue;
+      add(pairKeyOf(lg, g.date, away, home), t.padStart(5, '0'));
+    }
+  } catch (_) { /* 沒有 pregame feed → 非 MLB 不吸附 */ }
+  try {   // MLB 官方（台灣今明兩天 = UTC 昨天~明天）
+    const d0 = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+    const d1 = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+    const res = await axios.get(`https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate=${d0}&endDate=${d1}`, { headers: HEADERS, timeout: 15000 });
+    const p = n => String(n).padStart(2, '0');
+    for (const day of (res.data.dates || [])) for (const g of (day.games || [])) {
+      const a = MLB_TEAM_CN[g.teams && g.teams.away && g.teams.away.team && g.teams.away.team.id];
+      const h = MLB_TEAM_CN[g.teams && g.teams.home && g.teams.home.team && g.teams.home.team.id];
+      if (!a || !h || !g.gameDate) continue;
+      const tw = new Date(Date.parse(g.gameDate) + 8 * 3600e3);
+      add(pairKeyOf('mlb', `${tw.getUTCFullYear()}-${p(tw.getUTCMonth() + 1)}-${p(tw.getUTCDate())}`, a, h),
+        `${p(tw.getUTCHours())}:${p(tw.getUTCMinutes())}`);
+    }
+  } catch (e) { console.log('  ⚠️ MLB 官方時刻表抓取失敗（本輪 MLB 不吸附）:', e.message); }
+  return map;
+}
+
+// 吸附（純函式）：對「同聯盟同日同對戰」一組 Titan 列 vs 官方時刻們——
+//  pass1：時間差 ≤SNAP_TOL 分 → 吸附成該官方時刻（官方時刻被認領）
+//  pass2：對不上的列，若「恰好剩一個沒被認領的官方時刻、且恰好只有這一列對不上」→ 吸附過去
+//  其餘（官方沒資料/模稜兩可）→ 保留 Titan 時間。回傳吸附筆數。
+const SNAP_TOL = MOVE_MIN;   // 100 分：與搬場判定同一把尺
+function hhmmOf(iso) { return String(iso).slice(11, 16); }
+function minOfHHMM(t) { const m = /(\d{1,2}):(\d{2})/.exec(t || ''); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+function snapUpcoming(list, officialMap, now) {
+  const groups = {};
+  for (const m of list) {
+    const away = mapTeam(m.awayRaw, m.league), home = mapTeam(m.homeRaw, m.league);
+    if (!away || !home || !m.startISO) continue;
+    const k = pairKeyOf(m.league, String(m.startISO).slice(0, 10), away, home);
+    (groups[k] = groups[k] || []).push(m);
+  }
+  let snapped = 0;
+  const dropped = new Set();
+  for (const [k, rows] of Object.entries(groups)) {
+    const O = [...(officialMap[k] || [])].sort();
+    if (!O.length) continue;
+    const claimed = {}, unmatched = [];
+    for (const r of rows) {
+      const t = minOfHHMM(hhmmOf(r.startISO));
+      let best = null, bd = Infinity;
+      for (const o of O) { if (claimed[o]) continue; const d = Math.abs(minOfHHMM(o) - t); if (d < bd) { bd = d; best = o; } }
+      if (best != null && bd <= SNAP_TOL) {
+        claimed[best] = 1;
+        if (bd > 0) { retime(r, best); snapped++; }
+      } else unmatched.push(r);
+    }
+    const free = O.filter(o => !claimed[o]);
+    if (unmatched.length === 1 && free.length === 1) { retime(unmatched[0], free[0]); snapped++; }
+  }
+  // 吸附改了開賽時間 → 重算抓取窗（例：吸附成已開打的場要標 started、太久以前的整場剔除）
+  const graceMs = START_GRACE_MIN * 60 * 1000, limitMs = ACTIVE_WINDOW_HOURS * 3600 * 1000;
+  const out = list.filter(m => {
+    if (!m.titanTime) return true;                         // 沒被吸附的照舊
+    const cs = captureState(Date.parse(m.startISO), now, graceMs, limitMs);
+    m.started = cs.started;
+    if (!cs.eligible) { console.log(`  ⏭️ [${m.league}] id:${m.id} 吸附後已離開抓取窗，本輪略過`); dropped.add(m.id); }
+    return cs.eligible;
+  });
+  return { snapped: snapped, list: out, dropped: dropped.size };
+  function retime(r, o) {
+    const date = String(r.startISO).slice(0, 10);
+    r.titanTime = r.time;                                  // 保留原始值供查案
+    r.time = `${date} ${o}`;
+    r.startISO = `${date}T${o}:00+08:00`;
+    console.log(`  🧲 [${r.league}] id:${r.id} 開賽時間吸附 ${r.titanTime} → ${o}（官方時刻）`);
+  }
 }
 
 // 搬場過的 id：Titan007 的 ChangeDetail 變動表【永久】帶著舊場的列（2026-07-17 實測
@@ -394,17 +501,23 @@ async function run() {
   const stamp = nowTaiwanISO();
   console.log(`\n==================== ${stamp} ====================`);
 
-  const upcoming = await fetchUpcomingMatches();
+  let upcoming = await fetchUpcomingMatches();
   if (upcoming === null) {
     console.log('❌ 賽程抓取失敗，本次不寫檔（保留既有資料）。');
     return;
   }
+  const officialTimes = await loadOfficialTimes();
+  const snap = snapUpcoming(upcoming, officialTimes, Date.now());
+  upcoming = snap.list;
+  if (snap.snapped) console.log(`🧲 吸附 ${snap.snapped} 場開賽時間到官方時刻${snap.dropped ? `（${snap.dropped} 場吸附後離窗剔除）` : ''}`);
   console.log(`找到 ${upcoming.length} 場窗格內（未來 ${ACTIVE_WINDOW_HOURS} 小時）未開打賽事。`);
 
   const log = loadLog();
   if (!log.matches) log.matches = {};
   const unmapped = [];
   const dhCount = loadPregamePairCount();   // 雙重賽判定用（同 id 搬場時拆條目）
+  // MLB 的場數以官方時刻表為準（玩運彩出過幽靈場：PIT@CLE 7/19 同時掛 0110/0410/0710 三列）
+  for (const k of Object.keys(officialTimes)) if (k.slice(0, 4) === 'mlb|') dhCount[k] = officialTimes[k].size;
 
   for (const m of upcoming) {
     const homeTeam = mapTeam(m.homeRaw, m.league);
@@ -416,7 +529,7 @@ async function run() {
     const odds = await fetchMatchOdds(m);
 
     const e = log.matches[m.id] || { id: m.id, firstSeen: stamp, ml: {}, hd: { bet365: null }, ou: { bet365: null } };
-    if (log.matches[m.id]) handleScheduleMove(log, e, m, dhCount, stamp);   // 同 id 換時間：雙重賽拆場/改期跟隨
+    if (log.matches[m.id]) handleScheduleMove(log, e, m, dhCount, stamp, officialTimes);   // 同 id 換時間：雙重賽拆場/改期跟隨
     // 搬場過的 id：先把歸檔舊場的列從抓到的表/已存的表剝掉（見 stripArchivedRows 註解）
     if (odds.hd) { odds.hd = stripArchivedRows(odds.hd, log, m.id, 'hd'); if (!odds.hd.length) odds.hd = null; }
     if (odds.ou) { odds.ou = stripArchivedRows(odds.ou, log, m.id, 'ou'); if (!odds.ou.length) odds.ou = null; }
@@ -653,4 +766,4 @@ if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
 
-module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadPregamePairCount, MOVE_MIN, stripArchivedRows };
+module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadPregamePairCount, MOVE_MIN, stripArchivedRows, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };

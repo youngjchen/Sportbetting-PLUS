@@ -450,24 +450,27 @@
     return changed;
   }
 
-  /* ---- 重複卡自癒：同對戰同開球時間出現 ≥2 張卡（唯一鍵被 Titan007 搬列事故破壞的殘局）----
-     2026-07-17 事故：01:35 卡被改成 07:10 → 一天兩張 07:10 光芒@紅襪。
-     修法：從 feed（含歸檔舊場）∪ 官方/玩運彩 收齊這天該對戰的全部場次時間，
-     找出「沒有任何卡覆蓋」的缺時間，把最舊的重複卡改回去（事發時先建立的那張才是被改走的原場）。 */
+  /* ---- 卡片時間自癒（認領制）：修「重複卡」與「孤兒卡」兩種殘局 ----
+     重複卡：同對戰同開球時間 ≥2 張（2026-07-17 Titan 搬列事故：01:35 卡被改成 07:10）。
+     孤兒卡：卡片時間對不上該對戰任何已知場次 ±TOL（2026-07-18 事故：官方 G1=01:10、
+             Titan 給 04:10，卡片掛在不存在的時段 → 台彩盤/比分/自動結算全對不到）。
+     已知場次 = odds feed（含歸檔舊場）∪ 官方/玩運彩(__psFusion)。
+     作法：每個對戰做一輪「認領」——卡片【由新到舊】認領 ±TOL 內最近的未被認領場次；
+     認領不到的卡【由舊到新】依序改到沒人認領的場次（時間由早到晚）。
+     新卡先認領 → 重複時被改的是最舊那張（事發時先建立的才是被改走的原場）。 */
   function healDupCards() {
     if (typeof state === "undefined" || !state.items || typeof doc === "undefined" || !doc.activeDate) return false;
     var dateKey = doc.activeDate, changed = false;
     function pk(a, b) { return [a, b].sort().join("|"); }
-    var groups = {};
+    var byPair = {};
     state.items.forEach(function (it) {
       if (!it || it.type !== "match" || !it.gameTime) return;
-      var k = pk(it.away, it.home) + "|" + it.gameTime;
-      (groups[k] = groups[k] || []).push(it);
+      var k = pk(it.away, it.home);
+      (byPair[k] = byPair[k] || []).push(it);
     });
-    Object.keys(groups).forEach(function (k) {
-      var dup = groups[k];
-      if (dup.length < 2) return;
-      var away = dup[0].away, home = dup[0].home;
+    Object.keys(byPair).forEach(function (key) {
+      var cards = byPair[key];
+      var away = cards[0].away, home = cards[0].home;
       // 這天該對戰的完整場次時間：odds feed（含歸檔場）∪ 官方/玩運彩
       var times = {};
       for (var id in (feed.matches || {})) {
@@ -479,21 +482,31 @@
         var t = gStartHHMM(g); if (t) times[t] = g;
       }
       pregameTimesFor(away, home, dateKey).forEach(function (t) { if (!(t in times)) times[t] = null; });
-      var all = state.items.filter(function (it) { return it && it.type === "match" && pk(it.away, it.home) === pk(away, home); });
-      var missing = Object.keys(times).filter(function (t) {
-        return !all.some(function (c) { var d = minDiff(c.gameTime, t); return d != null && d <= TOL_MIN; });
-      }).sort();
-      if (!missing.length) return;
-      dup.sort(function (a, b) { return (+a.id || 0) - (+b.id || 0); });
-      for (var i = 0; i < missing.length && i < dup.length - 1; i++) {
-        var card = dup[i], t2 = missing[i], g2 = times[t2];
+      var known = Object.keys(times).sort();
+      if (!known.length) return;
+      var claimed = {}, unplaced = [];
+      cards.slice().sort(function (a, b) { return (+b.id || 0) - (+a.id || 0); }).forEach(function (c) {
+        var best = null, bd = Infinity;
+        known.forEach(function (t) {
+          if (claimed[t]) return;
+          var d = minDiff(c.gameTime, t);
+          if (d != null && d < bd) { bd = d; best = t; }
+        });
+        if (best != null && bd <= TOL_MIN) claimed[best] = 1;
+        else unplaced.push(c);
+      });
+      if (!unplaced.length) return;
+      var missing = known.filter(function (t) { return !claimed[t]; });
+      unplaced.sort(function (a, b) { return (+a.id || 0) - (+b.id || 0); });
+      for (var i = 0; i < unplaced.length && i < missing.length; i++) {
+        var card = unplaced[i], t2 = missing[i], g2 = times[t2];
         card.gameTime = t2;
         card.oddsId = g2 ? g2.id : null;
-        changed = true;
-        try { console.log("[賠率] 修復重複卡：", away, "@", home, "其中一張改回", t2); } catch (e) {}
+        claimed[t2] = 1; changed = true;
+        try { console.log("[賠率] 修復卡片開球時間：", away, "@", home, "→", t2); } catch (e) {}
       }
     });
-    if (changed) badge("已修復雙重賽卡片時間 ✓");
+    if (changed) badge("已修復卡片開球時間 ✓");
     return changed;
   }
 
