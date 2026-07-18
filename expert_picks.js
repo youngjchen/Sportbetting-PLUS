@@ -85,7 +85,9 @@ function toHHMM(txt) {
 
 /* ---- 解析單格「預測」文字（純函式，供測試）----
    國際盤: "釀酒人 讓分" / "巨人 受讓" / "10 大分 輸50%" / "8.5 小分" / "洋基 輸贏"
-   運彩盤: "運動家 主 +1.5" / "紅雀 客 +1.5"(受讓) / "光芒 客 -1.5"(讓) / "11.5 大分" / "水手 主"(不讓分)
+   運彩盤: "運動家 主 +1.5" / "紅雀 客 +1.5"(受讓) / "光芒 客 -1.5"(讓) / "11.5 大分"
+   不讓分(PK)：付費單附贈常見「軟銀 客 PK」、一般免費單「軟銀 PK」（2026-07-18 使用者截圖證實），
+   也保留「{隊} 主|客」「{隊} 不讓分/輸贏/獨贏」變體。
    回傳 {kind:'hd'|'ou'|'ml', team?, side?('over'|'under'), line?} 或 null */
 function parsePick(text) {
   const t = String(text || '').replace(/\s+/g, ' ').replace(/(贏|輸)50%/g, '').trim();
@@ -96,9 +98,11 @@ function parsePick(text) {
   if (m) return { kind: 'hd', team: m[1] };
   m = /^(\S+?)\s*[主客]\s*([+\-][0-9.]+)$/.exec(t);
   if (m) return { kind: 'hd', team: m[1], line: parseFloat(m[2]) };
+  m = /^(\S+?)\s*(?:[主客]\s*)?PK$/i.exec(t);            // 不讓分："軟銀 客 PK" / "軟銀 PK"
+  if (m) return { kind: 'ml', team: m[1] };
   m = /^(\S+?)\s*(輸贏|獨贏|不讓分)$/.exec(t);
   if (m) return { kind: 'ml', team: m[1] };
-  m = /^(\S+?)\s*[主客]$/.exec(t);                       // 運彩盤不讓分："水手 主"
+  m = /^(\S+?)\s*[主客]$/.exec(t);                       // 後備："水手 主"
   if (m) return { kind: 'ml', team: m[1] };
   return null;
 }
@@ -114,22 +118,27 @@ function parseExpertPage(html) {
     $(sel).each((_, tbl) => {
       const $t = $(tbl);
       if ($t.parents('table').length) return;
+      let cur = null;   // 目前這一場（同場多注時，第二注的 tr 沒有 gamenum/隊名 → 沿用上一場）
       $t.find('> tbody > tr, > tr').each((_, tr) => {
         const $tr = $(tr);
         const timeTxt = $tr.children('td.gamenum').text();
+        const ths = $tr.find('th').map((i, x) => $(x).text().replace(/\s+/g, ' ').trim()).get().filter(Boolean);
+        if (timeTxt && ths.length >= 2) {
+          cur = {
+            away: ths[0].replace(/\(主\)$/, '').trim(),
+            home: ths[1].replace(/\(主\)$/, '').trim(),
+            time: toHHMM(timeTxt),
+          };
+        }
         const $pk = $tr.children('td.managerpredictcon');
-        if (!timeTxt || !$pk.length) return;
+        if (!$pk.length || !cur) return;
         const pick = parsePick($pk.text());
         if (!pick) return;
-        const ths = $tr.find('th').map((i, x) => $(x).text().replace(/\s+/g, ' ').trim()).get().filter(Boolean);
-        if (ths.length < 2) return;
-        const away = ths[0].replace(/\(主\)$/, '').trim();
-        const home = ths[1].replace(/\(主\)$/, '').trim();
         const rTxt = $tr.children('td.predictresult, td[class*="predictresult"]').text().trim();
         out.push({
           mode: mode, kind: pick.kind, team: pick.team || null, side: pick.side || null,
           line: pick.line != null ? pick.line : null,
-          away: away, home: home, time: toHHMM(timeTxt),
+          away: cur.away, home: cur.home, time: cur.time,
           main: $tr.find('img[alt="主推"]').length > 0,
           free: $tr.find('img[alt="免費"]').length > 0,
           result: /準/.test(rTxt) ? 'win' : (/囧/.test(rTxt) ? 'lose' : null),
