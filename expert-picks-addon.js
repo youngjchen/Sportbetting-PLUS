@@ -249,8 +249,42 @@
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 
-  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, _setData: function (d) { data = d; } };
+  /* ---- 重點總結明牌軌（2026-07-19 拍板：K=5 加權、主導率 70%）----
+     recs＝主導側自身加權 ≥EP_K 且 加權主導率 ≥EP_DOM 的選項（反對是扣分項不是否決票）；
+     splits＝兩側總加權 ≥EP_K+1 且主導率 <EP_DOM ＝「分歧」（列資訊、不進推薦、不算命中）。 */
+  var EP_K = 5, EP_DOM = 0.7;
+  function epStrong(it, dateKey) {
+    var out = { recs: [], splits: [] };
+    try {
+      if (!data || !data.picks || !it || it.type !== 'match') return out;
+      var agg = aggregate(it, picksForCard(it, dateKey, data.picks));
+      var W = {}, N = {};
+      agg.rows.forEach(function (r) {
+        W[r.opt] = r.list.reduce(function (s, p) { return s + weightOf(p); }, 0);
+        N[r.opt] = r.list.length;
+      });
+      var fav = it.hdFav === 'away' ? it.away : it.home, und = it.hdFav === 'away' ? it.home : it.away;
+      var hdv = it.hdVal ? ' ' + it.hdVal : '', totv = it.totVal ? ' ' + it.totVal : '';
+      var PAIRS = [
+        ['mlAway', 'mlHome', '獨贏', [it.away, '獨贏', 'ml'], [it.home, '獨贏', 'ml']],
+        ['hdGive', 'hdRecv', '讓分', [fav, '讓' + hdv, 'hd'], [und, '受讓' + hdv, 'recv']],
+        ['over', 'under', '大小分', ['大分', '大小分' + totv, 'tot'], ['小分', '大小分' + totv, 'tot']],
+      ];
+      PAIRS.forEach(function (pr) {
+        var aW = W[pr[0]] || 0, bW = W[pr[1]] || 0, tot = aW + bW;
+        [[pr[0], aW, bW, pr[3]], [pr[1], bW, aW, pr[4]]].forEach(function (x) {
+          if (x[1] >= EP_K && x[1] / (x[1] + x[2] || 1) >= EP_DOM)
+            out.recs.push({ opt: x[0], pick: x[3][0], mk: x[3][1], market: x[3][2], w: x[1], n: N[x[0]] || 0 });
+        });
+        if (aW && bW && tot >= EP_K + 1 && Math.max(aW, bW) / tot < EP_DOM)
+          out.splits.push({ market: pr[2], txt: aW + ':' + bW });
+      });
+    } catch (e) {}
+    return out;
+  }
+
+  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; } };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf };
+    module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; } };
   }
 })();

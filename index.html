@@ -3061,21 +3061,42 @@ function collectSummary(){
     add(hdRecvOK, it.hdRecv.lights, it[undSide], "受讓"+(it.hdVal?` ${it.hdVal}`:""), "recv");
     add(!totC, it.over.lights,  "大分", "大小分"+(it.totVal?` ${it.totVal}`:""), "tot");
     add(!totC, it.under.lights, "小分", "大小分"+(it.totVal?` ${it.totVal}`:""), "tot");
+    // 明牌軌（expert-picks add-on 提供；K=5 加權、主導率 70%）；分歧列入衝突區
+    if(window.__expertPicks && window.__expertPicks.epStrong){
+      try{
+        const eps = window.__expertPicks.epStrong(it, doc.activeDate);
+        eps.recs.forEach(r=> strong.push({matchName, league:lg, pick:r.pick, mk:r.mk, n:r.w, it, market:r.market, ep:true, np:r.n}));
+        eps.splits.forEach(s=> conflicts.push({matchName, league:lg, market:`${s.market}明牌分歧 ${s.txt}`, kind:"ep"}));
+      }catch(_){}
+    }
   });
-  strong.sort((a,b)=>b.n-a.n);
-  return {strong, conflicts};
+  // 雙訊號：同一選項 手動燈≥3 ＋ 明牌共識 都推 → 併成一筆、置頂
+  strong.forEach(s=>{ if(!s.ep){ const e=strong.find(x=>x.ep && !x.drop && x.it===s.it && x.market===s.market && x.pick===s.pick); if(e){ s.dual=true; s.epW=e.n; s.np=e.np; e.drop=true; } } });
+  const strongOut = strong.filter(s=>!s.drop);
+  strongOut.sort((a,b)=> ((b.dual?1:0)-(a.dual?1:0)) || b.n-a.n);
+  return {strong: strongOut, conflicts};
 }
 
 // 今日下注命中率（只看當天板上已結算、且該選項點 ≥3 燈的）。tie / push / 未決定 不列入。
 function todayHitRate(){
-  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, bet:{hit:0,miss:0}, any:0 };
+  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, bet:{hit:0,miss:0}, ep:{hit:0,miss:0}, dual:{hit:0,miss:0}, any:0 };
   state.items.forEach(it=>{
     if(it.type!=="match" || !it.settled) return;
     const s = it.settled;
+    // 明牌軌帳：這張卡的明牌推薦選項集合（add-on 缺席＝空集合，零回歸）
+    let epSet = null;
+    const epTally = (opt, litOK, hit)=>{
+      if(epSet===null){ epSet=new Set(); try{ if(window.__expertPicks&&window.__expertPicks.epStrong) window.__expertPicks.epStrong(it, doc.activeDate).recs.forEach(x=>epSet.add(x.opt)); }catch(_){} }
+      if(!epSet.has(opt)) return;
+      (hit?r.ep.hit++:r.ep.miss++);
+      if(litOK) (hit?r.dual.hit++:r.dual.miss++);   // 雙訊號＝手動≥3燈且明牌同向
+    };
     // 獨贏
     if(s.ml==="away"||s.ml==="home"){
       if(it.mlAway.lights>=3){ r.any++; (s.ml==="away"?r.ml.hit++:r.ml.miss++); }
       if(it.mlHome.lights>=3){ r.any++; (s.ml==="home"?r.ml.hit++:r.ml.miss++); }
+      epTally("mlAway", it.mlAway.lights>=3, s.ml==="away");
+      epTally("mlHome", it.mlHome.lights>=3, s.ml==="home");
       if(it.mlAway.bet){ (s.ml==="away"?r.bet.hit++:r.bet.miss++); }             // 自主注（不限燈數）
       if(it.mlHome.bet){ (s.ml==="home"?r.bet.hit++:r.bet.miss++); }
     }
@@ -3085,6 +3106,8 @@ function todayHitRate(){
       const rv = (s.myHdRecv!=null) ? s.myHdRecv : (s.hd==="cover"?"nocover":"cover");
       if(it.hdGive.lights>=3 && gv!=="push"){ r.any++; (gv==="cover"?r.hd.hit++:r.hd.miss++); }
       if(it.hdRecv.lights>=3 && rv!=="push"){ r.any++; (rv==="cover"?r.hd.hit++:r.hd.miss++); }
+      if(gv!=="push") epTally("hdGive", it.hdGive.lights>=3, gv==="cover");
+      if(rv!=="push") epTally("hdRecv", it.hdRecv.lights>=3, rv==="cover");
       if(it.hdGive.bet && gv!=="push"){ (gv==="cover"?r.bet.hit++:r.bet.miss++); }
       if(it.hdRecv.bet && rv!=="push"){ (rv==="cover"?r.bet.hit++:r.bet.miss++); }
     }
@@ -3092,6 +3115,8 @@ function todayHitRate(){
     { const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="over"||st==="under"){   // B：命中用成交線 myTot
       if(it.over.lights>=3){ r.any++; (st==="over"?r.tot.hit++:r.tot.miss++); }
       if(it.under.lights>=3){ r.any++; (st==="under"?r.tot.hit++:r.tot.miss++); }
+      epTally("over", it.over.lights>=3, st==="over");
+      epTally("under", it.under.lights>=3, st==="under");
       if(it.over.bet){ (st==="over"?r.bet.hit++:r.bet.miss++); }
       if(it.under.bet){ (st==="under"?r.bet.hit++:r.bet.miss++); }
     } }
@@ -3164,9 +3189,9 @@ function renderSummary(){
                     `<span class="zrate">${rate}%</span>`;
       return r;
     };
-    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml],["自主注", zhan.bet]].forEach(([lab,m])=>{ const r=rowFor(lab,m); if(r) body.appendChild(r); });
-    if(!body.children.length){ const e=document.createElement("div"); e.className="zhanempty"; e.textContent="今天還沒有已結算、且點 ≥3 燈的下注。"; body.appendChild(e); }
-    const hint = document.createElement("div"); hint.className="zhanhint"; hint.textContent="只統計今天板上已結算、點 ≥3 燈的選項（和局／走盤不列入）。全季統計請看數據回顧。";
+    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml],["🎯 明牌軌", zhan.ep],["⚡ 雙訊號", zhan.dual],["自主注", zhan.bet]].forEach(([lab,m])=>{ const r=rowFor(lab,m); if(r) body.appendChild(r); });
+    if(!body.children.length){ const e=document.createElement("div"); e.className="zhanempty"; e.textContent="今天還沒有已結算的手動燈（≥3）或明牌軌選項。"; body.appendChild(e); }
+    const hint = document.createElement("div"); hint.className="zhanhint"; hint.textContent="三帳分計：手動燈 ≥3／🎯明牌軌（加權共識 ≥5 且主導 ≥70%）／⚡雙訊號（兩軌同向）。和局／走盤不列入。全季統計請看數據回顧。";
     body.appendChild(hint);
     if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
     box.appendChild(body);
@@ -3197,7 +3222,7 @@ function renderSummary(){
 
   const body = document.createElement("div"); body.className="sumbody";
   if(fStrong.length){
-    const t = document.createElement("div"); t.className="sumsec"; t.textContent="3 個以上（無衝突）";
+    const t = document.createElement("div"); t.className="sumsec"; t.textContent="強訊號（手動 ≥3 燈 ∪ 🎯明牌共識）";
     body.appendChild(t);
     // 同場的不同選項併成一列（下注不必來回找）；燈數用字色強度表達，不再顯示 ●N
     const byGame = new Map();
@@ -3205,10 +3230,12 @@ function renderSummary(){
     const games = [...byGame.values()].sort((a,b)=> Math.max(...b.map(x=>x.n)) - Math.max(...a.map(x=>x.n)));
     games.forEach(sigs=>{
       const r = document.createElement("div"); r.className="sumgrow";
-      const picks = sigs.slice().sort((a,b)=>b.n-a.n).map(s=>{
+      const picks = sigs.slice().sort((a,b)=>((b.dual?1:0)-(a.dual?1:0))||b.n-a.n).map(s=>{
         const low = (s.it && s.market) ? isLitSideLow(s.it, s.market) : false;
         const nCls = s.n>=6 ? "n6" : s.n===5 ? "n5" : s.n===4 ? "n4" : "n3";
-        return `<span class="sp ${nCls}" title="${s.n} 燈">${esc(s.pick)}<span class="mk">${esc(s.mk)}</span>${low?'<span class="lw">⚠</span>':''}</span>`;
+        const tag = s.dual ? "⚡" : (s.ep ? "🎯" : "");
+        const tip = s.dual ? `雙訊號：手動 ${s.n} 燈＋明牌加權 ${s.epW}（${s.np} 人）` : (s.ep ? `明牌加權 ${s.n}（${s.np} 人）` : `${s.n} 燈`);
+        return `<span class="sp ${nCls}" title="${tip}">${tag}${esc(s.pick)}<span class="mk">${esc(s.mk)}</span>${low?'<span class="lw">⚠</span>':''}</span>`;
       }).join("");
       r.innerHTML = `<span class="gmt">${esc(sigs[0].matchName)}</span><span class="gpk">${picks}</span>`;
       body.appendChild(r);
@@ -3224,7 +3251,7 @@ function renderSummary(){
     if(!doc.conflictsCollapsed){
       fConflict.forEach(c=>{
         const r = document.createElement("div"); r.className="sumrow conflict"+(c.kind==="cross"?" cross":"");
-        const desc = c.kind==="cross" ? `${esc(c.market)} 矛盾` : `${esc(c.market)} 兩邊都有燈`;
+        const desc = c.kind==="ep" ? esc(c.market) : (c.kind==="cross" ? `${esc(c.market)} 矛盾` : `${esc(c.market)} 兩邊都有燈`);
         r.innerHTML = `<span class="mt">${esc(c.matchName)}</span>`+
                       `<span class="pk">${desc}</span>`+
                       `<span class="n">⚠</span>`;
@@ -7364,6 +7391,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260718ep6"></script>
+</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep7"></script>
 </body>
 </html>
