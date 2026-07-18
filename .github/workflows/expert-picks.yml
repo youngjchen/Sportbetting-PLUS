@@ -1,0 +1,39 @@
+name: expert-picks
+
+on:
+  workflow_dispatch:
+  schedule:
+    # 每 2 小時一次（:23 錯開其他爬蟲的 :07/:17/:27...），明牌通常賽前幾小時內貼出。
+    - cron: '23 */2 * * *'
+
+concurrency:
+  group: expert-picks
+  cancel-in-progress: false
+
+permissions:
+  contents: write
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: 抓找高手明牌
+        run: node expert_picks.js
+      - name: commit 結果
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/expert_picks.json
+          if ! git diff --cached --quiet; then
+            git commit -m "expert picks $(date -u +%FT%TZ)"
+            if ! git push; then
+              git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+              git push || true
+            fi
+          fi
