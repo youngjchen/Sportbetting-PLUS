@@ -91,10 +91,14 @@
     // 同特異度會輸在來源順序 → 用特異度贏，不用 !important。
     '.card .bmkt-row{grid-template-columns:28px minmax(88px,126px) max-content 64px 24px 48px;}' +
     '.ep-cell{width:64px;display:flex;justify-content:flex-start;align-items:center;}' +
-    '.ep-cell .ep-n{display:inline-flex;align-items:center;gap:2px;font-family:Oswald;font-weight:700;' +
-      'font-size:12.5px;letter-spacing:.02em;color:#ffcf8a;background:rgba(255,176,46,.10);' +
-      'border:1px solid rgba(255,176,46,.42);border-radius:999px;padding:1px 8px;cursor:pointer;' +
+    // 標靶改純 CSS 同心圓：emoji 🎯 的字形基線天生偏離水平中線（2026-07-19 使用者反映），
+    // CSS 圓形無基線問題，flex 置中＝幾何中心＝光學中心。line-height:1 讓數字也貼齊中線。
+    '.ep-cell .ep-n{display:inline-flex;align-items:center;gap:4px;font-family:Oswald;font-weight:700;' +
+      'font-size:12.5px;line-height:1;letter-spacing:.02em;color:#ffcf8a;background:rgba(255,176,46,.10);' +
+      'border:1px solid rgba(255,176,46,.42);border-radius:999px;padding:3px 8px;cursor:pointer;' +
       'white-space:nowrap;font-variant-numeric:tabular-nums;}' +
+    '.ep-cell .ep-n::before{content:"";width:10px;height:10px;border-radius:50%;flex:0 0 auto;' +
+      'background:radial-gradient(circle,#ffd88a 0 2px,rgba(255,176,46,.15) 2px 3.2px,rgba(255,176,46,.95) 3.2px 4.6px,transparent 4.6px);}' +
     '.ep-cell .ep-n:hover{background:rgba(255,176,46,.2);}' +
     '.ep-cell .ep-n .st{color:#ffd873;font-size:11px;}' +
     '.bbadge.ep-badge{border-color:rgba(255,179,71,.55)!important;color:#ffcf8a!important;}' +
@@ -208,7 +212,7 @@
         var g = byOpt[ROW_OPTS[i]];
         if (g) {
           var stars = g.list.filter(function (p) { return weightOf(p) > 1; }).length;
-          cell.innerHTML = '<span class="ep-n" title="明牌 ' + g.list.length + ' 人' + (stars ? '（70%+ ' + stars + ' 人）' : '') + ' — 點看名單">🎯' + g.list.length +
+          cell.innerHTML = '<span class="ep-n" title="明牌 ' + g.list.length + ' 人' + (stars ? '（70%+ ' + stars + ' 人）' : '') + ' — 點看名單">' + g.list.length +
             (stars ? '<span class="st">⭐' + stars + '</span>' : '') + '</span>';
           cell.firstChild.onclick = openIt;
         }

@@ -357,6 +357,12 @@
   .sumsec .seccaret{font-size:11px;}
   .sumrow .pk .lowwarn{color:var(--ink-dim);font-size:11px;margin-left:6px;font-weight:500;}
   .sumrow.conflict .pk{color:var(--conflict);}
+  /* 2026-07-19 使用者要求：重點總結全面放大（看久不累）。後置同特異度覆蓋上面的字級 */
+  .sumgrow{font-size:15px;} .sumgrow .gmt{font-size:12.5px;flex-basis:78px;} .sumgrow .sp .mk{font-size:12.5px;}
+  .sumrow{font-size:15px;} .sumrow .mt{font-size:12.5px;flex-basis:74px;} .sumrow .pk .mk{font-size:12.5px;}
+  .sumsec{font-size:11.5px;} #summary .sumempty{font-size:13.5px;}
+  #summary .zhanrow{font-size:15px;} #summary .zhanhint{font-size:12px;line-height:1.6;}
+  #summary .sumhead{font-size:14px;} #summary .sumhead .count{font-size:13px;}
   .sumrow.conflict .n{color:var(--conflict);}
   .sumrow.conflict.cross .pk{color:var(--cross);}
   .sumrow.conflict.cross .n{color:var(--cross);}
@@ -1383,7 +1389,7 @@
 /* ---- 電腦版：比賽卡靠左、右側留給戰/重面板（不再死置中） ---- */
 @media (min-width:1180px){
   #world{ align-items:flex-start; padding-left:clamp(16px,3vw,48px); padding-right:24px; }
-  .card.bcard{ max-width:616px; zoom:1.4; }   /* 卡片放大約 1.4×：100% 看起來就像 150% */
+  .card.bcard{ max-width:672px; zoom:1.4; }   /* 卡片放大約 1.4×；2026-07-19 616→672：容納明牌膠囊欄(64px)，過盤率不再被擠出（總結面板右側空間讓渡，110% 縮放下驗收） */
   #matchnav{ display:flex; }
   /* 戰/重面板：填滿剩餘寬度、字放大、不用 uiScale 變形 */
   #summary{ transform:none !important; }
@@ -7391,6 +7397,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep7"></script>
+</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep8"></script>
 </body>
 </html>
