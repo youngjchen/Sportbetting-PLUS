@@ -376,6 +376,10 @@
   .zhanrow.zhas{cursor:pointer;}
   .rv-alert{position:relative;}
   .rv-alert::after{content:"❗";position:absolute;top:-7px;right:-5px;font-size:11px;line-height:1;}
+  .nv-epnew{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffb02e;
+    box-shadow:0 0 0 2px rgba(255,176,46,.28);margin-left:6px;vertical-align:middle;animation:epPulse 2s infinite;}
+  @keyframes epPulse{0%,100%{opacity:1}50%{opacity:.45}}
+  @media (prefers-reduced-motion: reduce){ .nv-epnew{animation:none;} }
   .rv-alert-mk{font-size:12px;}
   .drill-row.drill-today{background:rgba(255,176,46,.10);border-radius:6px;}
   .sumrow.conflict .n{color:var(--conflict);}
@@ -2698,20 +2702,7 @@ function bWinProbs(it){
   return { mdlA, mdlH, impA, impH, mp, pH };
 }
 // 「差X / 避開」：只在填了 STAKE 賠率且有模型時計算
-function bGapInfo(it){
-  const wp = bWinProbs(it);
-  if(wp.mp==null || wp.pH==null) return null;
-  const gap = Math.round(Math.abs((1-wp.pH)-wp.mp)*100);
-  if(gap < GAP_WARN) return { cls:"ok", txt:`差 ${gap}`, title:`模型與盤口差 ${gap}pp，正常範圍` };
-  const ea=parseFloat(it.eraAway), eh=parseFloat(it.eraHome);
-  if(!isNaN(ea)&&!isNaN(eh)){
-    const adj=Math.abs((1-eraAdjustedHome(wp.pH,ea,eh))-wp.mp)*100;
-    return (adj<GAP_WARN)
-      ? { cls:"ok", txt:`差 ${gap} ✓`, title:`差 ${gap}，先發 ERA（客 ${ea}／主 ${eh}）可解釋，修正後差 ${adj.toFixed(0)} — 正常場` }
-      : { cls:"avoid", txt:`⚠ 避開`, title:`差 ${gap}，先發 ERA 修正後仍差 ${adj.toFixed(0)} — 無法解釋，建議避開` };
-  }
-  return { cls:"note", txt:`差 ${gap} ⚠`, title:`模型與盤口差 ${gap}pp：到結算視窗輸入兩隊先發 ERA 驗證` };
-}
+// bGapInfo（差N/避開膠囊）已刪（2026-07-20）：模型vs盤口勝差回測=決定性null、ERA修正顯著有害
 // 獨贏 ⓘ：STAKE 賠率評語（同結算畫面）
 function bStakeReadHTML(it){
   const wp = bWinProbs(it);
@@ -2790,9 +2781,7 @@ function renderCardB(it){
   time.textContent = fmtDate(doc.activeDate) + (it.gameTime ? " "+it.gameTime : "");   // 日期 + 開球時間（工作流盤口）
   const hsp = document.createElement("span"); hsp.className="bhead-sp";
   head.append(time, hsp);
-  // 差X / 避開（填完賠率才出現）
-  const gap = bGapInfo(it);
-  if(gap){ const g=document.createElement("span"); g.className="bwarn "+gap.cls; g.textContent=gap.txt; g.title=gap.title; head.appendChild(g); }
+  // 差N/避開膠囊已移除（2026-07-20）：模型vs盤口勝差回測=決定性null、ERA修正有害 → 無判讀價值
   if(it.settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改 / 取消結算"; sm.onclick=()=>openSettleModal(it); head.appendChild(sm); }
   // 延賽：官方/玩運彩狀態 postponed（如比賽延期）→ 徽章標示；比賽不會開打也不會結算，可放心刪卡
   if(!it.settled){ try{
@@ -2800,17 +2789,14 @@ function renderCardB(it){
     const pg = (fu && fu.findGame) ? fu.findGame(fu.getData(), it, doc.activeDate) : null;
     if(pg && pg.status==="postponed"){ const pd=document.createElement("span"); pd.className="bbadge ppd"; pd.textContent="⏸ 延賽"; pd.title="官方判定延賽（補賽另排新場次）— 此卡不會開打與結算，可刪除"; head.appendChild(pd); }
   }catch(_){} }
-  // 顛倒：純標記切換（點一下變亮，不開任何輸入視窗）
-  const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"⇅ 顛倒":"顛倒"; flipB.title="標記平台顛倒（台彩 vs STAKE 受讓方相反）— 點一下切換"; flipB.onclick=()=>{ snapshot(); it.platformFlip=!it.platformFlip; save(); render(); };
-  // 曾經顛倒（收盤前已收斂一致）→ 靛藍徽章標示，讓賽前/已結算的收斂場也能一眼辨識（非互動）
-  const wasB = (!it.platformFlip && it.flipVanished) ? (()=>{ const b=document.createElement("span"); b.className="bbadge was"; b.textContent="曾顛倒"; b.title="曾經顛倒，收盤前已收斂一致（在結算視窗的『顛倒場狀態』設定）— 點頂部右鍵可修改"; return b; })() : null;
+  // 顛倒/曾顛倒膠囊已移除（2026-07-20）：狀態改在結算視窗『顛倒場狀態』設定，卡片底色已可辨識
   // 賽前▸輸入：開結算視窗填賠率
   const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
   const preB = document.createElement("button"); preB.className="bbadge"+(hasOdds?" done":""); preB.textContent = hasOdds?"賽前 ✓":"賽前▸輸入"; preB.title="輸入賽前賠率 / 開結算視窗"; preB.onclick=()=>openSettleModal(it);
   // collapse + delete
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; save(); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除"; delB.onclick=()=>{ snapshot(); state.items=state.items.filter(x=>x.id!==it.id); save(); render(); };
-  head.append(flipB); if(wasB) head.append(wasB); head.append(preB, colB, delB);
+  head.append(preB, colB, delB);
   head.title = "右鍵 → 開結算視窗";
   head.addEventListener("contextmenu", (e)=>{ e.preventDefault(); openSettleModal(it); });  // 右鍵點卡片頂部＝開結算
   el.appendChild(head);
@@ -3488,6 +3474,11 @@ function renderMatchNav(){
         };
         t.appendChild(bd);
       } }
+    // 新明牌紅點：該卡有未確認的新推薦（與明牌膠囊紅點同步；點開名單即消）
+    try{ if(window.__expertPicks && window.__expertPicks.hasNew && window.__expertPicks.hasNew(it)){
+      const nd=document.createElement("span"); nd.className="nv-epnew no-drag"; nd.title="有新明牌，點膠囊確認";
+      t.appendChild(nd);
+    } }catch(_){}
     return t;
   }
   function sec(label, extraCls, lgKey){ const s=document.createElement("div"); s.className="nvsec"+(extraCls?(" "+extraCls):""); s.textContent=label; if(lgKey) s.dataset.lg=lgKey; body.appendChild(s); }
@@ -7509,6 +7500,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260719heal6"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep11"></script>
+</script><script src="./odds-integration.js?v=20260719heal6"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260720ep12"></script>
 </body>
 </html>

@@ -115,40 +115,68 @@
     '.bbadge.ep-badge{border-color:rgba(255,179,71,.55)!important;color:#ffcf8a!important;}' +
     '.bbadge.ep-badge:hover{background:rgba(255,179,71,.14)!important;}' +
     '.bbadge.ep-badge.ep-done{border-color:rgba(255,179,71,.25)!important;color:#8a7a5e!important;}' +
-    '#ep-panel{position:fixed;z-index:99998;width:300px;max-height:70vh;overflow-y:auto;background:#151a22;' +
-      'border:1px solid rgba(255,179,71,.45);border-radius:12px;box-shadow:0 14px 34px rgba(0,0,0,.55);' +
-      'color:#e9eef5;font-size:12.5px;}' +
-    '#ep-panel .ep-hd{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #2a3340;' +
-      'font-family:Oswald;letter-spacing:.06em;color:#ffb347;}' +
-    '#ep-panel .ep-x{margin-left:auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;' +
-      'cursor:pointer;border-radius:8px;color:#8a96a6;}' +
+    // 面板放大版（2026-07-20 使用者要求）：min(460px,92vw)、字級整體 +2，行高加大
+    '#ep-panel{position:fixed;z-index:99998;width:min(460px,92vw);max-height:76vh;overflow-y:auto;background:#151a22;' +
+      'border:1px solid rgba(255,179,71,.45);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6);' +
+      'color:#e9eef5;font-size:14.5px;}' +
+    '#ep-panel .ep-hd{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #2a3340;' +
+      'font-family:Oswald;letter-spacing:.06em;color:#ffb347;font-size:15px;}' +
+    '#ep-panel .ep-x{width:32px;height:32px;display:flex;align-items:center;justify-content:center;' +
+      'cursor:pointer;border-radius:8px;color:#8a96a6;flex:0 0 auto;}' +
     '#ep-panel .ep-x:hover{color:#e9eef5;background:rgba(255,255,255,.06);}' +
-    '#ep-panel .ep-upd{margin-left:auto;font-size:11.5px;font-weight:600;color:#8fa3b8;letter-spacing:.02em;}' +
+    '#ep-panel .ep-upd{margin-left:auto;font-size:12px;font-weight:600;color:#8fa3b8;letter-spacing:.02em;}' +
     '#ep-panel .ep-hd .ep-upd+.ep-x{margin-left:6px;}' +
-    '#ep-panel .ep-sec{padding:8px 12px 2px;color:#9bd5ff;font-weight:700;}' +
-    '#ep-panel .ep-row{display:flex;align-items:baseline;gap:7px;padding:4px 12px;line-height:1.5;}' +
+    // 排序切換（勝率/時間）：只影響各市場組內列序，市場分組順序不動
+    '#ep-panel .ep-srt{font-size:12.5px;font-weight:700;color:#8a96a6;border:1px solid #2a3340;border-radius:999px;' +
+      'padding:3px 10px;cursor:pointer;letter-spacing:.04em;flex:0 0 auto;}' +
+    '#ep-panel .ep-srt:hover{color:#e9eef5;background:rgba(255,255,255,.05);}' +
+    '#ep-panel .ep-srt.on{color:#1a1205;background:#ff9f43;border-color:#ff9f43;}' +
+    '#ep-panel .ep-sec{padding:10px 14px 3px;color:#9bd5ff;font-weight:700;font-size:14.5px;}' +
+    '#ep-panel .ep-row{display:flex;align-items:baseline;gap:8px;padding:5px 14px;line-height:1.55;}' +
     '#ep-panel .ep-row .nm{color:#e6f0ff;}' +
-    '#ep-panel .ep-row .src{color:#8a96a6;font-size:11px;}' +
-    '#ep-panel .ep-row .wp{margin-left:auto;font-family:Oswald;color:#28c76f;}' +
-    '#ep-panel .ep-row .done{color:#5b6b80;font-size:10.5px;}' +
-    '#ep-panel .ep-main{color:#ffb347;font-size:11px;}' +
-    '#ep-panel .ep-row .tm{font-family:Oswald;font-size:11px;color:#6f7f92;letter-spacing:.02em;}' +
-    '#ep-panel{padding-bottom:8px;}';
+    '#ep-panel .ep-row .src{color:#8a96a6;font-size:12px;}' +
+    '#ep-panel .ep-row .wp{margin-left:auto;font-family:Oswald;color:#28c76f;font-size:15px;}' +
+    '#ep-panel .ep-row .done{color:#5b6b80;font-size:11px;}' +
+    '#ep-panel .ep-main{color:#ffb347;font-size:12px;}' +
+    '#ep-panel .ep-row .tm{font-family:Oswald;font-size:12px;color:#6f7f92;letter-spacing:.02em;}' +
+    '#ep-panel{padding-bottom:10px;}' +
+    // 新推薦紅點：膠囊右上角琥珀圓點（開面板即消）
+    '.bbadge.ep-badge.ep-new{position:relative;}' +
+    '.bbadge.ep-badge.ep-new::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;' +
+      'border-radius:50%;background:#ffb02e;box-shadow:0 0 0 2px #10151c;animation:epPulse 2s infinite;}' +
+    '@keyframes epPulse{0%,100%{opacity:1}50%{opacity:.45}}' +
+    '@media (prefers-reduced-motion: reduce){.bbadge.ep-badge.ep-new::after{animation:none;}}';
   document.head.appendChild(css);
 
   /* ---- 面板 ---- */
-  function closePanel() { var p = document.getElementById('ep-panel'); if (p) p.remove(); }
+  var lastPanel = null;   // {it,x,y}：排序切換/資料更新時原地重建
+  function closePanel() { var p = document.getElementById('ep-panel'); if (p) p.remove(); lastPanel = null; }
+  // 組內排序（市場分組順序不動）：wp=勝率高→低（同勝率新單前）；at=時間新→舊（同時間勝率高前）
+  var sortMode = 'wp';
+  try { sortMode = localStorage.getItem('epSortMode') || 'wp'; } catch (e) {}
+  function sortList(list) {
+    var arr = list.slice();
+    arr.sort(function (a, b) {
+      var byAt = String(b.at || '').localeCompare(String(a.at || ''));
+      var byWp = (b.wp || 0) - (a.wp || 0);
+      return sortMode === 'at' ? (byAt || byWp) : (byWp || byAt);
+    });
+    return arr;
+  }
   function openPanel(it, agg, x, y) {
     closePanel();
+    lastPanel = { it: it, x: x, y: y };
     var p = document.createElement('div'); p.id = 'ep-panel';
     // 資料時間戳＝爬蟲上次完抓時間（updated），手機上判斷「新一輪抓完沒」全靠這個
     var upd = (data && data.updated) ? String(data.updated).slice(5, 16).replace('T', ' ') : '';
     var html = '<div class="ep-hd">🎯 高手明牌 ×' + agg.total +
+      '<span class="ep-srt' + (sortMode === 'wp' ? ' on' : '') + '" data-m="wp" title="組內按勝率排序">勝率</span>' +
+      '<span class="ep-srt' + (sortMode === 'at' ? ' on' : '') + '" data-m="at" title="組內按抓到時間排序">時間</span>' +
       (upd ? '<span class="ep-upd" title="明牌資料抓取時間">' + esc(upd) + '</span>' : '') +
       '<span class="ep-x" title="關閉">✕</span></div>';
     agg.rows.forEach(function (r) {
       html += '<div class="ep-sec">' + esc(OPT_LABEL[r.opt](it, r)) + ' ×' + r.list.length + '</div>';
-      r.list.forEach(function (pk) {
+      sortList(r.list).forEach(function (pk) {
         // 主推榜合格者 srcLabel 就是「主推」→ 不跟主推徽章重複顯示
         var srcTxt = (pk.main && pk.srcLabel === '主推') ? '' : String(pk.srcLabel || '');
         if (pk.free) srcTxt += (srcTxt ? '·' : '') + '免費附贈';
@@ -165,6 +193,16 @@
     p.style.left = Math.max(8, Math.min(vw - r.width - 8, x - r.width / 2)) + 'px';
     p.style.top = Math.max(8, Math.min(vh - r.height - 8, y + 12)) + 'px';
     p.querySelector('.ep-x').onclick = closePanel;
+    p.querySelectorAll('.ep-srt').forEach(function (b) {
+      b.onclick = function (ev) {
+        ev.stopPropagation();
+        sortMode = b.dataset.m === 'at' ? 'at' : 'wp';
+        try { localStorage.setItem('epSortMode', sortMode); } catch (e) {}
+        var lp = lastPanel;
+        if (lp) openPanel(lp.it, currentAgg(lp.it), lp.x, lp.y);
+      };
+    });
+    markSeen(it);   // 點開名單＝已確認新推薦 → 膠囊/導覽列紅點消
     // 套用鈕已移除（2026-07-19 使用者拍板：明牌不進燈號、與手動燈徹底分帳）
     setTimeout(function () {
       document.addEventListener('pointerdown', function h(ev) {
@@ -175,6 +213,48 @@
   function badge(txt) {
     var b = document.getElementById('saveBadge');
     if (b) { b.textContent = txt; b.classList.add('show'); setTimeout(function () { b.classList.remove('show'); }, 1700); }
+  }
+
+  /* ---- 新推薦追蹤（2026-07-20）----
+     簽名＝該卡當日全部明牌的 uid|選項|時戳 排序串；與 doc.epSeen[卡id] 不同＝有新單 →
+     膠囊右上紅點＋導覽列紅點；點開名單即標已讀（doc 走 GitHub 同步，跨裝置一致）。 */
+  function dateKeyNow() { try { return (typeof doc !== 'undefined' && doc && doc.activeDate) || null; } catch (e) { return null; } }
+  function currentAgg(it) { return aggregate(it, picksForCard(it, dateKeyNow(), (data && data.picks) || [])); }
+  function itemSig(it, picks) {
+    return picks.map(function (p) { return p.uid + '|' + (optOf(it, p) || '') + '|' + (p.at || ''); }).sort().join(';');
+  }
+  function hasNewFor(it) {
+    try {
+      var dk = dateKeyNow();
+      if (!data || !data.picks || !dk) return false;
+      var picks = picksForCard(it, dk, data.picks);
+      if (!picks.length) return false;
+      var seen = (typeof doc !== 'undefined' && doc && doc.epSeen) || {};
+      return seen[String(it.id)] !== itemSig(it, picks);
+    } catch (e) { return false; }
+  }
+  function markSeen(it) {
+    try {
+      var dk = dateKeyNow();
+      if (!data || !data.picks || !dk || typeof doc === 'undefined' || !doc) return;
+      (doc.epSeen = doc.epSeen || {})[String(it.id)] = itemSig(it, picksForCard(it, dk, data.picks));
+      if (typeof save === 'function') save();
+      // 原地清紅點（不重繪整板，避免把剛開的面板洗掉）
+      var pill = (typeof world !== 'undefined' ? world : document).querySelector('.card[data-id="' + it.id + '"] .ep-badge');
+      if (pill) pill.classList.remove('ep-new');
+      document.querySelectorAll('.nvtag[data-itid="' + it.id + '"] .nv-epnew').forEach(function (x) { x.remove(); });
+    } catch (e) {}
+  }
+  // 開面板同時抓最新資料：資料真的變了才原地重建面板（顯示最新名單與時戳）
+  function refreshPanelData() {
+    var u0 = data && data.updated;
+    fetchFeed().then(function () {
+      if (!lastPanel || !document.getElementById('ep-panel')) return;
+      if ((data && data.updated) !== u0) {
+        var lp = lastPanel;
+        openPanel(lp.it, currentAgg(lp.it), lp.x, lp.y);
+      }
+    });
   }
 
   /* ---- 掛進卡片渲染 ----
@@ -196,6 +276,7 @@
       var openIt = function (ev) {
         ev.stopPropagation();
         openPanel(it, aggregate(it, picksForCard(it, dateKey, data.picks)), ev.clientX, ev.clientY);
+        refreshPanelData();   // 開面板即抓最新：抓完資料有變就原地重建（時戳/名單同步更新）
       };
       rows.forEach(function (row, i) {
         if (row.querySelector('.ep-cell')) return;               // 重繪防重
@@ -216,7 +297,7 @@
       var head = cardEl.querySelector('.bhead');
       if (!head) return;
       var pill = document.createElement('button');
-      pill.className = 'bbadge ep-badge';
+      pill.className = 'bbadge ep-badge' + (hasNewFor(it) ? ' ep-new' : '');
       pill.textContent = '明牌 ×' + agg.total;
       pill.title = '高手明牌 — 點看名單';
       pill.onclick = openIt;
@@ -289,7 +370,7 @@
     return out;
   }
 
-  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; } };
+  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, hasNew: hasNewFor, _setData: function (d) { data = d; } };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; } };
   }
