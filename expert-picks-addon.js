@@ -56,8 +56,11 @@
   }
   var OPT_LABEL = {
     mlAway: function (it) { return '獨贏 · ' + it.away; }, mlHome: function (it) { return '獨贏 · ' + it.home; },
-    hdGive: function (it) { return '讓分 · ' + (it.hdFav === 'away' ? it.away : it.home); },
-    hdRecv: function (it) { return '受讓 · ' + (it.hdFav === 'away' ? it.home : it.away); },
+    // 讓分：有台彩線就顯示「隊名 帶號線」（顛倒場時與卡片列正負號可能相反＝高手實際下的邊）
+    hdGive: function (it, r) { var t = it.hdFav === 'away' ? it.away : it.home;
+      return (r && r.tipLine != null) ? t + ' ' + (r.tipLine > 0 ? '+' : '') + r.tipLine : '讓分 · ' + t; },
+    hdRecv: function (it, r) { var t = it.hdFav === 'away' ? it.home : it.away;
+      return (r && r.tipLine != null) ? t + ' ' + (r.tipLine > 0 ? '+' : '') + r.tipLine : '受讓 · ' + t; },
     over: function () { return '大分'; }, under: function () { return '小分'; },
   };
   // 權重：本季 70%+ 的高手一注抵兩燈（2026-07-18 使用者拍板）；60~69% 一燈。
@@ -73,6 +76,14 @@
       if (!applied[p.uid + '|' + opt]) { g.newCount++; g.newWeight += weightOf(p); }
     });
     var rows = order.filter(function (k) { return by[k]; }).map(function (k) { return by[k]; });
+    // 讓分明牌帶「高手自己的台彩線」（多數決）：顛倒場時卡片列(STAKE)的正負號與台彩相反，
+    // 標籤/判定一律以這條線為準，不借用卡片列的角色（2026-07-19 遊騎兵@勇士誤判案）。
+    rows.forEach(function (r) {
+      var cnt = {};
+      r.list.forEach(function (p) { if (p.line != null) cnt[p.line] = (cnt[p.line] || 0) + 1; });
+      var ks = Object.keys(cnt);
+      if (ks.length) r.tipLine = +ks.sort(function (a, b) { return cnt[b] - cnt[a]; })[0];
+    });
     return {
       rows: rows, total: picks.length,
       totalNew: rows.reduce(function (s, r) { return s + r.newCount; }, 0),
@@ -130,7 +141,7 @@
     var p = document.createElement('div'); p.id = 'ep-panel';
     var html = '<div class="ep-hd">🎯 高手明牌 ×' + agg.total + '<span class="ep-x" title="關閉">✕</span></div>';
     agg.rows.forEach(function (r) {
-      html += '<div class="ep-sec">' + esc(OPT_LABEL[r.opt](it)) + ' ×' + r.list.length + '</div>';
+      html += '<div class="ep-sec">' + esc(OPT_LABEL[r.opt](it, r)) + ' ×' + r.list.length + '</div>';
       r.list.forEach(function (pk) {
         // 主推榜合格者 srcLabel 就是「主推」→ 不跟主推徽章重複顯示
         var srcTxt = (pk.main && pk.srcLabel === '主推') ? '' : String(pk.srcLabel || '');
@@ -187,7 +198,8 @@
         var g = byOpt[ROW_OPTS[i]];
         if (g) {
           var stars = g.list.filter(function (p) { return weightOf(p) > 1; }).length;
-          cell.innerHTML = '<span class="ep-n" title="明牌 ' + g.list.length + ' 人' + (stars ? '（70%+ ' + stars + ' 人）' : '') + ' — 點看名單">' + g.list.length +
+          var lineTxt = (g.tipLine != null) ? ' · 台彩 ' + (g.tipLine > 0 ? '+' : '') + g.tipLine : '';
+          cell.innerHTML = '<span class="ep-n" title="明牌 ' + g.list.length + ' 人' + (stars ? '（70%+ ' + stars + ' 人）' : '') + lineTxt + ' — 點看名單">' + g.list.length +
             (stars ? '<span class="st">⭐' + stars + '</span>' : '') + '</span>';
           cell.firstChild.onclick = openIt;
         }
@@ -237,10 +249,11 @@
     try {
       if (!data || !data.picks || !it || it.type !== 'match') return out;
       var agg = aggregate(it, picksForCard(it, dateKey, data.picks));
-      var W = {}, N = {};
+      var W = {}, N = {}, L = {};
       agg.rows.forEach(function (r) {
         W[r.opt] = r.list.reduce(function (s, p) { return s + weightOf(p); }, 0);
         N[r.opt] = r.list.length;
+        if (r.tipLine != null) L[r.opt] = r.tipLine;
       });
       var fav = it.hdFav === 'away' ? it.away : it.home, und = it.hdFav === 'away' ? it.home : it.away;
       var hdv = it.hdVal ? ' ' + it.hdVal : '', totv = it.totVal ? ' ' + it.totVal : '';
@@ -252,8 +265,12 @@
       PAIRS.forEach(function (pr) {
         var aW = W[pr[0]] || 0, bW = W[pr[1]] || 0, tot = aW + bW;
         [[pr[0], aW, bW, pr[3]], [pr[1], bW, aW, pr[4]]].forEach(function (x) {
-          if (x[1] >= EP_K && x[1] / (x[1] + x[2] || 1) >= EP_DOM)
-            out.recs.push({ opt: x[0], pick: x[3][0], mk: x[3][1], market: x[3][2], w: x[1], n: N[x[0]] || 0 });
+          if (x[1] >= EP_K && x[1] / (x[1] + x[2] || 1) >= EP_DOM) {
+            var tl = L[x[0]];
+            // 讓分推薦的標籤用高手的台彩帶號線（顛倒場與卡片列正負相反時，這才是他們實際下的邊）
+            var mk = (tl != null && (x[0] === 'hdGive' || x[0] === 'hdRecv')) ? ((tl > 0 ? '+' : '') + tl + '（台彩）') : x[3][1];
+            out.recs.push({ opt: x[0], pick: x[3][0], mk: mk, market: x[3][2], w: x[1], n: N[x[0]] || 0, tipLine: tl != null ? tl : null });
+          }
         });
         if (aW && bW && tot >= EP_K + 1 && Math.max(aW, bW) / tot < EP_DOM)
           out.splits.push({ market: pr[2], txt: aW + ':' + bW });

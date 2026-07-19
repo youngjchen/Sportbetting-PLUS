@@ -363,6 +363,13 @@
   .sumsec{font-size:11.5px;} #summary .sumempty{font-size:13.5px;}
   #summary .zhanrow{font-size:15px;} #summary .zhanhint{font-size:12px;line-height:1.6;}
   #summary .sumhead{font-size:14px;} #summary .sumhead .count{font-size:13px;}
+  /* 今日戰績明細列 */
+  .zhandetail{margin-top:8px;border-top:1px solid var(--line);padding-top:6px;}
+  .zdrow{display:flex;gap:8px;align-items:baseline;padding:3px 14px;font-size:13.5px;}
+  .zdrow .zmk{flex:0 0 14px;font-weight:800;} .zdrow .zmk.ok{color:var(--mlb);} .zdrow .zmk.no{color:var(--conflict);}
+  .zdrow .za{color:var(--ink-dim);font-size:12px;flex:0 0 38px;white-space:nowrap;}
+  .zdrow .zm{color:var(--ink-dim);font-size:12px;flex:0 0 92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .zdrow .zp{font-weight:600;white-space:nowrap;}
   .sumrow.conflict .n{color:var(--conflict);}
   .sumrow.conflict.cross .pk{color:var(--cross);}
   .sumrow.conflict.cross .n{color:var(--cross);}
@@ -3071,13 +3078,15 @@ function collectSummary(){
     if(window.__expertPicks && window.__expertPicks.epStrong){
       try{
         const eps = window.__expertPicks.epStrong(it, doc.activeDate);
-        eps.recs.forEach(r=> strong.push({matchName, league:lg, pick:r.pick, mk:r.mk, n:r.w, it, market:r.market, ep:true, np:r.n}));
+        eps.recs.forEach(r=> strong.push({matchName, league:lg, pick:r.pick, mk:r.mk, n:r.w, it, market:r.market, ep:true, np:r.n, tipLine:r.tipLine}));
         eps.splits.forEach(s=> conflicts.push({matchName, league:lg, market:`${s.market}明牌分歧 ${s.txt}`, kind:"ep"}));
       }catch(_){}
     }
   });
-  // 雙訊號：同一選項 手動燈≥3 ＋ 明牌共識 都推 → 併成一筆、置頂
-  strong.forEach(s=>{ if(!s.ep){ const e=strong.find(x=>x.ep && !x.drop && x.it===s.it && x.market===s.market && x.pick===s.pick); if(e){ s.dual=true; s.epW=e.n; s.np=e.np; e.drop=true; } } });
+  // 雙訊號：同一選項 手動燈≥3 ＋ 明牌共識 都推 → 併成一筆、置頂。
+  // 顛倒場守門：明牌的台彩線正負與卡片列(STAKE)角色相反時（讓列配+線/受讓列配−線）＝不是同一注，不合併
+  strong.forEach(s=>{ if(!s.ep){ const e=strong.find(x=>x.ep && !x.drop && x.it===s.it && x.market===s.market && x.pick===s.pick
+      && (x.tipLine==null || (s.market==="hd" ? x.tipLine<0 : s.market==="recv" ? x.tipLine>0 : true))); if(e){ s.dual=true; s.epW=e.n; s.np=e.np; e.drop=true; } } });
   const strongOut = strong.filter(s=>!s.drop);
   strongOut.sort((a,b)=> ((b.dual?1:0)-(a.dual?1:0)) || b.n-a.n);
   return {strong: strongOut, conflicts};
@@ -3085,46 +3094,62 @@ function collectSummary(){
 
 // 今日下注命中率（只看當天板上已結算、且該選項點 ≥3 燈的）。tie / push / 未決定 不列入。
 function todayHitRate(){
-  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, bet:{hit:0,miss:0}, ep:{hit:0,miss:0}, dual:{hit:0,miss:0}, any:0 };
+  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, bet:{hit:0,miss:0}, ep:{hit:0,miss:0}, dual:{hit:0,miss:0}, any:0, rows:[] };
   state.items.forEach(it=>{
     if(it.type!=="match" || !it.settled) return;
     const s = it.settled;
-    // 明牌軌帳：這張卡的明牌推薦選項集合（add-on 缺席＝空集合，零回歸）
-    let epSet = null;
-    const epTally = (opt, litOK, hit)=>{
-      if(epSet===null){ epSet=new Set(); try{ if(window.__expertPicks&&window.__expertPicks.epStrong) window.__expertPicks.epStrong(it, doc.activeDate).recs.forEach(x=>epSet.add(x.opt)); }catch(_){} }
-      if(!epSet.has(opt)) return;
-      (hit?r.ep.hit++:r.ep.miss++);
-      if(litOK) (hit?r.dual.hit++:r.dual.miss++);   // 雙訊號＝手動≥3燈且明牌同向
+    const matchName = `${it.away}/${it.home}`;
+    const fav = it.hdFav==="away"?it.away:it.home, und = it.hdFav==="away"?it.home:it.away;
+    const hv = it.hdVal?` ${it.hdVal}`:"";
+    const det = (acct,label,hit)=>r.rows.push({acct, m:matchName, label, hit});
+    // 明牌軌：opt → 推薦紀錄（含台彩帶號線）；add-on 缺席＝空表，零回歸
+    let epMap = null;
+    const epRec = (opt)=>{
+      if(epMap===null){ epMap={}; try{ if(window.__expertPicks&&window.__expertPicks.epStrong) window.__expertPicks.epStrong(it, doc.activeDate).recs.forEach(x=>epMap[x.opt]=x); }catch(_){} }
+      return epMap[opt];
+    };
+    const epTally = (opt, litOK, hit, label)=>{
+      const rec = epRec(opt); if(!rec) return;
+      // 顛倒場：讓分明牌以「高手自己的台彩線＋終場比分」判定，不借用卡片列(STAKE)的過盤結果
+      if((opt==="hdGive"||opt==="hdRecv") && rec.tipLine!=null && s.awayScore!=null && s.homeScore!=null){
+        const aTeam = rec.pick===it.away;
+        const ts = aTeam?s.awayScore:s.homeScore, os = aTeam?s.homeScore:s.awayScore;
+        if(ts+rec.tipLine===os) return;                                        // 走盤不列入
+        hit = (ts+rec.tipLine)>os;
+        label = `${rec.pick} ${rec.tipLine>0?"+":""}${rec.tipLine}`;
+      }
+      (hit?r.ep.hit++:r.ep.miss++); det("🎯",label,hit);
+      if(litOK){ (hit?r.dual.hit++:r.dual.miss++); det("⚡",label,hit); }
     };
     // 獨贏
     if(s.ml==="away"||s.ml==="home"){
-      if(it.mlAway.lights>=3){ r.any++; (s.ml==="away"?r.ml.hit++:r.ml.miss++); }
-      if(it.mlHome.lights>=3){ r.any++; (s.ml==="home"?r.ml.hit++:r.ml.miss++); }
-      epTally("mlAway", it.mlAway.lights>=3, s.ml==="away");
-      epTally("mlHome", it.mlHome.lights>=3, s.ml==="home");
-      if(it.mlAway.bet){ (s.ml==="away"?r.bet.hit++:r.bet.miss++); }             // 自主注（不限燈數）
-      if(it.mlHome.bet){ (s.ml==="home"?r.bet.hit++:r.bet.miss++); }
+      if(it.mlAway.lights>=3){ r.any++; const h=s.ml==="away"; (h?r.ml.hit++:r.ml.miss++); det("獨贏",it.away,h); }
+      if(it.mlHome.lights>=3){ r.any++; const h=s.ml==="home"; (h?r.ml.hit++:r.ml.miss++); det("獨贏",it.home,h); }
+      epTally("mlAway", it.mlAway.lights>=3, s.ml==="away", it.away);
+      epTally("mlHome", it.mlHome.lights>=3, s.ml==="home", it.home);
+      if(it.mlAway.bet){ const h=s.ml==="away"; (h?r.bet.hit++:r.bet.miss++); det("注",it.away,h); }
+      if(it.mlHome.bet){ const h=s.ml==="home"; (h?r.bet.hit++:r.bet.miss++); det("注",it.home,h); }
     }
     // 讓分（過盤/沒過；成交線結果優先=對調場，push 不列入）
     if(s.hd==="cover"||s.hd==="nocover"){
       const gv = (s.myHdGive!=null) ? s.myHdGive : (s.hd==="cover"?"cover":"nocover");
       const rv = (s.myHdRecv!=null) ? s.myHdRecv : (s.hd==="cover"?"nocover":"cover");
-      if(it.hdGive.lights>=3 && gv!=="push"){ r.any++; (gv==="cover"?r.hd.hit++:r.hd.miss++); }
-      if(it.hdRecv.lights>=3 && rv!=="push"){ r.any++; (rv==="cover"?r.hd.hit++:r.hd.miss++); }
-      if(gv!=="push") epTally("hdGive", it.hdGive.lights>=3, gv==="cover");
-      if(rv!=="push") epTally("hdRecv", it.hdRecv.lights>=3, rv==="cover");
-      if(it.hdGive.bet && gv!=="push"){ (gv==="cover"?r.bet.hit++:r.bet.miss++); }
-      if(it.hdRecv.bet && rv!=="push"){ (rv==="cover"?r.bet.hit++:r.bet.miss++); }
+      if(it.hdGive.lights>=3 && gv!=="push"){ r.any++; const h=gv==="cover"; (h?r.hd.hit++:r.hd.miss++); det("讓分",fav+hv,h); }
+      if(it.hdRecv.lights>=3 && rv!=="push"){ r.any++; const h=rv==="cover"; (h?r.hd.hit++:r.hd.miss++); det("讓分",und+" 受讓",h); }
+      if(gv!=="push") epTally("hdGive", it.hdGive.lights>=3, gv==="cover", fav+hv);
+      if(rv!=="push") epTally("hdRecv", it.hdRecv.lights>=3, rv==="cover", und+" 受讓");
+      if(it.hdGive.bet && gv!=="push"){ const h=gv==="cover"; (h?r.bet.hit++:r.bet.miss++); det("注",fav+hv,h); }
+      if(it.hdRecv.bet && rv!=="push"){ const h=rv==="cover"; (h?r.bet.hit++:r.bet.miss++); det("注",und+" 受讓",h); }
     }
     // 大小（push 不列入）
     { const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="over"||st==="under"){   // B：命中用成交線 myTot
-      if(it.over.lights>=3){ r.any++; (st==="over"?r.tot.hit++:r.tot.miss++); }
-      if(it.under.lights>=3){ r.any++; (st==="under"?r.tot.hit++:r.tot.miss++); }
-      epTally("over", it.over.lights>=3, st==="over");
-      epTally("under", it.under.lights>=3, st==="under");
-      if(it.over.bet){ (st==="over"?r.bet.hit++:r.bet.miss++); }
-      if(it.under.bet){ (st==="under"?r.bet.hit++:r.bet.miss++); }
+      const tv = it.totVal?` ${it.totVal}`:"";
+      if(it.over.lights>=3){ r.any++; const h=st==="over"; (h?r.tot.hit++:r.tot.miss++); det("大小","大"+tv,h); }
+      if(it.under.lights>=3){ r.any++; const h=st==="under"; (h?r.tot.hit++:r.tot.miss++); det("大小","小"+tv,h); }
+      epTally("over", it.over.lights>=3, st==="over", "大"+tv);
+      epTally("under", it.under.lights>=3, st==="under", "小"+tv);
+      if(it.over.bet){ const h=st==="over"; (h?r.bet.hit++:r.bet.miss++); det("注","大"+tv,h); }
+      if(it.under.bet){ const h=st==="under"; (h?r.bet.hit++:r.bet.miss++); det("注","小"+tv,h); }
     } }
   });
   return r;
@@ -3197,8 +3222,17 @@ function renderSummary(){
     };
     [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml],["🎯 明牌軌", zhan.ep],["⚡ 雙訊號", zhan.dual],["自主注", zhan.bet]].forEach(([lab,m])=>{ const r=rowFor(lab,m); if(r) body.appendChild(r); });
     if(!body.children.length){ const e=document.createElement("div"); e.className="zhanempty"; e.textContent="今天還沒有已結算的手動燈（≥3）或明牌軌選項。"; body.appendChild(e); }
-    const hint = document.createElement("div"); hint.className="zhanhint"; hint.textContent="三帳分計：手動燈 ≥3／🎯明牌軌（加權共識 ≥5 且主導 ≥70%）／⚡雙訊號（兩軌同向）。和局／走盤不列入。全季統計請看數據回顧。";
-    body.appendChild(hint);
+    // 各項命中明細（哪場哪個選項對/錯）
+    if(zhan.rows && zhan.rows.length){
+      const dt = document.createElement("div"); dt.className="zhandetail";
+      zhan.rows.forEach(e=>{
+        const d = document.createElement("div"); d.className="zdrow";
+        d.innerHTML = `<span class="zmk ${e.hit?"ok":"no"}">${e.hit?"✓":"✗"}</span><span class="za">${esc(e.acct)}</span>`+
+                      `<span class="zm">${esc(e.m)}</span><span class="zp">${esc(e.label)}</span>`;
+        dt.appendChild(d);
+      });
+      body.appendChild(dt);
+    }
     if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
     box.appendChild(body);
     const rz = document.createElement("div"); rz.className="sum-resize no-drag"; rz.title="拖曳調整大小";
@@ -7401,6 +7435,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep9"></script>
+</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep10"></script>
 </body>
 </html>
