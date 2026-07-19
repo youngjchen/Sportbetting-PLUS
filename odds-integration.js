@@ -116,6 +116,16 @@
     }
     return (best && bd <= TOL_MIN) ? best : titanT;
   }
+  // 歸檔場(id 帶 @)是否可信：官方/玩運彩同對戰有 ±TOL 內的場次才算真場次
+  //（2026-07-18 Titan 錯標 04:10 歸檔＝官方沒有的時段 → 排盤/認領都不該把它當一場）；
+  // 官方完全沒該對戰資料時放行（寧可信 Titan，別因 ps 斷線丟掉真歸檔場）。
+  function archiveCorroborated(g, dateKey) {
+    if (String(g.id).indexOf("@") < 0) return true;
+    var ts = pregameTimesFor(g.awayTeam, g.homeTeam, dateKey);
+    if (!ts.length) return true;
+    var t = gStartHHMM(g);
+    return ts.some(function (x) { var d = minDiff(x, t); return d != null && d <= TOL_MIN; });
+  }
   // 多個候選(雙重賽)時，用卡片開球時間(it.gameTime)挑最接近的那場；差超過 TOL 寧可不配（絕不錯配）。
   // 單一候選照舊回傳（真改期時要能跟隨）。
   function pickByTime(cands, it) {
@@ -132,6 +142,22 @@
   // 純函式：給「盤面已有卡片」與「當天 feed 的場」，回傳「還要新增哪幾場」(雙重賽會回該對戰缺的每一場)
   // 唯一鍵＝對戰＋開球時間；時間差 ≤TOL 視為同一場（吸收 Titan/官方之間的分鐘級差異，避免重複排卡）；
   // 沒記時間的舊卡每場扣一張。
+  // 同對戰 feed 場次先自我去重：歸檔場(id 帶 @) 與活列時間 ±TOL 內＝同一場（2026-07-19
+  // 海盜@守護者 172743(01:10)+歸檔172759@0110(01:10) 被當兩場 → 每次自動排盤多生一張空白卡）。
+  function dedupeFeedGames(games) {
+    var live = games.filter(function (g) { return String(g.id).indexOf("@") < 0; });
+    var out = live.slice();
+    games.forEach(function (g) {
+      if (String(g.id).indexOf("@") < 0) return;
+      var t = hhmmToMin(gStartHHMM(g));
+      var dup = out.some(function (o) {
+        var d = (t == null) ? null : minDiff(gStartHHMM(o), gStartHHMM(g));
+        return d != null && d <= TOL_MIN;
+      });
+      if (!dup) out.push(g);
+    });
+    return out;
+  }
   function gamesToAdd(existingItems, feedGames) {
     function pk(a, b) { return [a, b].sort().join("|"); }
     var byPair = {};
@@ -142,7 +168,7 @@
     });
     var out = [];
     Object.keys(byPair).forEach(function (key) {
-      var games = byPair[key].slice().sort(function (a, b) { return (hhmmToMin(gStartHHMM(a)) || 0) - (hhmmToMin(gStartHHMM(b)) || 0); });
+      var games = dedupeFeedGames(byPair[key]).sort(function (a, b) { return (hhmmToMin(gStartHHMM(a)) || 0) - (hhmmToMin(gStartHHMM(b)) || 0); });
       var cardTimes = [], noTime = 0;
       (existingItems || []).forEach(function (it) {
         if (!it || it.type !== "match" || pk(it.away, it.home) !== key) return;
@@ -450,6 +476,15 @@
     return changed;
   }
 
+  // 卡片是否帶使用者資料（燈/注/結算）。hdVal/totVal 可能是自動帶入不算；
+  // 空白卡若對不到真實場次可安全移除。
+  function cardHasData(c) {
+    if (!c) return false;
+    if (c.settled) return true;
+    var opts = [c.mlAway, c.mlHome, c.hdGive, c.hdRecv, c.over, c.under];
+    return opts.some(function (o) { return o && (((o.lights | 0) > 0) || o.bet); });
+  }
+
   /* ---- 卡片時間自癒（認領制）：修「重複卡」與「孤兒卡」兩種殘局 ----
      重複卡：同對戰同開球時間 ≥2 張（2026-07-17 Titan 搬列事故：01:35 卡被改成 07:10）。
      孤兒卡：卡片時間對不上該對戰任何已知場次 ±TOL（2026-07-18 事故：官方 G1=01:10、
@@ -479,32 +514,65 @@
         if ((g.startISO || "").slice(0, 10) !== dateKey) continue;
         var ok = (g.homeTeam === home && g.awayTeam === away) || (g.homeTeam === away && g.awayTeam === home);
         if (!ok) continue;
+        if (!archiveCorroborated(g, dateKey)) continue;   // 官方沒有的孤立歸檔時段不算場次
         var t = gStartHHMM(g); if (t) times[t] = g;
       }
       pregameTimesFor(away, home, dateKey).forEach(function (t) { if (!(t in times)) times[t] = null; });
       var known = Object.keys(times).sort();
       if (!known.length) return;
+      // 認領順序：有使用者資料的卡最優先（空白卡不得搶走真卡的時段——2026-07-19 大都會@費城人
+      // 空白新卡先佔走 03:05、資料卡永遠流浪的死循環），同類再新卡先認。claimed[t]=認領的卡。
       var claimed = {}, unplaced = [];
-      cards.slice().sort(function (a, b) { return (+b.id || 0) - (+a.id || 0); }).forEach(function (c) {
+      cards.slice().sort(function (a, b) {
+        var da = cardHasData(a) ? 1 : 0, db = cardHasData(b) ? 1 : 0;
+        if (da !== db) return db - da;
+        return (+b.id || 0) - (+a.id || 0);
+      }).forEach(function (c) {
         var best = null, bd = Infinity;
         known.forEach(function (t) {
           if (claimed[t]) return;
           var d = minDiff(c.gameTime, t);
           if (d != null && d < bd) { bd = d; best = t; }
         });
-        if (best != null && bd <= TOL_MIN) claimed[best] = 1;
+        if (best != null && bd <= TOL_MIN) claimed[best] = c;
         else unplaced.push(c);
       });
       if (!unplaced.length) return;
       var missing = known.filter(function (t) { return !claimed[t]; });
-      unplaced.sort(function (a, b) { return (+a.id || 0) - (+b.id || 0); });
-      for (var i = 0; i < unplaced.length && i < missing.length; i++) {
-        var card = unplaced[i], t2 = missing[i], g2 = times[t2];
-        card.gameTime = t2;
-        card.oddsId = g2 ? g2.id : null;
-        claimed[t2] = 1; changed = true;
-        try { console.log("[賠率] 修復卡片開球時間：", away, "@", home, "→", t2); } catch (e) {}
-      }
+      unplaced.sort(function (a, b) {
+        var da = cardHasData(a) ? 1 : 0, db = cardHasData(b) ? 1 : 0;
+        if (da !== db) return db - da;
+        return (+a.id || 0) - (+b.id || 0);
+      });
+      var rest = [];
+      unplaced.forEach(function (card) {
+        if (missing.length) {
+          var t2 = missing.shift(), g2 = times[t2];
+          card.gameTime = t2;
+          card.oddsId = g2 ? g2.id : null;
+          claimed[t2] = card; changed = true;
+          try { console.log("[賠率] 修復卡片開球時間：", away, "@", home, "→", t2); } catch (e) {}
+        } else rest.push(card);
+      });
+      rest.forEach(function (card) {
+        if (cardHasData(card)) {
+          // 資料卡沒場次可認：若某時段被空白卡占走 → 資料卡取代、空白卡移除；否則不動使用者資料
+          var t3 = known.find(function (t) { return claimed[t] && !cardHasData(claimed[t]); });
+          if (t3) {
+            var blank = claimed[t3], g3 = times[t3];
+            state.items = state.items.filter(function (x) { return x.id !== blank.id; });
+            card.gameTime = t3;
+            card.oddsId = g3 ? g3.id : null;
+            claimed[t3] = card; changed = true;
+            try { console.log("[賠率] 資料卡取代空白卡：", away, "@", home, "→", t3); } catch (e) {}
+          }
+          return;
+        }
+        // 空白且對不到任何已知場次（歸檔重複／改期遺留，如 04:10 幽靈卡）→ 移除
+        state.items = state.items.filter(function (x) { return x.id !== card.id; });
+        changed = true;
+        try { console.log("[賠率] 移除找不到場次的空白卡：", away, "@", home, card.gameTime); } catch (e) {}
+      });
     });
     if (changed) badge("已修復卡片開球時間 ✓");
     return changed;
@@ -535,7 +603,9 @@
       target = best;
     }
     if (typeof snapshot === "function") snapshot();
-    var toAdd = gamesToAdd(state.items, byDate[target]);   // 雙重賽會回該對戰缺的每一場(含第二場)
+    // 孤立歸檔時段（官方沒有）先剔除，避免替不存在的場次排卡
+    var candGames = byDate[target].filter(function (g) { return archiveCorroborated(g, target); });
+    var toAdd = gamesToAdd(state.items, candGames);        // 雙重賽會回該對戰缺的每一場(含第二場)
     var added = 0;
     toAdd.forEach(function (g) {
       var lg = g.league || null;
@@ -630,11 +700,16 @@
   }
 
   /* ---- 啟動 ---- */
-  function boot() { injectButtons(); fetchFeed(false).catch(function () {}); setInterval(function () { fetchFeed(false).catch(function () {}); }, REFRESH_MS); }
+  function boot() {
+    injectButtons(); fetchFeed(false).catch(function () {});
+    setInterval(function () { fetchFeed(false).catch(function () {}); }, REFRESH_MS);
+    // 手機回前景立即補抓（背景分頁計時器被凍結，回來不補會停在舊賠率）
+    document.addEventListener("visibilitychange", function () { if (!document.hidden) fetchFeed(false).catch(function () {}); });
+  }
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, _setFeed: function (f) { feed = f; } };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, _setFeed: function (f) { feed = f; } };
   }
 })();

@@ -365,13 +365,19 @@
   #summary .sumhead{font-size:14px;} #summary .sumhead .count{font-size:13px;}
   /* 今日戰績明細列 */
   .zhandetail{margin:2px 10px 8px 26px;padding:4px 0;background:rgba(255,255,255,.035);border-radius:8px;}
-  .zdrow{display:flex;gap:8px;align-items:baseline;padding:3px 12px;font-size:13.5px;}
+  .zdrow{display:flex;gap:8px;align-items:baseline;padding:3px 12px;font-size:13.5px;cursor:pointer;border-radius:6px;}
+  .zdrow:hover{background:rgba(255,255,255,.06);}
+  .zdlg{padding:5px 12px 1px;font-size:11px;color:var(--ink-dim);font-family:"Oswald";letter-spacing:.1em;}
   .zdrow .zmk{flex:0 0 14px;font-weight:800;} .zdrow .zmk.ok{color:var(--mlb);} .zdrow .zmk.no{color:var(--conflict);}
   .zdrow .zm{color:var(--ink-dim);font-size:12px;flex:0 0 92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .zdrow .zp{font-weight:600;white-space:nowrap;}
   .zhanrow .zcar{flex:0 0 12px;text-align:center;color:var(--ink-dim);font-size:11px;transition:transform .15s;}
   .zhanrow.zon .zcar{transform:rotate(90deg);}
   .zhanrow.zhas{cursor:pointer;}
+  .rv-alert{position:relative;}
+  .rv-alert::after{content:"❗";position:absolute;top:-7px;right:-5px;font-size:11px;line-height:1;}
+  .rv-alert-mk{font-size:12px;}
+  .drill-row.drill-today{background:rgba(255,176,46,.10);border-radius:6px;}
   .sumrow.conflict .n{color:var(--conflict);}
   .sumrow.conflict.cross .pk{color:var(--cross);}
   .sumrow.conflict.cross .n{color:var(--cross);}
@@ -1290,6 +1296,7 @@
 /* 曾經顛倒(收盤前變一致)徽章：靛藍/長春花色；非互動、僅標示 */
 .bbadge.was{ color:#c7cdff; background:rgba(127,139,245,.14); border-color:rgba(127,139,245,.55); cursor:default; }
 .bbadge.was:hover{ background:rgba(127,139,245,.22); }
+.bbadge.ppd{ color:#ffb0a6; background:rgba(255,107,107,.10); border-color:rgba(255,107,107,.45); cursor:default; }
 .bico{ width:26px; height:26px; display:grid; place-items:center; border-radius:7px; cursor:pointer; color:var(--ink-dim); font-size:14px; flex:0 0 auto; }
 .bico:hover{ background:#222a36; color:var(--ink); }
 .bico.bdel:hover{ color:var(--danger); }
@@ -2787,6 +2794,12 @@ function renderCardB(it){
   const gap = bGapInfo(it);
   if(gap){ const g=document.createElement("span"); g.className="bwarn "+gap.cls; g.textContent=gap.txt; g.title=gap.title; head.appendChild(g); }
   if(it.settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改 / 取消結算"; sm.onclick=()=>openSettleModal(it); head.appendChild(sm); }
+  // 延賽：官方/玩運彩狀態 postponed（如比賽延期）→ 徽章標示；比賽不會開打也不會結算，可放心刪卡
+  if(!it.settled){ try{
+    const fu = window.__psFusion;
+    const pg = (fu && fu.findGame) ? fu.findGame(fu.getData(), it, doc.activeDate) : null;
+    if(pg && pg.status==="postponed"){ const pd=document.createElement("span"); pd.className="bbadge ppd"; pd.textContent="⏸ 延賽"; pd.title="官方判定延賽（補賽另排新場次）— 此卡不會開打與結算，可刪除"; head.appendChild(pd); }
+  }catch(_){} }
   // 顛倒：純標記切換（點一下變亮，不開任何輸入視窗）
   const flipB = document.createElement("button"); flipB.className="bbadge"+(it.platformFlip?" on":""); flipB.textContent = it.platformFlip?"⇅ 顛倒":"顛倒"; flipB.title="標記平台顛倒（台彩 vs STAKE 受讓方相反）— 點一下切換"; flipB.onclick=()=>{ snapshot(); it.platformFlip=!it.platformFlip; save(); render(); };
   // 曾經顛倒（收盤前已收斂一致）→ 靛藍徽章標示，讓賽前/已結算的收斂場也能一眼辨識（非互動）
@@ -3103,7 +3116,8 @@ function todayHitRate(){
     const matchName = `${it.away}/${it.home}`;
     const fav = it.hdFav==="away"?it.away:it.home, und = it.hdFav==="away"?it.home:it.away;
     const hv = it.hdVal?` ${it.hdVal}`:"";
-    const det = (acct,label,hit)=>r.rows.push({acct, m:matchName, label, hit});
+    const lg = (typeof leagueOf==="function") ? leagueOf(it) : "zz";
+    const det = (acct,label,hit)=>r.rows.push({acct, m:matchName, label, hit, lg, itId:it.id});
     // 明牌軌：opt → 推薦紀錄（含台彩帶號線）；add-on 缺席＝空表，零回歸
     let epMap = null;
     const epRec = (opt)=>{
@@ -3158,6 +3172,7 @@ function todayHitRate(){
 }
 
 function renderSummary(){
+  try{ updateReviewAlert(); }catch(_){}
   const old = canvas.querySelector("#summary"); if(old) old.remove();
   if(!state.items.some(i=>i.type==="match")){ hideSummaryLauncher(); return; }
   const {strong, conflicts} = collectSummary();
@@ -3237,11 +3252,19 @@ function renderSummary(){
       if(doc.zhanOpen===key){
         r.classList.add("zon");
         const dt=document.createElement("div"); dt.className="zhandetail";
-        mine.forEach(en=>{
-          const d=document.createElement("div"); d.className="zdrow";
-          d.innerHTML = `<span class="zmk ${en.hit?"ok":"no"}">${en.hit?"✓":"✗"}</span>`+
-                        `<span class="zm">${esc(en.m)}</span><span class="zp">${esc(en.label)}</span>`;
-          dt.appendChild(d);
+        const lgs = LG_ORDER.filter(k=>mine.some(e=>e.lg===k));
+        const multi = lgs.length>1;
+        lgs.forEach(k=>{
+          if(multi){ const h=document.createElement("div"); h.className="zdlg"; h.textContent=LG_LABEL[k]||k; dt.appendChild(h); }
+          mine.filter(e=>e.lg===k).forEach(en=>{
+            const d=document.createElement("div"); d.className="zdrow";
+            d.innerHTML = `<span class="zmk ${en.hit?"ok":"no"}">${en.hit?"✓":"✗"}</span>`+
+                          `<span class="zm">${esc(en.m)}</span><span class="zp">${esc(en.label)}</span>`;
+            d.title="跳到該場卡片";
+            d.addEventListener("pointerdown",(e)=>e.stopPropagation());
+            d.addEventListener("click",(e)=>{ e.stopPropagation(); jumpToCard(en.itId); });
+            dt.appendChild(d);
+          });
         });
         body.appendChild(dt);
       }
@@ -4526,6 +4549,15 @@ $("#fitBtn") && ($("#fitBtn").onclick = doFit);
 $("#fitBtn2") && ($("#fitBtn2").onclick = doFit);
 
 /* ---- league jump buttons (bottom-right): pan to a league's top-left card ---- */
+// 跳到指定卡片（與導覽列標籤同邏輯：直設 scrollTop 單幀到位＋閃爍高亮）
+function jumpToCard(id){
+  const card = world.querySelector('.card[data-id="'+id+'"]');
+  if(!card || !canvas) return;
+  const target = canvas.scrollTop + (card.getBoundingClientRect().top - canvas.getBoundingClientRect().top) - 10;
+  canvas.scrollTop = Math.max(0, target);
+  card.classList.add("navflash");
+  setTimeout(()=>card.classList.remove("navflash"), 1200);
+}
 function jumpToLeague(lg){
   const cards = state.items.filter(i=>i.type==="match" && leagueOf(i)===lg);
   if(!cards.length) return;
@@ -5166,10 +5198,12 @@ let _drillSeq = 0;
 function drillBlock(games, roleFn){
   if(!games || !games.length) return {id:null, html:""};
   const id = "drill_"+(++_drillSeq);
+  const tdy = (typeof RV_TODAY==="function") ? RV_TODAY() : "";
   let rows = "";
   games.slice().sort((a,b)=> (a.date<b.date?1:-1)).forEach(g=>{
     const sc = (g.aScore!=null&&g.hScore!=null) ? `${g.aScore}-${g.hScore}` : "—";
-    rows += `<div class="drill-row"><span class="dr-date">${(g.date||"").slice(5)}</span>`+
+    const nw = g.date===tdy;
+    rows += `<div class="drill-row${nw?" drill-today":""}">${nw?'<span class="rv-alert-mk">❗</span>':''}<span class="dr-date">${(g.date||"").slice(5)}</span>`+
             `<span class="dr-match">${esc(g.away)} <b>${sc}</b> ${esc(g.home)}</span>`+
             `<span class="dr-role">${roleFn(g)}</span></div>`;
   });
@@ -5488,6 +5522,26 @@ function collectCrossTab(leagueFilter){
   }
   return { grp, other, total:gs.length };
 }
+// 異常組合統計「未讀」提示：簽名＝已分類異常場總數＋最新日期，任何新結算異常場都會改變簽名；
+// 開啟數據回顧即視為已讀（doc.anomalySeen）。今日場在表列/明細另帶 ❗ 指出歸類位置。
+const RV_TODAY = ()=> new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+function anomSig(){
+  const ct = collectCrossTab("all");
+  const bs = [ct.grp.flip.all, ct.grp.conv.all, ct.other.swapOnly, ct.other.divOnly, ct.other.bothOD];
+  let n=0, last="";
+  bs.forEach(b=>{ n+=b.n; b.games.forEach(g=>{ if(g.date && g.date>last) last=g.date; }); });
+  return n+"|"+last;
+}
+function anomUnseen(){ try{ return anomSig() !== (doc.anomalySeen||""); }catch(_){ return false; } }
+function updateReviewAlert(){
+  const un = anomUnseen();
+  ["reviewBtn","reviewQuickBtn"].forEach(id=>{
+    const b=document.getElementById(id); if(!b) return;
+    if(!b.dataset.t0) b.dataset.t0 = b.title||"";
+    b.classList.toggle("rv-alert", un);
+    b.title = un ? (b.dataset.t0+"｜異常組合統計有新結算場") : b.dataset.t0;
+  });
+}
 function renderReviewPage(){
   const body = $("#reviewBody"); if(!body) return;
   const scope = parseInt($("#reviewScope").value,10) || 3;
@@ -5500,6 +5554,7 @@ function renderReviewPage(){
       `回顧的資料來自「結算後的對戰卡」——只有結算時記錄了燈號的比賽才會進來。`+
       `從現在起每結算一場（且該盤口有點燈）就會累積。<br><br>`+
       `提醒：之前匯入的歷史比賽沒有燈號紀錄，不會出現在這裡。</div>`;
+    try{ doc.anomalySeen = anomSig(); save(); updateReviewAlert(); }catch(e){}   // 開了回顧＝已讀
     return;
   }
 
@@ -5524,9 +5579,11 @@ function renderReviewPage(){
   // ---- ◆ 異常組合統計（三組 × 組合 × 三市場，無基準）----
   {
     const ct = collectCrossTab(leagueF);
-    const info = rvInfo("只統計<b>異常場</b>，正常場（無任何異常）不列、只當背景基準。<br><b>顛倒</b>＝收盤台美讓分方仍相反；<b>收斂</b>＝曾相反、收盤貼回一致；<b>對調</b>＝賽前讓分方換過邊；<b>背離</b>＝STAKE 收盤低賠方≠讓分方（缺收盤賠率時改用下注賠率；賠率差&lt;0.10 無明確熱門則不列入背離）。<br>顛倒／收斂各自再拆「單獨／＋對調／＋背離／＋兩者」，每格給三市場命中率（分子/分母）。<b>點任一列</b>看該格逐場明細。<br>任何格 &lt;30 場都是雜訊，僅供觀察。");
+    const anomNew = anomUnseen();
+    const tdy = RV_TODAY();
+    const info = rvInfo("只統計<b>異常場</b>，正常場（無任何異常）不列、只當背景基準。<br><b>顛倒</b>＝收盤台美讓分方仍相反；<b>收斂</b>＝曾相反、收盤貼回一致；<b>對調</b>＝賽前讓分方換過邊；<b>背離</b>＝STAKE 收盤低賠方≠讓分方（缺收盤賠率時改用下注賠率；賠率差&lt;0.10 無明確熱門則不列入背離）。<br>顛倒／收斂各自再拆「單獨／＋對調／＋背離／＋兩者」，每格給三市場命中率（分子/分母）。<b>點任一列</b>看該格逐場明細。<br>任何格 &lt;30 場都是雜訊，僅供觀察。<br>❗＝含今日結算場的格；點開即消未讀。");
     const pc = (x,n)=> n?Math.round(100*x/n)+"%":"—";
-    html += `<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">顛倒／收斂／其他異常 × 三市場</span>${info.icon}</div>${info.pop}`;
+    html += `<div class="rv-section"><div class="rv-head">◆ 異常組合統計 ${anomNew?'<span class="rv-alert-mk">❗</span>':''}<span class="rv-sub">顛倒／收斂／其他異常 × 三市場</span>${info.icon}</div>${info.pop}`;
     if(!ct.total){
       html += `<div class="rv-empty">尚無 flipState 標記的結算場。每在結算視窗設「顛倒場狀態」就會累積。</div>`;
     } else {
@@ -5540,8 +5597,9 @@ function renderReviewPage(){
       const ROW=(lbl,o)=>{
         if(!o.n) return `<tr class="rv-row"><td class="lbl" style="color:var(--ink-dim)">${lbl}</td><td>0</td><td>—</td><td>—</td><td>—</td></tr>`;
         const det=drillBlock(o.games, roleFn);
+        const hasToday = o.games.some(g=>g.date===tdy);
         let h=`<tr class="rv-row drill-toggle"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
-          `<td class="lbl">${lbl}</td><td>${o.n}</td>`+
+          `<td class="lbl">${lbl}${hasToday?' <span class="rv-alert-mk">❗</span>':''}</td><td>${o.n}</td>`+
           `<td>${pc(o.hw,o.hwN)} <span class="rv-samp">${o.hw}/${o.hwN}</span></td>`+
           `<td>${pc(o.cov,o.covN)} <span class="rv-samp">${o.cov}/${o.covN}</span></td>`+
           `<td>${pc(o.ov,o.ovN)} <span class="rv-samp">${o.ov}/${o.ovN}</span></td></tr>`;
@@ -5887,6 +5945,8 @@ function renderReviewPage(){
     const lights = secs.filter(s => { const h = s.querySelector(".rv-head"); return h && /[①②③④]/.test(h.textContent); });
     lights.forEach(s => { if (eighth) body.insertBefore(s, eighth); else body.appendChild(s); });
   } catch(e){}
+  // 開啟數據回顧＝異常組合統計已讀（❗ 消失，直到有新結算異常場改變簽名）
+  try{ doc.anomalySeen = anomSig(); save(); updateReviewAlert(); }catch(e){}
 }
 
 // Validate the stored "數據偏向" leading direction against actual ml result.
@@ -7449,6 +7509,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260718heal5"></script><script src="./pregame-integration.js?v=20260709settle1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep10"></script>
+</script><script src="./odds-integration.js?v=20260719heal6"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260719ep11"></script>
 </body>
 </html>

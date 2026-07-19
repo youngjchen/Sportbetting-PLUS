@@ -123,6 +123,8 @@
     '#ep-panel .ep-x{margin-left:auto;width:30px;height:30px;display:flex;align-items:center;justify-content:center;' +
       'cursor:pointer;border-radius:8px;color:#8a96a6;}' +
     '#ep-panel .ep-x:hover{color:#e9eef5;background:rgba(255,255,255,.06);}' +
+    '#ep-panel .ep-upd{margin-left:auto;font-size:11.5px;font-weight:600;color:#8fa3b8;letter-spacing:.02em;}' +
+    '#ep-panel .ep-hd .ep-upd+.ep-x{margin-left:6px;}' +
     '#ep-panel .ep-sec{padding:8px 12px 2px;color:#9bd5ff;font-weight:700;}' +
     '#ep-panel .ep-row{display:flex;align-items:baseline;gap:7px;padding:4px 12px;line-height:1.5;}' +
     '#ep-panel .ep-row .nm{color:#e6f0ff;}' +
@@ -139,7 +141,11 @@
   function openPanel(it, agg, x, y) {
     closePanel();
     var p = document.createElement('div'); p.id = 'ep-panel';
-    var html = '<div class="ep-hd">🎯 高手明牌 ×' + agg.total + '<span class="ep-x" title="關閉">✕</span></div>';
+    // 資料時間戳＝爬蟲上次完抓時間（updated），手機上判斷「新一輪抓完沒」全靠這個
+    var upd = (data && data.updated) ? String(data.updated).slice(5, 16).replace('T', ' ') : '';
+    var html = '<div class="ep-hd">🎯 高手明牌 ×' + agg.total +
+      (upd ? '<span class="ep-upd" title="明牌資料抓取時間">' + esc(upd) + '</span>' : '') +
+      '<span class="ep-x" title="關閉">✕</span></div>';
     agg.rows.forEach(function (r) {
       html += '<div class="ep-sec">' + esc(OPT_LABEL[r.opt](it, r)) + ' ×' + r.list.length + '</div>';
       r.list.forEach(function (pk) {
@@ -236,7 +242,11 @@
             !document.querySelector('#settleModal.show, #modal.show, .bpop')) render();
       }).catch(function () {});
   }
-  function boot() { fetchFeed(); setInterval(fetchFeed, REFRESH_MS); }
+  function boot() {
+    fetchFeed(); setInterval(fetchFeed, REFRESH_MS);
+    // 手機回前景立即補抓：背景分頁計時器被凍結，回來要等下個 5 分刷新才會看到新明牌
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) fetchFeed(); });
+  }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
 

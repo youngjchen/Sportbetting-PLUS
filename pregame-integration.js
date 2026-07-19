@@ -117,11 +117,15 @@
             if (!a || !h || !a.team || !h.team) return;
             var aCN = TEAM_CN[a.team.id], hCN = TEAM_CN[h.team.id]; if (!aCN || !hCN) return;
             var ab = (g.status && g.status.abstractGameState) || '';
+            var det = (g.status && g.status.detailedState) || '';
+            // 延賽/中止/取消優先於 abstract 判定（Postponed 場的 abstract 可能是 Final，會被誤標 finished）
+            var st = /Postponed|Suspended|Cancelled/i.test(det) ? 'postponed'
+                   : ab === 'Final' ? 'finished' : (ab === 'Live' ? 'inprogress' : 'scheduled');
             byPk[g.gamePk] = { officialId: 'mlb' + g.gamePk, _mlb: true,
               date: twDateOf(g.gameDate), gameTime: twHHMMof(g.gameDate), time: twHHMMof(g.gameDate),
               awayTeam: aCN, homeTeam: hCN,
               awayScore: (a.score != null ? a.score : null), homeScore: (h.score != null ? h.score : null),
-              status: ab === 'Final' ? 'finished' : (ab === 'Live' ? 'inprogress' : 'scheduled') };
+              status: st };
           }); });
         });
         MLB_DATA = Object.keys(byPk).map(function (k) { return byPk[k]; });
@@ -171,6 +175,8 @@
     load();  loadMLB();
     setInterval(load, SWEEP_MS);
     setInterval(loadMLB, MLB_POLL_MS);                              // ★ MLB 比分快輪詢
+    // 手機回前景立即補抓：背景分頁計時器被瀏覽器凍結，回來不補會停留在切出去前的資料
+    document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadMLB(); } });
 
     function $(id) { return document.getElementById(id); }
     function markFilled(inp) {
@@ -213,7 +219,7 @@
       var totFilled = totLine != null ? fillIfEmpty('settleTotVal', totLine) : false;
       var flip = buildFlipHint(g, it);
 
-      var statusTxt = isFinal ? '已結束' : (g.status === 'inprogress' ? '進行中' : '未開賽');
+      var statusTxt = isFinal ? '已結束' : (g.status === 'inprogress' ? '進行中' : g.status === 'postponed' ? '延賽' : '未開賽');
       var scoreLine = (isFinal && g.awayScore != null && g.homeScore != null)
         ? ('比分 ' + g.awayScore + ' : ' + g.homeScore + (sFilled ? '（已帶入）' : '（你已填，未覆蓋）'))
         : ('比分 尚未結束（' + statusTxt + '，不帶比分）');

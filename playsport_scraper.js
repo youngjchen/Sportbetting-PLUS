@@ -138,9 +138,12 @@ function extractGames(html, leagueName) {
     const awayScore = num($on.find('[id$="_as_b"]').first().text());
     const homeScore = num($on.find('[id$="_hs_b"]').first().text());
     // 「結束」只認 on-box 那句「比賽結束/完場/終場」，不靠比分存在（避免把 0:0 進行中誤判為結束）
+    // 延賽：on-box 顯示「比賽延期」（2026-07-19 道奇@洋基實測）等字樣 → postponed，
+    // 否則延賽場會以 inprogress 0:0 永遠掛著（板上卡片殺不掉的根因）
     const onText = clean($on.text()) || '';
     const isFinished = /比賽結束|完場|終場|Final/.test(onText);
-    const status = isFinished ? 'finished' : (previewVisible ? 'upcoming' : 'inprogress');
+    const isPostponed = /比賽延期|比賽取消|比賽中止|延賽|順延|保留比賽|裁定/.test(onText);
+    const status = isFinished ? 'finished' : isPostponed ? 'postponed' : (previewVisible ? 'upcoming' : 'inprogress');
 
     // 即時：目前局數 + 逐局比分（只在進行中/已結束的 on-box 有值；未開賽為空）
     const inning = clean($on.find('[id$="_inning"]').first().text());   // 例「4局下」；未開賽/已結束多半為空
