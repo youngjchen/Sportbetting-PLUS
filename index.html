@@ -364,12 +364,14 @@
   #summary .zhanrow{font-size:15px;} #summary .zhanhint{font-size:12px;line-height:1.6;}
   #summary .sumhead{font-size:14px;} #summary .sumhead .count{font-size:13px;}
   /* 今日戰績明細列 */
-  .zhandetail{margin-top:8px;border-top:1px solid var(--line);padding-top:6px;}
-  .zdrow{display:flex;gap:8px;align-items:baseline;padding:3px 14px;font-size:13.5px;}
+  .zhandetail{margin:2px 10px 8px 26px;padding:4px 0;background:rgba(255,255,255,.035);border-radius:8px;}
+  .zdrow{display:flex;gap:8px;align-items:baseline;padding:3px 12px;font-size:13.5px;}
   .zdrow .zmk{flex:0 0 14px;font-weight:800;} .zdrow .zmk.ok{color:var(--mlb);} .zdrow .zmk.no{color:var(--conflict);}
-  .zdrow .za{color:var(--ink-dim);font-size:12px;flex:0 0 38px;white-space:nowrap;}
   .zdrow .zm{color:var(--ink-dim);font-size:12px;flex:0 0 92px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .zdrow .zp{font-weight:600;white-space:nowrap;}
+  .zhanrow .zcar{flex:0 0 12px;text-align:center;color:var(--ink-dim);font-size:11px;transition:transform .15s;}
+  .zhanrow.zon .zcar{transform:rotate(90deg);}
+  .zhanrow.zhas{cursor:pointer;}
   .sumrow.conflict .n{color:var(--conflict);}
   .sumrow.conflict.cross .pk{color:var(--cross);}
   .sumrow.conflict.cross .n{color:var(--cross);}
@@ -3220,19 +3222,31 @@ function renderSummary(){
                     `<span class="zrate">${rate}%</span>`;
       return r;
     };
-    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml],["🎯 明牌軌", zhan.ep],["⚡ 雙訊號", zhan.dual],["自主注", zhan.bet]].forEach(([lab,m])=>{ const r=rowFor(lab,m); if(r) body.appendChild(r); });
+    const ACCT_KEY = {"讓分過盤":"讓分","大小過盤":"大小","獨贏命中":"獨贏","🎯 明牌軌":"🎯","⚡ 雙訊號":"⚡","自主注":"注"};
+    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml],["🎯 明牌軌", zhan.ep],["⚡ 雙訊號", zhan.dual],["自主注", zhan.bet]].forEach(([lab,m])=>{
+      const r=rowFor(lab,m); if(!r) return;
+      const key=ACCT_KEY[lab];
+      const mine=(zhan.rows||[]).filter(e=>e.acct===key);
+      const car=document.createElement("span"); car.className="zcar"; car.textContent = mine.length?"▸":"";
+      r.insertBefore(car, r.firstChild);
+      body.appendChild(r);
+      if(!mine.length) return;
+      r.classList.add("zhas"); r.title="點擊展開場次明細";
+      r.addEventListener("pointerdown",(e)=>e.stopPropagation());
+      r.addEventListener("click",(e)=>{ e.stopPropagation(); doc.zhanOpen=(doc.zhanOpen===key?null:key); save(); render(); });
+      if(doc.zhanOpen===key){
+        r.classList.add("zon");
+        const dt=document.createElement("div"); dt.className="zhandetail";
+        mine.forEach(en=>{
+          const d=document.createElement("div"); d.className="zdrow";
+          d.innerHTML = `<span class="zmk ${en.hit?"ok":"no"}">${en.hit?"✓":"✗"}</span>`+
+                        `<span class="zm">${esc(en.m)}</span><span class="zp">${esc(en.label)}</span>`;
+          dt.appendChild(d);
+        });
+        body.appendChild(dt);
+      }
+    });
     if(!body.children.length){ const e=document.createElement("div"); e.className="zhanempty"; e.textContent="今天還沒有已結算的手動燈（≥3）或明牌軌選項。"; body.appendChild(e); }
-    // 各項命中明細（哪場哪個選項對/錯）
-    if(zhan.rows && zhan.rows.length){
-      const dt = document.createElement("div"); dt.className="zhandetail";
-      zhan.rows.forEach(e=>{
-        const d = document.createElement("div"); d.className="zdrow";
-        d.innerHTML = `<span class="zmk ${e.hit?"ok":"no"}">${e.hit?"✓":"✗"}</span><span class="za">${esc(e.acct)}</span>`+
-                      `<span class="zm">${esc(e.m)}</span><span class="zp">${esc(e.label)}</span>`;
-        dt.appendChild(d);
-      });
-      body.appendChild(dt);
-    }
     if(doc.summarySize && doc.summarySize.bodyH){ body.style.maxHeight = doc.summarySize.bodyH+"px"; }
     box.appendChild(body);
     const rz = document.createElement("div"); rz.className="sum-resize no-drag"; rz.title="拖曳調整大小";

@@ -349,27 +349,32 @@ async function run() {
     }
   }
 
-  // 榜外白名單 → 個人戰績頁(季)判定合格市場（60%+30注同一把尺）；結果進 qual/mainQual
+  // 白名單一律補抓個人戰績頁(季)判定合格市場（60%+30注同一把尺）；結果進 qual/mainQual
+  // 不可因「榜上已有身分」跳過：榜單只覆蓋部分市場（例：主推榜上榜≠讓分合格，
+  // 劉小武運彩讓分65%/130注因不在讓分榜前段而被漏）。榜單數字優先，戰績頁只補缺的市場鍵。
   // （會一起存進 qualCache，final 模式直接沿用、不重抓）
   if (!useCache) {
     for (const { id: aid, lg } of targets) {
       for (const uid of WL[lg] || []) {
-        if (perAlliance[aid] && perAlliance[aid].has(uid)) continue;   // 榜上已有身分 → 用榜單數字
         let rec;
         try { rec = parseRecordStats(await getHTML(`${BASE}/member/${encodeURIComponent(uid)}/record/winRate?during=${DURING}&allianceid=${aid}`)); }
         catch (e) { console.log(`  ⚠️ 戰績頁 ${uid} a${aid}: ${e.message}`); await sleep(jitter()); continue; }
         let best = 0;
         for (const s of rec.stats) {
           if (s.wp < THRESH_WP || s.total < MIN_BETS) continue;
-          if (s.kind === 'main') mainQual[`${uid}|${aid}|${s.mode}`] = { wp: s.wp, total: s.total };
-          else {
+          if (s.kind === 'main') {
+            const k = `${uid}|${aid}|${s.mode}`;
+            if (!mainQual[k]) mainQual[k] = { wp: s.wp, total: s.total };
+          } else {
             const gt = gtOf(s.mode, s.kind);
             if (gt == null) continue;
-            qual[`${uid}|${aid}|${s.mode}|${gt}`] = { wp: s.wp, w: s.w, l: s.l, total: s.total, label: '追蹤·' + QUAL_GT[s.mode][gt] };
+            const k = `${uid}|${aid}|${s.mode}|${gt}`;
+            if (!qual[k]) qual[k] = { wp: s.wp, w: s.w, l: s.l, total: s.total, label: '追蹤·' + QUAL_GT[s.mode][gt] };
           }
           if (s.wp > best) best = s.wp;
         }
-        if (best) (perAlliance[aid] = perAlliance[aid] || new Map()).set(uid, best);
+        const b0 = (perAlliance[aid] = perAlliance[aid] || new Map()).get(uid) || 0;
+        if (best > b0) perAlliance[aid].set(uid, best);
         if (rec.nickname && !nick[uid]) nick[uid] = rec.nickname;
         await sleep(jitter());
       }
