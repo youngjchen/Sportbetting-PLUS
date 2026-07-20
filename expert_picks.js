@@ -144,6 +144,20 @@ function mergePicks(prevPicks, newPicks, scopes) {
   return (prevPicks || []).filter(p => !scopes.has(p.league + '|' + p.date)).concat(newPicks);
 }
 
+// 清晨場日界修正（2026-07-20 胡小凱案）：playsport 傍晚後把「明晨場」滾進 today 頁
+// （MLB 賽事日跟美國日期走），照頁籤給日期會把 7/21 晨場記成 7/20 → 板上 7/21 卡看不到，
+// 且 scope 取代會把先前正確的 7/21 單洗掉。
+// 規則：today 頁、尚無結果、開球 < 12:00、且距現在已「過去」≥300 分 → 歸 +1 天。
+// 300 分＋正午上限＝避開亞洲午間在打場（KBO 13:00 雙重賽 G1、NPB 12:00 場結果未填時不受影響）。
+function fixMorningDate(day, date, p, nowMin, plusOneDate) {
+  if (day !== 'today' || p.result) return date;
+  const m = /^(\d\d):(\d\d)/.exec(String(p.time || ''));
+  if (!m) return date;
+  const t = (+m[1]) * 60 + (+m[2]);
+  if (t < 720 && (nowMin - t) >= 300) return plusOneDate;
+  return date;
+}
+
 // 從快取的合格表重建「每聯盟 uid→最佳勝率」（final 模式不打榜單）
 function rosterFromQual(qual, mainQual, aid) {
   const m = new Map();
@@ -401,8 +415,10 @@ async function run() {
           // 兩者都沒有 → 不吃（使用者 2026-07-18 確認：白名單也只吃合格市場）。
           if (!q && !mq) continue;
           const src = q || mq;
+          const nowTw = new Date(Date.now() + 8 * 3600e3);
+          const nowMin = nowTw.getUTCHours() * 60 + nowTw.getUTCMinutes();
           picks.push({
-            league: lg, date: date, time: p.time,
+            league: lg, date: fixMorningDate(day, date, p, nowMin, twDate(1)), time: p.time,
             away: feedCanon(p.away, lg) || p.away, home: feedCanon(p.home, lg) || p.home,
             market: boardMarket(p.mode, p.kind),
             team: p.team ? (feedCanon(p.team, lg) || p.team) : null,
@@ -457,4 +473,4 @@ async function run() {
 if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H };
+module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate };
