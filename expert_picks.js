@@ -144,6 +144,46 @@ function mergePicks(prevPicks, newPicks, scopes) {
   return (prevPicks || []).filter(p => !scopes.has(p.league + '|' + p.date)).concat(newPicks);
 }
 
+/* ---- 賽前型名冊（2026-07-21 使用者拍板：方案1+2）----
+   實證（roster_analysis 7/20-21）：下注時點可見的達標組 100% 來自「賽前型」高手；
+   賽前型+白名單 ~173 人＝與全量同覆蓋、負載 1/3。
+   · 常規 full 名冊＝賽前型(14天內有賽前可見單) ∪ 試用中新人(首見3天內) ∪ 白名單(外掛)
+   · 深掃(每日1次、台灣03-07時低峰)＝全量合格者：補歸檔/回測資料＋撈回改變習慣的人 */
+const PREGAME_LEAD_MIN = 25;
+const PREGAMER_DAYS = 14;
+const TRIAL_DAYS = 3;
+const daysBetween = (d1, d2) => Math.round((Date.parse(d2) - Date.parse(d1)) / 86400e3);
+// 本輪首見的單若在開賽前≥25分可見 → 記錄該人(lg|uid)最近賽前日
+function markPreGamers(newPicks, stampIso, preGamers) {
+  const nowMs = Date.parse(stampIso);
+  for (const p of newPicks) {
+    if (String(p.at) !== String(stampIso)) continue;
+    const m = /(\d\d):(\d\d)/.exec(p.time || ''); if (!m) continue;
+    const start = Date.parse(`${p.date}T${m[1]}:${m[2]}:00+08:00`);
+    if (isNaN(start)) continue;
+    if ((start - nowMs) / 60000 >= PREGAME_LEAD_MIN) preGamers[p.league + '|' + p.uid] = stampIso.slice(0, 10);
+  }
+  return preGamers;
+}
+// 常規 full 名冊過濾（深掃=全收並補記首見）；會就地更新 meta.firstFetched（新人開始試用）
+function rosterFilterFull(lg, uids, meta, today, deep) {
+  if (deep) {
+    uids.forEach(u => { const k = lg + '|' + u; if (!meta.firstFetched[k]) meta.firstFetched[k] = today; });
+    return uids;
+  }
+  return uids.filter(u => {
+    const k = lg + '|' + u;
+    const pg = meta.preGamers[k];
+    if (pg && daysBetween(pg, today) <= PREGAMER_DAYS) return true;
+    const ff = meta.firstFetched[k];
+    if (!ff) {
+      if (pg) { meta.firstFetched[k] = pg; return false; }   // 曾是賽前型＝早被觀察過→補記首見、不再試用
+      meta.firstFetched[k] = today; return true;             // 真新人→開始試用
+    }
+    return daysBetween(ff, today) < TRIAL_DAYS;
+  });
+}
+
 // 清晨場日界修正（2026-07-20 胡小凱案）：playsport 傍晚後把「明晨場」滾進 today 頁
 // （MLB 賽事日跟美國日期走），照頁籤給日期會把 7/21 晨場記成 7/20 → 板上 7/21 卡看不到，
 // 且 scope 取代會把先前正確的 7/21 單洗掉。
@@ -305,6 +345,15 @@ async function run() {
   let mainQual = {};      // `${uid}|${aid}|${mode}` -> {wp,total}
   let nick = {};          // uid -> nickname
   const perAlliance = {}; // aid -> Map(uid -> bestWp)
+  // 賽前型名冊狀態（跨輪持久化於 qualCache）＋深掃判定（每日1次、台灣03-07時）
+  const rosterMeta = {
+    preGamers: (prev && prev.qualCache && prev.qualCache.preGamers) || {},
+    firstFetched: (prev && prev.qualCache && prev.qualCache.firstFetched) || {},
+  };
+  const twHourNow = new Date(Date.now() + 8 * 3600e3).getUTCHours();
+  const lastDeepDate = (prev && prev.lastDeepAt) ? String(prev.lastDeepAt).slice(0, 10) : null;
+  const deep = decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== twDate(0);
+  if (decision.mode === 'full') console.log(deep ? '· 深掃輪：全量合格者（每日1次，補歸檔/回測＋撈回改變習慣者）' : '· 常規輪：賽前型名冊');
   const cacheFresh = prev && prev.qualCache && prev.qualCache.at && (Date.now() - Date.parse(prev.qualCache.at)) < 12 * 3600e3;
   const useCache = decision.mode === 'final' && cacheFresh;
   if (useCache) {
@@ -409,7 +458,8 @@ async function run() {
       const has = new Set(((prev && prev.picks) || []).filter(p => p.league === lg && (p.date === tw0 || p.date === tw1)).map(p => p.uid));
       uids = [...(perAlliance[aid] || new Map()).keys()].filter(u => has.has(u));
     } else {
-      uids = [...(perAlliance[aid] || new Map()).entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]);
+      const allQ = [...(perAlliance[aid] || new Map()).entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]);
+      uids = rosterFilterFull(lg, allQ, rosterMeta, twDate(0), deep);   // 常規=賽前型∪試用新人；深掃=全量
     }
     for (const w of WL[lg] || []) if (uids.indexOf(w) < 0) uids.push(w);   // 追蹤名單必抓
     coverage[lg] = { qualified: (perAlliance[aid] || new Map()).size, fetched: uids.length, whitelist: (WL[lg] || []).length };
@@ -458,6 +508,11 @@ async function run() {
     if (seen.has(k)) continue;
     seen.add(k); p.at = prevAt[k] || stamp; dedup.push(p);
   }
+  // 賽前型觀察：本輪首見且開賽前≥25分可見的單 → 記錄該人；過期身分(>30天)順手清
+  markPreGamers(dedup, stamp, rosterMeta.preGamers);
+  for (const k of Object.keys(rosterMeta.preGamers)) {
+    if (daysBetween(rosterMeta.preGamers[k], twDate(0)) > 30) delete rosterMeta.preGamers[k];
+  }
 
   // 合併上一輪：本輪掃過的 (league,date) 用新結果整批取代，其餘沿用；主檔只留昨天以後
   const scopes = new Set();
@@ -494,7 +549,11 @@ async function run() {
     counts: { qualified: Object.keys(qual).length, mainQualified: Object.keys(mainQual).length, picks: merged.length, newThisRun: dedup.length },
     coverage: coverage,
     lastFinal: lastFinal,
-    qualCache: useCache ? prev.qualCache : { at: stamp, qual: qual, mainQual: mainQual, nick: nick },
+    lastDeepAt: deep ? stamp : ((prev && prev.lastDeepAt) || null),
+    qualCache: Object.assign(
+      useCache ? Object.assign({}, prev.qualCache) : { at: stamp, qual: qual, mainQual: mainQual, nick: nick },
+      { preGamers: rosterMeta.preGamers, firstFetched: rosterMeta.firstFetched }
+    ),
     picks: merged,
   };
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
@@ -505,4 +564,4 @@ async function run() {
 if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate };
+module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS };

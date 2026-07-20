@@ -365,7 +365,7 @@
   /* ---- 重點總結明牌軌（2026-07-19 拍板：K=5 加權、主導率 70%）----
      recs＝主導側自身加權 ≥EP_K 且 加權主導率 ≥EP_DOM 的選項（反對是扣分項不是否決票）；
      splits＝兩側總加權 ≥EP_K+1 且主導率 <EP_DOM ＝「分歧」（列資訊、不進推薦、不算命中）。 */
-  var EP_K = 5, EP_DOM = 0.7;
+  var EP_K = 6, EP_DOM = 0.7;   // 2026-07-21 使用者拍板 K 5→6：廢名額後單量5.6倍，K6≈12組/天=舊舒適節奏
   function epStrong(it, dateKey) {
     var out = { recs: [], splits: [] };
     try {
