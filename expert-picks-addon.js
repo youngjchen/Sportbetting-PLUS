@@ -225,6 +225,7 @@
   }
   function hasNewFor(it) {
     try {
+      if (it.settled) return false;   // 已結算＝賽後才進的收費單，沒有下注價值 → 不亮未讀
       var dk = dateKeyNow();
       if (!data || !data.picks || !dk) return false;
       var picks = picksForCard(it, dk, data.picks);
@@ -266,8 +267,9 @@
     try {
       var cardEl = (typeof world !== 'undefined' ? world : document).querySelector('.card[data-id="' + it.id + '"]');
       if (!cardEl) return;
+      // 折疊/已結算卡沒有市場列（rows 空）→ 跳過列膠囊、但標頭膠囊照插
+      //（2026-07-20 使用者：收費明牌常賽後才進，折疊卡沒膠囊點不開名單）
       var rows = cardEl.querySelectorAll('.bmkt-row');
-      if (!rows.length) return;                                  // 已結算卡等無市場列 → 不動
       var dateKey = (typeof doc !== 'undefined' && doc && doc.activeDate) || null;
       var picks = (data && data.picks && dateKey) ? picksForCard(it, dateKey, data.picks) : [];
       var agg = aggregate(it, picks);

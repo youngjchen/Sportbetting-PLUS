@@ -378,6 +378,11 @@
   .rv-alert::after{content:"❗";position:absolute;top:-7px;right:-5px;font-size:11px;line-height:1;}
   .nv-epnew{display:inline-block;width:8px;height:8px;border-radius:50%;background:#ffb02e;
     box-shadow:0 0 0 2px rgba(255,176,46,.28);margin-left:6px;vertical-align:middle;animation:epPulse 2s infinite;}
+  .sec .banom, .bmkt-sec .banom{margin-left:8px;font-size:11.5px;font-weight:800;padding:2px 9px;border-radius:999px;
+    letter-spacing:.02em;white-space:nowrap;font-variant-numeric:tabular-nums;cursor:default;}
+  .banom.af{color:#ffc38a;background:rgba(255,150,40,.12);border:1px solid rgba(255,150,40,.5);}
+  .banom.aw{color:#c7cdff;background:rgba(127,139,245,.13);border:1px solid rgba(127,139,245,.55);}
+  .banom.as{color:#9ef0dd;background:rgba(46,196,166,.12);border:1px solid rgba(46,196,166,.5);}
   @keyframes epPulse{0%,100%{opacity:1}50%{opacity:.45}}
   @media (prefers-reduced-motion: reduce){ .nv-epnew{animation:none;} }
   .rv-alert-mk{font-size:12px;}
@@ -2446,7 +2451,10 @@ function renderCard(it){
   // ---- 讓分 / 受讓 ----
   const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
   favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 燈跟隊：換讓分方時兩槽燈互換，明牌燈不再被平台對調搬家
-  el.appendChild(sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null));
+  { const hdSec = sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null);
+    try{ const ai=bAnomInfo(it); if(ai){ const c=document.createElement("span"); c.className="banom "+ai.cls;
+      c.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; c.title=ai.tip; hdSec.appendChild(c); } }catch(_){}
+    el.appendChild(hdSec); }
   { const r = pctRow(sectionPctHTML(it,"hd")); if(r) el.appendChild(r); }
   const favSide = it.hdFav, undSide = it.hdFav==="away"?"home":"away";
   el.appendChild(optRow("讓", "give", it[favSide], teamColor(favSide), it.hdGive, hdConflict));
@@ -2703,6 +2711,33 @@ function bWinProbs(it){
 }
 // 「差X / 避開」：只在填了 STAKE 賠率且有模型時計算
 // bGapInfo（差N/避開膠囊）已刪（2026-07-20）：模型vs盤口勝差回測=決定性null、ERA修正顯著有害
+// ---- 異常場即時數據晶片：這場現在屬於哪種異常＋該類歷史讓分過盤率（決策點直接看，免開回顧）----
+// 2026-07-20 使用者實戰教訓：把「收斂」誤認成「顛倒+對調」下注守護者+1.5 輸慘 → 卡上直接標型+數據
+let __ctMemo=null, __ctMemoAt=0;
+function crossTabCached(){ const n=Date.now(); if(!__ctMemo || n-__ctMemoAt>800){ try{ __ctMemo=collectCrossTab("all"); }catch(_){ __ctMemo=null; } __ctMemoAt=n; } return __ctMemo; }
+function bAnomInfo(it){
+  const ist = (typeof intlFor==="function") ? intlFor(it) : null;
+  // 手標優先（結算視窗『顛倒場狀態』設定），沒手標才用國際軸即時判定
+  const kind = it.platformFlip ? "flip" : it.flipVanished ? "was"
+             : (ist && ist.v==="flip") ? "flip" : (ist && ist.v==="was") ? "was" : (ist && ist.v) ? "swap" : null;
+  if(!kind) return null;
+  const ct = crossTabCached(); if(!ct || !ct.total) return null;
+  const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
+  const line=(lbl,o)=> (o&&o.n)? `${lbl}：讓過 ${pc(o.cov,o.covN)}・主勝 ${pc(o.hw,o.hwN)}・開大 ${pc(o.ov,o.ovN)}（${o.n}場）` : null;
+  let lbl, cls, B, subs;
+  if(kind==="flip"){ lbl="顛倒"; cls="af"; B=ct.grp.flip.all;
+    subs=[line("單獨",ct.grp.flip.solo),line("＋對調",ct.grp.flip.swap),line("＋背離",ct.grp.flip.div),line("＋對調＋背離",ct.grp.flip.both)];
+  }else if(kind==="was"){ lbl="收斂"; cls="aw"; B=ct.grp.conv.all;
+    subs=[line("單獨",ct.grp.conv.solo),line("＋對調",ct.grp.conv.swap),line("＋背離",ct.grp.conv.div),line("＋對調＋背離",ct.grp.conv.both)];
+  }else{ lbl="對調"; cls="as";
+    const a=ct.other.swapOnly, b=ct.other.bothOD;
+    B={n:a.n+b.n, hw:a.hw+b.hw, hwN:a.hwN+b.hwN, cov:a.cov+b.cov, covN:a.covN+b.covN, ov:a.ov+b.ov, ovN:a.ovN+b.ovN};
+    subs=[line("只對調",a),line("對調＋背離",b)];
+  }
+  if(!B || !B.n) return null;
+  const tip = `${lbl}場歷史（全聯盟 ${B.n} 場）\n讓分過盤 ${pc(B.cov,B.covN)}・主勝 ${pc(B.hw,B.hwN)}・開大 ${pc(B.ov,B.ovN)}\n${subs.filter(Boolean).join("\n")}`;
+  return { lbl, cls, covTxt: pc(B.cov,B.covN), n: B.n, tip };
+}
 // 獨贏 ⓘ：STAKE 賠率評語（同結算畫面）
 function bStakeReadHTML(it){
   const wp = bWinProbs(it);
@@ -2937,7 +2972,11 @@ function renderCardB(it){
     const feedFlip = !!(it.feedFavTeam && it.feedFavTeam !== it[it.hdFav]);
     if(feedFlip){ flipHint=document.createElement("span"); flipHint.className="flaghint"; flipHint.textContent="⚠ 疑顛倒場"; flipHint.title=`工作流抓到的讓分熱門（${it.feedFavTeam}）與目前讓分方（${it[it.hdFav]}）相反`; }
     const hv = it.hdVal || "1.5";
-    const hdH=mktSecHead("讓分", hdConflict, [swap, flipHint], "hd");
+    // 異常場即時晶片：這場屬於哪種異常＋該類歷史讓分過盤率（tooltip=組合細分）
+    let anomChip=null;
+    try{ const ai=bAnomInfo(it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
+      anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
+    const hdH=mktSecHead("讓分", hdConflict, [swap, flipHint, anomChip], "hd");
     hdWrap.append(hdH.sec,
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
@@ -3467,7 +3506,9 @@ function renderMatchNav(){
             (ist.ls?`<br>台彩${ist.lsLive?"":"(開盤)"}：<b>${esc(ist.ls==="home"?it.home:it.away)} 讓${ist.ll!=null?ist.ll:""}</b>${ist.lsw?`　⇄${ist.lsw}`:""}`:`<br>台彩：無資料`)+
             (ist.tr&&ist.sw?`<br><span style="color:var(--ink-dim)">b365：${esc(ist.tr)}</span>`:"")+
             (ist.ltr?`<br><span style="color:var(--ink-dim)">台彩：${esc(ist.ltr)}</span>`:"")+
-            (ist.dv?`<br><span style="color:#ff5d7a">背離：bet365 獨贏熱門（${esc(ist.mf==="home"?it.home:it.away)}）≠ 讓分方</span>`:"");
+            (ist.dv?`<br><span style="color:#ff5d7a">背離：bet365 獨贏熱門（${esc(ist.mf==="home"?it.home:it.away)}）≠ 讓分方</span>`:"")+
+            (function(){ try{ const ai=(typeof bAnomInfo==="function")?bAnomInfo(it):null;
+              return ai? `<br><span style="color:#ffd88a">${ai.lbl}場歷史：讓分過盤 ${ai.covTxt}（${ai.n} 場）</span>`:""; }catch(_){ return ""; } })();
           t.appendChild(tip);
           setTimeout(()=>{ const h=(ev)=>{ if(!tip.contains(ev.target)&&ev.target!==bd){ tip.remove(); document.removeEventListener("pointerdown",h,true); } };
             document.addEventListener("pointerdown",h,true); },0);
@@ -7500,6 +7541,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260719heal6"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260720ep12"></script>
+</script><script src="./odds-integration.js?v=20260719heal6"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260720ep13"></script>
 </body>
 </html>
