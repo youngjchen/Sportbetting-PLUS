@@ -459,11 +459,31 @@ async function run() {
     seen.add(k); p.at = prevAt[k] || stamp; dedup.push(p);
   }
 
-  // 合併上一輪：本輪掃過的 (league,date) 用新結果整批取代，其餘沿用；只留昨天以後（歷史在 git）
+  // 合併上一輪：本輪掃過的 (league,date) 用新結果整批取代，其餘沿用；主檔只留昨天以後
   const scopes = new Set();
   for (const { lg } of targets) for (const date of Object.values(dates)) scopes.add(lg + '|' + date);
   const cutoff = twDate(-1);
-  const merged = mergePicks(prev && prev.picks, dedup, scopes).filter(p => p.date >= cutoff);
+  const mergedAll = mergePicks(prev && prev.picks, dedup, scopes);
+  const merged = mergedAll.filter(p => p.date >= cutoff);
+  // 修剪掉的舊單歸檔到 data/expert_archive/YYYY-MM.json —— 板上回看歷史日期用
+  // （2026-07-21 使用者發現 7/19 版面明牌全消失：cutoff 洗掉、板子讀不到 git 歷史）。
+  // 同鍵取最新＝result(準/囧) 後補會更新。
+  const dropped = mergedAll.filter(p => p.date < cutoff);
+  if (dropped.length) {
+    const byMonth = {};
+    dropped.forEach(p => { const m = p.date.slice(0, 7); (byMonth[m] = byMonth[m] || []).push(p); });
+    const akey = p => [p.uid, p.league, p.date, p.away, p.home, p.time, p.market, p.team || p.side].join('|');
+    for (const [m, arr] of Object.entries(byMonth)) {
+      const f = path.join(__dirname, 'data', 'expert_archive', m + '.json');
+      let old = [];
+      try { old = JSON.parse(fs.readFileSync(f, 'utf8')).picks || []; } catch (e) {}
+      const map = new Map(old.map(p => [akey(p), p]));
+      arr.forEach(p => map.set(akey(p), p));
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      fs.writeFileSync(f, JSON.stringify({ updated: stamp, picks: [...map.values()] }, null, 1));
+      console.log(`🗄️ 歸檔 ${m}：+${arr.length} → ${map.size} 筆`);
+    }
+  }
 
   const lastFinal = Object.assign({}, (prev && prev.lastFinal) || {});
   if (decision.mode === 'final') for (const lg of decision.leagues) lastFinal[lg] = stamp;

@@ -219,16 +219,18 @@
      簽名＝該卡當日全部明牌的 uid|選項|時戳 排序串；與 doc.epSeen[卡id] 不同＝有新單 →
      膠囊右上紅點＋導覽列紅點；點開名單即標已讀（doc 走 GitHub 同步，跨裝置一致）。 */
   function dateKeyNow() { try { return (typeof doc !== 'undefined' && doc && doc.activeDate) || null; } catch (e) { return null; } }
-  function currentAgg(it) { return aggregate(it, picksForCard(it, dateKeyNow(), (data && data.picks) || [])); }
+  function currentAgg(it) { return aggregate(it, picksForCard(it, dateKeyNow(), pickPool(dateKeyNow()))); }
   function itemSig(it, picks) {
     return picks.map(function (p) { return p.uid + '|' + (optOf(it, p) || '') + '|' + (p.at || ''); }).sort().join(';');
   }
   function hasNewFor(it) {
     try {
       if (it.settled) return false;   // 已結算＝賽後才進的收費單，沒有下注價值 → 不亮未讀
+      var dk0 = dateKeyNow();
+      if (dk0 && dk0 < twDateStr(0)) return false;   // 回看歷史日期不亮未讀
       var dk = dateKeyNow();
       if (!data || !data.picks || !dk) return false;
-      var picks = picksForCard(it, dk, data.picks);
+      var picks = picksForCard(it, dk, pickPool(dk));
       if (!picks.length) return false;
       var seen = (typeof doc !== 'undefined' && doc && doc.epSeen) || {};
       return seen[String(it.id)] !== itemSig(it, picks);
@@ -238,7 +240,7 @@
     try {
       var dk = dateKeyNow();
       if (!data || !data.picks || !dk || typeof doc === 'undefined' || !doc) return;
-      (doc.epSeen = doc.epSeen || {})[String(it.id)] = itemSig(it, picksForCard(it, dk, data.picks));
+      (doc.epSeen = doc.epSeen || {})[String(it.id)] = itemSig(it, picksForCard(it, dk, pickPool(dk)));
       if (typeof save === 'function') save();
       // 原地清紅點（不重繪整板，避免把剛開的面板洗掉）
       var pill = (typeof world !== 'undefined' ? world : document).querySelector('.card[data-id="' + it.id + '"] .ep-badge');
@@ -271,13 +273,13 @@
       //（2026-07-20 使用者：收費明牌常賽後才進，折疊卡沒膠囊點不開名單）
       var rows = cardEl.querySelectorAll('.bmkt-row');
       var dateKey = (typeof doc !== 'undefined' && doc && doc.activeDate) || null;
-      var picks = (data && data.picks && dateKey) ? picksForCard(it, dateKey, data.picks) : [];
+      var picks = dateKey ? picksForCard(it, dateKey, pickPool(dateKey)) : [];
       var agg = aggregate(it, picks);
       var byOpt = {};
       agg.rows.forEach(function (r) { byOpt[r.opt] = r; });
       var openIt = function (ev) {
         ev.stopPropagation();
-        openPanel(it, aggregate(it, picksForCard(it, dateKey, data.picks)), ev.clientX, ev.clientY);
+        openPanel(it, aggregate(it, picksForCard(it, dateKey, pickPool(dateKey))), ev.clientX, ev.clientY);
         refreshPanelData();   // 開面板即抓最新：抓完資料有變就原地重建（時戳/名單同步更新）
       };
       rows.forEach(function (row, i) {
@@ -313,6 +315,33 @@
     renderCard = function (it) { _orig(it); decorate(it); };
   }
 
+  /* ---- 歷史明牌（2026-07-21）：主檔只留今昨明，更早的在 data/expert_archive/YYYY-MM.json。
+     回看舊日期時按月懶載＋快取；載到後重繪。7/19 版面明牌消失案的解法。 ---- */
+  var ARCH_BASE = 'https://raw.githubusercontent.com/' + REPO + '/main/data/expert_archive/';
+  var ARCH_FALLBACK = './data/expert_archive/';
+  var archCache = {};   // 'YYYY-MM' -> {state:'loading'|'ok'|'miss', picks:[]}
+  function twDateStr(ofs) { var d = new Date(Date.now() + 8 * 3600e3 + (ofs || 0) * 86400e3); return d.toISOString().slice(0, 10); }
+  function pickPool(dateKey) {
+    var live = (data && data.picks) || [];
+    if (!dateKey) return live;
+    if (dateKey >= twDateStr(-1)) return live;               // 昨/今/明＝主檔範圍
+    if (live.some(function (p) { return p.date === dateKey; })) return live;
+    var m = String(dateKey).slice(0, 7), c = archCache[m];
+    if (c && c.state === 'ok') return c.picks;
+    if (!c) {
+      archCache[m] = { state: 'loading', picks: [] };
+      fetch(ARCH_BASE + m + '.json?t=' + Date.now(), { cache: 'no-store' })
+        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+        .catch(function () { return fetch(ARCH_FALLBACK + m + '.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }); })
+        .then(function (j) {
+          archCache[m] = { state: 'ok', picks: (j && j.picks) || [] };
+          if (typeof render === 'function' && !document.querySelector('#settleModal.show, #modal.show, .bpop')) try { render(); } catch (e) {}
+        })
+        .catch(function () { archCache[m] = { state: 'miss', picks: [] }; });
+    }
+    return archCache[m].picks;
+  }
+
   function fetchFeed() {
     return fetch(FEED_URL + '?t=' + Date.now(), { cache: 'no-store' })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
@@ -341,7 +370,7 @@
     var out = { recs: [], splits: [] };
     try {
       if (!data || !data.picks || !it || it.type !== 'match') return out;
-      var agg = aggregate(it, picksForCard(it, dateKey, data.picks));
+      var agg = aggregate(it, picksForCard(it, dateKey, pickPool(dateKey)));
       var W = {}, N = {}, L = {};
       agg.rows.forEach(function (r) {
         W[r.opt] = r.list.reduce(function (s, p) { return s + weightOf(p); }, 0);
