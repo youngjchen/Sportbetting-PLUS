@@ -13,7 +13,7 @@
      · /billboard/winRate?allianceid&mode&during=season&page  (XHR → JSON rankers)
      · /billboard/mainPrediction?allianceid&during=season     (XHR → JSON rankers 以 mode 為鍵)
      · /member/{uid}/prediction?allianceid&gameday=today|tomorrow  (HTML，cheerio 解析)
-   節奏：溫和(1.0~1.6s 抖動)；每聯盟合格高手取勝率前 EXPERT_CAP 名。
+   節奏：溫和(0.85~1.3s 抖動)；full=全部過門檻者＋白名單、final=已有單者＋白名單（無名額）。
    ============================================================ */
 'use strict';
 const axios = require('axios');
@@ -30,7 +30,7 @@ const MIN_BETS = 30;           // 最少注數
 // 個人頁抓取名額（每聯盟，依最佳勝率排序）。合格名單本身不受此限（勝率榜翻頁到 120 名、
 // 主推榜也翻頁），這個上限只管「每輪去抓幾個人的個人頁」——2026-07-18 使用者反映遺珠
 // 後由 25 調到 40（MLB 合格 124 人仍抓不完；再放大就要考慮站方流量禮貌）。
-const EXPERT_CAP = 40;
+// EXPERT_CAP 已廢除（2026-07-21 黃彥案）：過門檻＝必抓，不設名額
 const MAX_PAGES = 4;           // 勝率榜最多翻 4 頁（120 名）
 const ALLIANCES = [
   { id: 1, lg: 'mlb' }, { id: 2, lg: 'npb' }, { id: 6, lg: 'cpbl' }, { id: 9, lg: 'kbo' },
@@ -59,7 +59,7 @@ const HEADERS = {
   'Accept-Language': 'zh-TW,zh;q=0.9',
 };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const jitter = () => 1000 + Math.floor(Math.random() * 600);
+const jitter = () => 850 + Math.floor(Math.random() * 450);   // 0.85~1.3s：全量名冊後總時長 ~24 分/full
 
 async function getJSON(url) {
   const r = await axios.get(url, { headers: Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, HEADERS), timeout: 20000 });
@@ -398,8 +398,20 @@ async function run() {
   const picks = [];
   const coverage = {};
   for (const { id: aid, lg } of targets) {
-    const uids = [...(perAlliance[aid] || new Map()).entries()].sort((a, b) => b[1] - a[1]).slice(0, EXPERT_CAP).map(x => x[0]);
-    for (const w of WL[lg] || []) if (uids.indexOf(w) < 0) uids.push(w);   // 追蹤名單必抓、不占名額
+    // 2026-07-21 廢除名額（EXPERT_CAP）：黃彥案＝不讓分榜第3名(62%/323注)過門檻，
+    // 但「全聯盟最佳勝率前40」斷頭台排139/240 → 永遠抓不到。教義=過門檻(60%+30注)就必抓：
+    //  · full：全部合格者＋白名單（~660人×2頁≈24分/輪，jitter 收斂到 0.85~1.3s）
+    //  · final：只回訪「該聯盟今明兩天已有單的人」＋白名單（final=賽前確認改單/撤單；
+    //    還沒貼單的尾巴由 3 小時 full 涵蓋，避免每波 final 都全量掃）
+    let uids;
+    if (decision.mode === 'final') {
+      const tw0 = twDate(0), tw1 = twDate(1);
+      const has = new Set(((prev && prev.picks) || []).filter(p => p.league === lg && (p.date === tw0 || p.date === tw1)).map(p => p.uid));
+      uids = [...(perAlliance[aid] || new Map()).keys()].filter(u => has.has(u));
+    } else {
+      uids = [...(perAlliance[aid] || new Map()).entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]);
+    }
+    for (const w of WL[lg] || []) if (uids.indexOf(w) < 0) uids.push(w);   // 追蹤名單必抓
     coverage[lg] = { qualified: (perAlliance[aid] || new Map()).size, fetched: uids.length, whitelist: (WL[lg] || []).length };
     console.log(`[a${aid} ${lg}] 合格 ${coverage[lg].qualified} 名，抓 ${uids.length} 名（含追蹤名單 ${coverage[lg].whitelist}）`);
     for (const uid of uids) {

@@ -20,7 +20,7 @@ permissions:
 jobs:
   scrape:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 45   # 廢名額後 full=全量合格者(~660人×2頁)≈24-28分，放寬防殺
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
