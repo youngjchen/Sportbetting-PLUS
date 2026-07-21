@@ -2997,11 +2997,12 @@ function renderCardB(it){
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
     ana.appendChild(hdWrap);
-    // 國際軸藍帶：只在異常場出現（色點=判定：橙 現在相反／靛 曾反已合／青綠 只換過邊），點一下展開軌跡
+    // 國際軸藍帶：每張卡片都顯示（2026-07-22 使用者指令「統一都顯示出來」——卡片讓分列=STAKE，
+    // 有這條 bet365+台彩 才能同畫面三方比對）。色點：橙=顛倒/靛=曾反已合/青綠=只換過邊/灰=正常
     { const ist = (typeof intlFor==="function") ? intlFor(it) : null;
-      if(ist && ist.v){
+      if(ist && ist.is){
         const strip=document.createElement("div"); strip.className="intl-strip no-drag";
-        const dotc = ist.v==="flip"?"#e08020":(ist.v==="was"?"#6b7bff":"#2bbfa0");
+        const dotc = ist.v==="flip"?"#e08020":(ist.v==="was"?"#6b7bff":(ist.v?"#2bbfa0":"#5b6b80"));
         strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
           `<span>🌐 <b style="color:#3aa0ff">bet365 ${esc(ist.is==="home"?it.home:it.away)}讓${ist.il}</b>・`+
           `<b style="color:#ffd08a">${ist.ls?("台彩 "+esc(ist.ls==="home"?it.home:it.away)+"讓"+(ist.ll!=null?ist.ll:"")):"台彩無資料"}</b></span>`;
