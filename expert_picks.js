@@ -189,12 +189,16 @@ function rosterFilterFull(lg, uids, meta, today, deep) {
 // 且 scope 取代會把先前正確的 7/21 單洗掉。
 // 規則：today 頁、尚無結果、開球 < 12:00、且距現在已「過去」≥300 分 → 歸 +1 天。
 // 300 分＋正午上限＝避開亞洲午間在打場（KBO 13:00 雙重賽 G1、NPB 12:00 場結果未填時不受影響）。
-function fixMorningDate(day, date, p, nowMin, plusOneDate) {
+// 2026-07-23 改用「絕對時刻差」：跨午夜時分鐘數相減會變負（23:59 啟動的 full 跑過 00:00
+// → 7/23 晨場錯標 7/22＝當晚三刀資料災難之一），絕對毫秒差沒有環繞問題。
+function fixMorningDate(day, date, p, nowMs, plusOneDate) {
   if (day !== 'today' || p.result) return date;
   const m = /^(\d\d):(\d\d)/.exec(String(p.time || ''));
   if (!m) return date;
-  const t = (+m[1]) * 60 + (+m[2]);
-  if (t < 720 && (nowMin - t) >= 300) return plusOneDate;
+  if (+m[1] >= 12) return date;                                  // 正午上限：亞洲午間在打場不誤傷
+  const start = Date.parse(`${date}T${m[1]}:${m[2]}:00+08:00`);  // 以 today 解讀的開球絕對時刻
+  if (isNaN(start)) return date;
+  if (nowMs - start >= 300 * 60000) return plusOneDate;          // 已「過去」≥5小時 → 實為明晨場
   return date;
 }
 
@@ -339,7 +343,10 @@ async function run() {
   }
   const WL = loadWhitelist();
   const targets = decision.mode === 'full' ? ALLIANCES : ALLIANCES.filter(a => decision.leagues.indexOf(a.lg) >= 0);
-  const dates = decision.mode === 'full' ? { today: twDate(0), tomorrow: twDate(1) } : { today: twDate(0) };
+  // 跨午夜安全（2026-07-23 三刀災難教訓）：today/tomorrow/cutoff 在 run 啟動時一次定死，
+  // 全程用同一組值——23:59 啟動的 full 跑過 00:00 後，twDate() 重算會讓 cutoff 多剪一天、日期歸屬錯亂
+  const runToday = twDate(0), runTomorrow = twDate(1), runCutoff = twDate(-1);
+  const dates = decision.mode === 'full' ? { today: runToday, tomorrow: runTomorrow } : { today: runToday };
 
   let qual = {};          // `${uid}|${aid}|${mode}|${gt}` -> {wp,w,l,total,label}
   let mainQual = {};      // `${uid}|${aid}|${mode}` -> {wp,total}
@@ -352,7 +359,7 @@ async function run() {
   };
   const twHourNow = new Date(Date.now() + 8 * 3600e3).getUTCHours();
   const lastDeepDate = (prev && prev.lastDeepAt) ? String(prev.lastDeepAt).slice(0, 10) : null;
-  const deep = decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== twDate(0);
+  const deep = decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== runToday;
   if (decision.mode === 'full') console.log(deep ? '· 深掃輪：全量合格者（每日1次，補歸檔/回測＋撈回改變習慣者）' : '· 常規輪：賽前型名冊');
   const cacheFresh = prev && prev.qualCache && prev.qualCache.at && (Date.now() - Date.parse(prev.qualCache.at)) < 12 * 3600e3;
   const useCache = decision.mode === 'final' && cacheFresh;
@@ -454,12 +461,12 @@ async function run() {
     //    還沒貼單的尾巴由 3 小時 full 涵蓋，避免每波 final 都全量掃）
     let uids;
     if (decision.mode === 'final') {
-      const tw0 = twDate(0), tw1 = twDate(1);
+      const tw0 = runToday, tw1 = runTomorrow;
       const has = new Set(((prev && prev.picks) || []).filter(p => p.league === lg && (p.date === tw0 || p.date === tw1)).map(p => p.uid));
       uids = [...(perAlliance[aid] || new Map()).keys()].filter(u => has.has(u));
     } else {
       const allQ = [...(perAlliance[aid] || new Map()).entries()].sort((a, b) => b[1] - a[1]).map(x => x[0]);
-      uids = rosterFilterFull(lg, allQ, rosterMeta, twDate(0), deep);   // 常規=賽前型∪試用新人；深掃=全量
+      uids = rosterFilterFull(lg, allQ, rosterMeta, runToday, deep);   // 常規=賽前型∪試用新人；深掃=全量
     }
     for (const w of WL[lg] || []) if (uids.indexOf(w) < 0) uids.push(w);   // 追蹤名單必抓
     coverage[lg] = { qualified: (perAlliance[aid] || new Map()).size, fetched: uids.length, whitelist: (WL[lg] || []).length };
@@ -477,10 +484,8 @@ async function run() {
           // 兩者都沒有 → 不吃（使用者 2026-07-18 確認：白名單也只吃合格市場）。
           if (!q && !mq) continue;
           const src = q || mq;
-          const nowTw = new Date(Date.now() + 8 * 3600e3);
-          const nowMin = nowTw.getUTCHours() * 60 + nowTw.getUTCMinutes();
           picks.push({
-            league: lg, date: fixMorningDate(day, date, p, nowMin, twDate(1)), time: p.time,
+            league: lg, date: fixMorningDate(day, date, p, Date.now(), runTomorrow), time: p.time,
             away: feedCanon(p.away, lg) || p.away, home: feedCanon(p.home, lg) || p.home,
             market: boardMarket(p.mode, p.kind),
             team: p.team ? (feedCanon(p.team, lg) || p.team) : null,
@@ -511,13 +516,28 @@ async function run() {
   // 賽前型觀察：本輪首見且開賽前≥25分可見的單 → 記錄該人；過期身分(>30天)順手清
   markPreGamers(dedup, stamp, rosterMeta.preGamers);
   for (const k of Object.keys(rosterMeta.preGamers)) {
-    if (daysBetween(rosterMeta.preGamers[k], twDate(0)) > 30) delete rosterMeta.preGamers[k];
+    if (daysBetween(rosterMeta.preGamers[k], runToday) > 30) delete rosterMeta.preGamers[k];
   }
 
   // 合併上一輪：本輪掃過的 (league,date) 用新結果整批取代，其餘沿用；主檔只留昨天以後
+  // ‼️ 空頁防擦除（2026-07-23 災難：深夜 tomorrow 頁翻空＋亞洲 today 頁清空 → 8 個 scope
+  // 全用空資料取代，7/23 全滅＋日韓中職 7/22 全滅）：本輪某 scope 抓到 0 筆而前輪有單
+  // ＝頁面翻空（版面行為），不是全體撤單 → 該 scope 不取代、保留舊單。
+  // 個別撤單仍會生效：只要該 scope 本輪有 ≥1 筆，整批取代照舊。
+  const newBy = {};
+  dedup.forEach(p => { const k = p.league + '|' + p.date; newBy[k] = (newBy[k] || 0) + 1; });
+  const prevBy = {};
+  ((prev && prev.picks) || []).forEach(p => { const k = p.league + '|' + p.date; prevBy[k] = (prevBy[k] || 0) + 1; });
   const scopes = new Set();
-  for (const { lg } of targets) for (const date of Object.values(dates)) scopes.add(lg + '|' + date);
-  const cutoff = twDate(-1);
+  for (const { lg } of targets) for (const date of Object.values(dates)) {
+    const k = lg + '|' + date;
+    if ((newBy[k] || 0) === 0 && (prevBy[k] || 0) > 0) {
+      console.log(`⚠️ ${k} 本輪 0 筆、前輪 ${prevBy[k]} 筆 → 空頁防擦除，保留舊單`);
+      continue;
+    }
+    scopes.add(k);
+  }
+  const cutoff = runCutoff;
   const mergedAll = mergePicks(prev && prev.picks, dedup, scopes);
   const merged = mergedAll.filter(p => p.date >= cutoff);
   // 修剪掉的舊單歸檔到 data/expert_archive/YYYY-MM.json —— 板上回看歷史日期用
