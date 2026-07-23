@@ -22,7 +22,10 @@ const fs = require('fs');
 const path = require('path');
 const { feedCanon } = require('./index.js');   // 隊名正規化沿用主爬蟲（分聯盟別名表）
 
-const OUT = path.join('data', 'expert_picks.json');
+const EP_LEAGUE = (process.env.EP_LEAGUE || '').toLowerCase();      // ''=四聯盟(舊行為)；mlb|npb|cpbl|kbo=只抓該聯盟
+const EP_MODE   = (process.env.EP_MODE   || '').toLowerCase();      // ''=decideMode 自決(舊行為)；full|final=外部指定
+const EP_DEEP   = process.env.EP_DEEP === '1';                      // 深掃：強制全量名冊
+const OUT = path.join('data', EP_LEAGUE ? `expert_picks_${EP_LEAGUE}.json` : 'expert_picks.json');
 const BASE = 'https://www.playsport.cc';
 const DURING = 'season';
 const THRESH_WP = 60;          // 勝率門檻（%）
@@ -35,6 +38,7 @@ const MAX_PAGES = 4;           // 勝率榜最多翻 4 頁（120 名）
 const ALLIANCES = [
   { id: 1, lg: 'mlb' }, { id: 2, lg: 'npb' }, { id: 6, lg: 'cpbl' }, { id: 9, lg: 'kbo' },
 ];
+const ACTIVE_ALLIANCES = EP_LEAGUE ? ALLIANCES.filter(a => a.lg === EP_LEAGUE) : ALLIANCES;
 // 合格市場：billboard gametype → 市場。mode2=國際盤、mode1=運彩盤(北富盤)。gt0(全部)不用。
 const QUAL_GT = {
   2: { 11: '國際盤讓分', 12: '國際盤大小' },
@@ -335,14 +339,14 @@ function parseRecordStats(html) {
 async function run() {
   const stamp = new Date(Date.now() + 8 * 3600e3).toISOString().replace('Z', '+08:00');
   const prev = loadPrev();
-  const decision = decideMode(Date.now(), loadScheduleTimes(), (prev && prev.lastFinal) || {}, process.env.GITHUB_EVENT_NAME || '', prev && prev.lastFullAt);
+  const decision = EP_MODE ? { mode: EP_MODE, leagues: ACTIVE_ALLIANCES.map(a => a.lg) } : decideMode(Date.now(), loadScheduleTimes(), (prev && prev.lastFinal) || {}, process.env.GITHUB_EVENT_NAME || '', prev && prev.lastFullAt);
   console.log(`==================== expert_picks ${stamp} mode=${decision.mode}${decision.leagues ? '(' + decision.leagues.join(',') + ')' : ''} ====================`);
   if (decision.mode === 'skip') {
     console.log('· 非整點全掃時段、也沒有 35~65 分內開打的比賽 → 本輪不抓（對站方零請求）');
     return;
   }
   const WL = loadWhitelist();
-  const targets = decision.mode === 'full' ? ALLIANCES : ALLIANCES.filter(a => decision.leagues.indexOf(a.lg) >= 0);
+  const targets = decision.mode === 'full' ? ACTIVE_ALLIANCES : ACTIVE_ALLIANCES.filter(a => decision.leagues.indexOf(a.lg) >= 0);
   // 跨午夜安全（2026-07-23 三刀災難教訓）：today/tomorrow/cutoff 在 run 啟動時一次定死，
   // 全程用同一組值——23:59 啟動的 full 跑過 00:00 後，twDate() 重算會讓 cutoff 多剪一天、日期歸屬錯亂
   const runToday = twDate(0), runTomorrow = twDate(1), runCutoff = twDate(-1);
@@ -359,7 +363,7 @@ async function run() {
   };
   const twHourNow = new Date(Date.now() + 8 * 3600e3).getUTCHours();
   const lastDeepDate = (prev && prev.lastDeepAt) ? String(prev.lastDeepAt).slice(0, 10) : null;
-  const deep = decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== runToday;
+  const deep = EP_DEEP || (decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== runToday);
   if (decision.mode === 'full') console.log(deep ? '· 深掃輪：全量合格者（每日1次，補歸檔/回測＋撈回改變習慣者）' : '· 常規輪：賽前型名冊');
   const cacheFresh = prev && prev.qualCache && prev.qualCache.at && (Date.now() - Date.parse(prev.qualCache.at)) < 12 * 3600e3;
   const useCache = decision.mode === 'final' && cacheFresh;
@@ -549,7 +553,7 @@ async function run() {
     dropped.forEach(p => { const m = p.date.slice(0, 7); (byMonth[m] = byMonth[m] || []).push(p); });
     const akey = p => [p.uid, p.league, p.date, p.away, p.home, p.time, p.market, p.team || p.side].join('|');
     for (const [m, arr] of Object.entries(byMonth)) {
-      const f = path.join(__dirname, 'data', 'expert_archive', m + '.json');
+      const f = path.join(__dirname, 'data', 'expert_archive', m + (EP_LEAGUE ? '-' + EP_LEAGUE : '') + '.json');
       let old = [];
       try { old = JSON.parse(fs.readFileSync(f, 'utf8')).picks || []; } catch (e) {}
       const map = new Map(old.map(p => [akey(p), p]));
@@ -584,4 +588,4 @@ async function run() {
 if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS };
+module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE };
