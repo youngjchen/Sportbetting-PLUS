@@ -13,8 +13,11 @@
   if (window.__expertPicksLoaded) return; window.__expertPicksLoaded = true;
 
   var REPO = 'youngjchen/Sportbetting-PLUS';
-  var FEED_URL = 'https://raw.githubusercontent.com/' + REPO + '/main/data/expert_picks.json';
-  var FEED_FALLBACK = './data/expert_picks.json';
+  var LGS = ['mlb', 'npb', 'cpbl', 'kbo'];   // 四聯盟四檔（2026-07-24：逐聯盟精準抓取取代單檔，見任務4）
+  var FEED_URLS = LGS.map(function (lg) { return 'https://raw.githubusercontent.com/' + REPO + '/main/data/expert_picks_' + lg + '.json'; });
+  var FEED_FALLBACKS = LGS.map(function (lg) { return './data/expert_picks_' + lg + '.json'; });
+  var FEED_LEGACY = 'https://raw.githubusercontent.com/' + REPO + '/main/data/expert_picks.json';       // 舊單檔：逐聯盟後備＋新檔全缺時的零回歸路徑
+  var FEED_LEGACY_LOCAL = './data/expert_picks.json';
   var REFRESH_MS = 5 * 60 * 1000;   // 賽前終盤資料要在開賽前 20 分到板上 → 5 分刷新（檔案僅 ~200KB）
   var TOL_MIN = 120;
   var data = null;
@@ -163,12 +166,29 @@
     });
     return arr;
   }
+  // 逐聯盟時戳（2026-07-24 任務4）：data.perLg 存在＝四檔合併路徑 → 面板顯示各聯盟時:分緊湊列；
+  // 缺 perLg＝全缺新檔走舊單檔零回歸路徑 → 維持原本單一時戳渲染，不動舊行為。
+  var LG_DISP = [['mlb', '美'], ['npb', '日'], ['kbo', '韓'], ['cpbl', '中']];
+  function fmtHM(raw) {
+    if (!raw) return null;
+    var isOld = /\(舊\)$/.test(String(raw));
+    var s = String(raw).replace(/\(舊\)$/, '');
+    var m = /T(\d{2}):(\d{2})/.exec(s);
+    if (!m) return null;
+    return m[1] + ':' + m[2] + (isOld ? '舊' : '');
+  }
+  function fmtUpd() {
+    if (data && data.perLg) {
+      return LG_DISP.map(function (pr) { return pr[1] + ' ' + (fmtHM(data.perLg[pr[0]]) || '—'); }).join(' ');
+    }
+    // 資料時間戳＝爬蟲上次完抓時間（updated），手機上判斷「新一輪抓完沒」全靠這個
+    return (data && data.updated) ? String(data.updated).slice(5, 16).replace('T', ' ') : '';
+  }
   function openPanel(it, agg, x, y) {
     closePanel();
     lastPanel = { it: it, x: x, y: y };
     var p = document.createElement('div'); p.id = 'ep-panel';
-    // 資料時間戳＝爬蟲上次完抓時間（updated），手機上判斷「新一輪抓完沒」全靠這個
-    var upd = (data && data.updated) ? String(data.updated).slice(5, 16).replace('T', ' ') : '';
+    var upd = fmtUpd();
     var html = '<div class="ep-hd">🎯 高手明牌 ×' + agg.total +
       '<span class="ep-srt' + (sortMode === 'wp' ? ' on' : '') + '" data-m="wp" title="組內按勝率排序">勝率</span>' +
       '<span class="ep-srt' + (sortMode === 'at' ? ' on' : '') + '" data-m="at" title="組內按抓到時間排序">時間</span>' +
@@ -321,6 +341,27 @@
   var ARCH_FALLBACK = './data/expert_archive/';
   var archCache = {};   // 'YYYY-MM' -> {state:'loading'|'ok'|'miss', picks:[]}
   function twDateStr(ofs) { var d = new Date(Date.now() + 8 * 3600e3 + (ofs || 0) * 86400e3); return d.toISOString().slice(0, 10); }
+  // 歸檔去重鍵（2026-07-24 任務4，鎖定公式）：雙軌過渡月同一筆單可能同時存在於新舊兩家族檔案。
+  function archKey(p) { return p.uid + '|' + p.league + '|' + p.date + '|' + p.opt + '|' + (p.line || ''); }
+  function _mergeArchives(arrays) {
+    var map = {}, order = [];
+    (arrays || []).forEach(function (arr) {
+      (arr || []).forEach(function (p) {
+        if (!p) return;
+        var k = archKey(p), prev = map[k];
+        if (!prev) { map[k] = p; order.push(k); return; }
+        var prevHas = !!prev.result, curHas = !!p.result;
+        if (curHas !== prevHas) { if (curHas) map[k] = p; }                 // 有 result 的贏
+        else if (String(p.at || '') > String(prev.at || '')) map[k] = p;    // 都有/都無 result → 較晚 at 者贏
+      });
+    });
+    return order.map(function (k) { return map[k]; });
+  }
+  function archMonthUrls(m) {   // 月×聯盟 ×4（新家族）＋ 舊月檔（legacy 家族）：雙軌過渡月兩家族並存都要抓
+    var list = LGS.map(function (lg) { return { url: ARCH_BASE + m + '-' + lg + '.json', fb: ARCH_FALLBACK + m + '-' + lg + '.json' }; });
+    list.push({ url: ARCH_BASE + m + '.json', fb: ARCH_FALLBACK + m + '.json' });
+    return list;
+  }
   function pickPool(dateKey) {
     var live = (data && data.picks) || [];
     if (!dateKey) return live;
@@ -330,11 +371,9 @@
     if (c && c.state === 'ok') return c.picks;
     if (!c) {
       archCache[m] = { state: 'loading', picks: [] };
-      fetch(ARCH_BASE + m + '.json?t=' + Date.now(), { cache: 'no-store' })
-        .then(function (r) { if (!r.ok) throw 0; return r.json(); })
-        .catch(function () { return fetch(ARCH_FALLBACK + m + '.json?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }); })
-        .then(function (j) {
-          archCache[m] = { state: 'ok', picks: (j && j.picks) || [] };
+      Promise.all(archMonthUrls(m).map(function (u) { return fetchOne(u.url, u.fb); }))
+        .then(function (results) {
+          archCache[m] = { state: 'ok', picks: _mergeArchives(results.map(function (j) { return (j && j.picks) || []; })) };
           if (typeof render === 'function' && !document.querySelector('#settleModal.show, #modal.show, .bpop')) try { render(); } catch (e) {}
         })
         .catch(function () { archCache[m] = { state: 'miss', picks: [] }; });
@@ -342,17 +381,48 @@
     return archCache[m].picks;
   }
 
+  function fetchOne(url, fb) {   // raw→local 後備，任一層失敗都吞掉、最終缺資料回傳 null（不 reject）
+    return fetch(url + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw 0; return r.json(); })
+      .catch(function () { return fetch(fb + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { if (!r.ok) throw 0; return r.json(); }); })
+      .catch(function () { return null; });
+  }
+  // 逐聯盟優先權合併（2026-07-24 任務4）：每聯盟優先用新檔；新檔缺→舊檔該聯盟切片(標(舊))；
+  // 四新檔全缺→舊物件原樣套用（this exact path 部署後、四新檔上線前都會跑到，必須零回歸）。
+  function _mergeFeeds(parts, legacy) {
+    if (!parts.some(Boolean)) return legacy || null;
+    var merged = { updated: '', perLg: {}, picks: [] };
+    LGS.forEach(function (lg, i) {
+      var src = parts[i];
+      if (src) {
+        merged.perLg[lg] = src.updated || '';
+        merged.picks = merged.picks.concat(src.picks || []);
+        if ((src.updated || '') > merged.updated) merged.updated = src.updated;
+      } else if (legacy) {
+        merged.perLg[lg] = legacy.updated ? String(legacy.updated) + '(舊)' : '';
+        merged.picks = merged.picks.concat((legacy.picks || []).filter(function (p) { return p.league === lg; }));
+        if ((legacy.updated || '') > merged.updated) merged.updated = legacy.updated;
+      }
+      // 該聯盟新舊都缺 → perLg[lg] 不設，面板顯示「—」
+    });
+    return merged;
+  }
+  function onFeedChanged() {   // 原 fetchFeed 的 changed 分支內容，applyFeed 統一呼叫
+    if (typeof render === 'function' && !document.querySelector('#settleModal.show, #modal.show, .bpop')) render();
+  }
+  function applyFeed(j) {
+    if (!j || !j.picks) return;
+    var changed = !data || data.updated !== j.updated;
+    data = j;
+    if (changed) { try { onFeedChanged(); } catch (e) {} }
+  }
   function fetchFeed() {
-    return fetch(FEED_URL + '?t=' + Date.now(), { cache: 'no-store' })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .catch(function () { return fetch(FEED_FALLBACK + '?t=' + Date.now(), { cache: 'no-store' }).then(function (r) { return r.json(); }); })
-      .then(function (j) {
-        if (!j || !j.picks) return;
-        var changed = !data || data.updated !== j.updated;
-        data = j;
-        if (changed && typeof render === 'function' &&
-            !document.querySelector('#settleModal.show, #modal.show, .bpop')) render();
-      }).catch(function () {});
+    return Promise.all([
+      Promise.all(LGS.map(function (lg, i) { return fetchOne(FEED_URLS[i], FEED_FALLBACKS[i]); })),
+      fetchOne(FEED_LEGACY, FEED_LEGACY_LOCAL),
+    ]).then(function (rr) {
+      applyFeed(_mergeFeeds(rr[0], rr[1]));
+    }).catch(function () {});
   }
   function boot() {
     fetchFeed(); setInterval(fetchFeed, REFRESH_MS);
@@ -401,8 +471,8 @@
     return out;
   }
 
-  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, hasNew: hasNewFor, _setData: function (d) { data = d; } };
+  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, hasNew: hasNewFor, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; } };
+    module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd };
   }
 })();
