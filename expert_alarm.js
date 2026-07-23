@@ -61,12 +61,20 @@ function targetsFor(lg, games, nowMs) {
     const [dh,dm] = BASELINES[lg].deep;
     t.push({ atMs: day0 + d*86400e3 + (dh*60+dm)*60e3, mode:'full', deep:1, gameMs:Infinity, label:'深掃' });
   }
-  const rank = x => x.deep ? 2 : x.mode === 'full' ? 1 : 0;
+  // 去重：時間相近(<20分)的目標，深掃>full>final 留強者
+  // 去重（2026-07-24 修正）：只在 full 系(含深掃)之間去重；final 波絕不被吸收——
+  // 反例：MLB 00:30 場的 T-35=23:55 若被 00:00 保底 full 吃掉，full 要跑 12~15 分，
+  // 資料落地 T-15 踩爆「最慢 T-20 上板」紅線；final 便宜(3~6分)，同刻撞上就連跑兩波。
+  // 同為 full 相撞＝合併標籤（保底+簇T-120），深掃 rank 較高留深掃。
+  const rank = x => x.deep ? 2 : 1;
   t.sort((a,b) => a.atMs - b.atMs);
   const out = [];
   for (const x of t) {
     const p = out[out.length-1];
-    if (p && x.atMs - p.atMs < DEDUP_MIN*60e3) { if (rank(x) > rank(p)) out[out.length-1] = x; }
+    if (p && x.atMs - p.atMs < DEDUP_MIN*60e3 && x.mode === 'full' && p.mode === 'full') {
+      if (rank(x) > rank(p)) { x.label = p.label + '+' + x.label; out[out.length-1] = x; }
+      else { p.label += '+' + x.label; }
+    }
     else out.push(x);
   }
   return out;
