@@ -398,6 +398,8 @@
     var merged = { updated: '', perLg: {}, picks: [] };
     LGS.forEach(function (lg, i) {
       var src = parts[i];
+      // 加固(2026-07-24 審查)：新檔存在但 picks 空（首跑瞬時失敗等）→ 退回舊檔切片，防該聯盟明牌短暫消失
+      if (src && legacy && !(src.picks || []).length) src = null;
       if (src) {
         merged.perLg[lg] = src.updated || '';
         merged.picks = merged.picks.concat(src.picks || []);
