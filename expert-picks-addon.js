@@ -341,8 +341,12 @@
   var ARCH_FALLBACK = './data/expert_archive/';
   var archCache = {};   // 'YYYY-MM' -> {state:'loading'|'ok'|'miss', picks:[]}
   function twDateStr(ofs) { var d = new Date(Date.now() + 8 * 3600e3 + (ofs || 0) * 86400e3); return d.toISOString().slice(0, 10); }
-  // 歸檔去重鍵（2026-07-24 任務4，鎖定公式）：雙軌過渡月同一筆單可能同時存在於新舊兩家族檔案。
-  function archKey(p) { return p.uid + '|' + p.league + '|' + p.date + '|' + p.opt + '|' + (p.line || ''); }
+  // 歸檔去重鍵（2026-07-24 修正）：對齊爬蟲 expert_picks.js:557 的正宗 akey 語義——
+  // 原公式 uid|league|date|opt|line 缺「哪場比賽」身分（p.opt 實際上未存在於原始資料，恆為
+  // undefined），同人同日不同場＋同線值會誤撞；實測 1218 筆撞了 400 筆。改用比賽身分
+  // (away/home/time/market/team-or-side) 取代 opt，且刻意不含 line——改線＝同一注的更新，
+  // 同鍵仍走既有偏好（result 有值者勝、否則 at 較新者勝）。
+  function archKey(p) { return [p.uid, p.league, p.date, p.away, p.home, p.time, p.market, p.team || p.side].join('|'); }
   function _mergeArchives(arrays) {
     var map = {}, order = [];
     (arrays || []).forEach(function (arr) {
