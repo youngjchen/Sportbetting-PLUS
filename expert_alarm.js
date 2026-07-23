@@ -19,7 +19,8 @@ const BASELINES = {
   mlb:  { hot: [[22,0],[0,0],[2,0],[4,0]], deep: [6,0] },
 };
 const PFX = { npb:'NPB', kbo:'KBO', cpbl:'CPBL', mlb:'MLB' };
-const CLUSTER_MIN = 60, T_FULL_MIN = 120, T_FINAL_MIN = 35, LATE_OK_MIN = 25, DEDUP_MIN = 20, MAX_SLEEP = 900;
+const CLUSTER_MIN = 60, T_FULL_MIN = 120, T_FINAL_MIN = 35, LATE_OK_MIN = 35, DEDUP_MIN = 20, MAX_SLEEP = 900;
+const SUBGROUP_MIN = 20, LOOKBACK_MIN = 45;
 
 function twDayStartMs(nowMs) { const d = new Date(nowMs + TZ8); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - TZ8; }
 function loadGames(lg, nowMs) {
@@ -32,7 +33,7 @@ function loadGames(lg, nowMs) {
     if (!m) continue;
     const [, ymd, hh, mm] = m;
     const startMs = Date.UTC(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8), +hh-8, +mm);
-    if (startMs > nowMs - 3 * 3600e3 && startMs < nowMs + 30 * 3600e3) out.push({ startMs });
+    if (startMs > nowMs - LOOKBACK_MIN * 60e3 && startMs < nowMs + 30 * 3600e3) out.push({ startMs });
   }
   return out;
 }
@@ -49,7 +50,15 @@ function targetsFor(lg, games, nowMs) {
   const t = [];
   for (const c of clusterGames(games)) {
     t.push({ atMs: c.firstMs - T_FULL_MIN*60e3, mode:'full', deep:0, gameMs:c.firstMs, label:'簇T-120' });
-    t.push({ atMs: c.firstMs - T_FINAL_MIN*60e3, mode:'final', deep:0, gameMs:c.firstMs, label:'簇T-35' });
+    // 快抓波按 20 分鐘子群逐波：寬簇裡每批開賽時間都有自己的 T-35（保 T-20 紅線）
+    const starts = [...new Set(games.filter(g => g.startMs >= c.firstMs && g.startMs <= c.lastMs).map(g => g.startMs))].sort((a,b)=>a-b);
+    let anchor = null;
+    for (const s of starts) {
+      if (anchor === null || s - anchor > SUBGROUP_MIN*60e3) {
+        anchor = s;
+        t.push({ atMs: s - T_FINAL_MIN*60e3, mode:'final', deep:0, gameMs:s, label:'簇T-35' });
+      }
+    }
   }
   const day0 = twDayStartMs(nowMs);
   for (const d of [0, 1]) {
@@ -82,7 +91,10 @@ function computeNextWave(lg, games, nowMs, afterMs) {
   const ts = targetsFor(lg, games, nowMs);
   const missed = ts.filter(x => x.atMs <= nowMs && nowMs - x.atMs <= LATE_OK_MIN*60e3 && x.atMs > (afterMs||0)
     && (x.gameMs === Infinity || nowMs <= x.gameMs + 10*60e3)).pop();
-  if (missed) return { sleepSec: 0, mode: missed.mode, deep: missed.deep, label: missed.label + '(補償)' };
+  if (missed) {
+    const late = nowMs - missed.atMs > 60e3;
+    return { sleepSec: 0, mode: missed.mode, deep: missed.deep, label: missed.label + (late ? '(補償)' : '') };
+  }
   const next = ts.find(x => x.atMs > nowMs);
   if (!next) return { sleepSec: MAX_SLEEP, mode: 'skip', deep: 0, label: '無目標' };
   const sec = Math.round((next.atMs - nowMs) / 1000);
