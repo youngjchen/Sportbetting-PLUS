@@ -4072,25 +4072,19 @@ function switchDate(d){
   if(canvas) canvas.scrollTop = 0;   // 換日期才回到頂端
 }
 function addDate(){
-  const def = todayStr();
-  const input = prompt("輸入日期（YYYY-MM-DD），或直接確定使用今天：", def);
-  if(input===null) return;
-  let d = input.trim() || def;
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){ alert("格式需為 YYYY-MM-DD"); return; }
-  const existed = !!doc.boards[d];
+  // 2026-07-24 拍板：一鍵新增「下一天」，不再跳輸入框、不再問照搬（組合交給「⚡用賠率自動排」）。
+  // 基準＝現有日期、今天、目前檢視日的最大值 → +1 天；連按可一路 7/25、7/26…
+  const base = Object.keys(doc.boards).concat([todayStr(), doc.activeDate])
+    .filter(s=>/^\d{4}-\d{2}-\d{2}$/.test(s)).sort().pop();
+  const d = nextDateStr(base);
   snapshot();
-  const b = ensureBoard(d);
-  // if this is a brand-new empty day, offer to bring over the previous day's matchups
-  if(!existed && (!b.items || b.items.length===0)){
-    const src = prevDateWithMatches(d);
-    if(src){
-      const n = doc.boards[src].items.filter(x=>x.type==="match").length;
-      if(confirm(`要把 ${fmtDate(src)} 的 ${n} 場對戰組合複製過來嗎？\n（隊伍、主客、讓分方向都保留，圓圈會清空）`)){
-        b.items = cloneMatchupsCleared(doc.boards[src].items);
-      }
-    }
-  }
+  ensureBoard(d);
   switchDate(d);
+}
+function nextDateStr(s){
+  const nd = new Date(s + "T12:00:00");   // 正午錨點避開時區日界
+  nd.setDate(nd.getDate() + 1);
+  return nd.getFullYear() + "-" + String(nd.getMonth()+1).padStart(2,"0") + "-" + String(nd.getDate()).padStart(2,"0");
 }
 // copy matchups from a chosen day into the current day
 function copyMatchupsFromDay(){
