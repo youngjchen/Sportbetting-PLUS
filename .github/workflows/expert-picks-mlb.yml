@@ -1,0 +1,80 @@
+# ============================================================
+# 明牌智慧鬧鐘（mlb）：按當日賽程睡到準點抓（2026-07-24 四聯盟拆分）
+# · 每輪先 reset --hard 同步 → 問 expert_alarm.js 下一波（簇T-120全量/簇T-35快抓/保底/深掃）
+# · sleepSec>0 就睡（≤900s 再重估，吸收改賽）；==0 就以 EP_* 環境變數驅動 expert_picks.js
+# · cron 只是「斷鏈重點火」備援；主保險=末尾 WORKFLOW_PAT 自我接棒（無縫）
+# · concurrency 每聯盟獨立：本聯盟的快抓永不被別聯盟的全量卡住
+# ============================================================
+name: expert-picks-mlb
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '20,50 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: expert-picks-mlb
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: 智慧鬧鐘迴圈（睡到準點抓 mlb）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          # 接棒防重複：LASTW 種子取自聯盟檔的 updated（新 run 起手若為空，
+          # 前任 35 分內剛跑過的波會被「補償」重跑一次；用檔上時戳當地板即免疫）
+          LASTW=$(node -pe "try{require('./data/expert_picks_mlb.json').updated||''}catch(e){''}" 2>/dev/null || echo "")
+          echo "LASTW 種子: ${LASTW:-（空，首航）}"
+          END=$(( SECONDS + 18600 ))   # 5h10m：+最後一波上限30分+起步開銷 ≈342分 < timeout 350（19200 會壓線爆頂被硬砍）
+          while [ "$SECONDS" -lt "$END" ]; do
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            W=$(node expert_alarm.js --league=mlb --after="$LASTW" 2>/dev/null) || W='{"sleepSec":600,"mode":"skip","deep":0,"label":"alarm失敗"}'
+            SLEEPS=$(node -pe 'JSON.parse(process.argv[1]).sleepSec' "$W")
+            MODE=$(node -pe 'JSON.parse(process.argv[1]).mode' "$W")
+            DEEP=$(node -pe 'JSON.parse(process.argv[1]).deep' "$W")
+            LABEL=$(node -pe 'JSON.parse(process.argv[1]).label' "$W")
+            if [ -z "$SLEEPS" ]; then SLEEPS=600; MODE=skip; LABEL=alarm解析失敗; fi
+            echo "· [$(date -u +%FT%TZ)] wave=$LABEL mode=$MODE deep=$DEEP sleep=${SLEEPS}s"
+            if [ "$MODE" = "skip" ] || [ "$SLEEPS" -gt 0 ]; then
+              sleep "$SLEEPS"
+              continue
+            fi
+            if EP_LEAGUE=mlb EP_MODE=$MODE EP_DEEP=$DEEP timeout 1800 node expert_picks.js; then
+              LASTW=$(date -u +%FT%TZ)
+            else
+              echo "WARN [$(date -u +%FT%TZ)] 抓取 rc=$?（60 秒退避，35 分補償窗內自動重試）"
+              sleep 60
+            fi
+            git add data/expert_picks_mlb.json 2>/dev/null || true
+            git add data/expert_archive 2>/dev/null || true
+            if ! git diff --cached --quiet; then
+              git commit -m "expert picks mlb $(date -u +%FT%TZ)" || true
+              if ! git push; then
+                git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                git push || true
+              fi
+            fi
+          done
+      - name: 自我接棒（需 WORKFLOW_PAT）
+        # 人工取消不接棒＝有效煞車；逾時/崩潰由 cron 兜底
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
+          gh workflow run expert-picks-mlb.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"
