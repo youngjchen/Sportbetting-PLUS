@@ -366,7 +366,7 @@ async function run() {
   };
   const twHourNow = new Date(Date.now() + 8 * 3600e3).getUTCHours();
   const lastDeepDate = (prev && prev.lastDeepAt) ? String(prev.lastDeepAt).slice(0, 10) : null;
-  const deep = EP_DEEP || (decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== runToday);
+  const deep = EP_DEEP || (!EP_MODE && decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== runToday);   // 外部指定模式時鐘面自動深掃停用（深掃時機由 alarm 專責，防 MLB 04:00 保底+06:00 深掃一天兩次全量）
   if (decision.mode === 'full') console.log(deep ? '· 深掃輪：全量合格者（每日1次，補歸檔/回測＋撈回改變習慣者）' : '· 常規輪：賽前型名冊');
   const cacheFresh = prev && prev.qualCache && prev.qualCache.at && (Date.now() - Date.parse(prev.qualCache.at)) < 12 * 3600e3;
   const useCache = decision.mode === 'final' && cacheFresh;
