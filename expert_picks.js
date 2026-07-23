@@ -38,6 +38,9 @@ const MAX_PAGES = 4;           // 勝率榜最多翻 4 頁（120 名）
 const ALLIANCES = [
   { id: 1, lg: 'mlb' }, { id: 2, lg: 'npb' }, { id: 6, lg: 'cpbl' }, { id: 9, lg: 'kbo' },
 ];
+// 守門：EP_LEAGUE/EP_MODE 打錯字就直接擋（模組載入即擋），否則會靜默漏單（例：EP_LEAGUE='mbl' 篩出空清單卻照跑）
+if (EP_LEAGUE && !ALLIANCES.some(a => a.lg === EP_LEAGUE)) { console.error(`未知 EP_LEAGUE=${EP_LEAGUE}`); process.exit(1); }
+if (EP_MODE && EP_MODE !== 'full' && EP_MODE !== 'final') { console.error(`未知 EP_MODE=${EP_MODE}`); process.exit(1); }
 const ACTIVE_ALLIANCES = EP_LEAGUE ? ALLIANCES.filter(a => a.lg === EP_LEAGUE) : ALLIANCES;
 // 合格市場：billboard gametype → 市場。mode2=國際盤、mode1=運彩盤(北富盤)。gt0(全部)不用。
 const QUAL_GT = {
