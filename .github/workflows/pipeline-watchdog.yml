@@ -1,0 +1,86 @@
+# ============================================================
+#  管線看門狗：資料停更自癒（2026-07-23 事故後新增）
+#  · 事故模式1（7/23 實案）：對 concurrency 群組內「執行中的 run」按取消後，
+#    群組死鎖 —— 槽位空著但 queued run 永遠不被升格，之後每個 cron run
+#    排進去就被 churn 掉，16:35→20:58 停更 4.5h，直到人工清佇列＋dispatch。
+#  · 事故模式2（7/17 scrape.yml 實案）：迴圈 run 活著但 worktree wedge，
+#    每輪 push 靜默失敗、資料停更，run 外觀仍 in_progress。
+#  · 對策：每 30 分檢查資料檔最後 commit 年齡；超過閾值 → 取消該工作流
+#    全部 queued run＋執行超過 10 分鐘的 in_progress run（清死鎖/殭屍），
+#    之後下一個 cron 會在乾淨群組正常啟動（≤~30 分自癒）。
+#  · GITHUB_TOKEN 只能取消、不能 dispatch（2026-07-04 實測）；若日後設好
+#    WORKFLOW_PAT secret，清完佇列會立刻 dispatch，恢復縮到 ~1 分鐘。
+#  · 明牌管線（expert-picks）不在監控範圍：它的 commit 節奏本來就不規則
+#    （skip/final/full 自決），無法用「commit 年齡」判定死活。
+# ============================================================
+name: pipeline-watchdog
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '9,39 * * * *'   # 錯開 playsport(:15,:45) 與 odds(:07~:57 每10分) 的重啟 cron
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: pipeline-watchdog
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    env:
+      GH_TOKEN: ${{ github.token }}
+      PAT: ${{ secrets.WORKFLOW_PAT }}
+    steps:
+      - name: 檢查兩條資料管線鮮度，停更就清佇列自癒
+        run: |
+          R="${{ github.repository }}"
+          check() {  # $1=資料檔路徑 $2=workflow 檔名 $3=停更閾值(分)
+            local path="$1" wf="$2" thresh="$3"
+            local last
+            last=$(gh api "repos/$R/commits?path=$path&per_page=1" --jq '.[0].commit.committer.date' 2>/dev/null || echo "")
+            if [ -z "$last" ] || [ "$last" = "null" ]; then
+              echo "WARN $path 查無 commit 紀錄，略過"
+              return 0
+            fi
+            local now age
+            now=$(date -u +%s)
+            age=$(( ( now - $(date -u -d "$last" +%s) ) / 60 ))
+            echo "== $path 最後更新 $last（${age} 分鐘前，閾值 ${thresh} 分）"
+            if [ "$age" -le "$thresh" ]; then
+              echo "   正常，不動作"
+              return 0
+            fi
+            echo "!! $path 停更 ${age} 分 → 清理 $wf 的 queued / 卡死 in_progress run"
+            local runs run_age
+            runs=$(gh api "repos/$R/actions/workflows/$wf/runs?per_page=20" \
+              --jq '.workflow_runs[] | select(.status=="queued" or .status=="in_progress") | "\(.id) \(.status) \(.run_started_at)"' \
+              2>/dev/null || echo "")
+            while read -r id st started; do
+              if [ -z "$id" ]; then continue; fi
+              run_age=$(( ( now - $(date -u -d "$started" +%s 2>/dev/null || echo "$now") ) / 60 ))
+              # 剛啟動的 in_progress（<10 分）可能是恢復中的新 run，放過這一輪
+              if [ "$st" = "in_progress" ] && [ "$run_age" -lt 10 ]; then
+                echo "   . run $id 執行中僅 ${run_age} 分，先放過"
+                continue
+              fi
+              if gh api -X POST "repos/$R/actions/runs/$id/cancel" >/dev/null 2>&1; then
+                echo "   x 已取消 run $id（$st，${run_age} 分）"
+              else
+                echo "   WARN 取消 run $id 失敗"
+              fi
+            done <<< "$runs"
+            if [ -n "$PAT" ]; then
+              GH_TOKEN="$PAT" gh workflow run "$wf" -R "$R" \
+                && echo "   > 已用 WORKFLOW_PAT 立即重啟 $wf" \
+                || echo "   WARN PAT dispatch 失敗，等下一個 cron 重啟"
+            else
+              echo "   > 未設 WORKFLOW_PAT → 等下一個 cron 在乾淨群組重啟（≤~30 分）"
+            fi
+          }
+          check "data/pregame_data.json" "playsport-scrape.yml" 25
+          check "data/odds_log.json"     "scrape.yml"           25

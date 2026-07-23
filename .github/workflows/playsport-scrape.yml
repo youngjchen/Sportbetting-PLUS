@@ -5,6 +5,11 @@
 #    cron 只負責把迴圈重新點起來，單次 run 自己跑 ~5h25m、每 5 分一輪。
 #  · 每輪抓今天+明天，賽前累積 ERA/盤口、賽後抓即時比分→終場，
 #    寫進 data/pregame_data.json 供 add-on 讀取融合。
+#  · 2026-07-23 強化（16:31→21:00 停更 4.5h 事故後）：
+#    1) 每輪先 rebase --abort + reset --hard 自癒 —— 移植 2026-07-17
+#       scrape.yml 的教訓，杜絕 rebase 衝突殘留讓後續 push 全靜默失敗；
+#    2) 單輪 timeout 240s 護欄＋每輪狀態列印（原版錯誤全吞、log 不可診斷）；
+#    3) 末尾自我重觸發（需 WORKFLOW_PAT secret，未設定自動略過、行為同舊版）。
 # ============================================================
 name: Playsport Pregame Scrape
 
@@ -16,6 +21,7 @@ on:
 
 permissions:
   contents: write
+  actions: write        # 允許 gh workflow run 自我重觸發（見最後一步）
 
 concurrency:
   group: playsport-pregame      # 同時間只跑一個迴圈
@@ -41,7 +47,14 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           END=$(( SECONDS + 19500 ))          # 約 5h25m
           while [ "$SECONDS" -lt "$END" ]; do
-            node playsport_scraper.js || true
+            # 每輪【先】同步到遠端最新，再抓（2026-07-17 scrape.yml 同款修法）：
+            #  1) 中途 push 上 main 的程式碼修復，本輪 5 分鐘內就生效；
+            #  2) 清掉上一輪殘留的 rebase/衝突狀態，杜絕 wedge 後 push 全靜默失敗。
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            # timeout 護欄：單輪最多 240s（正常 60~90s），掛住就砍掉進下一輪（rc=124）
+            timeout 240 node playsport_scraper.js || echo "WARN [$(date -u +%FT%TZ)] scraper rc=$?（本輪略過）"
             if [ -f pregame_data.json ]; then
               mkdir -p data
               cp -f pregame_data.json data/pregame_data.json
@@ -49,9 +62,33 @@ jobs:
               [ -f lottery_series.json ] && cp -f lottery_series.json data/lottery_series.json && git add data/lottery_series.json
               if ! git diff --cached --quiet; then
                 git commit -m "chore: update pregame_data.json [skip ci]" || true
-                git pull --rebase --autostash || true   # 與 B 共用 repo，先 rebase 再推
-                git push || true
+                # push 撞到別的 workflow 同分鐘推檔 → rebase 一次再推；
+                # 再不行就放掉，下一輪 reset --hard 會以遠端最新重來（只損失一個 5 分鐘樣本）。
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
+                echo "OK [$(date -u +%FT%TZ)] 本輪已 commit"
+              else
+                echo "-- [$(date -u +%FT%TZ)] 資料無變化"
               fi
+            else
+              echo "WARN [$(date -u +%FT%TZ)] 無 pregame_data.json 輸出"
             fi
             sleep 300                           # 5 分鐘
           done
+
+      - name: 自我重觸發下一輪（cron 被丟時的後援；需設 WORKFLOW_PAT secret 才啟用）
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          # concurrency 群組保證這個 dispatch 只會成為唯一 pending、
+          # 待本輪結束後無縫接手，不會疊跑。GITHUB_TOKEN 無法觸發 workflow → 必須 PAT。
+          if [ -z "$GH_TOKEN" ]; then
+            echo "INFO 未設定 WORKFLOW_PAT secret → 略過自我重觸發（仍靠 schedule cron 接力，行為同舊版）"
+            exit 0
+          fi
+          gh workflow run playsport-scrape.yml -R "${{ github.repository }}" \
+            && echo "OK 已排入下一輪（不受 GitHub schedule 丟包影響）" \
+            || echo "WARN 自我重觸發失敗（PAT 權限不足？）— 仍有 cron 後援，不影響本輪"
