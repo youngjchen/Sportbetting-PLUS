@@ -56,7 +56,10 @@ function targetsFor(lg, games, nowMs) {
     for (const s of starts) {
       if (anchor === null || s - anchor > SUBGROUP_MIN*60e3) {
         anchor = s;
-        t.push({ atMs: s - T_FINAL_MIN*60e3, mode:'final', deep:0, gameMs:s, label:'簇T-35' });
+        // 2026-07-24 Day1 稽核修正：亞洲三聯盟 T-35 升級為全量——final 只回訪已有單者，
+        // 看不到「上次全量之後才第一次貼單」的新面孔（中職實測漏 27 筆）。亞洲名冊小(6~8分)
+        // 全量落地仍在 T-25+ 紅線內；mlb 名冊大維持 final，靠 22~04 每 2h 保底封洞。
+        t.push({ atMs: s - T_FINAL_MIN*60e3, mode: lg === 'mlb' ? 'final' : 'full', deep:0, gameMs:s, label:'簇T-35' });
       }
     }
   }
