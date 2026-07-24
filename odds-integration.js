@@ -33,6 +33,9 @@
   var FEED_FALLBACK = "./data/odds_log.json";
   var REFRESH_MS = 5 * 60 * 1000;
   var feed = { matches: {}, lastUpdated: null };
+  // 收盤讓分方（供結算防呆核對用；刻意不掛在卡片物件上——doc normalizer 可能濾掉不認得的欄位，
+  // 掛上去等於污染同步。只存在這支模組的記憶體裡，重整頁面就重建，volatile 沒關係，settle 當下讀得到即可）。
+  var feedCloseHd = {};
 
   // 3 段門檻（去水隱含機率變化，pp）— 三個市場共用，讀起來一致
   var T1 = 1.0, T2 = 2.5, T3 = 4.0;
@@ -287,6 +290,21 @@
     return { lean: lean, nowLine: now.line, initLine: init.line, lineChanged: lineChanged };
   }
 
+  /* ---- 結算防呆用：收盤讓分方（Bet365 via Titan feed，proxy，只標記不糾正）----
+     rows[0]＝最新（收盤，或抓取窗內最後一次更新）；rows[末]＝初盤——同 index.js parseHistoryTable
+     的註解「rows[0]=最新, rows[末]=初盤」與上面 hdSentiment() 的 now=rows[0] 一致，
+     千萬別讀反（讀到 rows[末] 等於拿初盤當收盤，整個防呆會失效、也驗證不出響尾蛇@紅雀那種事故）。
+     line 正負號（同 index.js parseHistoryTableTs 註解）：正＝主讓、負＝客讓。 */
+  function deriveCloseHd(g) {
+    var rows = g && g.hd && g.hd.bet365;
+    if (!rows || !rows.length) return null;
+    var row = rows[0];
+    if (!row) return null;
+    var line = parseFloat(row.line);
+    if (isNaN(line)) return null;
+    return { fav: line < 0 ? "away" : "home", line: Math.abs(line) };
+  }
+
   /* ---- 大小：大/小水位去水移動 → 方向評語；基準數字另外原樣顯示 ---- */
   function ouSentiment(g) {
     var rows = g.ou && g.ou.bet365;
@@ -463,6 +481,7 @@
     state.items.forEach(function (it) {
       if (it.type !== "match") return;
       var g = feedGameFor(it); if (!g) return;
+      feedCloseHd[it.id] = deriveCloseHd(g);   // 收盤讓分方快照，供結算防呆核對（見檔頭 feedCloseHd 註解）
       // 開球時間：以官方/玩運彩為權威（±TOL 內修正 Titan 的怪時間，如藍鳥主場 07:07→官方 07:15），
       // 沒對到才用 Titan 的。feedGameFor 已保證 g 與卡片時間相符（或單場改期），這裡放心跟隨。
       var t = (typeof doc !== "undefined" && doc.activeDate) ? authTimeFor(g, doc.activeDate) : gStartHHMM(g);
@@ -709,7 +728,12 @@
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 
+  // ---- 對外只讀 accessor（供 index.html 結算流程核對收盤讓分方；本檔案原本沒有掛任何 window.__odds*
+  // 物件，只有 window.__oddsAddonLoaded 這個布林旗標——這裡仿照 __expertPicks / __ghSync 的既有慣例
+  // 新開一個物件掛出去，additive，不影響任何既有行為）----
+  window.__oddsIntegration = { closeHdFor: function (id) { return feedCloseHd[id] || null; } };
+
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, _setFeed: function (f) { feed = f; } };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
   }
 })();

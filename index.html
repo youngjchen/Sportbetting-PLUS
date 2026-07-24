@@ -5554,7 +5554,7 @@ function collectCrossTab(leagueFilter){
   const B = ()=>({n:0,fw:0,fwN:0,cov:0,covN:0,ov:0,ovN:0,games:[]});
   const acc = (o,g)=>{ o.n++;
     const fv=favOf(g);
-    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g),fv,od:((g.closeOddsAway!=null&&g.closeOddsHome!=null)||(g.flipOddsAway!=null&&g.flipOddsHome!=null))});
+    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g),fv,od:((g.closeOddsAway!=null&&g.closeOddsHome!=null)||(g.flipOddsAway!=null&&g.flipOddsHome!=null)),hdSideSuspect:!!g.hdSideSuspect});
     // 熱門勝（2026-07-20 使用者拍板：主勝欄換掉，不並列——主勝各異常組全貼硬幣、無資訊量）
     if(fv && g.awayScore!==g.homeScore){o.fwN++; const w=g.homeScore>g.awayScore?"home":"away"; if(w===fv)o.fw++;}
     if(g.hdResult==="fav_cover"){o.covN++;o.cov++;} else if(g.hdResult==="fav_nocover")o.covN++; // 讓分方過盤
@@ -5644,7 +5644,8 @@ function renderReviewPage(){
       const roleFn = g=>{
         const w = g.aScore===g.hScore?null:(g.hScore>g.aScore?"home":"away");
         const hw = w===null?"和":(g.fv? (w===g.fv?"<b>熱門勝</b>":"冷門勝") : "無賠率");
-        const hd=g.hdResult==="fav_cover"?`<span class="dr-hit">過盤</span>`:g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`:"—";
+        const hdWarn=g.hdSideSuspect?`<span title="收盤讓分方(Bet365)與卡面讓分方不同，結果可能記在錯的一側，建議覆核" style="cursor:help">⚠</span>`:"";
+        const hd=hdWarn+(g.hdResult==="fav_cover"?`<span class="dr-hit">過盤</span>`:g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`:"—");
         const tt=g.totResult==="over"?"大":g.totResult==="under"?"小":"—";
         const dv=g.dv===true?"背離":g.dv===false?"":(g.od?"熱門不明":"缺賠率");
         return `${hw}・讓分${hd}・開${tt}${dv?`・<span style="color:var(--ink-dim)">${dv}</span>`:""}`;
@@ -5975,9 +5976,10 @@ function renderReviewPage(){
       html += `<table class="rv-table rv-allgames"><thead><tr><th class="lbl">日期</th><th style="text-align:left">對戰（比分）</th><th>讓分</th><th>大小</th></tr></thead><tbody>`;
       all.forEach(g=>{
         const sc = (g.awayScore!=null&&g.homeScore!=null)?`${g.awayScore}-${g.homeScore}`:"—";
-        const hd = g.hdResult==="fav_cover"?`<span class="dr-hit">過</span>`
+        const hdWarn = g.hdSideSuspect?`<span title="收盤讓分方(Bet365)與卡面讓分方不同，結果可能記在錯的一側，建議覆核" style="cursor:help">⚠</span>`:"";
+        const hd = hdWarn+(g.hdResult==="fav_cover"?`<span class="dr-hit">過</span>`
                   :g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`
-                  :g.hdResult==="push"?"推":"—";
+                  :g.hdResult==="push"?"推":"—");
         const tot = g.totResult==="over"?"大":g.totResult==="under"?"小":g.totResult==="push"?"推":"—";
         html += `<tr class="rv-row" data-hsid="${esc(String(g.sid||""))}" style="cursor:pointer" title="點擊編輯這場（比分／顛倒狀態／讓分／大小／賠率）">`+
                 `<td class="lbl" style="white-space:nowrap">${(g.date||"").slice(5)} <span style="color:var(--ink-dim);font-size:12.5px">${LG[g.league]||""}</span></td>`+
@@ -6310,6 +6312,9 @@ function openSettleModal(it){
   body.innerHTML = "";
 
   const prior = it.settled || {};
+  // 收盤讓分方核對（同 settleConfirm 那段邏輯，這裡只為了在視窗上顯示提示，不落地存值）
+  const _closeHd = (window.__oddsIntegration && window.__oddsIntegration.closeHdFor) ? window.__oddsIntegration.closeHdFor(it.id) : null;
+  const _hdSideSuspect = !!(_closeHd && it.hdFav && _closeHd.fav !== it.hdFav);
 
   // ---- score input row (top) ----
   const scoreRow = document.createElement("div"); scoreRow.className="settle-q score-row";
@@ -6512,6 +6517,15 @@ function openSettleModal(it){
     { label:`${favName} 過盤`, value:"cover" },
     { label:`${favName} 沒過`, value:"nocover" }
   ], { id:"settleHdVal", lbl:"盤口", value:(it.hdVal!=="" && it.hdVal!=null) ? it.hdVal : "1.5" });
+  if(_hdSideSuspect){
+    const hdQ = body.querySelector('.settle-q[data-key="hd"]');
+    if(hdQ){
+      const warn = document.createElement("div");
+      warn.style.cssText = "color:#e0a020;font-size:12px;margin-top:6px;";
+      warn.textContent = "⚠ 收盤讓分方與卡面不同（Bet365）";
+      hdQ.appendChild(warn);
+    }
+  }
   q("大小分：兩隊總分大於基準？", "tot", [
     { label:"大", value:"over" },
     { label:"小", value:"under" }
@@ -6882,6 +6896,12 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     it.eraHome = isNaN(_seh) ? null : _seh;
   }
   snapshot();
+  // 收盤讓分方核對（Bet365 via Titan feed，經 odds-integration.js；只標記不糾正——見事故：
+  // 響尾蛇@紅雀卡面卡在隔夜方、收盤已翻回主隊，auto-settle 照卡面判成過盤，實際收盤基準是沒過）。
+  // 這裡算一次，manual 與 auto-settle 都會走到這個 confirm handler，兩邊都吃得到。
+  const closeHd = (window.__oddsIntegration && window.__oddsIntegration.closeHdFor) ? window.__oddsIntegration.closeHdFor(it.id) : null;
+  picks.hdSideSuspect = !!(closeHd && it.hdFav && closeHd.fav !== it.hdFav);
+  picks.feedCloseFav = closeHd ? closeHd.fav : null;
   // if revising, remove the old game record first
   if(it.settled && it.settled._sid){ gameRemoveBySid(it.settled._sid); }
   // assign a fresh settlement-id so future revisions can target it exactly
@@ -6982,6 +7002,8 @@ function applySettlement(it, picks, delta){
     openHdLine: (picks.openHdLine!=null ? picks.openHdLine : null),
     closeHdLine: (picks.closeHdLine!=null ? picks.closeHdLine : null),
     hdLineMove: (picks.hdLineMove || null),
+    hdSideSuspect: !!picks.hdSideSuspect,   // 收盤讓分方(Bet365)與卡面讓分方不同 → 只標記存疑，不動 hdResult
+    feedCloseFav: (picks.feedCloseFav!=null ? picks.feedCloseFav : null),
     lowCoverWarnHd, lowCoverWarnMl, lowCoverWarnTot,
     // store which side was lit for ml so we can judge "did that team lose"
     mlLitSide: ( (it.mlAway.lights>=3 && it.mlHome.lights>=3) ? null
@@ -7564,6 +7586,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260719heal6"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260724ep16"></script>
+</script><script src="./odds-integration.js?v=20260724heal7"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260724ep16"></script>
 </body>
 </html>
