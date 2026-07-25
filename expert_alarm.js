@@ -19,6 +19,16 @@ const BASELINES = {
   mlb:  { hot: [[22,0],[0,0],[2,0],[4,0]], deep: [6,0] },
 };
 const PFX = { npb:'NPB', kbo:'KBO', cpbl:'CPBL', mlb:'MLB' };
+// 賽後回收波（台灣時間，2026-07-26）：撈「賽後才公開」的單（殺手單/result 回補）——
+// 亞洲三聯盟收工後到換日前的唯一空窗（Day2 稽核實測 npb35/kbo19/cpbl12 筆全在此時窗）；
+// mlb 由 22~04 每 2h 保底天然涵蓋（7/24 的 163 筆在 22:00 波全數回補實證），故無槽。
+const REVEAL = {
+  npb:  [[21,5],[23,30]],
+  kbo:  [[21,15],[23,40]],
+  cpbl: [[21,25],[23,50]],
+  mlb:  [],
+};
+const REVEAL_PAST_H = 12;   // 該時點往前 12h 內有開賽才跑（無賽日零請求）
 const CLUSTER_MIN = 60, T_FULL_MIN = 120, T_FINAL_MIN = 35, LATE_OK_MIN = 35, DEDUP_MIN = 20, MAX_SLEEP = 900;
 const SUBGROUP_MIN = 20, LOOKBACK_MIN = 45;
 
@@ -37,6 +47,22 @@ function loadGames(lg, nowMs) {
   }
   return out;
 }
+function loadPastStarts(lg, nowMs) {
+  // 回收波 gate 專用：已開打（或今日排定）場次的 startMs——獨立於 loadGames 的 45 分回看，
+  // 不進 clusterGames（否則舊場連鎖拖曳問題會回鍋），只拿來判斷「今天有沒有比賽可回收」。
+  let arr = [];
+  try { const j = JSON.parse(fs.readFileSync('data/pregame_data.json', 'utf8')); arr = Array.isArray(j) ? j : Object.values(j); } catch (_) { return []; }
+  const out = [];
+  for (const g of arr) {
+    const id = (g && g.officialId) || '';
+    const m = id.match(new RegExp('^' + PFX[lg] + '_(\\d{8})_.+_(\\d{2})(\\d{2})$'));
+    if (!m) continue;
+    const [, ymd, hh, mm] = m;
+    const startMs = Date.UTC(+ymd.slice(0,4), +ymd.slice(4,6)-1, +ymd.slice(6,8), +hh-8, +mm);
+    if (startMs > nowMs - 14 * 3600e3 && startMs < nowMs + 24 * 3600e3) out.push(startMs);
+  }
+  return out;
+}
 function clusterGames(games) {
   const s = [...games].sort((a,b) => a.startMs - b.startMs), out = [];
   for (const g of s) {
@@ -46,7 +72,7 @@ function clusterGames(games) {
   }
   return out;
 }
-function targetsFor(lg, games, nowMs) {
+function targetsFor(lg, games, nowMs, pastStarts) {
   const t = [];
   for (const c of clusterGames(games)) {
     t.push({ atMs: c.firstMs - T_FULL_MIN*60e3, mode:'full', deep:0, gameMs:c.firstMs, label:'簇T-120' });
@@ -72,6 +98,12 @@ function targetsFor(lg, games, nowMs) {
     }
     const [dh,dm] = BASELINES[lg].deep;
     t.push({ atMs: day0 + d*86400e3 + (dh*60+dm)*60e3, mode:'full', deep:1, gameMs:Infinity, label:'深掃' });
+    for (const [rh,rm] of (REVEAL[lg] || [])) {
+      const atMs = day0 + d*86400e3 + (rh*60+rm)*60e3;
+      // 回收波 gate：時點往前 12h 內有場開打過才跑（賽後公開單時窗；無賽日零請求）
+      if (!(pastStarts || []).some(s => s < atMs && atMs - s < REVEAL_PAST_H*3600e3)) continue;
+      t.push({ atMs, mode:'full', deep:0, gameMs:Infinity, label:'回收' });
+    }
   }
   // 去重（2026-07-24 修正）：只在 full 系(含深掃)之間去重；final 波絕不被吸收——
   // 反例：MLB 00:30 場的 T-35=23:55 若被 00:00 保底 full 吃掉，full 要跑 12~15 分，
@@ -90,8 +122,8 @@ function targetsFor(lg, games, nowMs) {
   }
   return out;
 }
-function computeNextWave(lg, games, nowMs, afterMs) {
-  const ts = targetsFor(lg, games, nowMs);
+function computeNextWave(lg, games, nowMs, afterMs, pastStarts) {
+  const ts = targetsFor(lg, games, nowMs, pastStarts);
   const missed = ts.filter(x => x.atMs <= nowMs && nowMs - x.atMs <= LATE_OK_MIN*60e3 && x.atMs > (afterMs||0)
     && (x.gameMs === Infinity || nowMs <= x.gameMs + 10*60e3)).pop();
   if (missed) {
@@ -109,7 +141,7 @@ if (require.main === module) {
   const lg = arg('league'); const afterMs = arg('after') ? Date.parse(arg('after')) : 0;
   if (!BASELINES[lg]) { console.log(JSON.stringify({ sleepSec: 600, mode: 'skip', deep: 0, label: '未知聯盟' })); process.exit(0); }
   const nowMs = Date.now();
-  const w = computeNextWave(lg, loadGames(lg, nowMs), nowMs, afterMs);
+  const w = computeNextWave(lg, loadGames(lg, nowMs), nowMs, afterMs, loadPastStarts(lg, nowMs));
   console.log(JSON.stringify(w));
 }
-module.exports = { computeNextWave, clusterGames, targetsFor, loadGames, BASELINES };
+module.exports = { computeNextWave, clusterGames, targetsFor, loadGames, loadPastStarts, BASELINES, REVEAL };
