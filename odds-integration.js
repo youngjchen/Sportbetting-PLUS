@@ -481,7 +481,16 @@
     state.items.forEach(function (it) {
       if (it.type !== "match") return;
       var g = feedGameFor(it); if (!g) return;
-      feedCloseHd[it.id] = deriveCloseHd(g);   // 收盤讓分方快照，供結算防呆核對（見檔頭 feedCloseHd 註解）
+      // 收盤讓分方快照（結算防呆用，2026-07-26 凍結修正）：開賽前每輪覆寫、標 frozen:true＝可信收盤；
+      // 開賽後不再覆寫——寬限窗抓進來的是「場中盤」（7/25 LG雙子@韓華鷹：開賽後 26 分場中盤翻成客讓2.5，
+      // 拿它當收盤造成誤報⚠）。頁面開賽後才載入、沒有賽前快照可凍 → frozen:false，防呆不觸發（證據不足不吵人）。
+      (function () {
+        var sMs = Date.parse(g.startISO || 0);
+        var started = sMs && Date.now() >= sMs;
+        var snap = deriveCloseHd(g);
+        if (!started) { if (snap) { snap.frozen = true; feedCloseHd[it.id] = snap; } }
+        else if (!feedCloseHd[it.id] && snap) { snap.frozen = false; feedCloseHd[it.id] = snap; }
+      })();
       // 開球時間：以官方/玩運彩為權威（±TOL 內修正 Titan 的怪時間，如藍鳥主場 07:07→官方 07:15），
       // 沒對到才用 Titan 的。feedGameFor 已保證 g 與卡片時間相符（或單場改期），這裡放心跟隨。
       var t = (typeof doc !== "undefined" && doc.activeDate) ? authTimeFor(g, doc.activeDate) : gStartHHMM(g);

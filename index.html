@@ -2983,16 +2983,14 @@ function renderCardB(it){
     const hdWrap=document.createElement("div"); hdWrap.className="bmkt";
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方";
     swap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 燈跟隊（同 favSwap）
-    let flipHint=null;
-    // 即時比對：工作流抓到的讓分熱門隊 ≠ 目前讓分方 → 疑顛倒（切換讓分方後會立刻消失）
-    const feedFlip = !!(it.feedFavTeam && it.feedFavTeam !== it[it.hdFav]);
-    if(feedFlip){ flipHint=document.createElement("span"); flipHint.className="flaghint"; flipHint.textContent="⚠ 疑顛倒場"; flipHint.title=`工作流抓到的讓分熱門（${it.feedFavTeam}）與目前讓分方（${it[it.hdFav]}）相反`; }
+    // 「⚠疑顛倒場」晶片已移除（2026-07-26 使用者拍板）：警示條時代前的老提醒，
+    // 現由頂部紫色「平台顛倒」橫幅＋異常晶片承擔，重複警示徒增版面噪音。
     const hv = it.hdVal || "1.5";
     // 異常場即時晶片：這場屬於哪種異常＋該類歷史讓分過盤率（tooltip=組合細分）
     let anomChip=null;
     try{ const ai=bAnomInfo(it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    const hdH=mktSecHead("讓分", hdConflict, [swap, flipHint, anomChip], "hd");
+    const hdH=mktSecHead("讓分", hdConflict, [swap, anomChip], "hd");
     hdWrap.append(hdH.sec,
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
@@ -6314,7 +6312,7 @@ function openSettleModal(it){
   const prior = it.settled || {};
   // 收盤讓分方核對（同 settleConfirm 那段邏輯，這裡只為了在視窗上顯示提示，不落地存值）
   const _closeHd = (window.__oddsIntegration && window.__oddsIntegration.closeHdFor) ? window.__oddsIntegration.closeHdFor(it.id) : null;
-  const _hdSideSuspect = !!(_closeHd && it.hdFav && _closeHd.fav !== it.hdFav);
+  const _hdSideSuspect = !!(_closeHd && _closeHd.frozen && it.hdFav && _closeHd.fav !== it.hdFav);   // frozen=賽前凍結快照才可信（場中盤誤報案 2026-07-26）
 
   // ---- score input row (top) ----
   const scoreRow = document.createElement("div"); scoreRow.className="settle-q score-row";
@@ -6900,7 +6898,7 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   // 響尾蛇@紅雀卡面卡在隔夜方、收盤已翻回主隊，auto-settle 照卡面判成過盤，實際收盤基準是沒過）。
   // 這裡算一次，manual 與 auto-settle 都會走到這個 confirm handler，兩邊都吃得到。
   const closeHd = (window.__oddsIntegration && window.__oddsIntegration.closeHdFor) ? window.__oddsIntegration.closeHdFor(it.id) : null;
-  picks.hdSideSuspect = !!(closeHd && it.hdFav && closeHd.fav !== it.hdFav);
+  picks.hdSideSuspect = !!(closeHd && closeHd.frozen && it.hdFav && closeHd.fav !== it.hdFav);   // frozen=賽前凍結快照才可信（場中盤誤報案 2026-07-26）
   picks.feedCloseFav = closeHd ? closeHd.fav : null;
   // if revising, remove the old game record first
   if(it.settled && it.settled._sid){ gameRemoveBySid(it.settled._sid); }
@@ -7586,6 +7584,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260724heal7"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260724ep16"></script>
+</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260717sync3"></script><script src="./divination-addon.js?v=20260713a"></script><script src="./expert-picks-addon.js?v=20260724ep16"></script>
 </body>
 </html>
