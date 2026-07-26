@@ -370,9 +370,20 @@
     var live = (data && data.picks) || [];
     if (!dateKey) return live;
     if (dateKey >= twDateStr(-1)) return live;               // 昨/今/明＝主檔範圍
-    if (live.some(function (p) { return p.date === dateKey; })) return live;
+    // 更早的日期一律「主檔 ∪ 歸檔」（2026-07-27 修）：四聯盟各自在自己的深掃時刻才把舊單修剪進歸檔，
+    // 所以同一天會同時存在「已進歸檔」(如 mlb 00:00 跑完) 與「還在主檔」(亞洲要等 03:40~04:27) 兩種狀態。
+    // 舊碼是二選一：主檔只要有任一聯盟的該日單就 early-return，永遠不載歸檔 →
+    // 已修剪的聯盟整批消失（實例：7/27 00:16 看 7/25，MLB 456 筆不見）。聯集後與修剪時刻脫鉤。
     var m = String(dateKey).slice(0, 7), c = archCache[m];
-    if (c && c.state === 'ok') return c.picks;
+    var liveHit = live.filter(function (p) { return p.date === dateKey; });
+    if (c && c.state === 'ok') {
+      if (!liveHit.length) return c.picks;
+      var seen = {}, out = [];
+      liveHit.concat(c.picks).forEach(function (p) {          // 主檔優先（較新、含手動修正），歸檔補未見者
+        var k = archKey(p); if (seen[k]) return; seen[k] = 1; out.push(p);
+      });
+      return out;
+    }
     if (!c) {
       archCache[m] = { state: 'loading', picks: [] };
       Promise.all(archMonthUrls(m).map(function (u) { return fetchOne(u.url, u.fb); }))
@@ -382,7 +393,8 @@
         })
         .catch(function () { archCache[m] = { state: 'miss', picks: [] }; });
     }
-    return archCache[m].picks;
+    // loading / miss：先回主檔已有的（載完會 render 一次補上歸檔那半），不要在載入的幾秒內變空白
+    return liveHit.length ? liveHit : archCache[m].picks;
   }
 
   function fetchOne(url, fb) {   // raw→local 後備，任一層失敗都吞掉、最終缺資料回傳 null（不 reject）
@@ -479,6 +491,6 @@
 
   window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, hasNew: hasNewFor, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd };
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd };
+    module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd, _pickPool: pickPool };
   }
 })();
