@@ -129,6 +129,91 @@
     return JSON.parse(await gunzipBytes(new Uint8Array(await r.arrayBuffer())));
   }
 
+  /* ── 手動卦紀錄雲端備份（2026-07-27 新增）─────────────────────────────
+     背景：手動卦只存在 localStorage['dvManualCasts']，從不在任何同步範圍內 →
+     換裝置、清快取、或被容量上限擠掉就永久消失（使用者實際損失過）。
+     設計三原則：
+      · 獨立檔案 state/dv_casts.json.gz —— 與盤面主檔完全隔離，絕不可能污染 doc。
+      · 聯集合併（union by castKey）—— 上傳下載都只增不減，兩台裝置各自起的卦都留住。
+      · 起卦後自動推（90 秒防抖）—— 使用者不必記得按按鈕；沒設權杖就安靜略過。 */
+  var CASTS_KEY = 'dvManualCasts';
+  var CASTS_PATH = 'state/dv_casts.json.gz';
+  var CASTS_API = 'https://api.github.com/repos/' + REPO + '/contents/' + CASTS_PATH;
+  function castKey(e) { return (e && e.ts || '') + '|' + (e && e.officialId || '') + '|' + (e && e.market || '') + '|' + (e && e.method || ''); }
+  function readLocalCasts() { try { return JSON.parse(localStorage.getItem(CASTS_KEY) || '[]') || []; } catch (e) { return []; } }
+  function mergeCasts(a, b) {
+    var m = {}, out = [];
+    (a || []).concat(b || []).forEach(function (e) { if (e && e.ts) m[castKey(e)] = e; });
+    for (var k in m) out.push(m[k]);
+    out.sort(function (x, y) { return x.ts < y.ts ? 1 : (x.ts > y.ts ? -1 : 0); });   // 新的在前，與本機 unshift 序一致
+    return out;
+  }
+  async function fetchCloudCasts(pat) {
+    var headers = { 'Accept': 'application/vnd.github.raw' };
+    if (pat) headers['Authorization'] = 'Bearer ' + pat;
+    var r = await fetch(CASTS_API + '?ref=' + BRANCH + '&t=' + Date.now(), { headers: headers });
+    if (r.status === 404) return [];                       // 還沒建檔
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return JSON.parse(await gunzipBytes(new Uint8Array(await r.arrayBuffer())));
+  }
+  // 回傳 {ok, added, total}；silent=true 時不彈窗（自動備份用）
+  async function pushCasts(silent) {
+    var pat = getPAT(); if (!pat) { if (!silent) alert('尚未設定 GitHub 權杖，無法備份卜卦紀錄。'); return { ok: false }; }
+    var local = readLocalCasts();
+    try {
+      var cloud = await fetchCloudCasts(pat);
+      var merged = mergeCasts(cloud, local);
+      var addedFromCloud = merged.length - local.length;
+      var content = b64encode(await gzipStr(JSON.stringify(merged)));
+      var sha = null;
+      var head = await fetch(CASTS_API + '?ref=' + BRANCH + '&t=' + Date.now(),
+        { headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github+json' } });
+      if (head.status === 200) sha = (await head.json()).sha;
+      var body = { message: 'dv casts ' + new Date().toISOString(), content: content, branch: BRANCH };
+      if (sha) body.sha = sha;
+      var put = await fetch(CASTS_API, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github+json' },
+        body: JSON.stringify(body)
+      });
+      if (!put.ok) throw new Error('HTTP ' + put.status);
+      if (addedFromCloud > 0) {                            // 雲端有本機沒有的（另一台起的卦）→ 一併補回本機
+        try { localStorage.setItem(CASTS_KEY, JSON.stringify(merged)); } catch (e) {}
+      }
+      if (!silent) toast('卜卦紀錄已備份 ✓（雲端共 ' + merged.length + ' 筆）');
+      return { ok: true, total: merged.length, added: addedFromCloud };
+    } catch (err) {
+      console.warn('[卜卦備份]', err);
+      if (!silent) alert('卜卦紀錄備份失敗：' + err.message);
+      return { ok: false };
+    }
+  }
+  async function pullCasts(silent) {
+    var pat = getPAT();
+    try {
+      var cloud = await fetchCloudCasts(pat);
+      var local = readLocalCasts();
+      var merged = mergeCasts(cloud, local);
+      var gained = merged.length - local.length;
+      if (gained > 0) { try { localStorage.setItem(CASTS_KEY, JSON.stringify(merged)); } catch (e) { if (!silent) alert('卜卦紀錄寫回本機失敗（空間不足？）：' + e.message); return { ok: false }; } }
+      if (!silent) toast(gained > 0 ? ('卜卦紀錄已還原 +' + gained + ' 筆（共 ' + merged.length + '）') : '卜卦紀錄已是最新');
+      return { ok: true, gained: gained, total: merged.length };
+    } catch (err) {
+      console.warn('[卜卦還原]', err);
+      if (!silent) alert('卜卦紀錄還原失敗：' + err.message);
+      return { ok: false };
+    }
+  }
+  var _dvTimer = null;
+  function scheduleCastBackup() {                          // 起卦後自動備份：90 秒防抖，連占多市場只推一次
+    if (!getPAT()) return;
+    clearTimeout(_dvTimer);
+    _dvTimer = setTimeout(function () { pushCasts(true); }, 90000);
+  }
+  window.__dvSync = { push: pushCasts, pull: pullCasts, schedule: scheduleCastBackup, merge: mergeCasts, key: castKey };
+  // 開板即拉一次雲端（把另一台/上次備份的卦補回來），失敗安靜略過
+  setTimeout(function () { try { pullCasts(true); } catch (e) {} }, 4000);
+
   function toast(msg) {
     var t = document.getElementById('gh-toast');
     if (!t) {
