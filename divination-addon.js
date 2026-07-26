@@ -309,7 +309,17 @@
         hdFav: g.lotteryHandicap ? g.lotteryHandicap.favSide : null, hdLine: g.lotteryHandicap ? g.lotteryHandicap.line : null,
         nonExperimental: true,
       };
-      const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); list.unshift(entry); localStorage.setItem(LS_KEY, JSON.stringify(list.slice(0, 300)));
+      // 手動卦紀錄保存（2026-07-27 修）：原本硬砍 300 筆＝約 5 天就把舊紀錄無聲擠掉，
+      // 命中率母體每天縮水、數字跳動（使用者回報「只保留到 7/23」）。改 8000 筆（約 4 個月），
+      // 且配額爆掉時「降級保留 + 明講」，絕不再無聲丟資料。
+      const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); list.unshift(entry);
+      (function saveCasts(cap) {
+        try { localStorage.setItem(LS_KEY, JSON.stringify(list.slice(0, cap))); }
+        catch (err) {
+          if (cap > 500) { saveCasts(Math.floor(cap / 2)); return; }        // 配額不足→逐級減半再試
+          try { alert('⚠ 瀏覽器儲存空間已滿，占卜紀錄只能保留最近 ' + cap + ' 筆；請先匯出備份。'); } catch (_) {}
+        }
+      })(8000);
       // 起卦動畫（純 CSS，~1.15s）→ 結果卡帶「起卦完成 ✓ 時:分:秒」戳與卦象字符——三市場連占、全棄場也能一眼確認每一卦都真的起過
       const TRI = { 乾: '☰', 兌: '☱', 離: '☲', 震: '☳', 巽: '☴', 坎: '☵', 艮: '☶', 坤: '☷' };
       let glyph;
@@ -344,7 +354,7 @@
       const arr = await (await fetch('data/liuyao_casts.json?nocache=' + Date.now())).json();
       const main = arr.filter(e => !e.market);   // v1.3 起 ledger 混有獨贏/讓分 exploratory 條目（e.market），本區只列 confirmatory 大小分
       const xN = arr.length - main.length;
-      const rows = main.slice(-60).reverse().map(e => e.failedAt
+      const rows = main.slice(-1200).reverse().map(e => e.failedAt
         ? `<div class="dv-item">⚠ beacon 失敗<div class="dv-sub">${esc(String(e.failedAt).slice(5, 16))}</div></div>`
         : e.missedWindow
         ? `<div class="dv-item"><b>漏卦（棄場留痕）</b>　${esc(e.matchup || e.gamePk)}<div class="dv-sub">開打 ${esc(String(e.gameTimeUTC).slice(5, 16))}Z｜排程未在窗口內起卦，依附錄規則棄場${e.reason ? '｜' + esc(e.reason) : ''}</div></div>`
@@ -353,7 +363,7 @@
       try {
         const qarr = await (await fetch('data/qiuqian_casts.json?nocache=' + Date.now())).json();
         const MK = { totals: '大小', ml: '獨贏', hd: '讓分' };
-        const qRows = qarr.slice(-45).reverse().map(e => e.failedAt
+        const qRows = qarr.slice(-900).reverse().map(e => e.failedAt
           ? `<div class="dv-item">⚠ beacon 失敗<div class="dv-sub">${esc(String(e.failedAt).slice(5, 16))}</div></div>`
           : e.missedWindow
           ? `<div class="dv-item"><b>漏籤（棄場留痕）</b>　${esc(e.matchup || e.gamePk)}［${MK[e.market] || esc(e.market)}］<div class="dv-sub">開打 ${esc(String(e.gameTimeUTC).slice(5, 16))}Z｜窗口已過未起籤</div></div>`
@@ -366,7 +376,7 @@
       try {
         const sArr = await (await fetch('data/xiaoliuren_casts.json?nocache=' + Date.now())).json();
         const pk = (p, pal) => p ? `押 ${p}（${pal}）` : `棄場（${pal}·空亡）`;
-        sHtml = sArr.slice(-45).reverse().map(e =>
+        sHtml = sArr.slice(-900).reverse().map(e =>
           `<div class="dv-item"><b>時盤 ${pk(e.timePicks && e.timePicks.totals, e.timePalace)}｜數盤 ${e.randStatus === 'cast' ? pk(e.randPicks && e.randPicks.totals, e.randPalace) : (e.randStatus === 'missedPulse' ? '信標斷檔（棄場留痕）' : esc(e.randStatus))}</b>　${esc(e.matchup || e.gamePk)}<div class="dv-sub">卜 ${esc(String(e.castAt).slice(5, 16))}Z｜錨 ${esc(String(e.anchorUtc).slice(5, 16))}Z（開賽−240 分）｜${esc(e.phase)}</div></div>`).join('')
           || '<div class="dv-empty">排程尚未產生卦——第一批將在下一個比賽日窗口出現</div>';
       } catch (e) { sHtml = '<div class="dv-empty">排程尚未產生卦（ledger 檔尚未建立）</div>'; }
