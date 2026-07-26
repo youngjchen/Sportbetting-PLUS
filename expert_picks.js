@@ -353,6 +353,7 @@ async function run() {
   // 跨午夜安全（2026-07-23 三刀災難教訓）：today/tomorrow/cutoff 在 run 啟動時一次定死，
   // 全程用同一組值——23:59 啟動的 full 跑過 00:00 後，twDate() 重算會讓 cutoff 多剪一天、日期歸屬錯亂
   const runToday = twDate(0), runTomorrow = twDate(1), runCutoff = twDate(-1);
+  const runBack = [null, runCutoff, twDate(-2), twDate(-3), twDate(-4)];   // 回溯日期同樣在啟動點定死（跨午夜安全）
 
   let qual = {};          // `${uid}|${aid}|${mode}|${gt}` -> {wp,w,l,total,label}
   let mainQual = {};      // `${uid}|${aid}|${mode}` -> {wp,total}
@@ -366,12 +367,22 @@ async function run() {
   const twHourNow = new Date(Date.now() + 8 * 3600e3).getUTCHours();
   const lastDeepDate = (prev && prev.lastDeepAt) ? String(prev.lastDeepAt).slice(0, 10) : null;
   const deep = EP_DEEP || (!EP_MODE && decision.mode === 'full' && twHourNow >= 3 && twHourNow < 7 && lastDeepDate !== runToday);   // 外部指定模式時鐘面自動深掃停用（深掃時機由 alarm 專責，防 MLB 04:00 保底+06:00 深掃一天兩次全量）
-  // 抓取頁範圍：深掃加抓 yesterday 頁（2026-07-26 使用者釐清：單子不會消失，過午夜只是掛到昨天）。
-  //  · 撈回「賽前設定販售、賽後才公開」的殺手單——它們一輩子只出現在賽後的頁面上；
-  //  · 順便回補既有單的 result（勝/敗），跟單命中率回測才有母體（實測 yesterday 頁 100% 帶結果）。
-  // 只在深掃做＝每聯盟每日一次、成本 +1 頁/人（實測深掃 4~11 分，離 30 分 timeout 很遠）。
+  // 抓取頁範圍：深掃往回抓 N 天（2026-07-27 實測玩運彩支援 yesterday/2daysAgo/3daysAgo/4daysAgo，
+  // 第 5 天起回空頁）。往回抓的用途有二：
+  //  · 撈「賽前設定販售、賽後才公開」的殺手單——它們一輩子只出現在賽後的頁面上；
+  //  · 回補既有單的 result（勝/敗）＝跟單命中率回測的母體（實測回溯頁 100% 帶結果）。
+  // 預設回抓 2 天：只抓 1 天的話，某晚深掃失敗＝該日永久缺結果；抓到 2 天等於多一次補救機會。
+  // EP_BACKDAYS 可調（上限 4），一次性補歷史時用 EP_BACKDAYS=4 手動跑。
+  // 成本：每多一天 = 每人多一頁。實測深掃 npb14/kbo7/cpbl7/mlb16 分（3 頁），4 頁約 +20%，離 30 分 timeout 仍安全。
+  const BACK_LABEL = { 1: 'yesterday', 2: '2daysAgo', 3: '3daysAgo', 4: '4daysAgo' };
+  const backDays = Math.min(4, Math.max(1, parseInt(process.env.EP_BACKDAYS || '2', 10) || 2));
   const dates = decision.mode === 'full'
-    ? (deep ? { yesterday: runCutoff, today: runToday, tomorrow: runTomorrow } : { today: runToday, tomorrow: runTomorrow })
+    ? (() => {
+        const o = {};
+        if (deep) for (let i = backDays; i >= 1; i--) o[BACK_LABEL[i]] = runBack[i];
+        o.today = runToday; o.tomorrow = runTomorrow;
+        return o;
+      })()
     : { today: runToday };
   if (decision.mode === 'full') console.log(deep ? '· 深掃輪：全量合格者（每日1次，補歸檔/回測＋撈回改變習慣者）' : '· 常規輪：賽前型名冊');
   const cacheFresh = prev && prev.qualCache && prev.qualCache.at && (Date.now() - Date.parse(prev.qualCache.at)) < 12 * 3600e3;
