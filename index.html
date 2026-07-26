@@ -5377,12 +5377,9 @@ function bigSignalRow(label, pctTxt, pctColor, subTxt, sampleTxt, verdict, star,
 function renderSwapTracker(leagueF){
  try{
   ensureC1();
-  const base = baseHomeRate(leagueF); const baseTxt = base!=null?Math.round(base*100)+"%":"—";
+  // 「賽前讓分方曾對調 / 收盤前變一致」兩列已移除（2026-07-26 使用者拍板）：
+  // 押主場 ML 的假設已回落成雜訊，且異常場的專業統計已由 ⑤ 區交叉表承擔，重複陳列徒增噪音。
   const bn = baseNocoverRate(leagueF); const bnTxt = bn!=null?Math.round(bn*100)+"%":"—";
-  const swapRows = [
-    {key:"preGameSwap",  label:"賽前讓分方曾對調", track:true},
-    {key:"flipVanished", label:"收盤前變一致",     track:false}
-  ];
   const moveRows = [
     {key:"shrink", label:"讓分線縮小→冷門過盤", track:true},
     {key:"grow",   label:"讓分線放大→冷門過盤", track:false}
@@ -5391,21 +5388,11 @@ function renderSwapTracker(leagueF){
   const M = (typeof window!=="undefined" && window.QIMEN_C1) || null;
   const favPct = c1.favBetN ? Math.round(c1.favBetHit/c1.favBetN*100) : null;
   const info = rvInfo(`本區＝追蹤中的假設（不受上方範圍/市場篩選影響）。`+
-    `① 賽前換邊類 → 押主場 ML，主場基準 ${baseTxt}。`+
-    `② 讓分線變動 → 押冷門過盤，基準不過盤 ${bnTxt}。`+
-    `③ 神刻奇門 C1 → 先發投手生年干「破敗較少」方；★ 僅在與收盤熱門（讓分熱門代）同邊才出手，對照純押熱門 ${favPct!=null?favPct+"%":"—"}。`+
+    `① 讓分線變動 → 押冷門過盤，基準不過盤 ${bnTxt}。`+
+    `② 神刻奇門 C1 → 先發投手生年干「破敗較少」方；★ 僅在與收盤熱門（讓分熱門代）同邊才出手，對照純押熱門 ${favPct!=null?favPct+"%":"—"}。`+
     `★ 為重點追蹤，累積 ${SWAP_TRACK_TARGET} 場再定論。`);
   let h = `<div class="rv-section">`;
-  h += `<div class="rv-head">⓪ 賽前換邊 ＋ 神刻奇門 追蹤 <span class="rv-sub">點 i 看完整說明</span>${info.icon}</div>${info.pop}`;
-  swapRows.forEach(r=>{
-    const a = swapSignalAgg(r.key, leagueF); if(a.n===0) return;
-    const pct = a.pct!=null?Math.round(a.pct*100):null;
-    const lift = (base!=null&&a.pct!=null)?(a.pct-base):null;
-    const col = lift!=null?(lift>0.05?"#28c76f":(lift<-0.03?"#ff5d5d":"var(--ink)")):"var(--ink)";
-    const verdict = r.track ? (a.n<SWAP_TRACK_TARGET?`累積中，還差 ${SWAP_TRACK_TARGET-a.n} 場`:(a.pct>=0.60?"維持高檔 ✓":"已回落，視為雜訊")) : (lift!=null&&lift>0.05?"略高於基準":"無明顯優勢");
-    const det = drillBlock(a.games, g=>`主場 ${esc(g.home)}：${g.homeWon?'<span class="dr-hit">贏</span>':'<span class="dr-miss">沒贏</span>'}`);
-    h += bigSignalRow(r.label, pct!=null?pct+"%":"—", col, lift!=null?(lift>0?"+":"")+Math.round(lift*100)+"pp":"", `主場勝率 ${a.home}/${a.n}`, verdict, r.track, det.id?{id:det.id,label:`展開 ${a.n} 場明細核對`,html:det.html}:null);
-  });
+  h += `<div class="rv-head">⓪ 讓分線變動 ＋ 神刻奇門 追蹤 <span class="rv-sub">點 i 看完整說明</span>${info.icon}</div>${info.pop}`;
   moveRows.forEach(r=>{
     const a = hdMoveAgg(r.key, leagueF); if(a.n===0) return;
     const pct = a.pct!=null?Math.round(a.pct*100):null;
