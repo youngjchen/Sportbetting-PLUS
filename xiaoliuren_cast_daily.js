@@ -19,6 +19,7 @@ const fs = require('fs');
 const axios = require('axios');
 const { execSync } = require('child_process');
 const eng = require('./xiaoliuren_engine.js');
+const { readJsonRequired } = require('./safe_json.js');
 
 const LEDGER = 'data/xiaoliuren_casts.json';
 const DRY = process.argv.includes('--dry');
@@ -55,7 +56,7 @@ async function beaconAt(anchorMs) {
 (async function main() {
   const now = Date.now();
   const games = await fetchSchedule();
-  const ledger = (() => { try { return JSON.parse(fs.readFileSync(LEDGER, 'utf8')); } catch (e) { return []; } })();
+  const ledger = readJsonRequired(LEDGER, Array.isArray, LEDGER);
   const done = new Set(ledger.filter(e => e.gamePk).map(e => String(e.gamePk)));
   // 嚴格 out-of-sample：凍結回測已含的 gamePk 一律跳過（避免與 divination-freeze-S-v1 雙計）
   try { for (const e of JSON.parse(fs.readFileSync('divination_lab/xiaoliuren_casts_time.json', 'utf8'))) done.add(String(e.gamePk)); } catch (e) {}

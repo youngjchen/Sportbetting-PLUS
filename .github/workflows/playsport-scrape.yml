@@ -57,8 +57,13 @@ jobs:
             git fetch origin main || true
             git reset --hard origin/main || true
             # timeout 護欄：單輪最多 240s（正常 60~90s），掛住就砍掉進下一輪（rc=124）
-            timeout 240 node playsport_scraper.js || echo "WARN [$(date -u +%FT%TZ)] scraper rc=$?（本輪略過）"
-            if [ -f pregame_data.json ]; then
+            SCRAPE_OK=0
+            if timeout 240 node playsport_scraper.js; then
+              SCRAPE_OK=1
+            else
+              echo "WARN [$(date -u +%FT%TZ)] scraper rc=$?（本輪拒絕覆寫）"
+            fi
+            if [ "$SCRAPE_OK" -eq 1 ] && [ -f pregame_data.json ]; then
               mkdir -p data
               cp -f pregame_data.json data/pregame_data.json
               git add data/pregame_data.json

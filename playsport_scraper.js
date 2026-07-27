@@ -11,6 +11,7 @@
    ============================================================ */
 const cheerio = require('cheerio');
 const fs = require('fs');
+const { readFirstJsonRequired } = require('./safe_json.js');
 
 const ALL_LEAGUES = [
   { id: 1, name: 'MLB' }, { id: 2, name: 'NPB' },
@@ -191,10 +192,11 @@ function saveAtomic(data) {
 // ============================================================
 const SERIES_FILE = 'lottery_series.json';
 function loadSeries() {
-  for (const p of ['data/lottery_series.json', SERIES_FILE]) {
-    try { const o = JSON.parse(fs.readFileSync(p, 'utf8')); if (o && o.games) return o; } catch (_) {}
-  }
-  return { games: {} };
+  return readFirstJsonRequired(
+    ['data/lottery_series.json', SERIES_FILE],
+    (value) => value && typeof value === 'object' && value.games && typeof value.games === 'object',
+    'lottery_series.json'
+  );
 }
 function recordSeries(fresh, keepDays) {
   const store = loadSeries();
@@ -225,10 +227,11 @@ function recordSeries(fresh, keepDays) {
 
 // 讀既有累積檔（Actions 會把 data/pregame_data.json checkout 進來；本機則讀根目錄）
 function loadStore() {
-  for (const p of ['data/pregame_data.json', OUTPUT_FILE]) {
-    try { const arr = JSON.parse(fs.readFileSync(p, 'utf8')); if (Array.isArray(arr)) return arr; } catch (_) {}
-  }
-  return [];
+  return readFirstJsonRequired(
+    ['data/pregame_data.json', OUTPUT_FILE],
+    Array.isArray,
+    'pregame_data.json'
+  );
 }
 
 // 合併：賽前數據（ERA/投手/打擊）一旦抓到就保留；狀態/比分/讓分方取最新；清掉過舊場

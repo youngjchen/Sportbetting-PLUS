@@ -19,6 +19,7 @@
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
+const { readJsonRequired } = require('./safe_json.js');
 const { feedCanon } = require('./index.js');   // 隊名正規化沿用主爬蟲（分聯盟別名表）
 
 const EP_LEAGUE = (process.env.EP_LEAGUE || '').toLowerCase();      // ''=四聯盟(舊行為)；mlb|npb|cpbl|kbo=只抓該聯盟
@@ -89,11 +90,22 @@ const WHITELIST_FILE = path.join('data', 'expert_whitelist.json');
 function loadWhitelist() {
   const out = {};
   for (const { lg } of ALLIANCES) out[lg] = [];
-  try {
-    const j = JSON.parse(fs.readFileSync(WHITELIST_FILE, 'utf8'));
-    for (const { lg } of ALLIANCES) if (Array.isArray(j[lg])) out[lg] = j[lg].filter(x => typeof x === 'string' && x);
-  } catch (_) {}
+  const j = readJsonRequired(
+    WHITELIST_FILE,
+    (value) => value && typeof value === 'object' && !Array.isArray(value),
+    WHITELIST_FILE
+  );
+  for (const { lg } of ALLIANCES) if (Array.isArray(j[lg])) out[lg] = j[lg].filter(x => typeof x === 'string' && x);
   return out;
+}
+
+function loadArchivePicks(file) {
+  if (!fs.existsSync(file)) return [];
+  return readJsonRequired(
+    file,
+    (value) => value && typeof value === 'object' && Array.isArray(value.picks),
+    file
+  ).picks;
 }
 
 /* ---- 排程感知：決定本輪模式（純函式，供測試）----
@@ -144,7 +156,11 @@ function loadScheduleTimes() {
 }
 
 function loadPrev() {
-  try { return JSON.parse(fs.readFileSync(OUT, 'utf8')); } catch (_) { return null; }
+  return readJsonRequired(
+    OUT,
+    (value) => value && typeof value === 'object' && Array.isArray(value.picks),
+    OUT
+  );
 }
 
 // 合併：本輪掃過的 (league|date) 以新結果為準（高手改單/撤單跟著更新），其餘沿用上一輪
@@ -348,6 +364,14 @@ function coverageCollapsed(previous, current) {
   return now < Math.max(10, Math.floor(before * 0.5));
 }
 
+function shouldReplaceScope(state) {
+  if (!state || !state.discoveryComplete) return false;
+  if (!Number.isFinite(state.attempted) || state.attempted <= 0) return state.previous <= 0;
+  if (state.succeeded !== state.attempted) return false;
+  if (state.previous > 0 && state.current === 0) return false;
+  return true;
+}
+
 /* ---- 主流程 ---- */
 async function run() {
   const stamp = new Date(Date.now() + 8 * 3600e3).toISOString().replace('Z', '+08:00');
@@ -369,6 +393,7 @@ async function run() {
   let mainQual = {};      // `${uid}|${aid}|${mode}` -> {wp,total}
   let nick = {};          // uid -> nickname
   const perAlliance = {}; // aid -> Map(uid -> bestWp)
+  const discoveryComplete = Object.fromEntries(targets.map(({ lg }) => [lg, true]));
   // 賽前型名冊狀態（跨輪持久化於 qualCache）＋深掃判定（每日1次、台灣03-07時）
   const rosterMeta = {
     preGamers: (prev && prev.qualCache && prev.qualCache.preGamers) || {},
@@ -401,13 +426,13 @@ async function run() {
     qual = prev.qualCache.qual || {}; mainQual = prev.qualCache.mainQual || {}; nick = prev.qualCache.nick || {};
     for (const { id: aid } of targets) perAlliance[aid] = rosterFromQual(qual, mainQual, aid);
     console.log(`· 榜單用快取（${prev.qualCache.at}），終盤確認只抓個人頁`);
-  } else for (const { id: aid } of targets) {
+  } else for (const { id: aid, lg } of targets) {
     perAlliance[aid] = new Map();
     for (const mode of [2, 1]) {
       for (let page = 0; page < MAX_PAGES; page++) {
         let j;
         try { j = await getJSON(`${BASE}/billboard/winRate?allianceid=${aid}&mode=${mode}&during=${DURING}&page=${page}`); }
-        catch (e) { console.log(`  ⚠️ winRate a${aid} m${mode} p${page}: ${e.message}`); break; }
+        catch (e) { discoveryComplete[lg] = false; console.log(`  ⚠️ winRate a${aid} m${mode} p${page}: ${e.message}`); break; }
         let more = false;
         for (const [gt, rows] of Object.entries((j && j.rankers) || {})) {
           const label = (QUAL_GT[mode] || {})[gt];
@@ -432,7 +457,7 @@ async function run() {
     for (let page = 0; page < MAX_PAGES; page++) {
       let j;
       try { j = await getJSON(`${BASE}/billboard/mainPrediction?allianceid=${aid}&during=${DURING}&page=${page}`); }
-      catch (e) { console.log(`  ⚠️ mainPred a${aid} p${page}: ${e.message}`); break; }
+      catch (e) { discoveryComplete[lg] = false; console.log(`  ⚠️ mainPred a${aid} p${page}: ${e.message}`); break; }
       let more = false, pageFirst = null;
       for (const [mode, rows] of Object.entries((j && j.rankers) || {})) {
         for (const r of rows || []) {
@@ -462,7 +487,7 @@ async function run() {
       for (const uid of WL[lg] || []) {
         let rec;
         try { rec = parseRecordStats(await getHTML(`${BASE}/member/${encodeURIComponent(uid)}/record/winRate?during=${DURING}&allianceid=${aid}`)); }
-        catch (e) { console.log(`  ⚠️ 戰績頁 ${uid} a${aid}: ${e.message}`); await sleep(jitter()); continue; }
+        catch (e) { discoveryComplete[lg] = false; console.log(`  ⚠️ 戰績頁 ${uid} a${aid}: ${e.message}`); await sleep(jitter()); continue; }
         let best = 0;
         for (const s of rec.stats) {
           if (s.wp < THRESH_WP || s.total < MIN_BETS) continue;
@@ -487,6 +512,7 @@ async function run() {
 
   const picks = [];
   const coverage = {};
+  const pageCoverage = {};
   for (const { id: aid, lg } of targets) {
     // 2026-07-21 廢除名額（EXPERT_CAP）：黃彥案＝不讓分榜第3名(62%/323注)過門檻，
     // 但「全聯盟最佳勝率前40」斷頭台排139/240 → 永遠抓不到。教義=過門檻(60%+30注)就必抓：
@@ -507,9 +533,13 @@ async function run() {
     console.log(`[a${aid} ${lg}] 合格 ${coverage[lg].qualified} 名，抓 ${uids.length} 名（含追蹤名單 ${coverage[lg].whitelist}）`);
     for (const uid of uids) {
       for (const [day, date] of Object.entries(dates)) {
+        const coverageKey = lg + '|' + date;
+        const pageState = pageCoverage[coverageKey] || (pageCoverage[coverageKey] = { attempted: 0, succeeded: 0 });
+        pageState.attempted++;
         let html;
         try { html = await getHTML(`${BASE}/member/${encodeURIComponent(uid)}/prediction?allianceid=${aid}&gameday=${day}`); }
         catch (e) { console.log(`  ⚠️ ${uid} ${day}: ${e.message}`); continue; }
+        pageState.succeeded++;
         for (const p of parseExpertPage(html)) {
           const gt = gtOf(p.mode, p.kind);
           const q = gt != null ? qual[`${uid}|${aid}|${p.mode}|${gt}`] : null;
@@ -575,8 +605,16 @@ async function run() {
   const scopes = new Set();
   for (const { lg } of targets) for (const date of Object.values(dates)) {
     const k = lg + '|' + date;
-    if ((newBy[k] || 0) === 0 && (prevBy[k] || 0) > 0) {
-      console.log(`⚠️ ${k} 本輪 0 筆、前輪 ${prevBy[k]} 筆 → 空頁防擦除，保留舊單`);
+    const pageState = pageCoverage[k] || { attempted: 0, succeeded: 0 };
+    const state = {
+      discoveryComplete: discoveryComplete[lg] !== false,
+      attempted: pageState.attempted,
+      succeeded: pageState.succeeded,
+      previous: prevBy[k] || 0,
+      current: newBy[k] || 0,
+    };
+    if (!shouldReplaceScope(state)) {
+      console.log(`⚠️ ${k} 覆蓋不完整（名冊=${state.discoveryComplete ? '完整' : '失敗'}、頁面=${state.succeeded}/${state.attempted}、本輪=${state.current}、前輪=${state.previous}）→ 保留舊 scope`);
       continue;
     }
     scopes.add(k);
@@ -594,8 +632,7 @@ async function run() {
     const akey = p => [p.uid, p.league, p.date, p.away, p.home, p.time, p.market, p.team || p.side].join('|');
     for (const [m, arr] of Object.entries(byMonth)) {
       const f = path.join(__dirname, 'data', 'expert_archive', m + (EP_LEAGUE ? '-' + EP_LEAGUE : '') + '.json');
-      let old = [];
-      try { old = JSON.parse(fs.readFileSync(f, 'utf8')).picks || []; } catch (e) {}
+      const old = loadArchivePicks(f);
       const map = new Map(old.map(p => [akey(p), p]));
       arr.forEach(p => map.set(akey(p), p));
       fs.mkdirSync(path.dirname(f), { recursive: true });
@@ -629,4 +666,4 @@ if (require.main === module) {
   // 收尾一定要關 sidecar：它的 stdin 開著會讓 node 永遠不結束（workflow 會掛到 timeout）
   run().then(() => { closeTransport(); }, e => { console.error('未預期錯誤：', e); closeTransport(); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, coverageCollapsed, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE };
+module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, coverageCollapsed, shouldReplaceScope, loadPrev, loadWhitelist, loadArchivePicks, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE };

@@ -58,19 +58,23 @@ jobs:
               sleep "$SLEEPS"
               continue
             fi
+            SCRAPE_OK=0
             if EP_LEAGUE=kbo EP_MODE=$MODE EP_DEEP=$DEEP timeout 2700 node expert_picks.js; then
               LASTW=$(date -u +%FT%TZ)
+              SCRAPE_OK=1
             else
               echo "WARN [$(date -u +%FT%TZ)] 抓取 rc=$?（60 秒退避，35 分補償窗內自動重試）"
               sleep 60
             fi
-            git add data/expert_picks_kbo.json 2>/dev/null || true
-            git add data/expert_archive 2>/dev/null || true
-            if ! git diff --cached --quiet; then
-              git commit -m "expert picks kbo $(date -u +%FT%TZ)" || true
-              if ! git push; then
-                git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
-                git push || true
+            if [ "$SCRAPE_OK" -eq 1 ]; then
+              git add data/expert_picks_kbo.json 2>/dev/null || true
+              git add data/expert_archive 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                git commit -m "expert picks kbo $(date -u +%FT%TZ)" || true
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
               fi
             fi
           done

@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { execSync } = require('child_process');
 const eng = require('./qiuqian_engine.js');
+const { readJsonRequired } = require('./safe_json.js');
 
 const LEDGER = 'data/qiuqian_casts.json';
 const DRY = process.argv.includes('--dry');
@@ -72,7 +73,7 @@ async function beaconPulseFor(gameTs) {
 (async function main() {
   const now = Date.now();
   const games = await fetchSchedule();
-  const ledger = (() => { try { return JSON.parse(fs.readFileSync(LEDGER, 'utf8')); } catch (e) { return []; } })();
+  const ledger = readJsonRequired(LEDGER, Array.isArray, LEDGER);
   const done = new Set(ledger.filter(e => e.gamePk && e.market).map(e => e.gamePk + '|' + e.market));
   const tables = loadTables();
   const inWindow = games.filter(g => { const m = (g.ts - now) / 60000; return m >= WIN_MIN && m <= WIN_MAX; });

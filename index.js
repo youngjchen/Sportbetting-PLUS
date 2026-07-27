@@ -13,6 +13,7 @@ const axios = require('axios');
 const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
+const { readJsonRequired } = require('./safe_json.js');
 
 // ---- 可調參數 ---------------------------------------------------------------
 // 只抓「未來這麼多小時內開打」的比賽。24＝提前一天開始記，涵蓋隔天整批賽事；
@@ -314,11 +315,11 @@ async function fetchUpcomingMatches() {
 }
 
 function loadLog() {
-  try {
-    return JSON.parse(fs.readFileSync(OUTPUT_FILE, 'utf8'));
-  } catch (_) {
-    return { lastUpdated: null, matches: {} };
-  }
+  return readJsonRequired(
+    OUTPUT_FILE,
+    (value) => value && typeof value === 'object' && value.matches && typeof value.matches === 'object',
+    OUTPUT_FILE
+  );
 }
 
 // ---- 同 id 開賽時間大改 = Titan007 把整列搬去別場（雙重賽）或真改期 -----------
@@ -675,32 +676,39 @@ function applyLot(e, key, serMap, lotMap) {
 function buildIntlState(log, stamp) {
   // 台彩側來源鏈：①lottery_series.json（盤中序列，2026-07-12 根治後的權威）②pregame feed 最新值（後備）
   let lotMap = {};
-  try {
-    const feed = JSON.parse(fs.readFileSync(path.join('data', 'pregame_data.json'), 'utf8'));
-    const list = Array.isArray(feed) ? feed : Object.values(feed);
-    for (const g of list) {
-      const lh = g.lotteryHandicap;
-      if (!lh || lh.src !== '運彩' || !lh.favSide) continue;
-      const lg = String(g.league || '').toLowerCase();
-      const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
-      if (!away || !home) continue;
-      lotMap[`${lg}|${g.date}|${away}|${home}`] = { side: lh.favSide, line: lh.line != null ? lh.line : null };
-    }
-  } catch (e) { console.log('  ⚠️ intl_state：讀不到 pregame feed（' + e.message + '）'); }
+  const feed = readJsonRequired(
+    path.join('data', 'pregame_data.json'),
+    Array.isArray,
+    'data/pregame_data.json'
+  );
+  for (const g of feed) {
+    const lh = g.lotteryHandicap;
+    if (!lh || lh.src !== '運彩' || !lh.favSide) continue;
+    const lg = String(g.league || '').toLowerCase();
+    const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
+    if (!away || !home) continue;
+    lotMap[`${lg}|${g.date}|${away}|${home}`] = { side: lh.favSide, line: lh.line != null ? lh.line : null };
+  }
   let serMap = {};
-  try {
-    const ser = JSON.parse(fs.readFileSync(fs.existsSync(path.join('data', 'lottery_series.json')) ? path.join('data', 'lottery_series.json') : 'lottery_series.json', 'utf8'));
-    for (const oid of Object.keys(ser.games || {})) {
-      const g = ser.games[oid];
-      const lg = String(g.league || '').toLowerCase();
-      const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
-      if (!away || !home || !g.pts || !g.pts.length) continue;
-      serMap[`${lg}|${g.date}|${away}|${home}`] = g.pts;
-    }
-  } catch (e) { /* 序列檔尚未存在（部署初期）→ 全走 feed 後備 */ }
+  const seriesPath = fs.existsSync(path.join('data', 'lottery_series.json')) ? path.join('data', 'lottery_series.json') : 'lottery_series.json';
+  const ser = readJsonRequired(
+    seriesPath,
+    (value) => value && typeof value === 'object' && value.games && typeof value.games === 'object',
+    'lottery_series.json'
+  );
+  for (const oid of Object.keys(ser.games)) {
+    const g = ser.games[oid];
+    const lg = String(g.league || '').toLowerCase();
+    const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
+    if (!away || !home || !g.pts || !g.pts.length) continue;
+    serMap[`${lg}|${g.date}|${away}|${home}`] = g.pts;
+  }
 
-  let prev = { games: {} };
-  try { prev = JSON.parse(fs.readFileSync(INTL_FILE, 'utf8')); } catch (e) {}
+  const prev = readJsonRequired(
+    INTL_FILE,
+    (value) => value && typeof value === 'object' && value.games && typeof value.games === 'object',
+    INTL_FILE
+  );
   const games = prev.games || {};
 
   for (const id of Object.keys(log.matches)) {
@@ -766,4 +774,4 @@ if (require.main === module) {
   run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
 }
 
-module.exports = { mapTeam, feedCanon, applyLot, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadPregamePairCount, MOVE_MIN, stripArchivedRows, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };
+module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };

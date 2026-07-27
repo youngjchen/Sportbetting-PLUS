@@ -17,6 +17,7 @@ const crypto = require('crypto');
 const axios = require('axios');
 const { execSync } = require('child_process');
 const eng = require('./liuyao_engine.js');
+const { readJsonRequired } = require('./safe_json.js');
 
 const LEDGER = 'data/liuyao_casts.json';
 const DRY = process.argv.includes('--dry');
@@ -68,7 +69,7 @@ const dirFor = (mk, pick) => pick == null ? null : (mk === 'ml' ? (pick === '大
 (async function main() {
   const now = Date.now();
   const games = await fetchSchedule();
-  const ledger = (() => { try { return JSON.parse(fs.readFileSync(LEDGER, 'utf8')); } catch (e) { return []; } })();
+  const ledger = readJsonRequired(LEDGER, Array.isArray, LEDGER);
   const done = new Set(ledger.map(e => e.gamePk));
   const inWindow = games.filter(g => { const m = (g.ts - now) / 60000; return m >= WIN_MIN && m <= WIN_MAX; });
   const todo = inWindow.filter(g => !done.has(g.gamePk));
