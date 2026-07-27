@@ -123,6 +123,7 @@ function run() {
         env: Object.assign({}, process.env, { EP_LEAGUE: lg, EP_MODE: 'full', EP_DEEP: useDeep ? '1' : '' }),
       });
       staged.push(`data/expert_picks_${lg}.json`);
+      staged.push('data/expert_archive');   // 深掃/跨日修剪會寫歸檔檔，不推上雲=板上歷史缺洞（legacy 只 add 主檔的舊坑）
       state['ep_' + lg] = slot.at;          // 記「補了哪個波」而非執行時刻：下一波到點才會再跑
       if (useDeep) state[deepKey] = today;
       saveState(state);
