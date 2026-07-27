@@ -9,7 +9,6 @@
    用法：
      node playsport_scraper.js [--leagues=MLB] [--date=20260621] [--debug]
    ============================================================ */
-const { execFile } = require('child_process');
 const cheerio = require('cheerio');
 const fs = require('fs');
 
@@ -49,26 +48,11 @@ function twDate(offsetDays) {
   if (offsetDays) tw.setDate(tw.getDate() + offsetDays);
   return `${tw.getFullYear()}${String(tw.getMonth() + 1).padStart(2, '0')}${String(tw.getDate()).padStart(2, '0')}`;
 }
-// 2026-07-27 起玩運彩 WAF 依客戶端 TLS 指紋擋 Node/axios（全路徑 403、任何 IP），curl 指紋放行
-// → 傳輸層改 curl 子行程，解析邏輯不動。curl 為 runner/Windows 內建，無新依賴。
-function curlGet(url, headers, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const args = ['-sS', '-L', '--max-redirs', '5', '--compressed', '-m', String(Math.ceil(timeoutMs / 1000)), '-w', '\n__CURL_CODE__%{http_code}'];
-    for (const [k, v] of Object.entries(headers)) args.push('-H', `${k}: ${v}`);
-    args.push(url);
-    execFile('curl', args, { maxBuffer: 32 * 1024 * 1024, windowsHide: true }, (err, stdout, stderr) => {
-      const out = String(stdout || '');
-      const i = out.lastIndexOf('__CURL_CODE__');
-      if (i < 0) return reject(new Error(`curl: ${(err && err.message) || String(stderr || '').trim() || 'no response'}`));
-      const code = parseInt(out.slice(i + '__CURL_CODE__'.length), 10);
-      if (code >= 200 && code < 400) return resolve(out.slice(0, Math.max(0, i - 1)));
-      reject(new Error(`Request failed with status code ${code}`));
-    });
-  });
-}
+// 傳輸層（2026-07-28）：curl 優先、被 Cloudflare 擋就自動切常駐隱形瀏覽器。見 sidecar_client.js。
+const { fetchText, shutdown: closeTransport } = require('./sidecar_client.js');
 async function fetchPage(leagueId, date) {
   const url = `${BASE}/${leagueId}?gamedate=${date}&mode=1&`;  // mode=1 = 運彩盤；帶 gamedate 防快取
-  return curlGet(url, HEADERS, REQ_TIMEOUT);
+  return fetchText(url, HEADERS, REQ_TIMEOUT);
 }
 
 // 取某表第一筆資料列(表頭 tr 之後第一個 tr)的儲存格文字
@@ -305,5 +289,5 @@ async function run(argv) {
   console.log(`\n✅ 本次抓 ${fresh.length} 場；累積保存 ${merged.length} 場（含 ERA ${withEra} 場）→ ${OUTPUT_FILE}\n`);
   return merged;
 }
-if (require.main === module) run().catch((e) => { console.error('未預期錯誤：', e); process.exitCode = 1; });
+if (require.main === module) run().then(() => closeTransport(), (e) => { console.error('未預期錯誤：', e); closeTransport(); process.exitCode = 1; });
 module.exports = { parseArgs, twDate, extractGames, resolveHandicap, saveAtomic, loadStore, mergeStore, recordSeries, loadSeries, run, ALL_LEAGUES };

@@ -39,7 +39,10 @@ jobs:
           node-version: '20'
 
       - name: Install deps
-        run: npm install axios cheerio
+        run: |
+          npm install axios cheerio
+          pip -q install "scrapling[all]>=0.4.11"
+          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零"
 
       - name: Scrape loop（每 5 分一輪，抓即時比分＋累積賽前資料）
         run: |

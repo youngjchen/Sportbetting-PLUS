@@ -30,6 +30,10 @@ jobs:
         with:
           node-version: '20'
       - run: npm install
+      - name: 安裝隱形瀏覽器內核（Cloudflare 封鎖時的傳輸層）
+        run: |
+          pip -q install "scrapling[all]>=0.4.11"
+          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零，仍續跑（curl 可用時不影響）"
       - name: 智慧鬧鐘迴圈（睡到準點抓 cpbl）
         run: |
           git config user.name  "github-actions[bot]"
@@ -54,7 +58,7 @@ jobs:
               sleep "$SLEEPS"
               continue
             fi
-            if EP_LEAGUE=cpbl EP_MODE=$MODE EP_DEEP=$DEEP timeout 1800 node expert_picks.js; then
+            if EP_LEAGUE=cpbl EP_MODE=$MODE EP_DEEP=$DEEP timeout 2700 node expert_picks.js; then
               LASTW=$(date -u +%FT%TZ)
             else
               echo "WARN [$(date -u +%FT%TZ)] 抓取 rc=$?（60 秒退避，35 分補償窗內自動重試）"

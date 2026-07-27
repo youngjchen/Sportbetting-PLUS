@@ -16,7 +16,6 @@
    節奏：溫和(0.85~1.3s 抖動)；full=全部過門檻者＋白名單、final=已有單者＋白名單（無名額）。
    ============================================================ */
 'use strict';
-const { execFile } = require('child_process');
 const cheerio = require('cheerio');
 const fs = require('fs');
 const path = require('path');
@@ -66,30 +65,17 @@ const HEADERS = {
   'Accept-Language': 'zh-TW,zh;q=0.9',
 };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
-const jitter = () => 850 + Math.floor(Math.random() * 450);   // 0.85~1.3s：全量名冊後總時長 ~24 分/full
+// curl 走 0.85~1.3s 抖動；隱形瀏覽器每頁本身就要 1.1~1.3s（等同節流）→ 抖動縮到 0.2~0.5s，
+// 免得總時長翻倍撞 workflow timeout（2026-07-28 雲端實測 1.1~1.3s/頁）。
+const jitter = () => (usingSidecar() ? 200 + Math.floor(Math.random() * 300) : 850 + Math.floor(Math.random() * 450));
 
-// 2026-07-27 起玩運彩 WAF 依客戶端 TLS 指紋擋 Node/axios（全路徑 403、任何 IP），curl 指紋放行
-// → 傳輸層改 curl 子行程，解析邏輯不動。curl 為 runner/Windows 內建，無新依賴。
-function curlGet(url, headers, timeoutMs) {
-  return new Promise((resolve, reject) => {
-    const args = ['-sS', '-L', '--max-redirs', '5', '--compressed', '-m', String(Math.ceil(timeoutMs / 1000)), '-w', '\n__CURL_CODE__%{http_code}'];
-    for (const [k, v] of Object.entries(headers)) args.push('-H', `${k}: ${v}`);
-    args.push(url);
-    execFile('curl', args, { maxBuffer: 32 * 1024 * 1024, windowsHide: true }, (err, stdout, stderr) => {
-      const out = String(stdout || '');
-      const i = out.lastIndexOf('__CURL_CODE__');
-      if (i < 0) return reject(new Error(`curl: ${(err && err.message) || String(stderr || '').trim() || 'no response'}`));
-      const code = parseInt(out.slice(i + '__CURL_CODE__'.length), 10);
-      if (code >= 200 && code < 300) return resolve(out.slice(0, Math.max(0, i - 1)));
-      reject(new Error(`Request failed with status code ${code}`));
-    });
-  });
-}
+// 傳輸層（2026-07-28）：curl 優先、被 Cloudflare 擋就自動切常駐隱形瀏覽器。見 sidecar_client.js。
+const { fetchText, shutdown: closeTransport, usingSidecar } = require('./sidecar_client.js');
 async function getJSON(url) {
-  return JSON.parse(await curlGet(url, Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, HEADERS), 20000));
+  return JSON.parse(await fetchText(url, Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, HEADERS), 20000));
 }
 async function getHTML(url) {
-  return curlGet(url, HEADERS, 20000);
+  return fetchText(url, HEADERS, 20000);
 }
 
 function twDate(offsetDays) {
@@ -621,6 +607,7 @@ async function run() {
 }
 
 if (require.main === module) {
-  run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
+  // 收尾一定要關 sidecar：它的 stdin 開著會讓 node 永遠不結束（workflow 會掛到 timeout）
+  run().then(() => { closeTransport(); }, e => { console.error('未預期錯誤：', e); closeTransport(); process.exit(1); });
 }
 module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE };
