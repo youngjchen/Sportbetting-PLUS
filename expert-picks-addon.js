@@ -130,8 +130,6 @@
     '.bbadge.ep-badge{border-color:rgba(255,179,71,.55)!important;color:#ffcf8a!important;}' +
     '.bbadge.ep-badge:hover{background:rgba(255,179,71,.14)!important;}' +
     '.bbadge.ep-badge.ep-done{border-color:rgba(255,179,71,.25)!important;color:#8a7a5e!important;}' +
-    '.bbadge.ep-swapwarn{border-color:rgba(64,201,198,.6)!important;color:#5fd6d3!important;}' +
-    '.bbadge.ep-swapwarn:hover{background:rgba(64,201,198,.14)!important;}' +
     // 面板放大版（2026-07-20 使用者要求）：min(460px,92vw)、字級整體 +2，行高加大
     '#ep-panel{position:fixed;z-index:99998;width:min(460px,92vw);max-height:76vh;overflow-y:auto;background:#151a22;' +
       'border:1px solid rgba(255,179,71,.45);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6);' +
@@ -342,18 +340,8 @@
       var preB = null;
       head.querySelectorAll('button.bbadge').forEach(function (b) { if (!preB && /^賽前/.test(b.textContent)) preB = b; });
       head.insertBefore(pill, preB || head.querySelector('.bico'));
-      // 讓分方曾對調警示（明牌指紋自動偵測）：青綠沿用板子「對調」色語言
-      if (agg.hdSwap && !cardEl.querySelector('.ep-swapwarn')) {
-        var teams = Object.keys(agg.hdSwap);
-        var warn = document.createElement('button');
-        warn.className = 'bbadge ep-swapwarn';
-        warn.textContent = '⚠讓分曾對調';
-        warn.title = '明牌台彩線兩邊都出現過讓方（' +
-          teams.map(function (t) { return t + '讓 ' + agg.hdSwap[t] + '票'; }).join('／') +
-          '）＝台彩讓分方期間曾對調。結算時記得勾「賽前對調」。點看名單。';
-        warn.onclick = openIt;
-        head.insertBefore(warn, pill.nextSibling);
-      }
+      // 「讓分曾對調」指紋不在標頭出晶片（2026-07-27 使用者否決：標頭/市場列=STAKE 軸空間）
+      // → 改由 index.html 國際軸藍帶的台彩段渲染，資料走 __expertPicks.hdSwapFor()。
     } catch (e) { /* add-on 永不弄壞排盤板 */ }
   }
   if (typeof renderCard === 'function') {
@@ -515,7 +503,9 @@
     return out;
   }
 
-  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, hasNew: hasNewFor, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd };
+  window.__expertPicks = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, hasNew: hasNewFor, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd,
+    // 台彩讓分方指紋（給 index.html 國際軸藍帶的台彩段用）：兩邊都當過讓方→{隊:票數}，否則 null
+    hdSwapFor: function (it, dateKey) { try { var dk = dateKey || (typeof doc !== 'undefined' && doc && doc.activeDate); if (!dk) return null; return aggregate(it, picksForCard(it, dk, pickPool(dk))).hdSwap || null; } catch (_) { return null; } } };
   if (typeof module !== 'undefined' && module.exports) {
     module.exports = { picksForCard: picksForCard, aggregate: aggregate, optOf: optOf, weightOf: weightOf, epStrong: epStrong, _setData: function (d) { data = d; }, _mergeFeeds: _mergeFeeds, _mergeArchives: _mergeArchives, _fmtUpd: fmtUpd, _pickPool: pickPool };
   }
