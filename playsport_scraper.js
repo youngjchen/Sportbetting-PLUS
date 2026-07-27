@@ -9,7 +9,7 @@
    用法：
      node playsport_scraper.js [--leagues=MLB] [--date=20260621] [--debug]
    ============================================================ */
-const axios = require('axios');
+const { execFile } = require('child_process');
 const cheerio = require('cheerio');
 const fs = require('fs');
 
@@ -49,10 +49,26 @@ function twDate(offsetDays) {
   if (offsetDays) tw.setDate(tw.getDate() + offsetDays);
   return `${tw.getFullYear()}${String(tw.getMonth() + 1).padStart(2, '0')}${String(tw.getDate()).padStart(2, '0')}`;
 }
+// 2026-07-27 起玩運彩 WAF 依客戶端 TLS 指紋擋 Node/axios（全路徑 403、任何 IP），curl 指紋放行
+// → 傳輸層改 curl 子行程，解析邏輯不動。curl 為 runner/Windows 內建，無新依賴。
+function curlGet(url, headers, timeoutMs) {
+  return new Promise((resolve, reject) => {
+    const args = ['-sS', '-L', '--max-redirs', '5', '--compressed', '-m', String(Math.ceil(timeoutMs / 1000)), '-w', '\n__CURL_CODE__%{http_code}'];
+    for (const [k, v] of Object.entries(headers)) args.push('-H', `${k}: ${v}`);
+    args.push(url);
+    execFile('curl', args, { maxBuffer: 32 * 1024 * 1024, windowsHide: true }, (err, stdout, stderr) => {
+      const out = String(stdout || '');
+      const i = out.lastIndexOf('__CURL_CODE__');
+      if (i < 0) return reject(new Error(`curl: ${(err && err.message) || String(stderr || '').trim() || 'no response'}`));
+      const code = parseInt(out.slice(i + '__CURL_CODE__'.length), 10);
+      if (code >= 200 && code < 400) return resolve(out.slice(0, Math.max(0, i - 1)));
+      reject(new Error(`Request failed with status code ${code}`));
+    });
+  });
+}
 async function fetchPage(leagueId, date) {
   const url = `${BASE}/${leagueId}?gamedate=${date}&mode=1&`;  // mode=1 = 運彩盤；帶 gamedate 防快取
-  const res = await axios.get(url, { headers: HEADERS, timeout: REQ_TIMEOUT, validateStatus: (s) => s >= 200 && s < 400 });
-  return res.data;
+  return curlGet(url, HEADERS, REQ_TIMEOUT);
 }
 
 // 取某表第一筆資料列(表頭 tr 之後第一個 tr)的儲存格文字
