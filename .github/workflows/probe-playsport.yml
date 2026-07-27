@@ -1,0 +1,41 @@
+# 一次性探測：玩運彩對 GitHub runner 是「硬 IP 封鎖」還是「反機器人挑戰頁」
+# 判據：curl 403 的回應標頭+內文（Cloudflare/challenge 特徵）；scrapling 隱形瀏覽器能否取到真內容。
+# 結論決定雲端自主抓取路線：挑戰頁=scrapling 內核可解；硬封鎖=只能換出口 IP（代理/台灣主機/手機端）。
+name: probe-playsport
+on:
+  workflow_dispatch:
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    steps:
+      - name: curl 探測（狀態碼＋回應標頭＋內文前段）
+        run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
+          for U in \
+            "https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0" \
+            "https://www.playsport.cc/livescore/1?gamedate=20260728&mode=1&" ; do
+            echo "===== PROBE $U"
+            curl -sS -D headers.txt -o body.txt -w "HTTP=%{http_code} SIZE=%{size_download}\n" \
+              -H "User-Agent: $UA" -H "Referer: https://www.playsport.cc/" \
+              -H "X-Requested-With: XMLHttpRequest" -m 25 "$U" || echo "CURL_ERR rc=$?"
+            echo "--- headers:"; cat headers.txt
+            echo "--- body head(600B):"; head -c 600 body.txt; echo
+            echo "--- 特徵掃描:"
+            grep -ci "cloudflare\|cf-ray\|challenge\|turnstile\|just a moment\|captcha" headers.txt body.txt || echo "無挑戰特徵"
+            grep -c "rankers\|universe-tablecon\|livescore" body.txt || echo "無真內容標記"
+          done
+      - name: scrapling 隱形瀏覽器探測
+        run: |
+          pip -q install "scrapling[all]>=0.4.11"
+          scrapling install --force
+          echo "===== stealthy-fetch livescore"
+          scrapling extract stealthy-fetch "https://www.playsport.cc/livescore/1?gamedate=20260728&mode=1&" ls.html --timeout 60000 || echo "STEALTHY_ERR rc=$?"
+          [ -f ls.html ] && wc -c ls.html && grep -c "universe-tablecon\|team\|賽事" ls.html || echo "ls.html 無內容"
+          echo "===== stealthy-fetch + solve-cloudflare"
+          scrapling extract stealthy-fetch "https://www.playsport.cc/livescore/1?gamedate=20260728&mode=1&" ls2.html --timeout 90000 --solve-cloudflare || echo "SOLVE_ERR rc=$?"
+          [ -f ls2.html ] && wc -c ls2.html && grep -c "universe-tablecon\|team\|賽事" ls2.html || echo "ls2.html 無內容"
+          echo "===== fetch(一般瀏覽器) billboard JSON"
+          scrapling extract fetch "https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0" bb.json --timeout 60000 || echo "FETCH_ERR rc=$?"
+          [ -f bb.json ] && wc -c bb.json && grep -c "rankers\|winpercentage" bb.json || echo "bb.json 無內容"

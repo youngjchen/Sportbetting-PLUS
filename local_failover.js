@@ -24,11 +24,12 @@ const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
 const LOCK_FILE = path.join(os.tmpdir(), 'bb_failover.lock');
 const LEAGUES = ['mlb', 'npb', 'cpbl', 'kbo'];
-// 12 分：排程每 15 分跑一次 → 雲端死亡期間台彩序列維持 ~15 分顆粒度（雲端原生為 5 分）。
-// 雲端復活時它自己每 ~6 分提交 → 年齡永遠 <12 → 備援自動休眠，不會雙頭抓。
+// 4 分＋排程每 5 分一輪＝台彩序列維持雲端原生的 5 分顆粒度（2026-07-28 使用者命令，不得放寬）。
+// 雲端復活時它自己每 ~6 分提交 → 年齡多半 <4 → 備援自動退讓；邊界重疊多抓一輪無害（merge 冪等）。
 // ‼️ 一定要綁 pregame 路徑判齡：雲端空轉時仍會每 6 分提交「只動 lottery_series 時戳」的殭屍提交
 //   （2026-07-28 00:08 實測 pregame 內容 138 場逐字相同），看整體提交節奏會被騙。
-const PREGAME_STALE_MIN = 12;
+// 已知縫隙：明牌全量波（8~25 分）持鎖期間 pregame 輪會被跳過，序列出現同長度空檔——鎖=git 操作安全前提。
+const PREGAME_STALE_MIN = 4;
 const EP_FRESH_H = 3;          // qualified=0 且 updated 在此小時數內才視為「被擋」
 const RESCUE_GAP_MIN = 85;     // 每聯盟救援最小間隔
 const DEEP_WIN = [4, 7];       // 深掃補位窗（台灣時）
