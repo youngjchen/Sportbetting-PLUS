@@ -87,10 +87,22 @@
       var ks = Object.keys(cnt);
       if (ks.length) r.tipLine = +ks.sort(function (a, b) { return cnt[b] - cnt[a]; })[0];
     });
+    // 台彩讓分方指紋（2026-07-27 金鶯@老虎案）：同場「台彩線」讓分單的隱含讓方出現兩邊
+    // ＝台彩期間曾對調。爬蟲空窗時 lottery_series 會漏錄來回對調，明牌內容本身就是證據：
+    // line<0＝該隊讓、line>0＝對手讓；只認 srcMode 1（運彩盤），國際盤與台彩不同邊屬背離非對調。
+    var favCnt = {};
+    picks.forEach(function (p) {
+      if (p.market !== 'hd' || p.srcMode !== 1 || p.line == null || !p.team) return;
+      var fav = p.line < 0 ? p.team
+        : (tmEq(p.team, it.away) ? it.home : (tmEq(p.team, it.home) ? it.away : null));
+      if (fav) favCnt[fav] = (favCnt[fav] || 0) + 1;
+    });
+    var favs = Object.keys(favCnt);
     return {
       rows: rows, total: picks.length,
       totalNew: rows.reduce(function (s, r) { return s + r.newCount; }, 0),
       totalNewWeight: rows.reduce(function (s, r) { return s + r.newWeight; }, 0),
+      hdSwap: favs.length > 1 ? favCnt : null,
     };
   }
 
@@ -118,6 +130,8 @@
     '.bbadge.ep-badge{border-color:rgba(255,179,71,.55)!important;color:#ffcf8a!important;}' +
     '.bbadge.ep-badge:hover{background:rgba(255,179,71,.14)!important;}' +
     '.bbadge.ep-badge.ep-done{border-color:rgba(255,179,71,.25)!important;color:#8a7a5e!important;}' +
+    '.bbadge.ep-swapwarn{border-color:rgba(64,201,198,.6)!important;color:#5fd6d3!important;}' +
+    '.bbadge.ep-swapwarn:hover{background:rgba(64,201,198,.14)!important;}' +
     // 面板放大版（2026-07-20 使用者要求）：min(460px,92vw)、字級整體 +2，行高加大
     '#ep-panel{position:fixed;z-index:99998;width:min(460px,92vw);max-height:76vh;overflow-y:auto;background:#151a22;' +
       'border:1px solid rgba(255,179,71,.45);border-radius:14px;box-shadow:0 16px 40px rgba(0,0,0,.6);' +
@@ -328,6 +342,18 @@
       var preB = null;
       head.querySelectorAll('button.bbadge').forEach(function (b) { if (!preB && /^賽前/.test(b.textContent)) preB = b; });
       head.insertBefore(pill, preB || head.querySelector('.bico'));
+      // 讓分方曾對調警示（明牌指紋自動偵測）：青綠沿用板子「對調」色語言
+      if (agg.hdSwap && !cardEl.querySelector('.ep-swapwarn')) {
+        var teams = Object.keys(agg.hdSwap);
+        var warn = document.createElement('button');
+        warn.className = 'bbadge ep-swapwarn';
+        warn.textContent = '⚠讓分曾對調';
+        warn.title = '明牌台彩線兩邊都出現過讓方（' +
+          teams.map(function (t) { return t + '讓 ' + agg.hdSwap[t] + '票'; }).join('／') +
+          '）＝台彩讓分方期間曾對調。結算時記得勾「賽前對調」。點看名單。';
+        warn.onclick = openIt;
+        head.insertBefore(warn, pill.nextSibling);
+      }
     } catch (e) { /* add-on 永不弄壞排盤板 */ }
   }
   if (typeof renderCard === 'function') {
