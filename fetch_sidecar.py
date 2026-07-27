@@ -11,12 +11,15 @@ runner 上 scrapling StealthySession 直接 200 拿到真內容、每頁 1.1~1.3
                     失敗: {"id": 7, "status": 0, "err": "..."}
   啟動完成時先送一行: {"ready": true}
 
-JSON 端點注意：瀏覽器會把 JSON 包進檢視器 HTML（<pre>{...}</pre>），
+JSON 端點注意：瀏覽器可能把 JSON 包進檢視器 HTML（<pre> 或 <p>），
 本檔負責還原成純 JSON 再回傳，Node 端不必知道差別。
 """
 import sys, json, base64, re, html as htmlmod
 
-PRE_RE = re.compile(r'<pre[^>]*>(.*?)</pre>', re.S | re.I)
+JSON_WRAPPER_RE = re.compile(
+    r'<(?P<tag>pre|p)\b[^>]*>(.*?)</(?P=tag)>',
+    re.S | re.I,
+)
 
 
 def unwrap_json(raw: str) -> str:
@@ -24,9 +27,9 @@ def unwrap_json(raw: str) -> str:
     s = raw.lstrip()
     if s.startswith('{') or s.startswith('['):
         return raw
-    m = PRE_RE.search(raw)
+    m = JSON_WRAPPER_RE.search(raw)
     if m:
-        inner = htmlmod.unescape(re.sub(r'<[^>]+>', '', m.group(1))).strip()
+        inner = htmlmod.unescape(re.sub(r'<[^>]+>', '', m.group(2))).strip()
         if inner.startswith('{') or inner.startswith('['):
             return inner
     return raw
@@ -54,8 +57,18 @@ def main():
         if req.get('quit'):
             break
         rid, url = req.get('id'), req.get('url')
+        headers = {
+            str(k): str(v) for k, v in (req.get('headers') or {}).items()
+            if str(k).lower() != 'user-agent'
+        }
+        timeout_ms = max(1000, int(req.get('timeoutMs') or 30000))
         try:
-            page = session.fetch(url)
+            page = session.fetch(
+                url,
+                extra_headers=headers,
+                google_search=False,
+                timeout=timeout_ms,
+            )
             status = getattr(page, 'status', 200) or 200
             raw = getattr(page, 'html_content', None)
             if raw is None:

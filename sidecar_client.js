@@ -71,7 +71,11 @@ function startSidecar() {
   return ready;
 }
 
-async function sidecarGet(url, timeoutMs) {
+function makeSidecarRequest(id, url, headers, timeoutMs) {
+  return { id, url, headers: Object.assign({}, headers || {}), timeoutMs };
+}
+
+async function sidecarGet(url, headers, timeoutMs) {
   await startSidecar();
   const id = ++seq;
   return new Promise((resolve, reject) => {
@@ -80,7 +84,7 @@ async function sidecarGet(url, timeoutMs) {
       resolve: (v) => { clearTimeout(timer); resolve(v); },
       reject: (e) => { clearTimeout(timer); reject(e); },
     });
-    try { proc.stdin.write(JSON.stringify({ id, url }) + '\n'); }
+    try { proc.stdin.write(JSON.stringify(makeSidecarRequest(id, url, headers, timeoutMs)) + '\n'); }
     catch (e) { clearTimeout(timer); pending.delete(id); reject(e); }
   });
 }
@@ -98,11 +102,11 @@ async function fetchText(url, headers, timeoutMs) {
       } else { throw e; }
     }
   }
-  return sidecarGet(url, timeoutMs);
+  return sidecarGet(url, headers, timeoutMs);
 }
 
 function shutdown() {
   if (proc) { try { proc.stdin.write(JSON.stringify({ quit: true }) + '\n'); } catch (_) {} try { proc.stdin.end(); } catch (_) {} }
 }
 
-module.exports = { fetchText, shutdown, usingSidecar: () => curlBlocked };
+module.exports = { fetchText, shutdown, makeSidecarRequest, usingSidecar: () => curlBlocked };

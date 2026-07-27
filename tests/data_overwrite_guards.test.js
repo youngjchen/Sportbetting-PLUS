@@ -22,6 +22,25 @@ function inTempDir(fn) {
   }
 }
 
+test('sidecar protocol forwards request headers and timeout to Scrapling', () => {
+  const sidecar = require('../sidecar_client.js');
+  assert.equal(typeof sidecar.makeSidecarRequest, 'function');
+  assert.deepEqual(
+    sidecar.makeSidecarRequest(
+      7,
+      'https://www.playsport.cc/billboard/winRate',
+      { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+      20000
+    ),
+    {
+      id: 7,
+      url: 'https://www.playsport.cc/billboard/winRate',
+      headers: { 'X-Requested-With': 'XMLHttpRequest', Accept: 'application/json' },
+      timeoutMs: 20000,
+    }
+  );
+});
+
 test('playsport refuses to replace malformed tracked pregame data', () => {
   const scraper = require('../playsport_scraper.js');
   inTempDir(() => {
