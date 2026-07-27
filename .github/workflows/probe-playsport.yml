@@ -1,6 +1,7 @@
-# 一次性探測：玩運彩對 GitHub runner 是「硬 IP 封鎖」還是「反機器人挑戰頁」
-# 判據：curl 403 的回應標頭+內文（Cloudflare/challenge 特徵）；scrapling 隱形瀏覽器能否取到真內容。
-# 結論決定雲端自主抓取路線：挑戰頁=scrapling 內核可解；硬封鎖=只能換出口 IP（代理/台灣主機/手機端）。
+# 探測二：決定雲端傳輸層架構（明牌一輪 ~1500 請求，不能每請求開瀏覽器）
+#  A. curl_cffi TLS 偽裝（scrapling Fetcher，無瀏覽器）能否直接過？→ 最佳解，快
+#  B. 瀏覽器取 cf_clearance cookie 後餵給純 HTTP，能否過？→ 次佳，改動小
+#  C. 常駐瀏覽器 session 連抓多頁的每頁耗時 → 保底解，確認速度可接受
 name: probe-playsport
 on:
   workflow_dispatch:
@@ -8,34 +9,67 @@ on:
 jobs:
   probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 14
+    timeout-minutes: 20
     steps:
-      - name: curl 探測（狀態碼＋回應標頭＋內文前段）
-        run: |
-          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36"
-          for U in \
-            "https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0" \
-            "https://www.playsport.cc/livescore/1?gamedate=20260728&mode=1&" ; do
-            echo "===== PROBE $U"
-            curl -sS -D headers.txt -o body.txt -w "HTTP=%{http_code} SIZE=%{size_download}\n" \
-              -H "User-Agent: $UA" -H "Referer: https://www.playsport.cc/" \
-              -H "X-Requested-With: XMLHttpRequest" -m 25 "$U" || echo "CURL_ERR rc=$?"
-            echo "--- headers:"; cat headers.txt
-            echo "--- body head(600B):"; head -c 600 body.txt; echo
-            echo "--- 特徵掃描:"
-            grep -ci "cloudflare\|cf-ray\|challenge\|turnstile\|just a moment\|captcha" headers.txt body.txt || echo "無挑戰特徵"
-            grep -c "rankers\|universe-tablecon\|livescore" body.txt || echo "無真內容標記"
-          done
-      - name: scrapling 隱形瀏覽器探測
+      - name: 安裝 scrapling
         run: |
           pip -q install "scrapling[all]>=0.4.11"
-          scrapling install --force
-          echo "===== stealthy-fetch livescore"
-          scrapling extract stealthy-fetch "https://www.playsport.cc/livescore/1?gamedate=20260728&mode=1&" ls.html --timeout 60000 || echo "STEALTHY_ERR rc=$?"
-          [ -f ls.html ] && wc -c ls.html && grep -c "universe-tablecon\|team\|賽事" ls.html || echo "ls.html 無內容"
-          echo "===== stealthy-fetch + solve-cloudflare"
-          scrapling extract stealthy-fetch "https://www.playsport.cc/livescore/1?gamedate=20260728&mode=1&" ls2.html --timeout 90000 --solve-cloudflare || echo "SOLVE_ERR rc=$?"
-          [ -f ls2.html ] && wc -c ls2.html && grep -c "universe-tablecon\|team\|賽事" ls2.html || echo "ls2.html 無內容"
-          echo "===== fetch(一般瀏覽器) billboard JSON"
-          scrapling extract fetch "https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0" bb.json --timeout 60000 || echo "FETCH_ERR rc=$?"
-          [ -f bb.json ] && wc -c bb.json && grep -c "rankers\|winpercentage" bb.json || echo "bb.json 無內容"
+          scrapling install --force >/dev/null 2>&1 || true
+      - name: A/B/C 三案探測
+        run: |
+          cat > probe.py <<'PY'
+          import time, json, sys
+          BB = "https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0"
+          MB = "https://www.playsport.cc/member/kerwin543/prediction?allianceid=1&gameday=today"
+          LS = "https://www.playsport.cc/livescore/1?gamedate=20260728&mode=1&"
+          def mark(tag, ok, size, extra=""):
+              print(f"VERDICT {tag} ok={ok} size={size} {extra}", flush=True)
+
+          # ---- A: curl_cffi TLS 偽裝，無瀏覽器
+          try:
+              from scrapling.fetchers import FetcherSession
+              with FetcherSession(impersonate='chrome') as s:
+                  t0 = time.time()
+                  r = s.get(BB, stealthy_headers=True)
+                  body = r.body if hasattr(r, 'body') else str(r)
+                  ok = ('rankers' in body) or ('winpercentage' in body)
+                  mark("A_billboard", ok, len(body), f"status={getattr(r,'status',None)} t={time.time()-t0:.1f}s")
+                  t0 = time.time()
+                  r2 = s.get(MB, stealthy_headers=True)
+                  b2 = r2.body if hasattr(r2, 'body') else str(r2)
+                  mark("A_member", ('tablecon' in b2) or ('預測' in b2), len(b2), f"status={getattr(r2,'status',None)} t={time.time()-t0:.1f}s")
+          except Exception as e:
+              mark("A", False, 0, f"EXC {type(e).__name__}: {e}")
+
+          # ---- B: 瀏覽器取 cookie，餵給 TLS 偽裝 HTTP
+          try:
+              from scrapling.fetchers import StealthySession
+              with StealthySession(headless=True) as bs:
+                  p = bs.fetch(LS)
+                  cookies = getattr(p, 'cookies', None) or {}
+                  print("COOKIE_KEYS", list(cookies.keys())[:10], flush=True)
+              from scrapling.fetchers import FetcherSession as FS2
+              if cookies:
+                  with FS2(impersonate='chrome') as s2:
+                      r3 = s2.get(BB, cookies=cookies, stealthy_headers=True)
+                      b3 = r3.body if hasattr(r3, 'body') else str(r3)
+                      mark("B_cookie_then_http", ('rankers' in b3), len(b3), f"status={getattr(r3,'status',None)}")
+              else:
+                  mark("B_cookie_then_http", False, 0, "無 cookie")
+          except Exception as e:
+              mark("B", False, 0, f"EXC {type(e).__name__}: {e}")
+
+          # ---- C: 常駐瀏覽器連抓 3 頁，量每頁耗時
+          try:
+              from scrapling.fetchers import StealthySession
+              with StealthySession(headless=True) as bs:
+                  for i, u in enumerate([BB, MB, LS]):
+                      t0 = time.time()
+                      p = bs.fetch(u)
+                      h = p.html_content if hasattr(p, 'html_content') else str(p)
+                      key = 'rankers' if i == 0 else ('tablecon' if i == 1 else 'livescore')
+                      mark(f"C_page{i}", key in h or 'winpercentage' in h, len(h), f"t={time.time()-t0:.1f}s")
+          except Exception as e:
+              mark("C", False, 0, f"EXC {type(e).__name__}: {e}")
+          PY
+          python probe.py
