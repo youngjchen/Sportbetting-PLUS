@@ -36,6 +36,23 @@ const DEEP_WIN = [4, 7];       // 深掃補位窗（台灣時）
 const log = (m) => console.log(`[${new Date().toISOString()}] ${m}`);
 const sh = (cmd, opt) => execSync(cmd, Object.assign({ cwd: REPO_DIR, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }, opt || {}));
 
+// 台灣時 HH:MM（給 log 用）
+function hhmm(ms) { return new Date(ms + 8 * 3600e3).toISOString().slice(11, 16); }
+// 該聯盟「已過的最近一個波」＝expert_alarm BASELINES 的保底時點＋深掃時點（跨日用前後一天涵蓋）
+function lastPassedSlot(lg) {
+  let B;
+  try { B = require('./expert_alarm.js').BASELINES[lg]; } catch (_) { return null; }
+  if (!B) return null;
+  const now = Date.now();
+  const day0 = Math.floor((now + 8 * 3600e3) / 86400e3) * 86400e3 - 8 * 3600e3;   // 今日台灣 00:00 的 UTC ms
+  const cands = [];
+  for (const d of [-1, 0, 1]) {
+    for (const [h, m] of B.hot) cands.push({ at: day0 + d * 86400e3 + (h * 60 + m) * 60e3, deep: false });
+    cands.push({ at: day0 + d * 86400e3 + (B.deep[0] * 60 + B.deep[1]) * 60e3, deep: true });
+  }
+  const passed = cands.filter(c => c.at <= now).sort((a, b) => b.at - a.at);
+  return passed[0] || null;
+}
 function loadState() { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch (_) { return {}; } }
 function saveState(s) { fs.writeFileSync(STATE_FILE, JSON.stringify(s)); }
 function twNow() { return new Date(Date.now() + 8 * 3600e3); }
@@ -86,20 +103,23 @@ function run() {
     const updAge = d.updated ? (Date.now() - +new Date(d.updated)) / 3600e3 : 99;
     const blocked = cov.qualified === 0 && updAge < EP_FRESH_H;
     if (!blocked) continue;
+    // 波次對齊：直接吃 expert_alarm 的時刻表（使用者改保底/深掃時點，備援自動跟著改），
+    // 判準＝「已過的最近一個波」若晚於上次救援就補跑；固定間隔節流會漂移，深掃會跑掉時點。
+    const slot = lastPassedSlot(lg);
     const last = state['ep_' + lg] || 0;
-    if (Date.now() - last < RESCUE_GAP_MIN * 60e3) { log(`${lg} 被擋但距上次救援 <${RESCUE_GAP_MIN} 分，略過`); continue; }
-    // 深掃補位：窗內每日一次帶 EP_DEEP
+    if (!slot) { log(`${lg} 尚無已過波次，略過`); continue; }
+    if (last >= slot.at) { log(`${lg} 被擋，但 ${slot.deep ? '深掃' : '保底'}波 ${hhmm(slot.at)} 已救過，略過`); continue; }
     const tw = twNow();
     const deepKey = 'deep_' + lg, today = tw.toISOString().slice(0, 10);
-    const useDeep = tw.getUTCHours() >= DEEP_WIN[0] && tw.getUTCHours() < DEEP_WIN[1] && state[deepKey] !== today;
-    log(`${lg} 雲端被擋（qualified=0, updated ${updAge.toFixed(1)}h 前）→ 本機 ${useDeep ? '深掃' : '全量'}`);
+    const useDeep = slot.deep && state[deepKey] !== today;
+    log(`${lg} 雲端被擋（qualified=0, updated ${updAge.toFixed(1)}h 前）→ 補 ${hhmm(slot.at)} ${slot.deep ? '深掃' : '保底'}波，本機 ${useDeep ? '深掃' : '全量'}`);
     try {
       execFileSync('node', ['expert_picks.js'], {
         cwd: REPO_DIR, stdio: ['ignore', 'inherit', 'inherit'], timeout: 35 * 60e3,
         env: Object.assign({}, process.env, { EP_LEAGUE: lg, EP_MODE: 'full', EP_DEEP: useDeep ? '1' : '' }),
       });
       staged.push(`data/expert_picks_${lg}.json`);
-      state['ep_' + lg] = Date.now();
+      state['ep_' + lg] = slot.at;          // 記「補了哪個波」而非執行時刻：下一波到點才會再跑
       if (useDeep) state[deepKey] = today;
       saveState(state);
     } catch (e) { log(`${lg} 本機抓取失敗：` + e.message.split('\n')[0]); }
