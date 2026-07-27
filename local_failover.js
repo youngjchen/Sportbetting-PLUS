@@ -38,17 +38,21 @@ const sh = (cmd, opt) => execSync(cmd, Object.assign({ cwd: REPO_DIR, encoding: 
 
 // 台灣時 HH:MM（給 log 用）
 function hhmm(ms) { return new Date(ms + 8 * 3600e3).toISOString().slice(11, 16); }
-// 該聯盟「已過的最近一個波」＝expert_alarm BASELINES 的保底時點＋深掃時點（跨日用前後一天涵蓋）
+// 該聯盟「已過的最近一個波」——直接吃 expert_alarm 的完整時刻表（targetsFor＝保底＋深掃＋
+// 開賽簇 T-120/T-35，含無賽日規則），跟雲端鬧鐘同一顆腦。只用 BASELINES 會漏簇波：
+// MLB 04:00 深掃後到 22:00 之間沒有保底，早場(06:40~09:45)的賽前波全靠簇波。
+// 跨午夜：用 now 與 now-12h 各算一份合併（targetsFor 以當日為錨）。
 function lastPassedSlot(lg) {
-  let B;
-  try { B = require('./expert_alarm.js').BASELINES[lg]; } catch (_) { return null; }
-  if (!B) return null;
+  let A;
+  try { A = require('./expert_alarm.js'); } catch (_) { return null; }
   const now = Date.now();
-  const day0 = Math.floor((now + 8 * 3600e3) / 86400e3) * 86400e3 - 8 * 3600e3;   // 今日台灣 00:00 的 UTC ms
   const cands = [];
-  for (const d of [-1, 0, 1]) {
-    for (const [h, m] of B.hot) cands.push({ at: day0 + d * 86400e3 + (h * 60 + m) * 60e3, deep: false });
-    cands.push({ at: day0 + d * 86400e3 + (B.deep[0] * 60 + B.deep[1]) * 60e3, deep: true });
+  for (const anchor of [now, now - 12 * 3600e3]) {
+    let games = [];
+    try { games = A.loadGames(lg, anchor) || []; } catch (_) {}
+    let ts = [];
+    try { ts = A.targetsFor(lg, games, anchor) || []; } catch (_) {}
+    for (const t of ts) cands.push({ at: t.atMs, deep: t.deep ? true : false });
   }
   const passed = cands.filter(c => c.at <= now).sort((a, b) => b.at - a.at);
   return passed[0] || null;
@@ -133,7 +137,9 @@ function run() {
     if (!diff) { log('產出與雲端無差異，不推'); sh('git reset -q'); return; }
     sh('git commit -q -m "data: local failover rescue（雲端被 WAF 擋，本機接手）"');
     for (let i = 0; i < 3; i++) {
-      try { sh('git pull --rebase origin main'); } catch (_) { try { sh('git rebase --abort'); } catch (_) {} continue; }
+      // -X theirs（rebase 語義＝保留「被重放的我方提交」內容）：雲端殭屍提交每 6 分動一次
+      // lottery_series（單行 JSON）必衝突；我方是剛抓的新資料、永遠比殭屍時戳新，取我方安全。
+      try { sh('git pull --rebase -X theirs origin main'); } catch (_) { try { sh('git rebase --abort'); } catch (_) {} continue; }
       try { sh('git push origin main'); log('✅ 已推送：' + staged.join(', ')); return; }
       catch (_) { /* 撞到別的提交，重試 */ }
     }
