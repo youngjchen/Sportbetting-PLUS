@@ -4404,7 +4404,15 @@ function wrapForeign(node, W, H){
 function exportData(){
   closeMore();
   syncStateToDoc();
-  const blob = new Blob([JSON.stringify(doc)], {type:"application/json"});
+  // 匯出＝完整快照：盤面主檔＋手動卜卦紀錄（2026-07-27 修）。
+  // 舊版只存 doc，卜卦紀錄不在裡面 → 使用者以為「有備份」，實際上卦全裸奔（實際損失過）。
+  // 包成信封格式並保留舊格式相容：載入端看到 __envelope 就拆，看不到就當成純 doc（舊備份照樣讀得回）。
+  let payload = doc;
+  try{
+    const casts = JSON.parse(localStorage.getItem("dvManualCasts") || "[]");
+    if(Array.isArray(casts) && casts.length) payload = { __envelope:"sbplus-backup-v1", doc: doc, dvManualCasts: casts };
+  }catch(_){}
+  const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
   a.download=`排盤備份_${todayStr()}.json`; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
@@ -4491,9 +4499,28 @@ function importData(){
     const rd=new FileReader();
     rd.onload=()=>{
       snapshot();
-      if(loadDocFromString(String(rd.result))){
+      // 信封格式（v1）＝{__envelope, doc, dvManualCasts}；舊備份是純 doc，兩者都吃。
+      let raw = String(rd.result), casts = null;
+      try{
+        const outer = JSON.parse(raw);
+        if(outer && outer.__envelope === "sbplus-backup-v1"){
+          raw = JSON.stringify(outer.doc);
+          if(Array.isArray(outer.dvManualCasts)) casts = outer.dvManualCasts;
+        }
+      }catch(_){}
+      if(loadDocFromString(raw)){
+        if(casts){   // 卜卦紀錄用聯集併回（不覆蓋這台已有的卦）
+          try{
+            const cur = JSON.parse(localStorage.getItem("dvManualCasts") || "[]");
+            const merged = (window.__dvSync && window.__dvSync.merge) ? window.__dvSync.merge(casts, cur)
+              : (function(){ const m={}, k=e=>(e.ts||"")+"|"+(e.officialId||"")+"|"+(e.market||"")+"|"+(e.method||"");
+                  cur.concat(casts).forEach(e=>{ if(e&&e.ts) m[k(e)]=e; });
+                  return Object.keys(m).map(x=>m[x]).sort((a,b)=>a.ts<b.ts?1:(a.ts>b.ts?-1:0)); })();
+            localStorage.setItem("dvManualCasts", JSON.stringify(merged));
+          }catch(_){}
+        }
         loadActiveBoard(); save(); render(); buildDateBar(); applyView(); fitView();
-        alert("已匯入備份 ✓");
+        alert("已匯入備份 ✓" + (casts ? `（含卜卦紀錄 ${casts.length} 筆，已聯集併入）` : ""));
       }else{
         alert("這個檔案讀不出來，請確認是本程式匯出的備份檔。");
       }
