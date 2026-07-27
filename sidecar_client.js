@@ -4,17 +4,16 @@
 //   · 住宅 IP + curl → 200（本機備援走這條，最快）
 //   · 資料中心 IP（GitHub runner）+ curl/axios → 403 挑戰頁
 //   · 任何 IP + scrapling 隱形瀏覽器 → 200（雲端實測 1.1~1.3 秒/頁）
-// 策略：先 curl；連續 CURL_FAIL_TRIP 次 403 就永久切 sidecar（同一輪不再浪費 curl 請求）。
+// 策略：先 curl；第一次 403/503 就永久切 sidecar，並用 sidecar 重試同一個請求。
+// 不可先丟掉前幾個 403：呼叫端會把漏抓頁面誤判成撤單，進而刪除既有明牌。
 // 環境變數 EP_TRANSPORT=sidecar|curl 可強制指定（測試用）。
 'use strict';
 const { execFile, spawn } = require('child_process');
 const path = require('path');
 
 const FORCE = (process.env.EP_TRANSPORT || '').toLowerCase();
-const CURL_FAIL_TRIP = 3;
 
 let curlBlocked = FORCE === 'sidecar';
-let curl403 = 0;
 let proc = null, ready = null, seq = 0;
 const pending = new Map();
 
@@ -94,10 +93,8 @@ async function fetchText(url, headers, timeoutMs) {
     try { return await curlGet(url, headers, timeoutMs); }
     catch (e) {
       if (e.httpCode === 403 || e.httpCode === 503) {
-        if (++curl403 >= CURL_FAIL_TRIP) {
-          curlBlocked = true;
-          console.log(`  ⓘ curl 連續 ${curl403} 次被擋（${e.httpCode}）→ 本輪改用隱形瀏覽器`);
-        } else { throw e; }
+        curlBlocked = true;
+        console.log(`  ⓘ curl 被擋（${e.httpCode}）→ 立即用隱形瀏覽器重試同一頁，本輪後續沿用瀏覽器`);
       } else { throw e; }
     }
   }

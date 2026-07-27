@@ -339,6 +339,15 @@ function parseRecordStats(html) {
   return { stats: out, nickname: $('.memberidname').first().text().trim() || null };
 }
 
+// 全掃名冊若相較前輪瞬間腰斬，代表榜單端點/WAF/解析層不完整，不是合格高手集體消失。
+// 此時整輪必須失敗且不得覆寫舊檔，讓 workflow 在補償窗內重試。
+function coverageCollapsed(previous, current) {
+  const before = Number(previous && previous.qualified);
+  const now = Number(current && current.qualified);
+  if (!Number.isFinite(before) || !Number.isFinite(now) || before < 30) return false;
+  return now < Math.max(10, Math.floor(before * 0.5));
+}
+
 /* ---- 主流程 ---- */
 async function run() {
   const stamp = new Date(Date.now() + 8 * 3600e3).toISOString().replace('Z', '+08:00');
@@ -526,6 +535,16 @@ async function run() {
     }
   }
 
+  if (decision.mode === 'full' && prev && prev.coverage) {
+    const collapsed = targets.filter(({ lg }) => coverageCollapsed(prev.coverage[lg], coverage[lg]));
+    if (collapsed.length) {
+      const detail = collapsed.map(({ lg }) =>
+        `${lg}:${prev.coverage[lg].qualified}→${coverage[lg].qualified}`
+      ).join(', ');
+      throw new Error(`全掃合格名冊異常崩跌（${detail}），拒絕覆寫舊明牌；交由補償窗重試`);
+    }
+  }
+
   // 去重：同人同場同市場同邊（today/tomorrow 頁重疊、或讓分+主推雙重身分）
   // at＝這筆單「首次被抓到」的時間（沿用上一輪同鍵的 at）；高手改單＝新鍵＝新時間 → 板上可辨識更新
   const prevAt = {};
@@ -610,4 +629,4 @@ if (require.main === module) {
   // 收尾一定要關 sidecar：它的 stdin 開著會讓 node 永遠不結束（workflow 會掛到 timeout）
   run().then(() => { closeTransport(); }, e => { console.error('未預期錯誤：', e); closeTransport(); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE };
+module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, coverageCollapsed, loadWhitelist, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE };
