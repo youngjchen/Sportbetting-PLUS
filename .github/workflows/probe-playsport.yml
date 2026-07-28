@@ -1,56 +1,47 @@
-# 探測四：雲端拿 billboard JSON 的兩條路——A. curl_cffi chrome TLS 模擬（無瀏覽器、快）
-# B. 隱形瀏覽器頁內 XHR（credentials 同源）。判定＝JSON.parse 出 rankers 才算數（禁字串誤判）。
+# 一次性稽核：四聯盟並行深掃回溯 7/27+7/28，量測漏抓明牌（前後筆數差）
+# AUDIT 行輸出格式：AUDIT <lg> BEFORE {...} AFTER {...}（主檔+歸檔 by date 筆數）
 name: probe-playsport
 on:
   workflow_dispatch:
 
 jobs:
-  probe:
+  backfill:
+    strategy:
+      fail-fast: false
+      matrix:
+        lg: [mlb, npb, kbo, cpbl]
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 50
     steps:
       - uses: actions/checkout@v4
-      - name: 安裝 scrapling
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: 安裝隱形瀏覽器內核
         run: |
           pip -q install "scrapling[all]>=0.4.11"
-          scrapling install --force >/dev/null 2>&1 || true
-      - name: A/B 兩案
+          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install"
+      - name: 深掃回溯＋前後比對＋推送
         run: |
-          cat > p4.py <<'PY'
-          import json
-          BB = 'https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0'
-          H = {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json',
-               'Referer': 'https://www.playsport.cc/'}
-          def parse_ok(t):
-              try:
-                  return isinstance(json.loads(t).get('rankers'), (dict, list))
-              except Exception:
-                  return False
-          try:
-              from scrapling.fetchers import FetcherSession
-              with FetcherSession(impersonate='chrome') as s:
-                  r = s.get(BB, headers=H)
-                  b = r.body
-                  if isinstance(b, (bytes, bytearray)):
-                      b = b.decode('utf-8', 'replace')
-                  b = b if isinstance(b, str) else str(b)
-                  print('A_status', getattr(r, 'status', None), 'A_parse', parse_ok(b), 'A_head', repr(b[:120]))
-          except Exception as e:
-              print('A_EXC', type(e).__name__, str(e)[:150])
-          try:
-              from scrapling.fetchers import StealthySession
-              holder = {}
-              def act(page):
-                  holder['r'] = page.evaluate(
-                      "async (u)=>{const r=await fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},credentials:'include'});return {s:r.status,t:await r.text()};}",
-                      BB)
-                  return page
-              with StealthySession(headless=True) as s:
-                  s.fetch('https://www.playsport.cc/', page_action=act)
-              rr = holder.get('r') or {}
-              t = rr.get('t') or ''
-              print('B_status', rr.get('s'), 'B_parse', parse_ok(t), 'B_head', repr(t[:120]))
-          except Exception as e:
-              print('B_EXC', type(e).__name__, str(e)[:150])
-          PY
-          python p4.py
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          LG=${{ matrix.lg }}
+          COUNT='const f="data/expert_picks_'$LG'.json",a="data/expert_archive/2026-07-'$LG'.json";
+            const load=p=>{try{return JSON.parse(require("fs").readFileSync(p,"utf8"))}catch(e){return{picks:[]}}};
+            const by={};for(const src of [load(f),load(a)])for(const p of src.picks||[])if(p.date>="2026-07-27")by[p.date]=(by[p.date]||0)+1;
+            console.log(JSON.stringify(by));'
+          BEFORE=$(node -e "$COUNT")
+          EP_LEAGUE=$LG EP_MODE=full EP_DEEP=1 EP_BACKDAYS=2 timeout 2400 node expert_picks.js || echo "WARN 深掃 rc=$?"
+          AFTER=$(node -e "$COUNT")
+          echo "AUDIT $LG BEFORE $BEFORE AFTER $AFTER"
+          git add data/expert_picks_$LG.json data/expert_archive 2>/dev/null || true
+          if ! git diff --cached --quiet; then
+            git commit -m "data: backfill audit $LG 7/27-7/28 深掃回溯"
+            for i in 1 2 3 4 5; do
+              git push && break
+              git pull --rebase -X theirs || git rebase --abort || true
+            done
+          else
+            echo "AUDIT $LG 無新增（零漏抓或無可回收）"
+          fi
