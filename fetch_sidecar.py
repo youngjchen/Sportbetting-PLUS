@@ -70,6 +70,36 @@ def main():
     # cm 供收尾 __exit__、http 供請求。
     http_cm = FetcherSession(impersonate='chrome')
     http = http_cm.__enter__()
+
+    # ── scrapling 多層自我升級（2026-07-29 使用者拍板：備援層級走 scrapling 自己的方法，不靠本機）──
+    # JSON:  第1層 chrome TLS 模擬純 HTTP → 第2層 頁內 XHR（probe4 B案，同源 credentials）
+    # HTML:  第1層 隱形瀏覽器 → 第2層 solve_cloudflare 解題模式（懶建，用到才開第二顆瀏覽器）
+    solve_holder = {}
+
+    def solve_session():
+        if 'cm' not in solve_holder:
+            cm = StealthySession(headless=True, block_webrtc=True, solve_cloudflare=True)
+            solve_holder['cm'] = cm
+            solve_holder['s'] = cm.__enter__()
+        return solve_holder['s']
+
+    def page_xhr_json(url):
+        holder = {}
+
+        def act(page):
+            holder['r'] = page.evaluate(
+                "async (u)=>{const r=await fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest',"
+                "'Accept':'application/json'},credentials:'include'});return {s:r.status,t:await r.text()};}",
+                url)
+            return page
+        session.fetch('https://www.playsport.cc/', page_action=act, google_search=False)
+        rr = holder.get('r') or {}
+        return int(rr.get('s') or 0), (rr.get('t') or '')
+
+    def looks_challenged(raw):
+        head = (raw or '')[:2000]
+        return ('Just a moment' in head) or ('challenges.cloudflare.com' in head)
+
     print(json.dumps({"ready": True}), flush=True)
 
     for line in sys.stdin:
@@ -91,13 +121,20 @@ def main():
         wants_json = 'json' in (headers.get('Accept') or headers.get('accept') or '').lower()
         try:
             if wants_json:
-                r = http.get(url, headers=headers)
-                status = getattr(r, 'status', 200) or 200
-                raw = getattr(r, 'body', None)
-                if raw is None:
-                    raw = str(r)
-                if isinstance(raw, (bytes, bytearray)):
-                    raw = raw.decode('utf-8', 'replace')
+                status, raw = 0, ''
+                try:
+                    r = http.get(url, headers=headers)
+                    status = getattr(r, 'status', 200) or 200
+                    raw = getattr(r, 'body', None)
+                    if raw is None:
+                        raw = str(r)
+                    if isinstance(raw, (bytes, bytearray)):
+                        raw = raw.decode('utf-8', 'replace')
+                except Exception:
+                    pass
+                bad = status != 200 or not (raw.lstrip()[:1] in ('{', '['))
+                if bad:  # 第2層：頁內 XHR
+                    status, raw = page_xhr_json(url)
             else:
                 page = session.fetch(
                     url,
@@ -109,6 +146,10 @@ def main():
                 raw = getattr(page, 'html_content', None)
                 if raw is None:
                     raw = str(page)
+                if status >= 400 or looks_challenged(raw):  # 第2層：解題模式重試
+                    page = solve_session().fetch(url, extra_headers=headers, google_search=False, timeout=timeout_ms)
+                    status = getattr(page, 'status', 200) or 200
+                    raw = getattr(page, 'html_content', None) or str(page)
             body = unwrap_json(raw)
             out = {"id": rid, "status": status,
                    "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii')}
@@ -116,7 +157,8 @@ def main():
             out = {"id": rid, "status": 0, "err": f"{type(e).__name__}: {e}"}
         print(json.dumps(out), flush=True)
 
-    for s in (http_cm, session):
+    closers = [http_cm, session] + ([solve_holder['cm']] if 'cm' in solve_holder else [])
+    for s in closers:
         try:
             s.__exit__(None, None, None)
         except Exception:
