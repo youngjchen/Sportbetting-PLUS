@@ -17,7 +17,7 @@ on:
 # 等正在跑的迴圈結束後【立刻接手】→ 近乎不間斷的 5 分鐘輪詢。
 concurrency:
   group: scrape-odds-loop
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 permissions:
   contents: write
