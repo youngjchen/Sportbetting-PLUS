@@ -3,7 +3,7 @@
 const assert = require('node:assert/strict');
 const test = require('node:test');
 
-const { handleScheduleMove, stripReusedMl } = require('../index.js');
+const { handleScheduleMove, handleImpossibleCarryover, stripReusedMl } = require('../index.js');
 
 function oldEntry() {
   return {
@@ -96,4 +96,39 @@ test('same-date single-game reschedule keeps the existing market history', () =>
   assert.equal(result, 'follow');
   assert.equal(log.matches['172884@0710'], undefined);
   assert.ok(entry.ml.bet365);
+});
+
+test('already-overwritten reused id is detected from an impossible first-seen window', () => {
+  const entry = oldEntry();
+  entry.startISO = '2026-07-29T01:40:00+08:00';
+  entry.time = '2026-07-29 01:40';
+  const log = { matches: { 172884: entry } };
+  const current = {
+    id: 172884,
+    league: 'mlb',
+    startISO: '2026-07-29T01:40:00+08:00',
+    time: '2026-07-29 01:40',
+  };
+  const stamp = '2026-07-28T16:30:00+08:00';
+
+  const result = handleImpossibleCarryover(log, entry, current, stamp);
+
+  assert.equal(result, 'split');
+  assert.match(entry.titanIdReusedFrom, /^172884@legacy-/);
+  assert.equal(log.matches[entry.titanIdReusedFrom].archivedReason, 'titan-id-reuse-migration');
+  assert.equal(log.matches[entry.titanIdReusedFrom].startISO, null);
+  assert.equal(log.matches[entry.titanIdReusedFrom].originalFirstSeen, '2026-07-27T07:11:19+08:00');
+  assert.deepEqual(entry.ml, {});
+  assert.deepEqual(entry.hd, { bet365: null });
+  assert.deepEqual(entry.ou, { bet365: null });
+
+  const stale = stripReusedMl({
+    bet365: {
+      openHome: 1.63,
+      openAway: 2.35,
+      liveHome: 1.63,
+      liveAway: 2.35,
+    },
+  }, log, entry);
+  assert.deepEqual(stale, {});
 });

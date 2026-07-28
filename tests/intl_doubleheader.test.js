@@ -114,6 +114,8 @@ test('intl_state removes a stale timed entry when a reused Titan id has no curre
           startISO: '2026-07-29T01:40:00+08:00',
           titanIdReusedFrom: '172884@0710',
           ml: {},
+          hd: { bet365: null },
+          _hdTs: [{ line: 1.5, live: false, hhmm: '15:00', md: '7-27' }],
         },
         late: {
           league: 'mlb',

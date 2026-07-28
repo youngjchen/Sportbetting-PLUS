@@ -394,6 +394,38 @@ function handleScheduleMove(log, e, m, dhCount, stamp, officialTimes) {
   return 'follow';
 }
 
+// 舊版可能已先把重用 id 的 startISO 覆蓋成新賽事，導致下一版看不出曾跨日。
+// 抓取窗只有 24 小時；若 firstSeen 比目前開賽早超過 25 小時，這筆不可能是
+// 在現行窗格內首次發現，視為已遭覆蓋的跨場資料並保留舊盤證據後歸零。
+function handleImpossibleCarryover(log, e, m, stamp) {
+  if (!e || !m || e.titanIdReusedFrom || e.startISO !== m.startISO) return null;
+  const first = Date.parse(e.firstSeen);
+  const start = Date.parse(m.startISO);
+  if (!Number.isFinite(first) || !Number.isFinite(start)) return null;
+  if (start - first <= (ACTIVE_WINDOW_HOURS + 1) * 3600e3) return null;
+
+  const suffix = String(e.firstSeen).replace(/\D/g, '').slice(0, 12) || 'unknown';
+  let archId = `${m.id}@legacy-${suffix}`;
+  for (let n = 2; log.matches[archId]; n++) archId = `${m.id}@legacy-${suffix}-${n}`;
+  const archived = JSON.parse(JSON.stringify(e));
+  archived.originalFirstSeen = e.firstSeen;
+  archived.startISO = null;
+  archived.time = null;
+  archived.archivedReason = 'titan-id-reuse-migration';
+  archived.lastUpdated = stamp;
+  delete archived._hdTs;
+  log.matches[archId] = archived;
+
+  e.firstSeen = stamp;
+  e.ml = {};
+  e.hd = { bet365: null };
+  e.ou = { bet365: null };
+  e.titanIdReusedFrom = archId;
+  delete e._hdTs;
+  console.log(`  🧹 [${e.league}] id:${m.id} firstSeen 早於抓取窗，判定為舊版跨場污染 → 歸檔 ${archId}、新場歸零`);
+  return 'split';
+}
+
 // ---- 官方時刻表與時間吸附 --------------------------------------------------
 // 為什麼：Titan007 的開賽時間會錯——小錯如白襪@藍鳥給 07:07(官方 07:15)、
 // 大錯如 2026-07-18 海盜@守護者雙重賽 G1 給 04:10(官方 01:10、台彩/STAKE 都是 01:10)。
@@ -584,10 +616,19 @@ async function run() {
       : await fetchMatchOdds(m);
 
     const e = log.matches[m.id] || { id: m.id, firstSeen: stamp, ml: {}, hd: { bet365: null }, ou: { bet365: null } };
-    if (log.matches[m.id]) handleScheduleMove(log, e, m, dhCount, stamp, officialTimes);   // 同 id 換時間：雙重賽拆場/改期跟隨
+    if (log.matches[m.id]) {
+      const moved = handleScheduleMove(log, e, m, dhCount, stamp, officialTimes);          // 同 id 換時間：雙重賽拆場/改期跟隨
+      if (!moved) handleImpossibleCarryover(log, e, m, stamp);                             // 舊版已覆蓋 startISO 的跨場污染補救
+    }
     odds.ml = stripReusedMl(odds.ml, log, e);
     // 搬場過的 id：先把歸檔舊場的列從抓到的表/已存的表剝掉（見 stripArchivedRows 註解）
-    if (odds.hd) { odds.hd = stripArchivedRows(odds.hd, log, m.id, 'hd'); if (!odds.hd.length) odds.hd = null; }
+    if (odds.hd) {
+      odds.hd = stripArchivedRows(odds.hd, log, m.id, 'hd');
+      if (!odds.hd.length) {
+        odds.hd = null;
+        odds.hdTs = null;
+      }
+    }
     if (odds.ou) { odds.ou = stripArchivedRows(odds.ou, log, m.id, 'ou'); if (!odds.ou.length) odds.ou = null; }
     if (e.hd && Array.isArray(e.hd.bet365)) { const s = stripArchivedRows(e.hd.bet365, log, m.id, 'hd'); e.hd.bet365 = s.length ? s : null; }
     if (e.ou && Array.isArray(e.ou.bet365)) { const s = stripArchivedRows(e.ou.bet365, log, m.id, 'ou'); e.ou.bet365 = s.length ? s : null; }
@@ -833,13 +874,15 @@ function buildIntlState(log, stamp) {
   // Titan 會跨日期重用賽事 ID。若該新賽事目前沒有任何讓分證據，
   // 不可保留先前用同一 ID 寫入的時間鍵，否則板面會顯示成仍有 Bet365 方向。
   for (const e of Object.values(log.matches)) {
-    if (!e || !e.titanIdReusedFrom || (Array.isArray(e._hdTs) && e._hdTs.length)) continue;
+    const hasCurrentHd = Array.isArray(e && e.hd && e.hd.bet365) && e.hd.bet365.length;
+    if (!e || !e.titanIdReusedFrom || hasCurrentHd) continue;
     if (!e.awayTeam || !e.homeTeam || !e.startISO) continue;
     const base = `${e.league}|${e.startISO.slice(0, 10)}|${e.awayTeam}|${e.homeTeam}`;
     const key = startsByBase[base] && startsByBase[base].size >= 2
       ? `${base}|${e.startISO.slice(11, 16)}`
       : base;
     delete games[key];
+    delete e._hdTs;
   }
 
   for (const id of Object.keys(log.matches)) {
@@ -910,4 +953,4 @@ if (require.main === module) {
     .finally(() => bet365Fallback.shutdown());
 }
 
-module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, stripReusedMl, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };
+module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, handleImpossibleCarryover, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, stripReusedMl, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };
