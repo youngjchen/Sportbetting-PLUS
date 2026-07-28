@@ -23,7 +23,13 @@ JSON_WRAPPER_RE = re.compile(
 
 
 def unwrap_json(raw: str) -> str:
-    """瀏覽器 JSON 檢視器包裝還原；不是 JSON 就原樣回傳。"""
+    """瀏覽器 JSON 包裝還原；不是 JSON 就原樣回傳。
+
+    雲端 camoufox 對 application/json 的包裝與本機不同（2026-07-28 實測）：
+    本機回乾淨 JSON、雲端回無 head 的「<html><bod...」純文字包裝且無 <pre>
+    → 先試 <pre>/<p>，不中就整頁剝標籤、定位第一個 {/[、配對括號漸進解析。
+    HTML 頁（有 rankers 以外的真標記）不會誤傷：剝完不是合法 JSON 就原樣回傳。
+    """
     s = raw.lstrip()
     if s.startswith('{') or s.startswith('['):
         return raw
@@ -32,6 +38,19 @@ def unwrap_json(raw: str) -> str:
         inner = htmlmod.unescape(re.sub(r'<[^>]+>', '', m.group(2))).strip()
         if inner.startswith('{') or inner.startswith('['):
             return inner
+    txt = htmlmod.unescape(re.sub(r'<[^>]+>', ' ', raw))
+    for opener, closer in (('{', '}'), ('[', ']')):
+        i = txt.find(opener)
+        if i < 0:
+            continue
+        j = txt.rfind(closer)
+        while j > i:
+            cand = txt[i:j + 1].strip()
+            try:
+                json.loads(cand)
+                return cand
+            except Exception:
+                j = txt.rfind(closer, i, j)
     return raw
 
 

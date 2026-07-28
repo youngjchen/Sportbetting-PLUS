@@ -73,7 +73,15 @@ const jitter = () => (usingSidecar() ? 200 + Math.floor(Math.random() * 300) : 8
 // 傳輸層（2026-07-28）：curl 優先、被 Cloudflare 擋就自動切常駐隱形瀏覽器。見 sidecar_client.js。
 const { fetchText, shutdown: closeTransport, usingSidecar } = require('./sidecar_client.js');
 async function getJSON(url) {
-  return JSON.parse(await fetchText(url, Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, HEADERS), 20000));
+  const body = await fetchText(url, Object.assign({ 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' }, HEADERS), 20000);
+  try { return JSON.parse(body); }
+  catch (e) {
+    // 雲端瀏覽器對 JSON 端點可能回 HTML 包裝（2026-07-28 名冊崩跌案根因）：剝標籤後配對大括號再試
+    const txt = body.replace(/<[^>]+>/g, ' ');
+    const i = txt.indexOf('{'), j = txt.lastIndexOf('}');
+    if (i >= 0 && j > i) { try { return JSON.parse(txt.slice(i, j + 1)); } catch (_) {} }
+    throw e;
+  }
 }
 async function getHTML(url) {
   return fetchText(url, HEADERS, 20000);
