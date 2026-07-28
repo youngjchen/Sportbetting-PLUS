@@ -56,13 +56,18 @@ def unwrap_json(raw: str) -> str:
 
 def main():
     try:
-        from scrapling.fetchers import StealthySession
+        from scrapling.fetchers import StealthySession, FetcherSession
     except Exception as e:  # 沒裝 scrapling → 讓 Node 立刻退回 curl
         print(json.dumps({"ready": False, "err": f"import: {e}"}), flush=True)
         return 1
 
     session = StealthySession(headless=True, block_webrtc=True)
     session.__enter__()
+    # JSON 端點專用：chrome TLS 模擬的純 HTTP（2026-07-29 probe4 實證雲端 200＋真 rankers）。
+    # ‼️ 不可用瀏覽器「導航」拿 JSON：雲端會回 SPA 外殼（118KB Vue 頁、資料不在內），
+    #    外殼 JS 原始碼裡含 "rankers" 字樣 → 字串判定會誤判成功，一定要 json.loads 驗證。
+    http = FetcherSession(impersonate='chrome')
+    http.__enter__()
     print(json.dumps({"ready": True}), flush=True)
 
     for line in sys.stdin:
@@ -81,17 +86,27 @@ def main():
             if str(k).lower() != 'user-agent'
         }
         timeout_ms = max(1000, int(req.get('timeoutMs') or 30000))
+        wants_json = 'json' in (headers.get('Accept') or headers.get('accept') or '').lower()
         try:
-            page = session.fetch(
-                url,
-                extra_headers=headers,
-                google_search=False,
-                timeout=timeout_ms,
-            )
-            status = getattr(page, 'status', 200) or 200
-            raw = getattr(page, 'html_content', None)
-            if raw is None:
-                raw = str(page)
+            if wants_json:
+                r = http.get(url, headers=headers)
+                status = getattr(r, 'status', 200) or 200
+                raw = getattr(r, 'body', None)
+                if raw is None:
+                    raw = str(r)
+                if isinstance(raw, (bytes, bytearray)):
+                    raw = raw.decode('utf-8', 'replace')
+            else:
+                page = session.fetch(
+                    url,
+                    extra_headers=headers,
+                    google_search=False,
+                    timeout=timeout_ms,
+                )
+                status = getattr(page, 'status', 200) or 200
+                raw = getattr(page, 'html_content', None)
+                if raw is None:
+                    raw = str(page)
             body = unwrap_json(raw)
             out = {"id": rid, "status": status,
                    "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii')}
@@ -99,10 +114,11 @@ def main():
             out = {"id": rid, "status": 0, "err": f"{type(e).__name__}: {e}"}
         print(json.dumps(out), flush=True)
 
-    try:
-        session.__exit__(None, None, None)
-    except Exception:
-        pass
+    for s in (http, session):
+        try:
+            s.__exit__(None, None, None)
+        except Exception:
+            pass
     return 0
 
 
