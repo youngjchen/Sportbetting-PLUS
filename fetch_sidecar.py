@@ -66,8 +66,10 @@ def main():
     # JSON 端點專用：chrome TLS 模擬的純 HTTP（2026-07-29 probe4 實證雲端 200＋真 rankers）。
     # ‼️ 不可用瀏覽器「導航」拿 JSON：雲端會回 SPA 外殼（118KB Vue 頁、資料不在內），
     #    外殼 JS 原始碼裡含 "rankers" 字樣 → 字串判定會誤判成功，一定要 json.loads 驗證。
-    http = FetcherSession(impersonate='chrome')
-    http.__enter__()
+    # FetcherSession 的 __enter__ 回傳的才是可 .get 的 session 物件（≠實例本身），兩個都要留：
+    # cm 供收尾 __exit__、http 供請求。
+    http_cm = FetcherSession(impersonate='chrome')
+    http = http_cm.__enter__()
     print(json.dumps({"ready": True}), flush=True)
 
     for line in sys.stdin:
@@ -114,7 +116,7 @@ def main():
             out = {"id": rid, "status": 0, "err": f"{type(e).__name__}: {e}"}
         print(json.dumps(out), flush=True)
 
-    for s in (http, session):
+    for s in (http_cm, session):
         try:
             s.__exit__(None, None, None)
         except Exception:
