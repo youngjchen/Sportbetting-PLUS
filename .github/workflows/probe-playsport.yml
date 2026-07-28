@@ -1,4 +1,5 @@
-# 探測三：雲端 sidecar 抓 billboard JSON 的「原始包裝形狀」＋repo 內 unwrap_json 的實效
+# 探測四：雲端拿 billboard JSON 的兩條路——A. curl_cffi chrome TLS 模擬（無瀏覽器、快）
+# B. 隱形瀏覽器頁內 XHR（credentials 同源）。判定＝JSON.parse 出 rankers 才算數（禁字串誤判）。
 name: probe-playsport
 on:
   workflow_dispatch:
@@ -13,27 +14,43 @@ jobs:
         run: |
           pip -q install "scrapling[all]>=0.4.11"
           scrapling install --force >/dev/null 2>&1 || true
-      - name: 抓 billboard 印形狀與解包判定
+      - name: A/B 兩案
         run: |
-          cat > p3.py <<'PY'
+          cat > p4.py <<'PY'
           import json
-          src = open('fetch_sidecar.py', encoding='utf-8').read()
-          ns = {}
-          exec(compile(src.split('def main()')[0], 'fs', 'exec'), ns)
-          unwrap = ns['unwrap_json']
-          from scrapling.fetchers import StealthySession
-          with StealthySession(headless=True) as s:
-              p = s.fetch('https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0')
-              raw = getattr(p, 'html_content', None) or str(p)
-          print('RAW_LEN', len(raw))
-          print('RAW400', repr(raw[:400]))
-          w = unwrap(raw)
-          print('UNWRAP200', repr(w[:200]))
+          BB = 'https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0'
+          H = {'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json',
+               'Referer': 'https://www.playsport.cc/'}
+          def parse_ok(t):
+              try:
+                  return isinstance(json.loads(t).get('rankers'), (dict, list))
+              except Exception:
+                  return False
           try:
-              j = json.loads(w)
-              rk = j.get('rankers')
-              print('PARSE_OK type=', type(rk).__name__, 'size=', len(rk) if hasattr(rk, '__len__') else '?')
+              from scrapling.fetchers import FetcherSession
+              with FetcherSession(impersonate='chrome') as s:
+                  r = s.get(BB, headers=H)
+                  b = r.body
+                  if isinstance(b, (bytes, bytearray)):
+                      b = b.decode('utf-8', 'replace')
+                  b = b if isinstance(b, str) else str(b)
+                  print('A_status', getattr(r, 'status', None), 'A_parse', parse_ok(b), 'A_head', repr(b[:120]))
           except Exception as e:
-              print('PARSE_FAIL', type(e).__name__, str(e)[:120])
+              print('A_EXC', type(e).__name__, str(e)[:150])
+          try:
+              from scrapling.fetchers import StealthySession
+              holder = {}
+              def act(page):
+                  holder['r'] = page.evaluate(
+                      "async (u)=>{const r=await fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest','Accept':'application/json'},credentials:'include'});return {s:r.status,t:await r.text()};}",
+                      BB)
+                  return page
+              with StealthySession(headless=True) as s:
+                  s.fetch('https://www.playsport.cc/', page_action=act)
+              rr = holder.get('r') or {}
+              t = rr.get('t') or ''
+              print('B_status', rr.get('s'), 'B_parse', parse_ok(t), 'B_head', repr(t[:120]))
+          except Exception as e:
+              print('B_EXC', type(e).__name__, str(e)[:150])
           PY
-          python p3.py
+          python p4.py
