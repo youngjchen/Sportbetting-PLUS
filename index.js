@@ -362,8 +362,11 @@ function loadPregamePairCount() {
 function handleScheduleMove(log, e, m, dhCount, stamp, officialTimes) {
   if (!e || !e.startISO || !m.startISO || !scheduleMove(e.startISO, m.startISO)) return null;
   const oldDate = String(e.startISO).slice(0, 10);
+  const newDate = String(m.startISO).slice(0, 10);
   const pairKey = `${e.league}|${oldDate}|${[e.awayTeam || '', e.homeTeam || ''].sort().join('|')}`;
-  if ((dhCount[pairKey] || 0) >= 2) {
+  // Titan 偶爾把已完賽的 id 直接重用到隔天同組對戰。跨日期絕不能視為改期沿用，
+  // 否則昨天的完整賠率歷史會污染今天；同日則維持原本的雙重賽判定。
+  if (oldDate !== newDate || (dhCount[pairKey] || 0) >= 2) {
     let archISO = e.startISO;
     const O = officialTimes && officialTimes[pairKey] ? [...officialTimes[pairKey]] : [];
     if (O.length) {
@@ -382,6 +385,7 @@ function handleScheduleMove(log, e, m, dhCount, stamp, officialTimes) {
     delete log.matches[archId]._hdTs;
     e.firstSeen = stamp;
     e.ml = {}; e.hd = { bet365: null }; e.ou = { bet365: null };
+    e.titanIdReusedFrom = archId;
     delete e._hdTs;
     console.log(`  ↔️ [${e.league}] id:${m.id} 開賽 ${e.startISO} → ${m.startISO}（官方雙重賽）→ 舊場歸檔 ${archId}、新場歸零`);
     return 'split';
@@ -499,6 +503,36 @@ function stripArchivedRows(rows, log, id, key) {
   return rows;
 }
 
+// Titan 跨場重用 id 時，1x2 端點可能仍回傳上一場的舊獨贏盤。
+// 完全相同就丟棄；若即時價已變但「開盤」仍是舊值，改以本場第一個觀測值作開盤。
+function stripReusedMl(ml, log, entry) {
+  if (!ml || !entry || !entry.titanIdReusedFrom) return ml || {};
+  const archived = log.matches && log.matches[entry.titanIdReusedFrom];
+  if (!archived || !archived.ml) return ml;
+  const clean = {};
+  for (const [book, odds] of Object.entries(ml)) {
+    const old = archived.ml[book];
+    if (!old || !old.open) {
+      clean[book] = odds;
+      continue;
+    }
+    const last = old.live && old.live.length ? old.live[old.live.length - 1] : old.open;
+    const sameOpen = odds.openHome === old.open.home && odds.openAway === old.open.away;
+    const sameLive = odds.liveHome === last.home && odds.liveAway === last.away;
+    if (sameOpen && sameLive) {
+      console.log(`  🧹 id:${entry.id} ${book} 獨贏仍是歸檔舊場值，暫不匯入`);
+      continue;
+    }
+    clean[book] = sameOpen
+      ? Object.assign({}, odds, {
+          openHome: odds.liveHome,
+          openAway: odds.liveAway
+        })
+      : odds;
+  }
+  return clean;
+}
+
 async function run() {
   const stamp = nowTaiwanISO();
   console.log(`\n==================== ${stamp} ====================`);
@@ -551,6 +585,7 @@ async function run() {
 
     const e = log.matches[m.id] || { id: m.id, firstSeen: stamp, ml: {}, hd: { bet365: null }, ou: { bet365: null } };
     if (log.matches[m.id]) handleScheduleMove(log, e, m, dhCount, stamp, officialTimes);   // 同 id 換時間：雙重賽拆場/改期跟隨
+    odds.ml = stripReusedMl(odds.ml, log, e);
     // 搬場過的 id：先把歸檔舊場的列從抓到的表/已存的表剝掉（見 stripArchivedRows 註解）
     if (odds.hd) { odds.hd = stripArchivedRows(odds.hd, log, m.id, 'hd'); if (!odds.hd.length) odds.hd = null; }
     if (odds.ou) { odds.ou = stripArchivedRows(odds.ou, log, m.id, 'ou'); if (!odds.ou.length) odds.ou = null; }
@@ -751,7 +786,11 @@ function buildIntlState(log, stamp) {
     const lg = String(g.league || '').toLowerCase();
     const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
     if (!away || !home) continue;
-    lotMap[`${lg}|${g.date}|${away}|${home}`] = { side: lh.favSide, line: lh.line != null ? lh.line : null };
+    const base = `${lg}|${g.date}|${away}|${home}`;
+    const value = { side: lh.favSide, line: lh.line != null ? lh.line : null };
+    lotMap[base] = value;
+    const time = (String(g.time || '').match(/\d{1,2}:\d{2}/) || [])[0];
+    if (time) lotMap[`${base}|${time.padStart(5, '0')}`] = value;
   }
   let serMap = {};
   const seriesPath = fs.existsSync(path.join('data', 'lottery_series.json')) ? path.join('data', 'lottery_series.json') : 'lottery_series.json';
@@ -765,7 +804,12 @@ function buildIntlState(log, stamp) {
     const lg = String(g.league || '').toLowerCase();
     const away = feedCanon(g.awayTeam, lg), home = feedCanon(g.homeTeam, lg);
     if (!away || !home || !g.pts || !g.pts.length) continue;
-    serMap[`${lg}|${g.date}|${away}|${home}`] = g.pts;
+    const base = `${lg}|${g.date}|${away}|${home}`;
+    serMap[base] = g.pts;
+    const directTime = (String(g.time || '').match(/\d{1,2}:\d{2}/) || [])[0];
+    const idTime = String(oid).match(/_(\d{2})(\d{2})$/);
+    const time = directTime ? directTime.padStart(5, '0') : (idTime ? `${idTime[1]}:${idTime[2]}` : null);
+    if (time) serMap[`${base}|${time}`] = g.pts;
   }
 
   const prev = readJsonRequired(
@@ -774,13 +818,39 @@ function buildIntlState(log, stamp) {
     INTL_FILE
   );
   const games = prev.games || {};
+  const startsByBase = {};
+  for (const e of Object.values(log.matches)) {
+    if (!e || !e.awayTeam || !e.homeTeam || !e.startISO) continue;
+    const base = `${e.league}|${e.startISO.slice(0, 10)}|${e.awayTeam}|${e.homeTeam}`;
+    (startsByBase[base] = startsByBase[base] || new Set()).add(e.startISO.slice(11, 16));
+  }
+  const legacyByBase = {};
+  for (const [base, starts] of Object.entries(startsByBase)) {
+    if (starts.size < 2) continue;
+    legacyByBase[base] = games[base] || null;
+    delete games[base];
+  }
+  // Titan 會跨日期重用賽事 ID。若該新賽事目前沒有任何讓分證據，
+  // 不可保留先前用同一 ID 寫入的時間鍵，否則板面會顯示成仍有 Bet365 方向。
+  for (const e of Object.values(log.matches)) {
+    if (!e || !e.titanIdReusedFrom || (Array.isArray(e._hdTs) && e._hdTs.length)) continue;
+    if (!e.awayTeam || !e.homeTeam || !e.startISO) continue;
+    const base = `${e.league}|${e.startISO.slice(0, 10)}|${e.awayTeam}|${e.homeTeam}`;
+    const key = startsByBase[base] && startsByBase[base].size >= 2
+      ? `${base}|${e.startISO.slice(11, 16)}`
+      : base;
+    delete games[key];
+  }
 
   for (const id of Object.keys(log.matches)) {
     const e = log.matches[id];
     if (!e._hdTs || !e.awayTeam || !e.homeTeam || !e.startISO) continue;
     const date = e.startISO.slice(0, 10);
     const year = date.slice(0, 4);
-    const key = `${e.league}|${date}|${e.awayTeam}|${e.homeTeam}`;
+    const baseKey = `${e.league}|${date}|${e.awayTeam}|${e.homeTeam}`;
+    const key = startsByBase[baseKey] && startsByBase[baseKey].size >= 2
+      ? `${baseKey}|${e.startISO.slice(11, 16)}`
+      : baseKey;
     const pre = e._hdTs.filter(r => !r.live && r.line != null && r.line !== 0);
     if (!pre.length) continue;
     const sideName = d => d === 'home' ? e.homeTeam : e.awayTeam;
@@ -803,7 +873,7 @@ function buildIntlState(log, stamp) {
       mlFav = lastMl.home < lastMl.away ? 'home' : 'away';
       dv = mlFav !== intlSide;
     }
-    const prevEo = eoOf(games[key]);                        // 覆蓋前先接住閂鎖（台彩序列會被修剪，證據可能已不在）
+    const prevEo = eoOf(games[key] || legacyByBase[baseKey]); // 舊版無時間鍵只作遷移後備
     games[key] = {
       is: intlSide, il: Math.abs(cur.line), sw: Math.max(0, seq.length - 1),
       tr: seq.map(s => (s.hhmm ? s.hhmm + ' ' : '') + sideName(s.dir)).join(' → '),
@@ -840,4 +910,4 @@ if (require.main === module) {
     .finally(() => bet365Fallback.shutdown());
 }
 
-module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };
+module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, stripReusedMl, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };

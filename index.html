@@ -3431,7 +3431,10 @@ let __intl = null, __intlRaw = "";
 function intlFor(it){
   if(!__intl || !__intl.games || !it || it.type!=="match") return null;
   const lg = (typeof leagueOf==="function") ? leagueOf(it) : (it.league||"mlb");
-  return __intl.games[lg+"|"+doc.activeDate+"|"+it.away+"|"+it.home] || null;
+  const base = lg+"|"+doc.activeDate+"|"+it.away+"|"+it.home;
+  const tm = String(it.gameTime||"").match(/\d{1,2}:\d{2}/);
+  const timed = tm ? base+"|"+tm[0].padStart(5,"0") : null;
+  return (timed && __intl.games[timed]) || __intl.games[base] || null;
 }
 async function loadIntlState(){
   try{
