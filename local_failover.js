@@ -107,14 +107,19 @@ function run() {
     catch (_) { continue; }
     const cov = (d.coverage || {})[lg] || {};
     const updAge = d.updated ? (Date.now() - +new Date(d.updated)) / 3600e3 : 99;
-    const blocked = cov.qualified === 0 && updAge < EP_FRESH_H;
-    if (!blocked) continue;
     // 波次對齊：直接吃 expert_alarm 的時刻表（使用者改保底/深掃時點，備援自動跟著改），
     // 判準＝「已過的最近一個波」若晚於上次救援就補跑；固定間隔節流會漂移，深掃會跑掉時點。
     const slot = lastPassedSlot(lg);
+    // 兩種觸發：①被擋指紋（雲端波有跑但整波 403，會蓋 qualified:0）
+    //          ②鏈死偵測（2026-07-28 名冊崩跌案：波直接中止、什麼都不蓋 → 檔案更新時間
+    //            落後「最近該跑的波」40 分以上＝該波沒完成；40 分 > 35 分補償窗，不誤搶雲端遲到波）
+    const blocked = cov.qualified === 0 && updAge < EP_FRESH_H;
+    const overdue = !!(slot && d.updated && (+new Date(d.updated) < slot.at - 40 * 60e3));
+    if (!blocked && !overdue) continue;
     const last = state['ep_' + lg] || 0;
     if (!slot) { log(`${lg} 尚無已過波次，略過`); continue; }
-    if (last >= slot.at) { log(`${lg} 被擋，但 ${slot.deep ? '深掃' : '保底'}波 ${hhmm(slot.at)} 已救過，略過`); continue; }
+    if (last >= slot.at) { log(`${lg} ${blocked ? '被擋' : '鏈死'}，但 ${slot.deep ? '深掃' : '保底'}波 ${hhmm(slot.at)} 已救過，略過`); continue; }
+    log(`${lg} 觸發原因：${blocked ? '被擋指紋(qualified=0)' : ''}${blocked && overdue ? '＋' : ''}${overdue ? '鏈死(檔案落後 ' + hhmm(slot.at) + ' 波)' : ''}`);
     const tw = twNow();
     const deepKey = 'deep_' + lg, today = tw.toISOString().slice(0, 10);
     const useDeep = slot.deep && state[deepKey] !== today;
