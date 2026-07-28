@@ -14,6 +14,7 @@ const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
 const { readJsonRequired } = require('./safe_json.js');
+const bet365Fallback = require('./bet365_fallback.js');
 
 // ---- 可調參數 ---------------------------------------------------------------
 // 只抓「未來這麼多小時內開打」的比賽。24＝提前一天開始記，涵蓋隔天整批賽事；
@@ -510,6 +511,23 @@ async function run() {
   const officialTimes = await loadOfficialTimes();
   const snap = snapUpcoming(upcoming, officialTimes, Date.now());
   upcoming = snap.list;
+  for (const m of upcoming) {
+    m.homeTeam = mapTeam(m.homeRaw, m.league);
+    m.awayTeam = mapTeam(m.awayRaw, m.league);
+  }
+  if (upcoming.some(m => m.league === 'mlb')) {
+    try {
+      const officialBet365 = await bet365Fallback.fetchBet365Hub();
+      upcoming = bet365Fallback.augmentUpcoming(upcoming, officialBet365, Date.now());
+      console.log(`✅ Bet365 官方後備：${officialBet365.length} 場（目前抓取窗 ${upcoming.filter(m => m.league === 'mlb').length} 場）`);
+      const missing = upcoming.filter(m => m.league === 'mlb' && !m.bet365Fixture);
+      if (missing.length) {
+        console.log(`⚠️ Bet365 官方目前撤盤/未列：${missing.map(m => `${m.awayTeam}@${m.homeTeam} ${String(m.startISO).slice(11, 16)}`).join('、')}`);
+      }
+    } catch (e) {
+      console.log(`⚠️ Bet365 官方後備失敗，保留 Titan007 資料：${e.message}`);
+    }
+  }
   if (snap.snapped) console.log(`🧲 吸附 ${snap.snapped} 場開賽時間到官方時刻${snap.dropped ? `（${snap.dropped} 場吸附後離窗剔除）` : ''}`);
   console.log(`找到 ${upcoming.length} 場窗格內（未來 ${ACTIVE_WINDOW_HOURS} 小時）未開打賽事。`);
 
@@ -521,13 +539,15 @@ async function run() {
   for (const k of Object.keys(officialTimes)) if (k.slice(0, 4) === 'mlb|') dhCount[k] = officialTimes[k].size;
 
   for (const m of upcoming) {
-    const homeTeam = mapTeam(m.homeRaw, m.league);
-    const awayTeam = mapTeam(m.awayRaw, m.league);
+    const homeTeam = m.homeTeam || mapTeam(m.homeRaw, m.league);
+    const awayTeam = m.awayTeam || mapTeam(m.awayRaw, m.league);
     if (m.homeRaw && !homeTeam) unmapped.push({ raw: m.homeRaw, league: m.league, vs: m.awayRaw });
     if (m.awayRaw && !awayTeam) unmapped.push({ raw: m.awayRaw, league: m.league, vs: m.homeRaw });
 
     console.log(`⚾ [${m.league}] ${m.awayRaw} (客) vs ${m.homeRaw} (主) | ${m.time} | id:${m.id}`);
-    const odds = await fetchMatchOdds(m);
+    const odds = m.officialFallback
+      ? { ml: {}, hd: null, ou: null, hdTs: null }
+      : await fetchMatchOdds(m);
 
     const e = log.matches[m.id] || { id: m.id, firstSeen: stamp, ml: {}, hd: { bet365: null }, ou: { bet365: null } };
     if (log.matches[m.id]) handleScheduleMove(log, e, m, dhCount, stamp, officialTimes);   // 同 id 換時間：雙重賽拆場/改期跟隨
@@ -548,6 +568,13 @@ async function run() {
 
     // 獨贏：只在【未開賽】累加，避免混入場中即時價（grace 窗補抓的已開賽場不碰 ml）
     if (!m.started) {
+      if (odds.ml.bet365 && e.ml.bet365 && e.ml.bet365.source === 'bet365_official') {
+        const observed = e.ml.bet365.live || [];
+        e.ml.bet365 = {
+          open: { home: odds.ml.bet365.openHome, away: odds.ml.bet365.openAway },
+          live: observed
+        };
+      }
       for (const [book, o] of Object.entries(odds.ml)) {
         if (!e.ml[book]) e.ml[book] = { open: { home: o.openHome, away: o.openAway }, live: [] };
         const arr = e.ml[book].live;
@@ -556,11 +583,48 @@ async function run() {
           arr.push({ ts: stamp, home: o.liveHome, away: o.liveAway });
         }
       }
+      const direct = m.bet365Fixture && m.bet365Fixture.ml;
+      if (!odds.ml.bet365 && direct) {
+        if (!e.ml.bet365) {
+          e.ml.bet365 = {
+            open: { home: direct.home, away: direct.away },
+            live: [],
+            source: 'bet365_official'
+          };
+        }
+        const arr = e.ml.bet365.live;
+        const last = arr[arr.length - 1];
+        if (!last || last.home !== direct.home || last.away !== direct.away) {
+          arr.push({ ts: stamp, home: direct.home, away: direct.away, src: 'bet365_official' });
+        }
+      }
     }
     // 讓分/大小：未開賽 + grace 窗都補抓（保留最完整那份）——這正是亞洲場臨場才貼盤的救援
-    if (odds.hd && (!e.hd.bet365 || odds.hd.length >= e.hd.bet365.length)) e.hd.bet365 = odds.hd;
-    if (odds.ou && (!e.ou.bet365 || odds.ou.length >= e.ou.bet365.length)) e.ou.bet365 = odds.ou;
+    const oldHdIsOfficial = Array.isArray(e.hd.bet365) && e.hd.bet365.some(row => row && row.src === 'bet365_official');
+    const oldOuIsOfficial = Array.isArray(e.ou.bet365) && e.ou.bet365.some(row => row && row.src === 'bet365_official');
+    if (odds.hd && (oldHdIsOfficial || !e.hd.bet365 || odds.hd.length >= e.hd.bet365.length)) e.hd.bet365 = odds.hd;
+    if (odds.ou && (oldOuIsOfficial || !e.ou.bet365 || odds.ou.length >= e.ou.bet365.length)) e.ou.bet365 = odds.ou;
+    if (!odds.hd && m.bet365Fixture && m.bet365Fixture.hd) {
+      const direct = m.bet365Fixture.hd;
+      e.hd.bet365 = bet365Fallback.mergeOfficialRows(
+        e.hd.bet365,
+        { home: direct.home, line: String(direct.line), away: direct.away },
+        stamp
+      );
+    }
+    if (!odds.ou && m.bet365Fixture && m.bet365Fixture.ou) {
+      const direct = m.bet365Fixture.ou;
+      e.ou.bet365 = bet365Fallback.mergeOfficialRows(
+        e.ou.bet365,
+        { over: direct.over, line: String(direct.line), under: direct.under },
+        stamp
+      );
+    }
     if (odds.hdTs) e._hdTs = odds.hdTs;            // 只掛在記憶體給 intl_state 用（下方 delete，不進 odds_log）
+
+    if (!odds.hdTs && Array.isArray(e.hd.bet365)) {
+      e._hdTs = bet365Fallback.officialRowsToHdTs(e.hd.bet365);
+    }
 
     log.matches[m.id] = e;
     await new Promise(r => setTimeout(r, REQUEST_GAP_MS));
@@ -771,7 +835,9 @@ function buildIntlState(log, stamp) {
 }
 
 if (require.main === module) {
-  run().catch(e => { console.error('未預期錯誤：', e); process.exit(1); });
+  run()
+    .catch(e => { console.error('未預期錯誤：', e); process.exitCode = 1; })
+    .finally(() => bet365Fallback.shutdown());
 }
 
 module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };
