@@ -1,30 +1,39 @@
-# 驗收：正式爬蟲程式碼在雲端能否自主抓到明牌（不靠本機）
-# 判準：coverage.qualified > 0 且本輪筆數 > 0。final 模式＝小名冊，約 5 分鐘。
+# 探測三：雲端 sidecar 抓 billboard JSON 的「原始包裝形狀」＋repo 內 unwrap_json 的實效
 name: probe-playsport
 on:
   workflow_dispatch:
 
 jobs:
-  verify:
+  probe:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 12
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install
-      - name: 安裝隱形瀏覽器內核
+      - name: 安裝 scrapling
         run: |
           pip -q install "scrapling[all]>=0.4.11"
-          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零"
-      - name: 雲端實跑 expert_picks（final，不寫回 repo）
+          scrapling install --force >/dev/null 2>&1 || true
+      - name: 抓 billboard 印形狀與解包判定
         run: |
-          EP_LEAGUE=mlb EP_MODE=final timeout 1500 node expert_picks.js 2>&1 | tail -40
-          echo "===== 結果判定"
-          node -e "
-            const d=JSON.parse(require('fs').readFileSync('data/expert_picks_mlb.json','utf8'));
-            const c=(d.coverage||{}).mlb||{};
-            console.log('VERDICT qualified='+c.qualified+' fetched='+c.fetched+' picks='+(d.picks||[]).length+' updated='+d.updated);
-            process.exit((c.qualified>0||c.fetched>0)?0:1);
-          "
+          cat > p3.py <<'PY'
+          import json
+          src = open('fetch_sidecar.py', encoding='utf-8').read()
+          ns = {}
+          exec(compile(src.split('def main()')[0], 'fs', 'exec'), ns)
+          unwrap = ns['unwrap_json']
+          from scrapling.fetchers import StealthySession
+          with StealthySession(headless=True) as s:
+              p = s.fetch('https://www.playsport.cc/billboard/winRate?allianceid=1&mode=2&during=season&page=0')
+              raw = getattr(p, 'html_content', None) or str(p)
+          print('RAW_LEN', len(raw))
+          print('RAW400', repr(raw[:400]))
+          w = unwrap(raw)
+          print('UNWRAP200', repr(w[:200]))
+          try:
+              j = json.loads(w)
+              rk = j.get('rankers')
+              print('PARSE_OK type=', type(rk).__name__, 'size=', len(rk) if hasattr(rk, '__len__') else '?')
+          except Exception as e:
+              print('PARSE_FAIL', type(e).__name__, str(e)[:120])
+          PY
+          python p3.py
