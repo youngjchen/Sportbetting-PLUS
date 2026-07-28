@@ -172,8 +172,16 @@ function loadPrev() {
 }
 
 // 合併：本輪掃過的 (league|date) 以新結果為準（高手改單/撤單跟著更新），其餘沿用上一輪
-function mergePicks(prevPicks, newPicks, scopes) {
-  return (prevPicks || []).filter(p => !scopes.has(p.league + '|' + p.date)).concat(newPicks);
+// 按高手取代（2026-07-29 稽核吞單案根治）：舊單只有在「該 scope 本輪有掃」且「該高手本輪
+// 頁面全數有效抓到」時才被新資料取代（此時新資料裡沒有他的單＝真撤單）。抓失敗／不在本輪
+// 名冊的高手 → 舊單原地保留，等深掃(全量)或下輪再對帳。fetchedByLg 缺席＝退回舊整批語義。
+function mergePicks(prevPicks, newPicks, scopes, fetchedByLg) {
+  return (prevPicks || []).filter(p => {
+    if (!scopes.has(p.league + '|' + p.date)) return true;
+    if (!fetchedByLg) return false;
+    const f = fetchedByLg[p.league];
+    return !(f && f.has(p.uid));
+  }).concat(newPicks);
 }
 
 /* ---- 賽前型名冊（2026-07-21 使用者拍板：方案1+2）----
@@ -375,7 +383,9 @@ function coverageCollapsed(previous, current) {
 function shouldReplaceScope(state) {
   if (!state || !state.discoveryComplete) return false;
   if (!Number.isFinite(state.attempted) || state.attempted <= 0) return state.previous <= 0;
-  if (state.succeeded !== state.attempted) return false;
+  // 2026-07-29 起不再要求頁面全數成功（全有全無會讓一頁失敗就整輪凍結）：
+  // 部分失敗的保護改由「按高手取代」承擔——抓失敗的高手不在 fetchedByLg，舊單自動保留。
+  if (state.succeeded <= 0) return state.previous <= 0;
   if (state.previous > 0 && state.current === 0) return false;
   return true;
 }
@@ -521,6 +531,7 @@ async function run() {
   const picks = [];
   const coverage = {};
   const pageCoverage = {};
+  const fetchedByLg = {};   // lg -> Set(uid)：本輪頁面全數有效抓到的高手（按高手取代語義的白名單）
   for (const { id: aid, lg } of targets) {
     // 2026-07-21 廢除名額（EXPERT_CAP）：黃彥案＝不讓分榜第3名(62%/323注)過門檻，
     // 但「全聯盟最佳勝率前40」斷頭台排139/240 → 永遠抓不到。教義=過門檻(60%+30注)就必抓：
@@ -539,14 +550,16 @@ async function run() {
     for (const w of WL[lg] || []) if (uids.indexOf(w) < 0) uids.push(w);   // 追蹤名單必抓
     coverage[lg] = { qualified: (perAlliance[aid] || new Map()).size, fetched: uids.length, whitelist: (WL[lg] || []).length };
     console.log(`[a${aid} ${lg}] 合格 ${coverage[lg].qualified} 名，抓 ${uids.length} 名（含追蹤名單 ${coverage[lg].whitelist}）`);
+    fetchedByLg[lg] = fetchedByLg[lg] || new Set();
     for (const uid of uids) {
+      let allPagesOk = true;   // 任一頁失敗＝此高手本輪不完整 → 不得取代他的舊單（按高手取代語義）
       for (const [day, date] of Object.entries(dates)) {
         const coverageKey = lg + '|' + date;
         const pageState = pageCoverage[coverageKey] || (pageCoverage[coverageKey] = { attempted: 0, succeeded: 0 });
         pageState.attempted++;
         let html;
         try { html = await getHTML(`${BASE}/member/${encodeURIComponent(uid)}/prediction?allianceid=${aid}&gameday=${day}`); }
-        catch (e) { console.log(`  ⚠️ ${uid} ${day}: ${e.message}`); continue; }
+        catch (e) { console.log(`  ⚠️ ${uid} ${day}: ${e.message}`); allPagesOk = false; continue; }
         pageState.succeeded++;
         for (const p of parseExpertPage(html)) {
           const gt = gtOf(p.mode, p.kind);
@@ -570,6 +583,7 @@ async function run() {
         }
         await sleep(jitter());
       }
+      if (allPagesOk) fetchedByLg[lg].add(uid);
     }
   }
 
@@ -628,7 +642,7 @@ async function run() {
     scopes.add(k);
   }
   const cutoff = runCutoff;
-  const mergedAll = mergePicks(prev && prev.picks, dedup, scopes);
+  const mergedAll = mergePicks(prev && prev.picks, dedup, scopes, fetchedByLg);
   const merged = mergedAll.filter(p => p.date >= cutoff);
   // 修剪掉的舊單歸檔到 data/expert_archive/YYYY-MM.json —— 板上回看歷史日期用
   // （2026-07-21 使用者發現 7/19 版面明牌全消失：cutoff 洗掉、板子讀不到 git 歷史）。

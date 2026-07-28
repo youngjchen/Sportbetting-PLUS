@@ -89,12 +89,28 @@ async function sidecarGet(url, headers, timeoutMs) {
   });
 }
 
+// 挑戰頁辨識（2026-07-29 稽核吞單案：挑戰頁回 HTTP 200、內容空殼，被當成功頁 → 高手被誤判撤單）
+// 200 ≠ 有效內容；收到挑戰＝該層被擋，往下一層走或拋錯讓呼叫端計為抓取失敗。
+function isChallenged(body) {
+  const head = String(body || '').slice(0, 3000);
+  return head.includes('Just a moment') || head.includes('challenges.cloudflare.com');
+}
+
 // 對外唯一入口：語義同原本的 curlGet
 async function fetchText(url, headers, timeoutMs) {
   timeoutMs = timeoutMs || 20000;
-  if (FORCE === 'curl') return curlGet(url, headers, timeoutMs);
+  if (FORCE === 'curl') {
+    const b = await curlGet(url, headers, timeoutMs);
+    if (isChallenged(b)) throw new Error('challenge page (curl)');
+    return b;
+  }
   if (!curlBlocked) {
-    try { return await curlGet(url, headers, timeoutMs); }
+    try {
+      const b = await curlGet(url, headers, timeoutMs);
+      if (!isChallenged(b)) return b;
+      curlBlocked = true;
+      console.log('  ⓘ curl 收到挑戰頁 → 立即用隱形瀏覽器重試同一頁，本輪後續沿用瀏覽器');
+    }
     catch (e) {
       if (e.httpCode === 403 || e.httpCode === 503) {
         curlBlocked = true;
@@ -102,7 +118,9 @@ async function fetchText(url, headers, timeoutMs) {
       } else { throw e; }
     }
   }
-  return sidecarGet(url, headers, timeoutMs);
+  const b = await sidecarGet(url, headers, timeoutMs);
+  if (isChallenged(b)) throw new Error('challenge page (sidecar)');   // python 端 solve 層也沒過 → 當抓取失敗
+  return b;
 }
 
 function shutdown() {
