@@ -52,6 +52,36 @@ test('local failover installs runtime dependencies only when package-lock change
   }
 });
 
+test('local failover can execute the real npm ci entrypoint on Windows', { skip: process.platform !== 'win32' }, () => {
+  const { ensureRuntimeDependencies } = loadWorkspaceModule();
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failover-real-npm-'));
+  try {
+    fs.mkdirSync(path.join(root, '.git'));
+    fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+      name: 'failover-real-npm-test',
+      version: '1.0.0',
+      private: true,
+    }));
+    fs.writeFileSync(path.join(root, 'package-lock.json'), JSON.stringify({
+      name: 'failover-real-npm-test',
+      version: '1.0.0',
+      lockfileVersion: 3,
+      requires: true,
+      packages: {
+        '': {
+          name: 'failover-real-npm-test',
+          version: '1.0.0',
+        },
+      },
+    }));
+
+    assert.equal(ensureRuntimeDependencies(root), true);
+    assert.ok(fs.existsSync(path.join(root, '.git', 'bb_failover_deps.sha256')));
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 test('local failover runs from an independent clone and fast-forwards it without touching the interactive clone', () => {
   const { ensureFailoverWorkspace } = loadWorkspaceModule();
   assert.equal(typeof ensureFailoverWorkspace, 'function');

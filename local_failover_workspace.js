@@ -62,8 +62,13 @@ function ensureRuntimeDependencies(workspaceDir, install = null) {
   if (previous === digest && fs.existsSync(path.join(workspaceDir, 'node_modules'))) return false;
 
   const runInstall = install || (() => {
-    const npm = process.platform === 'win32' ? 'npm.cmd' : 'npm';
-    execFileSync(npm, ['ci', '--omit=dev', '--no-audit', '--no-fund'], {
+    const executable = process.platform === 'win32'
+      ? (process.env.ComSpec || 'cmd.exe')
+      : 'npm';
+    const args = process.platform === 'win32'
+      ? ['/d', '/s', '/c', 'npm.cmd ci --omit=dev --no-audit --no-fund']
+      : ['ci', '--omit=dev', '--no-audit', '--no-fund'];
+    execFileSync(executable, args, {
       cwd: workspaceDir,
       stdio: 'inherit',
       windowsHide: true,
