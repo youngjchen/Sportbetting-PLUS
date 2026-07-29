@@ -80,7 +80,8 @@ function run() {
   const state = loadState();
   // 1) 專用 clone 必須乾淨；不再使用 autostash，從架構上切斷互動工作區衝突。
   try {
-    const dirty = sh('git status --porcelain').trim();
+    // launcher 已拒絕未知 untracked；這裡只檢查 tracked 修改，node_modules 是專用 clone 的正常 runtime。
+    const dirty = sh('git status --porcelain --untracked-files=no').trim();
     if (dirty) { log('專用備援 clone 不乾淨，本輪 fail-closed：\n' + dirty); return; }
   } catch (e) { log('工作樹檢查失敗，本輪放棄：' + e.message.split('\n')[0]); return; }
   try { sh('git pull --rebase origin main'); }

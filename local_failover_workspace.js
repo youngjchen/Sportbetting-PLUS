@@ -43,7 +43,10 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   if (normalizedRemote(actualOrigin) !== normalizedRemote(originUrl)) {
     throw new Error(`failover workspace origin mismatch: ${actualOrigin}`);
   }
-  const dirty = git(['status', '--porcelain'], workspaceDir);
+  const dirty = git(['status', '--porcelain'], workspaceDir)
+    .split(/\r?\n/)
+    .filter(line => line && line !== '?? node_modules/')
+    .join('\n');
   if (dirty) {
     throw new Error(`failover workspace not clean（不乾淨），拒絕自動覆寫：\n${dirty}`);
   }

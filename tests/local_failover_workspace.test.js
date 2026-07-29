@@ -121,6 +121,12 @@ test('local failover runs from an independent clone and fast-forwards it without
     );
     assert.equal(fs.existsSync(path.join(interactive, 'interactive-only.txt')), true);
 
+    fs.mkdirSync(path.join(failover, 'node_modules'));
+    fs.writeFileSync(path.join(failover, 'node_modules', 'runtime.txt'), 'generated dependency\n');
+    assert.doesNotThrow(
+      () => ensureFailoverWorkspace({ originUrl: origin, workspaceDir: failover })
+    );
+
     fs.writeFileSync(path.join(failover, 'unexpected-local-file.txt'), 'dirty\n');
     assert.throws(
       () => ensureFailoverWorkspace({ originUrl: origin, workspaceDir: failover }),
