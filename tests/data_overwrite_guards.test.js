@@ -71,7 +71,7 @@ test('expert scraper refuses to replace malformed prior picks', () => {
   });
 });
 
-test('expert scope replacement requires complete discovery and page fetches', () => {
+test('expert scope replacement requires complete discovery and at least one valid page', () => {
   const expert = require('../expert_picks.js');
   assert.equal(typeof expert.shouldReplaceScope, 'function');
   assert.equal(expert.shouldReplaceScope({
@@ -79,13 +79,72 @@ test('expert scope replacement requires complete discovery and page fetches', ()
   }), false);
   assert.equal(expert.shouldReplaceScope({
     discoveryComplete: true, attempted: 10, succeeded: 9, previous: 20, current: 19,
-  }), false);
+  }), true);
   assert.equal(expert.shouldReplaceScope({
     discoveryComplete: true, attempted: 10, succeeded: 10, previous: 20, current: 18,
   }), true);
   assert.equal(expert.shouldReplaceScope({
     discoveryComplete: true, attempted: 10, succeeded: 10, previous: 20, current: 0,
   }), false);
+});
+
+test('expert merge replaces only successful user-date pages and never duplicates a pick key', () => {
+  const expert = require('../expert_picks.js');
+  const date = '2026-07-29';
+  const base = {
+    league: 'mlb',
+    date,
+    away: '小熊',
+    home: '釀酒人',
+    time: '08:10',
+    market: 'hd',
+    team: '小熊',
+    side: null,
+  };
+  const previous = [
+    { ...base, uid: 'ok-user', line: 1.5, at: 'old-ok' },
+    { ...base, uid: 'failed-user', line: 1.5, at: 'old-failed' },
+  ];
+  const current = [
+    { ...base, uid: 'ok-user', line: 2.5, at: 'new-ok' },
+  ];
+  const fetchedByLg = {
+    mlb: new Set([`ok-user|${date}`]),
+  };
+
+  const merged = expert.mergePicks(
+    previous,
+    current,
+    new Set([`mlb|${date}`]),
+    fetchedByLg
+  );
+
+  assert.equal(merged.length, 2);
+  assert.deepEqual(
+    merged.map((pick) => [pick.uid, pick.line, pick.at]).sort(),
+    [
+      ['failed-user', 1.5, 'old-failed'],
+      ['ok-user', 2.5, 'new-ok'],
+    ]
+  );
+});
+
+test('expert merge keeps valid new picks as a union when an incomplete scope is not allowed to delete old picks', () => {
+  const expert = require('../expert_picks.js');
+  const previous = [{
+    uid: 'old-user', league: 'mlb', date: '2026-07-29',
+    away: '小熊', home: '釀酒人', time: '08:10',
+    market: 'hd', team: '小熊', side: null, line: 1.5,
+  }];
+  const current = [{
+    uid: 'new-user', league: 'mlb', date: '2026-07-29',
+    away: '小熊', home: '釀酒人', time: '08:10',
+    market: 'ml', team: '釀酒人', side: null, line: null,
+  }];
+
+  const merged = expert.mergePicks(previous, current, new Set(), { mlb: new Set() });
+
+  assert.deepEqual(merged.map(p => p.uid).sort(), ['new-user', 'old-user']);
 });
 
 test('expert scraper refuses malformed whitelist and existing archive', () => {

@@ -6,4 +6,4 @@ rem 移除：
 rem   schtasks /Delete /F /TN "BB-ScrapeFailover"
 rem 檢視 log：type "%USERPROFILE%\bb_failover.log"
 cd /d %~dp0
-node local_failover.js >> "%USERPROFILE%\bb_failover.log" 2>&1
+node local_failover_workspace.js >> "%USERPROFILE%\bb_failover.log" 2>&1

@@ -12,7 +12,7 @@
 // 深掃補位：台灣 04:00~07:00 窗內若該聯盟仍被擋，當日一次改 EP_DEEP=1
 //   （補 yesterday 頁 result 回補，保住跟單回測生命週期）。
 // 排程：failover_task.cmd + Windows 工作排程器每 30 分（見 cmd 檔頭註解）。
-// 手動單發：node local_failover.js --once（同邏輯跑一輪）
+// 手動單發：node local_failover_workspace.js（會建立/更新專用 clone 後跑一輪）
 // ============================================================
 'use strict';
 const { execSync, execFileSync } = require('child_process');
@@ -64,6 +64,9 @@ function saveState(s) { fs.writeFileSync(STATE_FILE, JSON.stringify(s)); }
 function twNow() { return new Date(Date.now() + 8 * 3600e3); }
 
 function main() {
+  if (process.env.BB_FAILOVER_ISOLATED !== '1') {
+    throw new Error('本機備援拒絕在互動工作目錄執行；請改跑 local_failover_workspace.js');
+  }
   // 防重入（前一輪全量可能 10~25 分）
   if (fs.existsSync(LOCK_FILE)) {
     const age = Date.now() - fs.statSync(LOCK_FILE).mtimeMs;
@@ -75,8 +78,12 @@ function main() {
 
 function run() {
   const state = loadState();
-  // 1) 同步到遠端最新（autostash 容忍本機未提交修改）
-  try { sh('git pull --rebase --autostash origin main'); }
+  // 1) 專用 clone 必須乾淨；不再使用 autostash，從架構上切斷互動工作區衝突。
+  try {
+    const dirty = sh('git status --porcelain').trim();
+    if (dirty) { log('專用備援 clone 不乾淨，本輪 fail-closed：\n' + dirty); return; }
+  } catch (e) { log('工作樹檢查失敗，本輪放棄：' + e.message.split('\n')[0]); return; }
+  try { sh('git pull --rebase origin main'); }
   catch (e) { try { sh('git rebase --abort'); } catch (_) {} log('pull 失敗，本輪放棄：' + e.message.split('\n')[0]); return; }
 
   // autostash 回貼可能把衝突標記寫進「別的工作」留在樹上的資料檔（2026-07-29 14:40 污染案：

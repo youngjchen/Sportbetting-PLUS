@@ -172,16 +172,20 @@ function loadPrev() {
 }
 
 // 合併：本輪掃過的 (league|date) 以新結果為準（高手改單/撤單跟著更新），其餘沿用上一輪
-// 按高手取代（2026-07-29 稽核吞單案根治）：舊單只有在「該 scope 本輪有掃」且「該高手本輪
-// 頁面全數有效抓到」時才被新資料取代（此時新資料裡沒有他的單＝真撤單）。抓失敗／不在本輪
-// 名冊的高手 → 舊單原地保留，等深掃(全量)或下輪再對帳。fetchedByLg 缺席＝退回舊整批語義。
+// 按「高手×日期」取代：只有該高手的該日期頁成功時，才可刪除/更新他的舊單。
+// 另一日期失敗不會阻止成功日期更新，也不會讓成功頁的新單和舊單重複並存。
 function mergePicks(prevPicks, newPicks, scopes, fetchedByLg) {
-  return (prevPicks || []).filter(p => {
+  const akey = p => [p.uid, p.league, p.date, p.away, p.home, p.time, p.market, p.team || p.side].join('|');
+  const kept = (prevPicks || []).filter(p => {
     if (!scopes.has(p.league + '|' + p.date)) return true;
     if (!fetchedByLg) return false;
     const f = fetchedByLg[p.league];
-    return !(f && f.has(p.uid));
-  }).concat(newPicks);
+    return !(f && f.has(p.uid + '|' + p.date));
+  });
+  const unique = new Map(kept.map(p => [akey(p), p]));
+  // scope 不完整時只禁止「刪舊」，已成功解析的新單仍可安全聯集；同鍵由新值覆蓋。
+  for (const p of (newPicks || [])) unique.set(akey(p), p);
+  return [...unique.values()];
 }
 
 /* ---- 賽前型名冊（2026-07-21 使用者拍板：方案1+2）----
@@ -531,7 +535,7 @@ async function run() {
   const picks = [];
   const coverage = {};
   const pageCoverage = {};
-  const fetchedByLg = {};   // lg -> Set(uid)：本輪頁面全數有效抓到的高手（按高手取代語義的白名單）
+  const fetchedByLg = {};   // lg -> Set("uid|date")：成功頁面，精確控制每個高手每個日期的取代權
   for (const { id: aid, lg } of targets) {
     // 2026-07-21 廢除名額（EXPERT_CAP）：黃彥案＝不讓分榜第3名(62%/323注)過門檻，
     // 但「全聯盟最佳勝率前40」斷頭台排139/240 → 永遠抓不到。教義=過門檻(60%+30注)就必抓：
@@ -552,15 +556,15 @@ async function run() {
     console.log(`[a${aid} ${lg}] 合格 ${coverage[lg].qualified} 名，抓 ${uids.length} 名（含追蹤名單 ${coverage[lg].whitelist}）`);
     fetchedByLg[lg] = fetchedByLg[lg] || new Set();
     for (const uid of uids) {
-      let allPagesOk = true;   // 任一頁失敗＝此高手本輪不完整 → 不得取代他的舊單（按高手取代語義）
       for (const [day, date] of Object.entries(dates)) {
         const coverageKey = lg + '|' + date;
         const pageState = pageCoverage[coverageKey] || (pageCoverage[coverageKey] = { attempted: 0, succeeded: 0 });
         pageState.attempted++;
         let html;
         try { html = await getHTML(`${BASE}/member/${encodeURIComponent(uid)}/prediction?allianceid=${aid}&gameday=${day}`); }
-        catch (e) { console.log(`  ⚠️ ${uid} ${day}: ${e.message}`); allPagesOk = false; continue; }
+        catch (e) { console.log(`  ⚠️ ${uid} ${day}: ${e.message}`); continue; }
         pageState.succeeded++;
+        fetchedByLg[lg].add(uid + '|' + date);
         for (const p of parseExpertPage(html)) {
           const gt = gtOf(p.mode, p.kind);
           const q = gt != null ? qual[`${uid}|${aid}|${p.mode}|${gt}`] : null;
@@ -583,7 +587,6 @@ async function run() {
         }
         await sleep(jitter());
       }
-      if (allPagesOk) fetchedByLg[lg].add(uid);
     }
   }
 

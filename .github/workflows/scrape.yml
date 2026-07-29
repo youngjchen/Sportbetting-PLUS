@@ -38,7 +38,7 @@ jobs:
       - name: Install scraper dependencies
         run: |
           npm install
-          pip -q install "scrapling[all]>=0.4.11"
+          pip -q install -r requirements-scraping.txt
           scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling browser install failed"
       - name: 每 5 分鐘抓一次，本 run 持續約 5h25m 後結束，由排程接力
         run: |

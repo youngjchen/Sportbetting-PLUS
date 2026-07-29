@@ -3010,7 +3010,7 @@ function renderCardB(it){
         more.innerHTML = (has?((ist.sw?`⇄${ist.sw}＝bet365 讓分方今天換邊 ${ist.sw} 次：${esc(ist.tr||"")}`:`bet365 讓分方今天未換邊`)+
           (ist.dv?`・<span style="color:#ff5d7a">背離（獨贏熱門 ${esc(ist.mf==="home"?it.home:it.away)}）</span>`:"")):`bet365 讓分未開盤（亞洲盤常較晚開）`)+
           ((ist&&ist.ltr)?`<br>台彩換邊 ⇄${ist.lsw}：${esc(ist.ltr)}`:"")+
-          (epSwShow?`<br><span style="color:#2bbfa0">台彩⚠曾對調（明牌指紋）：序列未錄到換邊，但台彩線讓分單兩邊都出現過讓方（${epSw}）＝期間曾對調遭空窗漏錄、確切時間不可考，結算時記得勾「賽前對調」。</span>`:"")+`<br>台彩側＝${(has&&ist.lsLive)?"玩運彩盤中序列（現況）":"玩運彩開盤快照"}；此帶唯讀（國際軸＋明牌指紋），不會改卡片任何欄位。`;
+          (epSwShow?`<br><span style="color:#2bbfa0">台彩⚠曾對調（明牌指紋）：序列未錄到換邊，但台彩線讓分單兩邊都出現過讓方（${epSw}）＝期間曾對調遭空窗漏錄、確切時間不可考，結算時記得勾「賽前對調」。</span>`:"")+`<br>台彩側＝${(ist&&ist.lsLive)?"玩運彩盤中序列（現況）":"玩運彩開盤快照"}；此帶唯讀（國際軸＋明牌指紋），不會改卡片任何欄位。`;
         strip.onclick=(e)=>{ e.stopPropagation(); strip.classList.toggle("open"); };
         ana.appendChild(strip); ana.appendChild(more);
       } }

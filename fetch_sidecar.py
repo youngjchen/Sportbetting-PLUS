@@ -54,6 +54,70 @@ def unwrap_json(raw: str) -> str:
     return raw
 
 
+def looks_challenged(raw: str) -> bool:
+    head = (raw or '')[:3000]
+    return ('Just a moment' in head) or ('challenges.cloudflare.com' in head)
+
+
+def valid_json_body(raw: str):
+    body = unwrap_json(raw or '')
+    try:
+        json.loads(body)
+        return body
+    except Exception:
+        return None
+
+
+def fetch_with_fallback(
+    *,
+    url,
+    headers,
+    timeout_ms,
+    http_get,
+    browser_fetch,
+    xhr_fetch,
+    solve_fetch,
+):
+    """執行正式傳輸升級鏈，回傳 (status, body, layer)。
+
+    I/O 以 callable 注入，讓測試走同一份控制流程，而不是複製一套假流程。
+    第一層例外可升級；最後一層仍無效時必須拋錯，禁止把挑戰頁當正常空頁。
+    """
+    wants_json = 'json' in (
+        (headers.get('Accept') or headers.get('accept') or '').lower()
+    )
+    if wants_json:
+        try:
+            status, raw = http_get(url, headers, timeout_ms)
+        except Exception:
+            status, raw = 0, ''
+        body = valid_json_body(raw) if 200 <= int(status or 0) < 400 else None
+        if body is not None:
+            return int(status), body, 'http'
+        try:
+            status, raw = xhr_fetch(url, headers, timeout_ms)
+        except Exception as exc:
+            raise RuntimeError(f'page-xhr failed: {type(exc).__name__}: {exc}') from exc
+        body = valid_json_body(raw) if 200 <= int(status or 0) < 400 else None
+        if body is None:
+            raise RuntimeError(f'page-xhr returned invalid JSON/status {status}')
+        return int(status), body, 'page-xhr'
+
+    try:
+        status, raw = browser_fetch(url, headers, timeout_ms)
+    except Exception:
+        status, raw = 0, ''
+    if 200 <= int(status or 0) < 400 and not looks_challenged(raw):
+        return int(status), raw, 'stealth-browser'
+    try:
+        status, raw = solve_fetch(url, headers, max(timeout_ms, 60000))
+    except Exception as exc:
+        raise RuntimeError(f'solve-cloudflare failed: {type(exc).__name__}: {exc}') from exc
+    if not (200 <= int(status or 0) < 400) or looks_challenged(raw):
+        raise RuntimeError(f'solve-cloudflare returned challenge/status {status}')
+    return int(status), raw, 'solve-cloudflare'
+
+
 def main():
     try:
         from scrapling.fetchers import StealthySession, FetcherSession
@@ -83,7 +147,7 @@ def main():
             solve_holder['s'] = cm.__enter__()
         return solve_holder['s']
 
-    def page_xhr_json(url):
+    def page_xhr_json(url, _headers, timeout_ms):
         holder = {}
 
         def act(page):
@@ -92,13 +156,46 @@ def main():
                 "'Accept':'application/json'},credentials:'include'});return {s:r.status,t:await r.text()};}",
                 url)
             return page
-        session.fetch('https://www.playsport.cc/', page_action=act, google_search=False)
+        session.fetch(
+            'https://www.playsport.cc/',
+            page_action=act,
+            google_search=False,
+            timeout=timeout_ms,
+        )
         rr = holder.get('r') or {}
         return int(rr.get('s') or 0), (rr.get('t') or '')
 
-    def looks_challenged(raw):
-        head = (raw or '')[:2000]
-        return ('Just a moment' in head) or ('challenges.cloudflare.com' in head)
+    def http_get(url, headers, timeout_ms):
+        r = http.get(url, headers=headers, timeout=max(1, timeout_ms / 1000))
+        status = getattr(r, 'status', 200) or 200
+        raw = getattr(r, 'body', None)
+        if raw is None:
+            raw = str(r)
+        if isinstance(raw, (bytes, bytearray)):
+            raw = raw.decode('utf-8', 'replace')
+        return status, raw
+
+    def browser_fetch(url, headers, timeout_ms):
+        page = session.fetch(
+            url,
+            extra_headers=headers,
+            google_search=False,
+            timeout=timeout_ms,
+        )
+        status = getattr(page, 'status', 200) or 200
+        raw = getattr(page, 'html_content', None)
+        return status, raw if raw is not None else str(page)
+
+    def solve_fetch(url, headers, timeout_ms):
+        page = solve_session().fetch(
+            url,
+            extra_headers=headers,
+            google_search=False,
+            timeout=timeout_ms,
+        )
+        status = getattr(page, 'status', 200) or 200
+        raw = getattr(page, 'html_content', None)
+        return status, raw if raw is not None else str(page)
 
     print(json.dumps({"ready": True}), flush=True)
 
@@ -118,40 +215,17 @@ def main():
             if str(k).lower() != 'user-agent'
         }
         timeout_ms = max(1000, int(req.get('timeoutMs') or 30000))
-        wants_json = 'json' in (headers.get('Accept') or headers.get('accept') or '').lower()
         try:
-            if wants_json:
-                status, raw = 0, ''
-                try:
-                    r = http.get(url, headers=headers)
-                    status = getattr(r, 'status', 200) or 200
-                    raw = getattr(r, 'body', None)
-                    if raw is None:
-                        raw = str(r)
-                    if isinstance(raw, (bytes, bytearray)):
-                        raw = raw.decode('utf-8', 'replace')
-                except Exception:
-                    pass
-                bad = status != 200 or not (raw.lstrip()[:1] in ('{', '['))
-                if bad:  # 第2層：頁內 XHR
-                    status, raw = page_xhr_json(url)
-            else:
-                page = session.fetch(
-                    url,
-                    extra_headers=headers,
-                    google_search=False,
-                    timeout=timeout_ms,
-                )
-                status = getattr(page, 'status', 200) or 200
-                raw = getattr(page, 'html_content', None)
-                if raw is None:
-                    raw = str(page)
-                if status >= 400 or looks_challenged(raw):  # 第2層：解題模式重試
-                    page = solve_session().fetch(url, extra_headers=headers, google_search=False, timeout=timeout_ms)
-                    status = getattr(page, 'status', 200) or 200
-                    raw = getattr(page, 'html_content', None) or str(page)
-            body = unwrap_json(raw)
-            out = {"id": rid, "status": status,
+            status, body, layer = fetch_with_fallback(
+                url=url,
+                headers=headers,
+                timeout_ms=timeout_ms,
+                http_get=http_get,
+                browser_fetch=browser_fetch,
+                xhr_fetch=page_xhr_json,
+                solve_fetch=solve_fetch,
+            )
+            out = {"id": rid, "status": status, "layer": layer,
                    "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii')}
         except Exception as e:
             out = {"id": rid, "status": 0, "err": f"{type(e).__name__}: {e}"}

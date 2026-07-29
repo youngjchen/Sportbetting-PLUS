@@ -813,6 +813,38 @@ function applyLot(e, key, serMap, lotMap) {
   e.v = verdict;
 }
 
+const LOT_TIME_TOL_MIN = 15;
+function clockMinutes(hhmm) {
+  const m = /^(\d{2}):(\d{2})$/.exec(String(hhmm || ''));
+  return m ? Number(m[1]) * 60 + Number(m[2]) : null;
+}
+function alignTimedSources(map, base, starts, toleranceMin = LOT_TIME_TOL_MIN) {
+  const prefix = base + '|';
+  const targets = [...starts];
+  const sources = Object.keys(map)
+    .filter(k => k.startsWith(prefix) && /^\d{2}:\d{2}$/.test(k.slice(prefix.length)))
+    .map(k => ({ key: k, time: k.slice(prefix.length), mins: clockMinutes(k.slice(prefix.length)) }));
+  const pairs = [];
+  for (const target of targets) {
+    const targetMins = clockMinutes(target);
+    if (targetMins == null) continue;
+    for (const source of sources) {
+      if (source.mins == null) continue;
+      const raw = Math.abs(targetMins - source.mins);
+      const distance = Math.min(raw, 1440 - raw);
+      if (distance <= toleranceMin) pairs.push({ target, source, distance });
+    }
+  }
+  pairs.sort((a, b) => a.distance - b.distance || a.target.localeCompare(b.target));
+  const usedTargets = new Set(), usedSources = new Set();
+  for (const pair of pairs) {
+    if (usedTargets.has(pair.target) || usedSources.has(pair.source.key)) continue;
+    map[`${base}|${pair.target}`] = map[pair.source.key];
+    usedTargets.add(pair.target);
+    usedSources.add(pair.source.key);
+  }
+}
+
 function buildIntlState(log, stamp) {
   // 台彩側來源鏈：①lottery_series.json（盤中序列，2026-07-12 根治後的權威）②pregame feed 最新值（後備）
   let lotMap = {};
@@ -853,25 +885,26 @@ function buildIntlState(log, stamp) {
     if (time) serMap[`${base}|${time}`] = g.pts;
   }
 
-  // 舊 intl 檔讀取容錯（2026-07-29 污染案：壞檔會讓每輪建置永久跳過＝卡死不自癒）：
-  // 讀不了就從空表重建——條目本就由當前賠率窗＋台彩來源每輪推導，重建成本一輪、卡死成本無限。
-  let prev;
-  try {
-    prev = readJsonRequired(
-      INTL_FILE,
-      (value) => value && typeof value === 'object' && value.games && typeof value.games === 'object',
-      INTL_FILE
-    );
-  } catch (e) {
-    console.log(`⚠️ ${INTL_FILE} 壞檔（${String(e.message).slice(0, 80)}）→ 從空表重建`);
-    prev = { games: {} };
-  }
+  // intl_state 含 eo 閂鎖、方向序列與已離開抓取窗的歷史，無法從單輪資料完整重建。
+  // 壞檔必須 fail-closed：保留磁碟上的原檔並讓工作流失敗，禁止用空表覆寫。
+  const prev = readJsonRequired(
+    INTL_FILE,
+    (value) => value && typeof value === 'object' && value.games && typeof value.games === 'object',
+    INTL_FILE
+  );
   const games = prev.games || {};
   const startsByBase = {};
   for (const e of Object.values(log.matches)) {
     if (!e || !e.awayTeam || !e.homeTeam || !e.startISO) continue;
     const base = `${e.league}|${e.startISO.slice(0, 10)}|${e.awayTeam}|${e.homeTeam}`;
     (startsByBase[base] = startsByBase[base] || new Set()).add(e.startISO.slice(11, 16));
+  }
+  // 雙重賽來源常因官方改時或四捨五入差幾分鐘。以一對一最近時間吸附，
+  // 同一台彩場次不可同時餵給兩場；超過 15 分鐘則寧可不配對，避免串場。
+  for (const [base, starts] of Object.entries(startsByBase)) {
+    if (starts.size < 2) continue;
+    alignTimedSources(lotMap, base, starts);
+    alignTimedSources(serMap, base, starts);
   }
   const legacyByBase = {};
   for (const [base, starts] of Object.entries(startsByBase)) {
@@ -947,12 +980,21 @@ function buildIntlState(log, stamp) {
       : baseKey;
     const cur0 = games[key];
     if (cur0 && cur0.is) continue;
-    if (!serMap[key] && !lotMap[key]) continue;
+    if (!serMap[key] && !lotMap[key]) {
+      // 兩個來源檔都已成功解析，但本輪都沒有這場＝台彩已撤盤/移除。
+      // 連續兩輪才清 Taiwan-only stub，避免單輪局部抓漏讓提示條閃退；
+      // 有 Bet365 歷史的完整條目交給下方補算 pass 清台彩欄位。
+      if (cur0 && !cur0.is) {
+        cur0.lmiss = (Number(cur0.lmiss) || 0) + 1;
+        if (cur0.lmiss >= 2) delete games[key];
+      }
+      continue;
+    }
     const stub = cur0 || { is: null, il: null, sw: 0, tr: null, iseq: [],
       ls: null, ll: null, lsLive: false, lsw: 0, ltr: null,
       mf: null, dv: null, eo: null, v: null, u: stamp };
     applyLot(stub, key, serMap, lotMap);
-    if (stub.ls) { stub.u = stamp; games[key] = stub; }
+    if (stub.ls) { delete stub.lmiss; stub.u = stamp; games[key] = stub; }
   }
 
   // ── 補算 pass：對「所有」既有條目重算台彩側。

@@ -137,3 +137,111 @@ test('intl_state removes a stale timed entry when a reused Titan id has no curre
     fs.rmSync(dir, { recursive: true, force: true });
   }
 });
+
+test('intl_state matches doubleheader lottery times within five minutes without merging the games', () => {
+  const original = process.cwd();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'intl-doubleheader-drift-'));
+  fs.mkdirSync(path.join(dir, 'data'));
+  try {
+    process.chdir(dir);
+    fs.writeFileSync(path.join('data', 'pregame_data.json'), JSON.stringify([
+      {
+        league: 'KBO',
+        date: '2026-07-29',
+        time: '17:05',
+        awayTeam: '斗山熊',
+        homeTeam: 'SSG登陸者',
+        lotteryHandicap: { favSide: 'away', line: 1.5, src: '運彩' },
+      },
+      {
+        league: 'KBO',
+        date: '2026-07-29',
+        time: '20:00',
+        awayTeam: '斗山熊',
+        homeTeam: 'SSG登陸者',
+        lotteryHandicap: { favSide: 'home', line: 1.5, src: '運彩' },
+      },
+    ]));
+    fs.writeFileSync(path.join('data', 'lottery_series.json'), '{"games":{}}');
+    fs.writeFileSync(path.join('data', 'intl_state.json'), '{"updated":null,"games":{}}');
+
+    buildIntlState({
+      matches: {
+        early: {
+          league: 'kbo',
+          awayTeam: '斗山熊',
+          homeTeam: 'SSG登陸者',
+          startISO: '2026-07-29T17:00:00+08:00',
+          hd: { bet365: [] },
+          ml: {},
+        },
+        late: {
+          league: 'kbo',
+          awayTeam: '斗山熊',
+          homeTeam: 'SSG登陸者',
+          startISO: '2026-07-29T20:00:00+08:00',
+          hd: { bet365: [] },
+          ml: {},
+        },
+      },
+    }, '2026-07-29T12:00:00+08:00');
+
+    const state = JSON.parse(fs.readFileSync(path.join('data', 'intl_state.json'), 'utf8'));
+    const base = 'kbo|2026-07-29|斗山熊|SSG登陸者';
+    assert.equal(state.games[base], undefined);
+    assert.ok(state.games[`${base}|17:00`], 'five-minute drift must still create the early game');
+    assert.ok(state.games[`${base}|20:00`], 'the late game must remain independently matched');
+    assert.equal(state.games[`${base}|17:00`].ls, 'away');
+    assert.equal(state.games[`${base}|20:00`].ls, 'home');
+  } finally {
+    process.chdir(original);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
+test('intl_state removes a Taiwan-only stub only after two valid source snapshots omit the game', () => {
+  const original = process.cwd();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'intl-stale-stub-'));
+  fs.mkdirSync(path.join(dir, 'data'));
+  try {
+    process.chdir(dir);
+    const game = {
+      league: 'cpbl',
+      awayTeam: '味全龍',
+      homeTeam: '富邦悍將',
+      startISO: '2026-07-29T18:35:00+08:00',
+      hd: { bet365: [] },
+      ml: {},
+    };
+    fs.writeFileSync(path.join('data', 'pregame_data.json'), JSON.stringify([{
+      league: 'CPBL',
+      date: '2026-07-29',
+      time: '18:35',
+      awayTeam: '味全龍',
+      homeTeam: '富邦悍將',
+      lotteryHandicap: { favSide: 'home', line: 1.5, src: '運彩' },
+    }]));
+    fs.writeFileSync(path.join('data', 'lottery_series.json'), '{"games":{}}');
+    fs.writeFileSync(path.join('data', 'intl_state.json'), '{"updated":null,"games":{}}');
+
+    buildIntlState({ matches: { game } }, '2026-07-29T12:00:00+08:00');
+    let state = JSON.parse(fs.readFileSync(path.join('data', 'intl_state.json'), 'utf8'));
+    const key = 'cpbl|2026-07-29|味全龍|富邦悍將';
+    assert.equal(state.games[key].ls, 'home');
+    assert.equal(state.games[key].is, null);
+
+    fs.writeFileSync(path.join('data', 'pregame_data.json'), '[]');
+    buildIntlState({ matches: { game } }, '2026-07-29T12:05:00+08:00');
+    state = JSON.parse(fs.readFileSync(path.join('data', 'intl_state.json'), 'utf8'));
+    assert.ok(state.games[key], 'one missing snapshot must not erase the stub');
+    assert.equal(state.games[key].ls, 'home');
+    assert.equal(state.games[key].lmiss, 1);
+
+    buildIntlState({ matches: { game } }, '2026-07-29T12:10:00+08:00');
+    state = JSON.parse(fs.readFileSync(path.join('data', 'intl_state.json'), 'utf8'));
+    assert.equal(state.games[key], undefined);
+  } finally {
+    process.chdir(original);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});

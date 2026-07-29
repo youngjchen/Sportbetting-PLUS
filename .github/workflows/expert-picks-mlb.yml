@@ -32,7 +32,7 @@ jobs:
       - run: npm install
       - name: 安裝隱形瀏覽器內核（Cloudflare 封鎖時的傳輸層）
         run: |
-          pip -q install "scrapling[all]>=0.4.11"
+          pip -q install -r requirements-scraping.txt
           scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零，仍續跑（curl 可用時不影響）"
       - name: 智慧鬧鐘迴圈（睡到準點抓 mlb）
         run: |

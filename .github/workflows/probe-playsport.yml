@@ -20,7 +20,7 @@ jobs:
       - run: npm install
       - name: 安裝隱形瀏覽器內核
         run: |
-          pip -q install "scrapling[all]>=0.4.11"
+          pip -q install -r requirements-scraping.txt
           scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install"
       - name: 深掃回溯＋前後比對＋推送
         run: |
