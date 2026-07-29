@@ -19,6 +19,7 @@ const { execSync, execFileSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 const os = require('os');
+const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
 
 const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
@@ -31,7 +32,6 @@ const LEAGUES = ['mlb', 'npb', 'cpbl', 'kbo'];
 //   （2026-07-28 00:08 實測 pregame 內容 138 場逐字相同），看整體提交節奏會被騙。
 // 已知縫隙：明牌全量波（8~25 分）持鎖期間 pregame 輪會被跳過，序列出現同長度空檔——鎖=git 操作安全前提。
 const PREGAME_STALE_MIN = 12;
-const EP_FRESH_H = 3;          // qualified=0 且 updated 在此小時數內才視為「被擋」
 const RESCUE_GAP_MIN = 85;     // 每聯盟救援最小間隔
 const DEEP_WIN = [4, 7];       // 深掃補位窗（台灣時）
 
@@ -40,11 +40,13 @@ const sh = (cmd, opt) => execSync(cmd, Object.assign({ cwd: REPO_DIR, encoding: 
 
 // 台灣時 HH:MM（給 log 用）
 function hhmm(ms) { return new Date(ms + 8 * 3600e3).toISOString().slice(11, 16); }
-// 該聯盟「已過的最近一個波」——直接吃 expert_alarm 的完整時刻表（targetsFor＝保底＋深掃＋
-// 開賽簇 T-120/T-35，含無賽日規則），跟雲端鬧鐘同一顆腦。只用 BASELINES 會漏簇波：
+// 從 expert_alarm 的完整時刻表（targetsFor＝保底＋深掃＋開賽簇 T-120/T-35，含無賽日規則）
+// 選救援波次：WAF 明確指紋選最近已過波；一般鏈死只選已等滿 40 分鐘的最近波。
+// 這樣既不會在準點跟健康雲端搶跑，也不會被 30 分鐘密集波次不斷重置等待期。
+// 只用 BASELINES 會漏簇波：
 // MLB 04:00 深掃後到 22:00 之間沒有保底，早場(06:40~09:45)的賽前波全靠簇波。
 // 跨午夜：用 now 與 now-12h 各算一份合併（targetsFor 以當日為錨）。
-function lastPassedSlot(lg) {
+function rescueSlot(lg, blocked) {
   let A;
   try { A = require('./expert_alarm.js'); } catch (_) { return null; }
   const now = Date.now();
@@ -56,8 +58,7 @@ function lastPassedSlot(lg) {
     try { ts = A.targetsFor(lg, games, anchor) || []; } catch (_) {}
     for (const t of ts) cands.push({ at: t.atMs, deep: t.deep ? true : false });
   }
-  const passed = cands.filter(c => c.at <= now).sort((a, b) => b.at - a.at);
-  return passed[0] || null;
+  return selectExpertRescueSlot(cands, now, blocked);
 }
 function loadState() { try { return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8')); } catch (_) { return {}; } }
 function saveState(s) { fs.writeFileSync(STATE_FILE, JSON.stringify(s)); }
@@ -128,16 +129,29 @@ function run() {
     try { d = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', `expert_picks_${lg}.json`), 'utf8')); }
     catch (_) { continue; }
     const cov = (d.coverage || {})[lg] || {};
-    const updAge = d.updated ? (Date.now() - +new Date(d.updated)) / 3600e3 : 99;
-    // 波次對齊：直接吃 expert_alarm 的時刻表（使用者改保底/深掃時點，備援自動跟著改），
-    // 判準＝「已過的最近一個波」若晚於上次救援就補跑；固定間隔節流會漂移，深掃會跑掉時點。
-    const slot = lastPassedSlot(lg);
+    const now = Date.now();
+    const updatedMs = d.updated ? +new Date(d.updated) : NaN;
+    const updAge = d.updated ? (now - updatedMs) / 3600e3 : 99;
+    // 波次對齊：直接吃 expert_alarm 的時刻表（使用者改保底/深掃時點，備援自動跟著改）。
+    // WAF 指紋可立即補；只有「資料沒更新」時才等雲端 40 分鐘完成寬限。
+    const preReason = expertRescueReason({
+      qualified: cov.qualified,
+      updatedMs,
+      slotAtMs: null,
+      nowMs: now,
+    });
+    const slot = rescueSlot(lg, preReason.blocked);
     // 兩種觸發：①被擋指紋（雲端波有跑但整波 403，會蓋 qualified:0）
     //          ②鏈死偵測（2026-07-28 名冊崩跌案：波直接中止、什麼都不蓋 → 檔案更新時間
     //            落後「最近該跑的波」40 分以上＝該波沒完成；40 分 > 35 分補償窗，不誤搶雲端遲到波）
-    const blocked = cov.qualified === 0 && updAge < EP_FRESH_H;
-    const overdue = !!(slot && d.updated && (+new Date(d.updated) < slot.at - 40 * 60e3));
-    if (!blocked && !overdue) continue;
+    const reason = expertRescueReason({
+      qualified: cov.qualified,
+      updatedMs,
+      slotAtMs: slot && slot.at,
+      nowMs: now,
+    });
+    const { blocked, overdue } = reason;
+    if (!reason.rescue) continue;
     const last = state['ep_' + lg] || 0;
     if (!slot) { log(`${lg} 尚無已過波次，略過`); continue; }
     if (last >= slot.at) { log(`${lg} ${blocked ? '被擋' : '鏈死'}，但 ${slot.deep ? '深掃' : '保底'}波 ${hhmm(slot.at)} 已救過，略過`); continue; }
@@ -145,7 +159,7 @@ function run() {
     const tw = twNow();
     const deepKey = 'deep_' + lg, today = tw.toISOString().slice(0, 10);
     const useDeep = slot.deep && state[deepKey] !== today;
-    log(`${lg} 雲端被擋（qualified=0, updated ${updAge.toFixed(1)}h 前）→ 補 ${hhmm(slot.at)} ${slot.deep ? '深掃' : '保底'}波，本機 ${useDeep ? '深掃' : '全量'}`);
+    log(`${lg} ${blocked ? '雲端 WAF 指紋' : '雲端波逾期未落地'}（qualified=${cov.qualified ?? '未知'}, updated ${updAge.toFixed(1)}h 前）→ 補 ${hhmm(slot.at)} ${slot.deep ? '深掃' : '保底'}波，本機 ${useDeep ? '深掃' : '全量'}`);
     try {
       execFileSync('node', ['expert_picks.js'], {
         cwd: REPO_DIR, stdio: ['ignore', 'inherit', 'inherit'], timeout: 35 * 60e3,
@@ -172,7 +186,7 @@ function run() {
     }
     const diff = sh('git diff --cached --stat').trim();
     if (!diff) { log('產出與雲端無差異，不推'); sh('git reset -q'); return; }
-    sh('git commit -q -m "data: local failover rescue（雲端被 WAF 擋，本機接手）"');
+    sh('git commit -q -m "data: local failover rescue（WAF 或雲端波逾期，本機接手）"');
     for (let i = 0; i < 3; i++) {
       // -X theirs（rebase 語義＝保留「被重放的我方提交」內容）：雲端殭屍提交每 6 分動一次
       // lottery_series（單行 JSON）必衝突；我方是剛抓的新資料、永遠比殭屍時戳新，取我方安全。
