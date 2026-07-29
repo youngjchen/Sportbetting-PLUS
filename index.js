@@ -927,6 +927,26 @@ function buildIntlState(log, stamp) {
     applyLot(games[key], key, serMap, lotMap);              // 台彩側 + verdict
   }
 
+  // ── 台彩先行條目（2026-07-29 韓中職提示條消失案）：Bet365 亞洲盤常晚貼（7/4 已知行為），
+  // 原本「無 bet365 讓分＝不建條目」把台彩顯示一起綁死 → 台彩明明 12:xx 就開盤、板上整條看不到。
+  // 台彩有側就先建 is=null 條目（帶子顯示「bet365 未開盤＋台彩 X讓N」）；
+  // Bet365 開盤後主迴圈用同 key 覆寫成完整條目。is=null 條目每輪在此重算台彩側（補算 pass 只管有 is 的）。
+  for (const e of Object.values(log.matches)) {
+    if (!e || !e.awayTeam || !e.homeTeam || !e.startISO) continue;
+    const baseKey = `${e.league}|${e.startISO.slice(0, 10)}|${e.awayTeam}|${e.homeTeam}`;
+    const key = startsByBase[baseKey] && startsByBase[baseKey].size >= 2
+      ? `${baseKey}|${e.startISO.slice(11, 16)}`
+      : baseKey;
+    const cur0 = games[key];
+    if (cur0 && cur0.is) continue;
+    if (!serMap[key] && !lotMap[key]) continue;
+    const stub = cur0 || { is: null, il: null, sw: 0, tr: null, iseq: [],
+      ls: null, ll: null, lsLive: false, lsw: 0, ltr: null,
+      mf: null, dv: null, eo: null, v: null, u: stamp };
+    applyLot(stub, key, serMap, lotMap);
+    if (stub.ls) { stub.u = stamp; games[key] = stub; }
+  }
+
   // ── 補算 pass：對「所有」既有條目重算台彩側。
   // 為什麼必要：台彩序列由另一支爬蟲寫入，常在本爬蟲的抓取窗關閉後才補上晚段換邊
   // （實例 2026-07-14 富邦@台鋼：本檔 16:25 凍結時序列只有 1 點，16:33/16:52 兩次換邊
