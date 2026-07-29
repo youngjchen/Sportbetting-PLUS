@@ -853,11 +853,19 @@ function buildIntlState(log, stamp) {
     if (time) serMap[`${base}|${time}`] = g.pts;
   }
 
-  const prev = readJsonRequired(
-    INTL_FILE,
-    (value) => value && typeof value === 'object' && value.games && typeof value.games === 'object',
-    INTL_FILE
-  );
+  // 舊 intl 檔讀取容錯（2026-07-29 污染案：壞檔會讓每輪建置永久跳過＝卡死不自癒）：
+  // 讀不了就從空表重建——條目本就由當前賠率窗＋台彩來源每輪推導，重建成本一輪、卡死成本無限。
+  let prev;
+  try {
+    prev = readJsonRequired(
+      INTL_FILE,
+      (value) => value && typeof value === 'object' && value.games && typeof value.games === 'object',
+      INTL_FILE
+    );
+  } catch (e) {
+    console.log(`⚠️ ${INTL_FILE} 壞檔（${String(e.message).slice(0, 80)}）→ 從空表重建`);
+    prev = { games: {} };
+  }
   const games = prev.games || {};
   const startsByBase = {};
   for (const e of Object.values(log.matches)) {

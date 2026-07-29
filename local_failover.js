@@ -79,6 +79,20 @@ function run() {
   try { sh('git pull --rebase --autostash origin main'); }
   catch (e) { try { sh('git rebase --abort'); } catch (_) {} log('pull 失敗，本輪放棄：' + e.message.split('\n')[0]); return; }
 
+  // autostash 回貼可能把衝突標記寫進「別的工作」留在樹上的資料檔（2026-07-29 14:40 污染案：
+  // 標記被互動 session 的 git add 帶上雲 → odds 管線讀壞檔全停 40 分）——發現即還原 origin 乾淨版。
+  try {
+    const dirtyData = sh('git diff --name-only -- data').split('\n').filter(Boolean);
+    for (const f of dirtyData) {
+      try {
+        if (fs.readFileSync(path.join(REPO_DIR, f), 'utf8').includes('<<<<<<<')) {
+          sh('git checkout -- "' + f + '"');
+          log('⚠️ ' + f + ' 含衝突標記（autostash 撞擊），已還原乾淨版');
+        }
+      } catch (_) {}
+    }
+  } catch (_) {}
+
   const staged = [];
 
   // 2) pregame 生命徵象：origin/main 上主檔最後真變動年齡
@@ -141,6 +155,13 @@ function run() {
   if (!staged.length) { log('本輪無事可做（雲端健康或無變化）'); return; }
   try {
     sh('git add -- ' + staged.map(s => `"${s}"`).join(' '));
+    // 提交前最後一道閘：暫存內容絕不可含衝突標記（見上方 2026-07-29 污染案）
+    if (sh('git diff --cached').includes('<<<<<<<')) {
+      log('⚠️ 暫存內容含衝突標記，本輪放棄推送並還原');
+      sh('git reset -q');
+      for (const f of staged) { try { sh('git checkout -- "' + f + '"'); } catch (_) {} }
+      return;
+    }
     const diff = sh('git diff --cached --stat').trim();
     if (!diff) { log('產出與雲端無差異，不推'); sh('git reset -q'); return; }
     sh('git commit -q -m "data: local failover rescue（雲端被 WAF 擋，本機接手）"');
