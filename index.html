@@ -2825,6 +2825,9 @@ function renderCardB(it){
   const favV  = (venueMode==="combined") ? null : (favSide==="away"?"away":"home");
   const undV  = (venueMode==="combined") ? null : (undSide==="away"?"away":"home");
   const wp = bWinProbs(it);
+  const _opGame = (window.__oddsPortalIntegration && window.__oddsPortalIntegration.gameFor)
+    ? window.__oddsPortalIntegration.gameFor(it, doc.activeDate) : null;
+  const _opSwap = !!(_opGame && _opGame.handicapSwitch && _opGame.handicapSwitch.ever);
 
   /* ---------- 標頭 ---------- */
   const head = document.createElement("div"); head.className="bhead";
@@ -2841,6 +2844,7 @@ function renderCardB(it){
     if(pg && pg.status==="postponed"){ const pd=document.createElement("span"); pd.className="bbadge ppd"; pd.textContent="⏸ 延賽"; pd.title="官方判定延賽（補賽另排新場次）— 此卡不會開打與結算，可刪除"; head.appendChild(pd); }
   }catch(_){} }
   // 顛倒/曾顛倒膠囊已移除（2026-07-20）：狀態改在結算視窗『顛倒場狀態』設定，卡片底色已可辨識
+  if(_opSwap){ const op=document.createElement("span"); op.className="bbadge"; op.textContent="⇆"; op.title="OddsPortal 的 Stake 讓分方曾換邊；開結算視窗可看首次／最後紀錄"; head.appendChild(op); }
   // 賽前▸輸入：開結算視窗填賠率
   const hasOdds = (it.flipOddsAway!=null || it.flipOddsHome!=null);
   const preB = document.createElement("button"); preB.className="bbadge"+(hasOdds?" done":""); preB.textContent = hasOdds?"賽前 ✓":"賽前▸輸入"; preB.title="輸入賽前賠率 / 開結算視窗"; preB.onclick=()=>openSettleModal(it);
@@ -2863,7 +2867,7 @@ function renderCardB(it){
     const bn=document.createElement("div"); bn.className="bflipbanner was";
     bn.innerHTML="<span class='ic'>⇄</span>平台曾顛倒：收盤前已收斂一致";
     el.appendChild(bn);
-  } else if(it.preGameSwap){                                // 賽前讓分方曾對調（非顛倒/非曾顛倒）→ 青綠卡框＋橫幅，與另兩類分色
+  } else if(it.preGameSwap || _opSwap){                     // 人工紀錄或 OddsPortal 即時證據；不覆蓋卡面讓分方
     el.classList.add("flip-swap");
     const bn=document.createElement("div"); bn.className="bflipbanner swap";
     bn.innerHTML="<span class='ic'>⇆</span>賽前讓分方曾對調（與顛倒/曾顛倒是不同訊號）";
@@ -6903,6 +6907,8 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     picks.flipVanished = it.flipVanished;  // it.flipVanished 已由 applyFlipState 設定
     it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
     picks.preGameSwap = it.preGameSwap;
+    const _op = (window.__oddsPortalIntegration && window.__oddsPortalIntegration.snapshotFor) ? window.__oddsPortalIntegration.snapshotFor(it, doc.activeDate) : null;
+    if(_op){ it.oddsPortal = _op; picks.oddsPortal = _op; }
     readSettleHdMove(it);
     picks.openHdLine = it.openHdLine; picks.closeHdLine = it.closeHdLine; picks.hdLineMove = it.hdLineMove;
     const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
@@ -7016,6 +7022,7 @@ function applySettlement(it, picks, delta){
     closeOddsHome: (picks.closeOddsHome!=null ? picks.closeOddsHome : null),
     flipVanished: !!picks.flipVanished,
     preGameSwap: !!picks.preGameSwap,
+    oddsPortal: (picks.oddsPortal || null),
     openHdLine: (picks.openHdLine!=null ? picks.openHdLine : null),
     closeHdLine: (picks.closeHdLine!=null ? picks.closeHdLine : null),
     hdLineMove: (picks.hdLineMove || null),
@@ -7603,6 +7610,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./github-sync.js?v=20260727sync4"></script><script src="./divination-addon.js?v=20260727c"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script>
+</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260801op1"></script><script src="./github-sync.js?v=20260727sync4"></script><script src="./divination-addon.js?v=20260727c"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script>
 </body>
 </html>
