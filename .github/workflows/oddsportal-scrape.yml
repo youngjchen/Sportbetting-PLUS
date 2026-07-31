@@ -8,11 +8,11 @@ on:
       - '.github/workflows/oddsportal-scrape.yml'
       - 'oddsportal_scraper.py'
       - 'oddsportal-integration.js'
+      - 'oddsportal_local.js'
+      - 'local_failover.js'
       - 'tests/test_oddsportal_scraper.py'
       - 'tests/oddsportal_integration.test.js'
-  schedule:
-    # Off the hour boundary to reduce GitHub scheduled-run delays.
-    - cron: '7,22,37,52 * * * *'
+      - 'tests/oddsportal_local.test.js'
 
 concurrency:
   group: scrape-oddsportal-loop
@@ -36,14 +36,18 @@ jobs:
       - name: Install locked Node test dependencies
         run: npm ci --ignore-scripts --no-audit --no-fund
       - name: Install pinned Scrapling runtime
+        if: github.event_name == 'workflow_dispatch'
         run: |
           pip -q install -r requirements-scraping.txt
           scrapling install --force >/dev/null
       - name: Contract tests
         run: |
           python -m unittest tests.test_oddsportal_scraper
-          node --test tests/oddsportal_integration.test.js
+          node --test tests/oddsportal_integration.test.js tests/oddsportal_local.test.js
       - name: Poll OddsPortal once
+        # Hosted runners receive the event shell but no bookmaker rows. Production
+        # polling therefore runs through BB-ScrapeFailover on the Taiwan machine.
+        if: github.event_name == 'workflow_dispatch'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"

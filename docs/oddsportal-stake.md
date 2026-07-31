@@ -6,8 +6,10 @@
 - 莊家：OddsPortal 表格內的 `Stake.com` 列。
 - 聯盟：MLB、NPB、KBO、CPBL。
 - 市場：獨贏、亞洲讓分、大小分。
-- 輪詢：每 15 分鐘；只抓已排程且距開賽 18 小時內的比賽，首次進窗時從 hover 歷史回補真正初盤與此前變價，開賽後停止更新收盤。
+- 輪詢：本機 `BB-ScrapeFailover` 每 5 分鐘喚醒，OddsPortal 模組以 15 分鐘節流；只抓已排程且距開賽 18 小時內的比賽，首次進窗時從 hover 歷史回補真正初盤與此前變價，開賽後停止更新收盤。
 - 效能：使用兩個彼此獨立的 Scrapling browser worker 分批抓取；資料仍由主執行緒合併後原子寫入。
+
+GitHub hosted runner 實測雖能取得 OddsPortal HTTP 200，但事件頁不提供 bookmaker rows，無法讀取 `Stake.com`。正式輪詢因此沿用專案既有的台灣本機 failover 專用 clone、共用防重入鎖與安全 push；GitHub Actions 僅在 push 跑合約測試，手動 dispatch 才保留雲端診斷入口。這個安排不需要代理、API key 或額外付費。
 
 ## 資料
 

@@ -20,6 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
+const { isOddsPortalDue, runOddsPortal } = require('./oddsportal_local.js');
 
 const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
@@ -121,6 +122,24 @@ function run() {
         if (fs.existsSync(src)) { fs.copyFileSync(src, dst); staged.push('data/' + f); }
       }
     } catch (e) { log('pregame 本機抓取失敗：' + e.message.split('\n')[0]); }
+  }
+
+  // 2b) OddsPortal 的 Stake 賠率在 GitHub 美國 runner 只回空 bookmaker rows。
+  // 沿用本專用 clone 與共用 lock，住宅 IP 每 15 分鐘抓一次；只 stage 自己的摘要與日檔。
+  const oddsAttempt = Number(state.oddsportal_last_attempt) || 0;
+  if (isOddsPortalDue(oddsAttempt)) {
+    state.oddsportal_last_attempt = Date.now();
+    saveState(state);
+    log('OddsPortal / Stake 到期，本機開始抓取四聯盟');
+    try {
+      const outputs = runOddsPortal({ repoDir: REPO_DIR });
+      staged.push(...outputs);
+      state.oddsportal_last_success = Date.now();
+      saveState(state);
+      log('OddsPortal / Stake 本輪完成');
+    } catch (e) {
+      log('OddsPortal / Stake 本機抓取失敗：' + e.message.split('\n')[0]);
+    }
   }
 
   // 3) 明牌各聯盟：被擋指紋 qualified===0 且 updated 新鮮
