@@ -2,6 +2,14 @@ name: scrape-oddsportal-stake
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/oddsportal-scrape.yml'
+      - 'oddsportal_scraper.py'
+      - 'oddsportal-integration.js'
+      - 'tests/test_oddsportal_scraper.py'
+      - 'tests/oddsportal_integration.test.js'
   schedule:
     # Cron only wakes the long-running poller; the loop polls every 15 minutes.
     - cron: '11,31,51 * * * *'
