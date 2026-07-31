@@ -11,13 +11,12 @@ on:
       - 'tests/test_oddsportal_scraper.py'
       - 'tests/oddsportal_integration.test.js'
   schedule:
-    # Cron only wakes the long-running poller; the loop polls every 15 minutes.
-    - cron: '11,31,51 * * * *'
+    # Off the hour boundary to reduce GitHub scheduled-run delays.
+    - cron: '7,22,37,52 * * * *'
 
 concurrency:
   group: scrape-oddsportal-loop
-  # Code deployments supersede old code; scheduled/manual handoffs stay serialized.
-  cancel-in-progress: ${{ github.event_name == 'push' }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -25,7 +24,7 @@ permissions:
 jobs:
   poll:
     runs-on: ubuntu-latest
-    timeout-minutes: 350
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -44,50 +43,31 @@ jobs:
         run: |
           python -m unittest tests.test_oddsportal_scraper
           node --test tests/oddsportal_integration.test.js
-      - name: Poll OddsPortal every 15 minutes
+      - name: Poll OddsPortal once
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          END=$(( SECONDS + 19500 ))
-          while [ "$SECONDS" -lt "$END" ]; do
-            ROUND_START=$SECONDS
-            git rebase --abort 2>/dev/null || true
-            git fetch origin main
-            git reset --hard origin/main
+          git fetch origin main
+          git reset --hard origin/main
 
-            if python oddsportal_scraper.py; then
-              if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' data/oddsportal_summary.json data/oddsportal_history 2>/dev/null; then
-                echo "ERROR conflict marker in OddsPortal data; refusing commit"
-                git restore --staged --worktree -- data/oddsportal_summary.json data/oddsportal_history 2>/dev/null || true
-              else
-                git add data/oddsportal_summary.json data/oddsportal_history
-                if ! git diff --cached --quiet; then
-                  git commit -m "oddsportal update $(date -u +%FT%TZ) [skip ci]"
-                  if ! git push origin HEAD:main; then
-                    if ! git pull --rebase origin main; then
-                      git rebase --abort 2>/dev/null || true
-                      exit 1
-                    fi
-                    git push origin HEAD:main
-                  fi
-                fi
-              fi
-            else
-              echo "WARN OddsPortal round failed; old summary and archive were preserved"
-            fi
+          python oddsportal_scraper.py
 
-            ELAPSED=$(( SECONDS - ROUND_START ))
-            WAIT=$(( 900 - ELAPSED ))
-            [ "$WAIT" -lt 60 ] && WAIT=60
-            sleep "$WAIT"
-          done
-      - name: Self-dispatch successor
-        if: success()
-        env:
-          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
-        run: |
-          if [ -z "$GH_TOKEN" ]; then
-            echo "WORKFLOW_PAT not configured; cron remains the fallback"
+          if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' data/oddsportal_summary.json data/oddsportal_history 2>/dev/null; then
+            echo "ERROR conflict marker in OddsPortal data; refusing commit"
+            exit 1
+          fi
+
+          git add data/oddsportal_summary.json data/oddsportal_history
+          if git diff --cached --quiet; then
+            echo "No OddsPortal data changes"
             exit 0
           fi
-          gh workflow run oddsportal-scrape.yml -R "${{ github.repository }}" || true
+
+          git commit -m "oddsportal update $(date -u +%FT%TZ) [skip ci]"
+          if ! git push origin HEAD:main; then
+            if ! git pull --rebase origin main; then
+              git rebase --abort 2>/dev/null || true
+              exit 1
+            fi
+            git push origin HEAD:main
+          fi
