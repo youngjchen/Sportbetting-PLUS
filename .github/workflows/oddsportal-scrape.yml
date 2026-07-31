@@ -81,7 +81,7 @@ jobs:
             sleep "$WAIT"
           done
       - name: Self-dispatch successor
-        if: always()
+        if: success()
         env:
           GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
