@@ -21,6 +21,7 @@ from oddsportal_scraper import (
     _parse_listing_date,
     _partition_batches,
     _stealth_session_factory,
+    _wait_for_market_navigation,
     _load_schedule,
     reduce_handicap_switches,
     team_zh,
@@ -155,6 +156,24 @@ class HandicapSwitchTests(unittest.TestCase):
 
 
 class SnapshotMergeTests(unittest.TestCase):
+    def test_event_action_waits_for_market_navigation_before_collecting_rows(self):
+        calls = []
+
+        class Nav:
+            def wait_for(self, **kwargs):
+                calls.append(kwargs)
+
+        class Page:
+            def get_by_test_id(self, value):
+                self.requested = value
+                return Nav()
+
+        page = Page()
+        _wait_for_market_navigation(page)
+
+        self.assertEqual(page.requested, "bet-types-nav")
+        self.assertEqual(calls, [{"state": "visible", "timeout": 20000}])
+
     def test_missing_stake_row_diagnostic_distinguishes_geo_visibility(self):
         message = _missing_market_diagnostic({
             "ml": [], "hd": [], "ou": [],

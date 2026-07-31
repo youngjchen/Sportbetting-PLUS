@@ -438,6 +438,10 @@ def _capture_stake_row(row: Any, page: Any, event_start: datetime, with_history:
     }
 
 
+def _wait_for_market_navigation(page: Any) -> None:
+    page.get_by_test_id("bet-types-nav").wait_for(state="visible", timeout=20000)
+
+
 def _collect_market(page: Any, label: str, event_start: datetime, with_history: bool) -> list[dict[str, Any]]:
     nav = page.get_by_test_id("bet-types-nav")
     tab = nav.get_by_text(label, exact=True)
@@ -691,6 +695,7 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
         if event_start is None:
             stamp = page.evaluate("() => { const m=document.documentElement.innerHTML.match(/\\\"startDate\\\":(\\d{9,12})/); return m?Number(m[1]):null; }")
             event_start = datetime.fromtimestamp(stamp, tz=TW) if stamp else datetime.now(TW)
+        _wait_for_market_navigation(page)
         captured["ml"] = _collect_market(page, "Home/Away", event_start, with_history)
         captured["ou"] = _collect_market(page, "Over/Under", event_start, with_history)
         captured["hd"] = _collect_market(page, "Asian Handicap", event_start, with_history)
