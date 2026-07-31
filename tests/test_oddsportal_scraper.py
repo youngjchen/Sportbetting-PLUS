@@ -16,6 +16,7 @@ from oddsportal_scraper import (
     _is_pregame_listing,
     _listing_matches_schedule,
     _parse_listing_date,
+    _partition_batches,
     _load_schedule,
     reduce_handicap_switches,
     team_zh,
@@ -148,6 +149,13 @@ class HandicapSwitchTests(unittest.TestCase):
 
 
 class SnapshotMergeTests(unittest.TestCase):
+    def test_event_batches_cover_every_event_once(self):
+        events = [{"eventId": str(index)} for index in range(7)]
+        batches = _partition_batches(events, 2)
+
+        self.assertEqual(len(batches), 2)
+        self.assertEqual(sorted(item["eventId"] for batch in batches for item in batch), [str(index) for index in range(7)])
+
     def test_daily_gzip_archive_is_readable_and_deduplicates_the_same_round(self):
         record = {"observedAt": "2026-08-01T04:00:00+08:00", "games": [{"eventId": "one"}]}
         with tempfile.TemporaryDirectory() as folder:

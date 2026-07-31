@@ -12,6 +12,7 @@ import gzip
 import json
 import re
 import sys
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Iterable
@@ -774,6 +775,13 @@ def _compact_for_summary(game: dict[str, Any]) -> dict[str, Any]:
     return compact
 
 
+def _partition_batches(items: list[dict[str, Any]], worker_count: int) -> list[list[dict[str, Any]]]:
+    if not items:
+        return []
+    count = max(1, min(int(worker_count or 1), len(items)))
+    return [items[index::count] for index in range(count)]
+
+
 def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues: list[str]) -> dict[str, Any]:
     try:
         from scrapling.fetchers import DynamicSession
@@ -800,17 +808,31 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
                         discovered.append(event)
             except Exception as exc:
                 errors.append(f"{league} discovery: {exc}")
-        unique = {event["eventId"]: event for event in discovered}
-        for event in unique.values():
-            try:
-                game = scrape_event(
-                    session, event, schedule, observed_at,
-                    with_history=not _has_opening_summary(summary, event["eventId"]),
-                )
-                if game:
-                    successes.append(game)
-            except Exception as exc:
-                errors.append(f"{event['league']} {event['eventId']}: {exc}")
+
+    unique = {event["eventId"]: event for event in discovered}
+
+    def scrape_batch(batch: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
+        batch_successes: list[dict[str, Any]] = []
+        batch_errors: list[str] = []
+        with DynamicSession(headless=True, block_ads=True, locale="en-US", timezone_id="Asia/Taipei") as session:
+            for event in batch:
+                try:
+                    game = scrape_event(
+                        session, event, schedule, observed_at,
+                        with_history=not _has_opening_summary(summary, event["eventId"]),
+                    )
+                    if game:
+                        batch_successes.append(game)
+                except Exception as exc:
+                    batch_errors.append(f"{event['league']} {event['eventId']}: {exc}")
+        return batch_successes, batch_errors
+
+    batches = _partition_batches(list(unique.values()), 2)
+    if batches:
+        with ThreadPoolExecutor(max_workers=len(batches), thread_name_prefix="oddsportal") as executor:
+            for batch_successes, batch_errors in executor.map(scrape_batch, batches):
+                successes.extend(batch_successes)
+                errors.extend(batch_errors)
 
     if not successes:
         raise RuntimeError("OddsPortal 本輪 0 場有效資料；保留舊檔並以失敗結束。" + (" | " + " | ".join(errors[:5]) if errors else ""))
