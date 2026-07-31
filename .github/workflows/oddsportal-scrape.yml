@@ -50,7 +50,17 @@ jobs:
           git fetch origin main
           git reset --hard origin/main
 
-          python oddsportal_scraper.py
+          set +e
+          python oddsportal_scraper.py 2>&1 | tee "$RUNNER_TEMP/oddsportal-scrape.log"
+          scrape_status=${PIPESTATUS[0]}
+          set -e
+          if [ "$scrape_status" -ne 0 ]; then
+            # This repo is public. Only publish the scraper's own URL/error text;
+            # cookies, headers, credentials and environment values are never logged.
+            scrape_error=$(tail -n 12 "$RUNNER_TEMP/oddsportal-scrape.log" | tr '\r\n' ' ' | sed 's/%/%25/g')
+            echo "::error title=OddsPortal scrape failed::$scrape_error"
+            exit "$scrape_status"
+          fi
 
           if grep -R -n -E '^(<<<<<<<|=======|>>>>>>>)' data/oddsportal_summary.json data/oddsportal_history 2>/dev/null; then
             echo "ERROR conflict marker in OddsPortal data; refusing commit"
