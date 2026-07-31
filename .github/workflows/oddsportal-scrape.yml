@@ -16,7 +16,8 @@ on:
 
 concurrency:
   group: scrape-oddsportal-loop
-  cancel-in-progress: false
+  # Code deployments supersede old code; scheduled/manual handoffs stay serialized.
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 
 permissions:
   contents: write
