@@ -17,6 +17,7 @@ from oddsportal_scraper import (
     _append_daily_archive,
     _is_pregame_listing,
     _listing_matches_schedule,
+    _missing_market_diagnostic,
     _parse_listing_date,
     _partition_batches,
     _stealth_session_factory,
@@ -154,6 +155,16 @@ class HandicapSwitchTests(unittest.TestCase):
 
 
 class SnapshotMergeTests(unittest.TestCase):
+    def test_missing_stake_row_diagnostic_distinguishes_geo_visibility(self):
+        message = _missing_market_diagnostic({
+            "ml": [], "hd": [], "ou": [],
+            "visibleBookmakers": ["bet365", "BetInAsia", "Cloudbet"],
+        })
+
+        self.assertIn("Stake.com", message)
+        self.assertIn("ml=0 hd=0 ou=0", message)
+        self.assertIn("bet365", message)
+
     def test_cloud_runner_uses_stealth_session_with_cloudflare_solver(self):
         sentinel = object()
         fetchers = SimpleNamespace(StealthySession=sentinel)

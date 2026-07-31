@@ -623,6 +623,17 @@ def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str) -
     return result
 
 
+def _missing_market_diagnostic(captured: dict[str, Any]) -> str:
+    counts = " ".join(
+        f"{name}={len(captured.get(name) or [])}" for name in ("ml", "hd", "ou")
+    )
+    visible = ",".join(str(item) for item in (captured.get("visibleBookmakers") or [])[:12])
+    return (
+        f"Stake.com 無可用盤口 ({counts}); "
+        f"目前頁面可見 bookmaker/logo: {visible or 'none'}"
+    )
+
+
 def _extract_start(response: Any) -> datetime | None:
     match = re.search(r'"startDate":(\d{9,12})', str(response.html_content))
     if not match:
@@ -683,6 +694,14 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
         captured["ml"] = _collect_market(page, "Home/Away", event_start, with_history)
         captured["ou"] = _collect_market(page, "Over/Under", event_start, with_history)
         captured["hd"] = _collect_market(page, "Asian Handicap", event_start, with_history)
+        try:
+            captured["visibleBookmakers"] = page.locator(
+                '[data-testid="over-under-expanded-row"] img[alt]'
+            ).evaluate_all(
+                "els => [...new Set(els.map(el => el.getAttribute('alt')).filter(Boolean))]"
+            )
+        except Exception:
+            captured["visibleBookmakers"] = []
 
     response = session.fetch(
         _assert_oddsportal_url(event["sourceUrl"]),
@@ -704,7 +723,7 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
     }
     markets = {key: value for key, value in markets.items() if _market_has_data(value)}
     if not markets:
-        return None
+        raise RuntimeError(_missing_market_diagnostic(captured))
     switch = _inferred_switches(captured.get("hd") or [], observed_at)
     return {
         **{key: official[key] for key in ("league", "date", "startTime", "startISO", "awayTeam", "homeTeam")},
