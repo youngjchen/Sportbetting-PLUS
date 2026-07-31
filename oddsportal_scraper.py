@@ -235,13 +235,14 @@ def _parse_history_time(value: str, event_start: datetime) -> str | None:
     value = str(value or "").strip().replace("  ", " ")
     for fmt in ("%d %b, %H:%M", "%d %b %Y, %H:%M"):
         try:
-            parsed = datetime.strptime(value, fmt)
             if "%Y" not in fmt:
-                parsed = parsed.replace(year=event_start.year, tzinfo=TW)
+                parsed = datetime.strptime(
+                    f"{value} {event_start.year}", f"{fmt} %Y"
+                ).replace(tzinfo=TW)
                 if parsed - event_start > timedelta(days=180):
                     parsed = parsed.replace(year=event_start.year - 1)
             else:
-                parsed = parsed.replace(tzinfo=TW)
+                parsed = datetime.strptime(value, fmt).replace(tzinfo=TW)
             return parsed.isoformat(timespec="seconds")
         except ValueError:
             pass
@@ -782,11 +783,28 @@ def _partition_batches(items: list[dict[str, Any]], worker_count: int) -> list[l
     return [items[index::count] for index in range(count)]
 
 
+def _stealth_session_factory(fetchers: Any) -> tuple[Any, dict[str, Any]]:
+    """Return the protected-browser session and its cloud-safe defaults."""
+    return fetchers.StealthySession, {
+        "headless": True,
+        "block_ads": True,
+        "locale": "en-US",
+        "timezone_id": "Asia/Taipei",
+        "solve_cloudflare": True,
+        "block_webrtc": True,
+        "hide_canvas": True,
+        "allow_webgl": True,
+        "google_search": True,
+    }
+
+
 def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues: list[str]) -> dict[str, Any]:
     try:
-        from scrapling.fetchers import DynamicSession
+        import scrapling.fetchers as fetchers
     except ImportError as exc:
         raise RuntimeError("尚未安裝 Scrapling；請先 pip install -r requirements-scraping.txt") from exc
+
+    SessionClass, session_options = _stealth_session_factory(fetchers)
 
     now = datetime.now(TW)
     observed_at = now.isoformat(timespec="seconds")
@@ -796,7 +814,7 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
     successes: list[dict[str, Any]] = []
     errors: list[str] = []
 
-    with DynamicSession(headless=True, block_ads=True, locale="en-US", timezone_id="Asia/Taipei") as session:
+    with SessionClass(**session_options) as session:
         for league in leagues:
             try:
                 listing = session.fetch(
@@ -814,7 +832,7 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
     def scrape_batch(batch: list[dict[str, Any]]) -> tuple[list[dict[str, Any]], list[str]]:
         batch_successes: list[dict[str, Any]] = []
         batch_errors: list[str] = []
-        with DynamicSession(headless=True, block_ads=True, locale="en-US", timezone_id="Asia/Taipei") as session:
+        with SessionClass(**session_options) as session:
             for event in batch:
                 try:
                     game = scrape_event(

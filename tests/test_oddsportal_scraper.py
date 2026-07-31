@@ -2,8 +2,10 @@ import gzip
 import json
 import tempfile
 import unittest
+import warnings
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 
 from oddsportal_scraper import (
     build_event_key,
@@ -17,6 +19,7 @@ from oddsportal_scraper import (
     _listing_matches_schedule,
     _parse_listing_date,
     _partition_batches,
+    _stealth_session_factory,
     _load_schedule,
     reduce_handicap_switches,
     team_zh,
@@ -99,10 +102,12 @@ class HandicapSwitchTests(unittest.TestCase):
 
     def test_history_time_is_taipei_aware_before_year_boundary_comparison(self):
         event_start = datetime.fromisoformat("2026-08-01T07:05:00+08:00")
-        self.assertEqual(
-            _parse_history_time("31 Jul, 20:04", event_start),
-            "2026-07-31T20:04:00+08:00",
-        )
+        with warnings.catch_warnings(record=True) as caught:
+            warnings.simplefilter("always")
+            parsed = _parse_history_time("31 Jul, 20:04", event_start)
+
+        self.assertEqual(parsed, "2026-07-31T20:04:00+08:00")
+        self.assertEqual(caught, [])
 
     def test_oddsportal_first_column_is_home_so_negative_line_means_home_favorite(self):
         self.assertEqual(favorite_for_line(-1.5), "home")
@@ -149,6 +154,19 @@ class HandicapSwitchTests(unittest.TestCase):
 
 
 class SnapshotMergeTests(unittest.TestCase):
+    def test_cloud_runner_uses_stealth_session_with_cloudflare_solver(self):
+        sentinel = object()
+        fetchers = SimpleNamespace(StealthySession=sentinel)
+
+        session_class, options = _stealth_session_factory(fetchers)
+
+        self.assertIs(session_class, sentinel)
+        self.assertTrue(options["headless"])
+        self.assertTrue(options["solve_cloudflare"])
+        self.assertTrue(options["block_webrtc"])
+        self.assertTrue(options["hide_canvas"])
+        self.assertTrue(options["google_search"])
+
     def test_event_batches_cover_every_event_once(self):
         events = [{"eventId": str(index)} for index in range(7)]
         batches = _partition_batches(events, 2)
