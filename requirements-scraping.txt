@@ -1,1 +1,11 @@
-scrapling[all]==0.4.12
+# 反爬蟲抓取相依（玩運彩對雲端 IP 啟用 Cloudflare 後的備援層）
+# ‼️ 2026-08-01 事故：CI 每輪重裝時 pip 拉到 browserforge 指紋資料包的新版，
+#    scrapling 匯入階段就炸「No headers based on this input can be generated」→
+#    curl 被 403、隱形瀏覽器又起不來＝八個聯盟×日期組合全滅、pregame_data.json
+#    凍結 2h19m（火腿@羅德開賽後抓不到即時比分）。本機同組合實測 ready:true。
+#    → 三個版本全部釘死。日後要升版，先在本機跑
+#      python -c "from scrapling.fetchers import StealthySession, FetcherSession"
+#      確認可匯入，再改這裡。
+scrapling[all]==0.4.11
+browserforge==1.2.4
+apify_fingerprint_datapoints==0.13.0
