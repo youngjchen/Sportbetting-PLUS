@@ -1,0 +1,37 @@
+name: op-probe
+# Phase 0 探針⑤：GitHub Actions 資料中心 IP 能不能拿到 OddsPortal 的 SSR 頁（含 ld+json）。
+# 只做兩個 curl，結果寫回 data/op_actions_probe.json。一次性探針，結論出來後可整個刪除。
+on:
+  workflow_dispatch: {}
+  push:
+    paths: [".github/workflows/op_probe.yml"]
+permissions:
+  contents: write
+concurrency: op-probe
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: probe oddsportal from datacenter IP
+        run: |
+          UA="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36"
+          probe() { curl -sS -A "$UA" -H "Accept-Language: en-US,en;q=0.9" -o /tmp/body -w "%{http_code}" --max-time 45 "$1" || echo "ERR"; }
+          C1=$(probe "https://www.oddsportal.com/robots.txt"); H1=$(head -c 500 /tmp/body | tr '\n\r"' '  _')
+          C2=$(probe "https://www.oddsportal.com/baseball/usa/mlb/")
+          LD=$(grep -c 'application/ld+json' /tmp/body || true)
+          CF=$(grep -cio 'just a moment\|cf-challenge\|turnstile' /tmp/body || true)
+          SZ=$(wc -c </tmp/body)
+          printf '{"when":"%s","robots":{"code":"%s","head":"%s"},"league":{"code":"%s","ldjson":%s,"cf_challenge_words":%s,"bytes":%s}}\n' \
+            "$(date -u +%FT%TZ)" "$C1" "$H1" "$C2" "${LD:-0}" "${CF:-0}" "${SZ:-0}" > data/op_actions_probe.json
+          cat data/op_actions_probe.json
+      - name: commit result
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          for i in 1 2 3; do
+            git pull --rebase -q || true
+            git add data/op_actions_probe.json
+            git commit -m "op actions probe [skip ci]" || true
+            git push && break || sleep 6
+          done
