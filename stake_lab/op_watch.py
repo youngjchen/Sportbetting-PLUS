@@ -306,6 +306,7 @@ def visit_game(url, want_hash, mode, hover_keys):
             page.evaluate(JS_EXPAND); page.wait_for_timeout(3200)
             rows = page.evaluate(JS_HARVEST)
             V["markets"][label] = [x for x in rows if "stake" in x["book"].lower()]
+            V.setdefault("b365", {})[label] = [x for x in rows if "bet365" in x["book"].lower()]
             if mode != "full": continue
             # hover 收割：ML 兩格；AH ±1.5 兩側；OU 主線兩側
             marks = []
@@ -470,6 +471,14 @@ def do_visit(st, mode, h):
         fav = None
     entry = {"t": iso(now()), "fav": fav, "mode": fmode, "ev": ev,
              "dead": [{"line": s["line"], "odds": s["odds"][:3]} for s in ah if s["struck"]][:4]}
+    b365ah = (V.get("b365", {}) or {}).get("ah", [])
+    b365live = [x for x in b365ah if not x["struck"] and len(x["odds"]) >= 3]
+    if b365live:
+        try:
+            sgn = [float(x["line"]) for x in b365live]
+            entry["b365fav"] = "home" if all(v < 0 for v in sgn) else ("away" if all(v > 0 for v in sgn) else None)
+            entry["b365"] = [{"line": x["line"], "odds": x["odds"][:3]} for x in b365live][:3]
+        except Exception: pass
     g["checks"].append(entry)
     if ah and not g.get("ahSeen"): g["ahSeen"] = iso(now())
     prev = g.get("hdFav")
@@ -488,26 +497,6 @@ def do_visit(st, mode, h):
             g["latched"] = True; g["swapAt"] = iso(now())
             g["swapEvidence"] = {"before": "劃線死組在對側", "after": fav, "mode": fmode, "ev": ev}
             alert(f"⇄ 對調：{label}（開賽 {g['startISO'][11:16]}）")
-        # 第三通道＝價格翻框（8/2 中信@味全實錘：STAKE 官網已翻中信讓，OP 的 Stake 框仍掛味全讓、
-        # 只有賠率跟著翻 → 「讓分方」側 2.65 / 受讓側 1.42。框不可信時看價格形狀）
-        if not g.get("latched"):
-            pf = None
-            for s2 in [x for x in ah if not x["struck"] and len(x["odds"]) >= 3]:
-                try:
-                    if s2["line"] == "-1.5":
-                        give, recv, side = float(s2["odds"][1]), float(s2["odds"][2]), "home"
-                    elif s2["line"] == "+1.5":
-                        give, recv, side = float(s2["odds"][2]), float(s2["odds"][1]), "away"
-                    else:
-                        continue
-                    if give >= 2.30 and recv <= 1.55:
-                        pf = "away" if side == "home" else "home"
-                except Exception: pass
-            if pf and fav and pf != fav:
-                g["latched"] = True; g["swapAt"] = iso(now())
-                g["swapEvidence"] = {"before": fav, "after": pf, "mode": "price-shape",
-                                     "ev": "框仍掛" + fav + " 但價格形狀指向 " + pf}
-                alert(f"⇄ 對調（價格跡象）：{label}（開賽 {g['startISO'][11:16]}）")
     if mode == "full":
         start_dt = datetime.datetime.fromisoformat(g["startISO"])
         g["closeSnapshot"] = {k: v for k, v in V["markets"].items()}
