@@ -97,6 +97,32 @@ def alert(msg, popup=True):
         except Exception as e:
             log("popup失敗:" + str(e)[:80])
 
+
+REPO = os.path.dirname(ROOT)
+def publish():
+    """匯出 data/stake_odds.json 並推上 repo（板頁 add-on 的資料源）。
+    失敗只記錄不拋——推不上去不影響盯哨本身。"""
+    try:
+        import op_export
+        op_export.main()
+    except Exception as e:
+        log("匯出失敗：" + str(e)[:120]); return
+    try:
+        env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
+        def git(*a, **kw):
+            return subprocess.run(["git"] + list(a), cwd=REPO, capture_output=True,
+                                  text=True, timeout=kw.get("t", 90), env=env)
+        if not git("diff", "--quiet", "--", "data/stake_odds.json").returncode == 0:
+            git("add", "data/stake_odds.json")
+            git("commit", "-m", "stake odds " + iso(now()) + " [skip ci]")
+            for _ in range(3):
+                git("pull", "--rebase", "-q", "origin", "main", t=120)
+                if git("push", "-q", "origin", "main", t=120).returncode == 0:
+                    log("已推送 data/stake_odds.json"); return
+            log("推送失敗（保留在本機 commit，下輪再試）")
+    except Exception as e:
+        log("推送例外：" + str(e)[:120])
+
 def load_state():
     try:
         with open(STATE_F, encoding="utf-8") as f: return json.load(f)
@@ -554,6 +580,8 @@ def sweep():
             done += 1
             save_state(st)
         log(f"本輪完成 {done} 訪問，用時 {int((now() - t_start).total_seconds())}s")
+        if done:
+            publish()
     finally:
         try: os.remove(LOCK_F)
         except Exception: pass
