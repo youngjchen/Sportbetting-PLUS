@@ -402,6 +402,8 @@ def due_actions(st):
         if g.get("harvested"):
             continue
         if mins >= HARVEST_DELAY_MIN:
+            if g.get("deferUntil") and now() < datetime.datetime.fromisoformat(g["deferUntil"]):
+                continue
             if mins <= HARVEST_WINDOW_H * 60:
                 harvests.append((mins, h))
             else:
@@ -422,15 +424,22 @@ def derive_open_close(g, tips, start_dt):
     H = {k: parse_tip(v) for k, v in tips.items()}
     g["histories"] = H
     limit = start_dt + datetime.timedelta(minutes=10)
+    # ‼️ 走地浮窗守門（8/2 巨人場實錘）：開賽後頁面賠率區=走地市場，其浮窗歷史全是開賽後的點
+    # （會把走地價當收盤寫進去）。判別法=浮窗至少要有一個「開賽前」的點才算賽前盤資料。
+    def is_live_widget(key):
+        hh = H.get(key)
+        if not hh or not hh.get("points"): return False
+        return not any(datetime.datetime.fromisoformat(p["t"]) < start_dt for p in hh["points"])
     def close_of(key):
         hh = H.get(key)
-        if not hh or not hh.get("points"): return None
+        if not hh or not hh.get("points") or is_live_widget(key): return None
         for p in hh["points"]:          # 新→舊
             if datetime.datetime.fromisoformat(p["t"]) <= limit: return p
         return None
     def open_of(key):
         hh = H.get(key)
-        return hh.get("opening") if hh else None
+        if not hh or is_live_widget(key): return None
+        return hh.get("opening")
     board = {"openOddsHome": open_of("ml_home"), "openOddsAway": open_of("ml_away"),
              "closeOddsHome": (close_of("ml_home") or {}).get("o"),
              "closeOddsAway": (close_of("ml_away") or {}).get("o"),
@@ -439,6 +448,8 @@ def derive_open_close(g, tips, start_dt):
     for k, v in [("openOddsHome", board["openOddsHome"]), ("openOddsAway", board["openOddsAway"]),
                  ("closeOddsHome", board["closeOddsHome"]), ("closeOddsAway", board["closeOddsAway"])]:
         if v is not None and not (1.01 < float(v) < 30): g["asserts"].append(f"{k} 值異常:{v}")
+    if any(is_live_widget(k) for k in ("ml_home", "ml_away")):
+        g["asserts"].append("live-widget(走地浮窗，賽後重收)")
     if board["closeOddsHome"] is None or board["closeOddsAway"] is None:
         g["asserts"].append("close 缺點(浮窗無 ≤開賽+10min 的點)")
     g["board"] = board
@@ -452,6 +463,11 @@ def do_visit(st, mode, h):
         log(f"✗ {label} {mode} 失敗: {V['err']}"); return
     ah = V["markets"].get("ah", [])
     fav, fmode, ev = hd_fav(ah)
+    # ‼️ 開賽後頁面讓分區重建為「走地線」（跟著戰況跑，實測 13:15 巨人場）→
+    # 對調判定/hdFav 更新只准用賽前資料，開賽後的訪問只收割不判盤
+    started = now() >= datetime.datetime.fromisoformat(g["startISO"])
+    if started:
+        fav = None
     entry = {"t": iso(now()), "fav": fav, "mode": fmode, "ev": ev,
              "dead": [{"line": s["line"], "odds": s["odds"][:3]} for s in ah if s["struck"]][:4]}
     g["checks"].append(entry)
@@ -462,7 +478,7 @@ def do_visit(st, mode, h):
         if prev and prev != fav and not g.get("latched"):
             g["latched"] = True; g["swapAt"] = iso(now())
             g["swapEvidence"] = {"before": prev, "after": fav, "mode": fmode, "ev": ev}
-            alert(f"⇄ 讓分對調！{label}（{prev}→{fav}，開賽 {g['startISO'][11:16]}）")
+            alert(f"⇄ 對調：{label}（開賽 {g['startISO'][11:16]}）")   # 使用者規格：不判讓分方，方向自己在官網看
         g["hdFav"] = fav
         dead_sides = set()
         for d in entry["dead"]:
@@ -471,18 +487,23 @@ def do_visit(st, mode, h):
         if (("home" in dead_sides and fav == "away") or ("away" in dead_sides and fav == "home")) and not g.get("latched"):
             g["latched"] = True; g["swapAt"] = iso(now())
             g["swapEvidence"] = {"before": "劃線死組在對側", "after": fav, "mode": fmode, "ev": ev}
-            alert(f"⇄ 讓分對調（劃線證據）！{label}（現讓分方={fav}，開賽 {g['startISO'][11:16]}）")
+            alert(f"⇄ 對調：{label}（開賽 {g['startISO'][11:16]}）")
     if mode == "full":
         start_dt = datetime.datetime.fromisoformat(g["startISO"])
         g["closeSnapshot"] = {k: v for k, v in V["markets"].items()}
         derive_open_close(g, V.get("tips", {}), start_dt)
         g["harvested"] = True; g["harvestedAt"] = iso(now())
-        # 收盤缺點多半是該次 hover 失手（in-play 版面偶發）→ 最多重試 2 輪再定案
-        if any("close 缺點" in a for a in g["asserts"]) and g.get("harvestRetries", 0) < 2:
+        # 收盤缺點/走地浮窗 → 重試；走地浮窗直接延到賽後（完賽頁會恢復賽前盤＋完整歷史）
+        bad = [a for a in g["asserts"] if ("close 缺點" in a or "live-widget" in a)]
+        if bad and g.get("harvestRetries", 0) < 3:
             g["harvestRetries"] = g.get("harvestRetries", 0) + 1
             g["harvested"] = False
-            g["asserts"] = [a for a in g["asserts"] if "close 缺點" not in a]
-            log(f"  ↻ 收盤缺點，安排重試（第 {g['harvestRetries']} 次）")
+            g["asserts"] = [a for a in g["asserts"] if a not in bad]
+            if any("live-widget" in a for a in bad):
+                g["deferUntil"] = iso(start_dt + datetime.timedelta(hours=4))
+                log(f"  ↻ 走地浮窗，延到賽後重收（{g['deferUntil'][11:16]} 後）")
+            else:
+                log(f"  ↻ 收盤缺點，安排重試（第 {g['harvestRetries']} 次）")
         b = g.get("board", {})
         log(f"✓ 收割 {label}  初盤 {b.get('openOddsAway')}/{b.get('openOddsHome')} 收盤 {b.get('closeOddsAway')}/{b.get('closeOddsHome')}  斷言={g['asserts'] or '無'}")
     else:
