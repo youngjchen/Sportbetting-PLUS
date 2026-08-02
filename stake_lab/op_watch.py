@@ -306,6 +306,8 @@ def visit_game(url, want_hash, mode, hover_keys):
             page.evaluate(JS_EXPAND); page.wait_for_timeout(3200)
             rows = page.evaluate(JS_HARVEST)
             V["markets"][label] = [x for x in rows if "stake" in x["book"].lower()]
+            if label == "ah":
+                V["_allAh"] = rows            # 全書商原始列（供 op_b365_fill 取 bet365）
             V.setdefault("b365", {})[label] = [x for x in rows if "bet365" in x["book"].lower()]
             if mode != "full": continue
             # hover 收割：ML 兩格；AH ±1.5 兩側；OU 主線兩側
