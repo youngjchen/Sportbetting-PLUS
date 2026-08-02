@@ -307,7 +307,7 @@ def fetch_league(lg):
     StealthyFetcher.fetch(LEAGUES[lg], page_action=a, **COMMON)
     return HOLD.get("cur") or []
 
-def visit_game(url, want_hash, mode, hover_keys):
+def visit_game(url, want_hash, mode, hover_keys, expect_en=None):
     """mode='watch'（只 AH）或 'full'（三市場＋hover）。結果寫 HOLD['visit']"""
     HOLD["visit"] = {"who": None, "markets": {}, "tips": {}, "err": None}
     def a(page):
@@ -325,8 +325,16 @@ def visit_game(url, want_hash, mode, hover_keys):
             except Exception: pass
             who = page.evaluate(JS_WHOAMI)
         V["who"] = who
-        if want_hash and want_hash not in (who.get("url") or ""):
-            V["err"] = "match-switched"
+        # 身分驗證改看「頁面標題的隊名」而非網址片段：OP 會自行改寫 fragment 但顯示的仍是正確比賽
+        # （8/3 三場實證：hash 對不上、h1 標題完全正確）。用 hash 判定會誤殺有效頁面。
+        hdr = (who.get("header") or "").lower()
+        if expect_en and hdr:
+            miss = [t for t in expect_en if t and t.lower() not in hdr]
+            if miss:
+                V["err"] = "wrong-match:標題=" + (who.get("header") or "")[:50]
+                return page
+        elif want_hash and want_hash not in (who.get("url") or ""):
+            V["err"] = "match-switched(無隊名可驗)"
             return page
         # 賽中版面守門（使用者情報）：開賽後頁面預設 In-Play Odds 分頁，
         # 一律先點回 Pre-match Odds 再抓；賽中資料一律不碰
@@ -495,7 +503,7 @@ def derive_open_close(g, tips, start_dt):
 def do_visit(st, mode, h):
     g = st["games"][h]
     label = f'{g["league"]} {g.get("awayZh") or g["awayEn"]}@{g.get("homeZh") or g["homeEn"]}'
-    V = visit_game(g["url"], h, mode, "all")
+    V = visit_game(g["url"], h, mode, "all", [g.get("homeEn"), g.get("awayEn")])
     if V.get("err"):
         g["asserts"].append(f"{mode}:{V['err']}")
         log(f"✗ {label} {mode} 失敗: {V['err']}"); return
