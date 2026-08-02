@@ -1,0 +1,38 @@
+name: op-probe2
+# 探針：Actions 上跑瀏覽器抓 OddsPortal 單場頁（含 hover）可不可行。一次性，結論後可刪。
+on:
+  workflow_dispatch: {}
+  push:
+    paths: [".github/workflows/op_probe2.yml"]
+permissions:
+  contents: write
+concurrency: op-probe2
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: "pip" }
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: pw-browsers-${{ runner.os }}-v1
+      - name: install
+        run: |
+          pip install -q -r requirements-scraping.txt
+          scrapling install --force || python -m scrapling install --force
+      - name: probe
+        run: python stake_lab/op_cloud_probe.py
+      - name: commit result
+        if: always()
+        run: |
+          git config user.name github-actions
+          git config user.email actions@github.com
+          for i in 1 2 3; do
+            git pull --rebase -q || true
+            git add data/op_actions_probe2.json || true
+            git commit -m "op actions probe2 [skip ci]" || true
+            git push && break || sleep 6
+          done

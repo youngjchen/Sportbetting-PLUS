@@ -31,7 +31,7 @@ MAX_VISITS = int(os.environ.get("OPW_MAX_VISITS", "8"))
 WALL_CAP_MIN = 22
 CHECK_GAP_MIN = 28          # 盯哨間隔（排程 30 分，留 2 分裕度）
 SCHED_STALE_H = 3           # 賽程快取壽命
-HARVEST_DELAY_MIN = 10      # 開賽後幾分鐘才收割
+HARVEST_DELAY_MIN = int(os.environ.get("OPW_HARVEST_DELAY", "200"))   # 賽中一律不碰(使用者8/2鐵則)→約完賽後才收割
 HARVEST_WINDOW_H = 9        # 開賽超過這麼久就放棄收割（標記 miss）
 
 LEAGUES = {
@@ -83,7 +83,7 @@ def alert(msg, popup=True):
     try:
         with open(ALERT_F, "a", encoding="utf-8") as f: f.write(f"[{iso(now())}] {msg}\n")
     except Exception: pass
-    if popup:
+    if popup and not os.environ.get("CI"):
         try:
             import winsound
             winsound.Beep(1200, 250); winsound.Beep(900, 250); winsound.Beep(1200, 250)
@@ -107,6 +107,8 @@ def publish():
         op_export.main()
     except Exception as e:
         log("匯出失敗：" + str(e)[:120]); return
+    if os.environ.get("CI"):
+        return                                    # Actions 上由 workflow 的 commit step 統一推
     try:
         env = dict(os.environ, GIT_TERMINAL_PROMPT="0")
         def git(*a, **kw):
@@ -136,7 +138,8 @@ def save_state(st):
 
 # ---------------- 瀏覽器共用件（與 op_snapshot v1.1 同源） ----------------
 from scrapling.fetchers import StealthyFetcher
-COMMON = dict(headless=True, real_chrome=True, network_idle=True,
+REAL_CHROME = os.environ.get("OPW_REAL_CHROME", "1") != "0"   # 本機=1（內建chromium壞）；Actions=0
+COMMON = dict(headless=True, real_chrome=REAL_CHROME, network_idle=True,
               locale="zh-TW", timezone_id="Asia/Taipei", timeout=240000)
 HOLD = {}
 
@@ -325,6 +328,12 @@ def visit_game(url, want_hash, mode, hover_keys):
         if want_hash and want_hash not in (who.get("url") or ""):
             V["err"] = "match-switched"
             return page
+        # 賽中版面守門（使用者情報）：開賽後頁面預設 In-Play Odds 分頁，
+        # 一律先點回 Pre-match Odds 再抓；賽中資料一律不碰
+        pm = page.evaluate(JS_CLICK_TAB, "Pre-match Odds")
+        if pm == "ok":
+            page.wait_for_timeout(3800)
+        V["prematch_tab"] = pm
         tabs = [("ah", "Asian Handicap")] if mode == "watch" else \
                [("ml", "Home/Away"), ("ou", "Over/Under"), ("ah", "Asian Handicap")]
         for label, tab in tabs:
@@ -531,7 +540,7 @@ def do_visit(st, mode, h):
         derive_open_close(g, V.get("tips", {}), start_dt)
         g["harvested"] = True; g["harvestedAt"] = iso(now())
         # 收盤缺點/走地浮窗 → 重試；走地浮窗直接延到賽後（完賽頁會恢復賽前盤＋完整歷史）
-        bad = [a for a in g["asserts"] if ("close 缺點" in a or "live-widget" in a)]
+        bad = [a for a in g["asserts"] if ("close 缺點" in a or "live-widget" in a or "走地" in a)]
         if bad and g.get("harvestRetries", 0) < 3:
             g["harvestRetries"] = g.get("harvestRetries", 0) + 1
             g["harvested"] = False
