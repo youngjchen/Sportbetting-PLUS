@@ -3464,7 +3464,9 @@ function renderMatchNav(){
   const flipTop = !!doc.navFlipTop;
   const showScore = !!doc.navShowScore;
   const isFlip = it => !!it.platformFlip;
-  const isAnom = it => isFlip(it) || !!(typeof intlFor==="function" && intlFor(it) && intlFor(it).v);   // 異常置頂＝手標異常＋國際軸異常
+  const isAnom = it => { if(isFlip(it)) return true;
+    const g = (typeof intlFor==="function") ? intlFor(it) : null;
+    return !!(g && (g.v || g.lsw)); };   // 異常置頂＝手標異常＋國際軸異常＋台彩自身換邊（bet365 缺席時 v=null 也要亮）
   const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   el.innerHTML = "";
   const head = document.createElement("div"); head.className="nvhead";
@@ -3517,7 +3519,10 @@ function renderMatchNav(){
     t.addEventListener("dragend", ()=>{ t.classList.remove("dragging"); if(_navDrag!=null){ _navDrag=null; commitNavOrder(); } });
     // 國際軸徽章 🌐⇄N（純圖標；判定用顏色：橙=現在相反/靛=曾反已合/青綠=只換過邊）；點徽章看數字
     { const ist = (typeof intlFor==="function") ? intlFor(it) : null;
-      if(ist && ist.v){
+      // 亮徽章的條件：有「國際vs台彩」裁決(v)，或「台彩自己換過邊」(lsw>0)。
+      // 只認 v 的話，titan 缺 bet365 線時（is=null → v 永遠算不出）台彩對調會整個隱形——
+      // 2026-08-02 中信@味全實例：序列 09:25味全→12:29中信 記錄俱在、板上卻無聲。
+      if(ist && (ist.v || ist.lsw)){
         const bd=document.createElement("span");
         bd.className="nv-intl no-drag "+(ist.v==="flip"?"bo":ist.v==="was"?"bi":"bg");
         bd.textContent="🌐";   // 只留圖標；判定用光暈色（橙顛倒/靛收斂/青綠對調），換邊次數移進點擊框
@@ -3526,7 +3531,7 @@ function renderMatchNav(){
           const tip=document.createElement("div"); tip.className="nvtip no-drag";
           tip.onclick=(ev)=>ev.stopPropagation();
           tip.innerHTML = `<b style="color:#3aa0ff">國際軸（bet365 vs 台彩${ist.lsLive?"":"開盤"}）</b><br>`+
-            `bet365：<b>${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}</b>${ist.sw?`　⇄${ist.sw}＝今天換邊 ${ist.sw} 次`:""}`+
+            (ist.is?`bet365：<b>${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}</b>${ist.sw?`　⇄${ist.sw}＝今天換邊 ${ist.sw} 次`:""}`:`bet365：無資料`)+
             (ist.ls?`<br>台彩${ist.lsLive?"":"(開盤)"}：<b>${esc(ist.ls==="home"?it.home:it.away)} 讓${ist.ll!=null?ist.ll:""}</b>${ist.lsw?`　⇄${ist.lsw}`:""}`:`<br>台彩：無資料`)+
             (ist.tr&&ist.sw?`<br><span style="color:var(--ink-dim)">b365：${esc(ist.tr)}</span>`:"")+
             (ist.ltr?`<br><span style="color:var(--ink-dim)">台彩：${esc(ist.ltr)}</span>`:"")+
