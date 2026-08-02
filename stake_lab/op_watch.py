@@ -488,6 +488,26 @@ def do_visit(st, mode, h):
             g["latched"] = True; g["swapAt"] = iso(now())
             g["swapEvidence"] = {"before": "劃線死組在對側", "after": fav, "mode": fmode, "ev": ev}
             alert(f"⇄ 對調：{label}（開賽 {g['startISO'][11:16]}）")
+        # 第三通道＝價格翻框（8/2 中信@味全實錘：STAKE 官網已翻中信讓，OP 的 Stake 框仍掛味全讓、
+        # 只有賠率跟著翻 → 「讓分方」側 2.65 / 受讓側 1.42。框不可信時看價格形狀）
+        if not g.get("latched"):
+            pf = None
+            for s2 in [x for x in ah if not x["struck"] and len(x["odds"]) >= 3]:
+                try:
+                    if s2["line"] == "-1.5":
+                        give, recv, side = float(s2["odds"][1]), float(s2["odds"][2]), "home"
+                    elif s2["line"] == "+1.5":
+                        give, recv, side = float(s2["odds"][2]), float(s2["odds"][1]), "away"
+                    else:
+                        continue
+                    if give >= 2.30 and recv <= 1.55:
+                        pf = "away" if side == "home" else "home"
+                except Exception: pass
+            if pf and fav and pf != fav:
+                g["latched"] = True; g["swapAt"] = iso(now())
+                g["swapEvidence"] = {"before": fav, "after": pf, "mode": "price-shape",
+                                     "ev": "框仍掛" + fav + " 但價格形狀指向 " + pf}
+                alert(f"⇄ 對調（價格跡象）：{label}（開賽 {g['startISO'][11:16]}）")
     if mode == "full":
         start_dt = datetime.datetime.fromisoformat(g["startISO"])
         g["closeSnapshot"] = {k: v for k, v in V["markets"].items()}
