@@ -3,23 +3,27 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>NBA 排盤板</title>
-<!-- 階段3 骨架版（NBA_PLAN.md T14-T15 起手）。資料管線(nba-scrape/官方比分)於階段2上線後接入;
-     localStorage 命名空間 sportbetting_nba_doc_v1（與棒球板 sportbetting_plus_doc_v2 完全隔離）。-->
+<title>籃球排盤板</title>
+<!-- 籃球頁（NBA＋WNBA 雙聯盟,WNBA_PLAN.md D8）。卡片=DEMO v2 定稿版型;
+     隊伍統計=doc.games 推導引擎(移植自棒球板,快取鍵帶聯盟防撞名:NBA太陽 vs WNBA太陽)。
+     localStorage 命名空間 sportbetting_nba_doc_v1（與棒球板 sportbetting_plus_doc_v2 完全隔離）。
+     WNBA 種子=data/wnba_games.json（nba_lab/wnba_build_games.js 產出,台彩線口徑,對帳驗證過）。-->
 <style>
   :root{
     --bg:#0a0e17; --card:#101828; --card2:#0d1420; --line:#1e2a40;
     --ink:#e8edf6; --ink-dim:#8a94a8; --lit:#ffb02e; --grn:#35d07f; --red:#ff5d5d;
-    --blu:#3aa0ff; --org:#ff9d3c; --nba:#e56020;
+    --blu:#3aa0ff; --org:#ff9d3c; --nba:#e56020; --wnba:#ff9d3c;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;min-height:100vh}
-  header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--card2);position:sticky;top:0;z-index:5}
+  header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--card2);position:sticky;top:0;z-index:5;flex-wrap:wrap}
   .logo{font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px}
   .logo .dot{width:12px;height:12px;border-radius:50%;background:var(--nba)}
   .swpill{display:inline-flex;align-items:center;gap:5px;margin:0 4px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-dim);text-decoration:none;white-space:nowrap}
-  .lgchip{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:14px;font-weight:700}
-  .lgchip .lgdot{width:8px;height:8px;border-radius:50%;background:var(--nba)}
+  .lgchip{display:inline-flex;align-items:center;gap:6px;padding:5px 14px;border:1px solid var(--line);border-radius:10px;background:var(--card);font-size:14px;font-weight:700;cursor:pointer;color:var(--ink-dim)}
+  .lgchip .lgdot{width:8px;height:8px;border-radius:50%}
+  .lgchip.on{color:var(--ink);border-color:var(--lit);background:rgba(255,176,46,.08)}
+  .hbtn{padding:5px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font-size:13.5px;font-weight:700;cursor:pointer}
   .stamp{margin-left:auto;color:var(--ink-dim);font-size:12.5px}
   .datebar{display:flex;gap:8px;align-items:center;padding:10px 18px;border-bottom:1px solid var(--line);overflow-x:auto}
   .datebar .lab{color:var(--ink-dim);font-size:13px;margin-right:4px}
@@ -71,22 +75,77 @@
   .pct{text-align:right;font-weight:700;font-size:15.5px}
   .pct.g{color:var(--grn)}
   .strip{display:flex;gap:8px;align-items:center;background:rgba(58,160,255,.07);border:1px solid rgba(58,160,255,.25);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--blu)}
+  .covstrip{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12.5px;color:var(--ink-dim)}
+  .covstrip b{color:var(--ink);font-weight:700}
   .hr{border-top:1px solid var(--line)}
   .basein{width:64px;background:var(--card2);border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:14.5px;font-weight:700;text-align:center;padding:3px 4px}
   .cmt{font-size:12.5px;color:var(--ink-dim);padding-left:42px}
   .cmt b{color:var(--org)}
   .demoTag{font-size:11px;color:#151006;background:var(--org);border-radius:6px;padding:1px 8px;font-weight:800}
+  /* ===== 隊伍統計頁（移植棒球板版型） ===== */
+  #statspage{position:fixed;inset:0;z-index:160;background:var(--bg);display:none;flex-direction:column;overflow:hidden}
+  #statspage.show{display:flex}
+  .stats-toolbar{display:flex;align-items:center;gap:8px;padding:12px 16px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(255,255,255,.03),transparent);flex-wrap:wrap}
+  .stats-toolbar .title{font-weight:700;font-size:16px;margin-right:6px}
+  .stats-toolbar select{background:var(--card2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 10px;font-size:13px;font-family:inherit}
+  .stats-toolbar .closebtn{margin-left:auto}
+  .stats-body{flex:1 1 auto;overflow:auto;padding:12px}
+  .stats-table{width:100%;border-collapse:separate;border-spacing:0;font-size:13px;color:var(--ink)}
+  .stats-table th,.stats-table td{padding:8px 10px;border-bottom:1px solid var(--line);text-align:center;white-space:nowrap}
+  .stats-table th{color:var(--ink-dim);font-weight:600;font-size:11px;letter-spacing:.06em;text-transform:uppercase;position:sticky;top:0;background:var(--card);z-index:2}
+  .stats-table th.group{border-left:1px solid var(--line);background:var(--card2)}
+  .stats-table th.sortable{user-select:none;cursor:pointer}
+  .stats-table th.sortable:hover{color:var(--ink);background:rgba(255,255,255,.05)}
+  .stats-table td.group{border-left:1px solid var(--line)}
+  .stats-table td.team{text-align:left;font-weight:700;font-size:14px}
+  .stats-table tr:hover td{background:rgba(255,255,255,.02)}
+  .statcell{display:inline-flex;flex-direction:column;align-items:center;gap:2px;border-radius:6px;padding:4px 6px}
+  .statcell .wl{font-family:"Oswald",monospace;font-size:13px;font-weight:600}
+  .statcell .spct{font-size:11px;color:var(--ink-dim)}
+  .statcell.empty .wl{color:#3a4756}
+  .statcell.empty .spct{visibility:hidden}
+  .pcthi{color:#28c76f}
+  .pctlo{color:#ff3b5c}
+  .stats-team{background:linear-gradient(180deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:10px}
+  .stats-team .tname{font-weight:700;font-size:15px;margin-bottom:8px;display:flex;align-items:center;gap:6px}
+  .stats-team .tname .swatch{width:8px;height:8px;border-radius:50%}
+  .stats-team .mkt{display:flex;align-items:center;gap:8px;padding:6px 0;border-top:1px solid rgba(255,255,255,.05)}
+  .stats-team .mkt:first-of-type{border-top:none}
+  .stats-team .mkt .label{flex:0 0 56px;color:var(--ink-dim);font-size:12px;letter-spacing:.05em}
+  .stats-team .mkt .cells{flex:1;display:flex;gap:6px}
+  .stats-team .mkt .cells .statcell{flex:1;background:rgba(255,255,255,.02)}
+  .statcell .colhd{font-size:10px;color:#5c6678}
 </style>
 </head>
 <body>
   <header>
-    <div class="logo"><span class="dot"></span>NBA 排盤板</div>
+    <div class="logo"><span class="dot" id="logoDot"></span>籃球排盤板</div>
     <a class="swpill" href="index.html" title="切換回棒球排盤板">⚾ 棒球</a>
-    <span class="lgchip"><span class="lgdot"></span>NBA</span>
-    <span class="stamp" id="stamp">骨架版 · 資料管線 2026-09 接入</span>
+    <span class="lgchip" id="lgNBA"><span class="lgdot" style="background:var(--nba)"></span>NBA</span>
+    <span class="lgchip" id="lgWNBA"><span class="lgdot" style="background:var(--wnba)"></span>WNBA</span>
+    <button class="hbtn" id="statsBtn">📊 隊伍統計</button>
+    <span class="stamp" id="stamp"></span>
   </header>
   <div class="datebar" id="datebar"><span class="lab">日期</span></div>
   <main id="board"></main>
+
+  <!-- 隊伍統計（覆蓋頁） -->
+  <div id="statspage">
+    <div class="stats-toolbar">
+      <span class="title">📊 隊伍統計</span>
+      <select id="statsLeague">
+        <option value="WNBA">WNBA</option>
+        <option value="NBA">NBA</option>
+      </select>
+      <select id="statsSeason"></select>
+      <select id="statsFilter">
+        <option value="today">今日對戰</option>
+        <option value="all">全部隊伍</option>
+      </select>
+      <button class="hbtn closebtn" id="statsClose">關閉</button>
+    </div>
+    <div class="stats-body" id="statsBody"></div>
+  </div>
 
 <script>
 "use strict";
@@ -95,15 +154,186 @@ const DOC_KEY = "sportbetting_nba_doc_v1";
 function loadDoc(){ try{ return JSON.parse(localStorage.getItem(DOC_KEY)) || null; }catch(e){ return null; } }
 function saveDoc(d){ localStorage.setItem(DOC_KEY, JSON.stringify(d)); }
 let doc = loadDoc() || { v:1, activeDate: today(), boards:{} };
+if(!doc.games) doc.games = [];
+if(!doc.activeLeague) doc.activeLeague = "WNBA";   // WNBA 賽季中;NBA 10 月開季
 function today(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 const esc = (s)=> String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const $ = (sel)=> document.querySelector(sel);
 
-// ===== 資料管線掛鉤（階段2 上線後實作;見 nba_lab/NBA_PLAN.md T10-T12,T17）=====
-// TODO(T10): loadOdds()  → data/nba_odds_log.json（bet365 變盤序列）
-// TODO(T11): loadLottery() → data/nba_lottery_series.json（台彩序列）
-// TODO(T12): loadPregame() → 先發/傷兵（玩運彩賽前頁,臨場 1h 加密輪詢）
-// TODO(T17): loadLive()  → cdn.nba.com scoreboard（節數+時鐘+OT;±120分跨日配對防呆）
-// TODO(T19): 模型% = nba_lab 評分引擎輸出（垃圾時間過濾版+陣容先驗;前15場標「先驗」）
+// ===== 聯盟（隊名=玩運彩繁中短名;NBA 名單來自 nba_lab/nba_team_map.json,WNBA 來自 2026 種子）=====
+const LEAGUES = {
+  NBA:  { name:"NBA",  color:"var(--nba)",  colorHex:"#e56020", teams:["老鷹","塞爾提克","籃網","黃蜂","公牛","騎士","獨行俠","金塊","活塞","勇士","火箭","溜馬","快艇","湖人","灰熊","熱火","公鹿","灰狼","鵜鶘","尼克","雷霆","魔術","76人","太陽","拓荒者","國王","馬刺","暴龍","爵士","巫師"] },
+  WNBA: { name:"WNBA", color:"var(--wnba)", colorHex:"#ff9d3c", teams:["王牌","自由","山貓","狂熱","風暴","水星","金州","太陽","飛翼","神秘","美夢","天空","火花","節奏","火焰"] }
+};
+
+// ============================================================
+// GAMES — 統計唯一真相源,一場結算一筆（移植自棒球板 index.html,籃球調整:
+//   ml 無和局(t 欄保留無害)、hd/tot 半分制 push 分支保留防整數線、
+//   mlOffered=false(台彩未開獨贏)該場不計獨贏帳、快取鍵帶聯盟防撞名）
+// doc.games = [{sid,date,league,awayTeam,homeTeam,awayScore,homeScore,hdFav,hdVal,totBasis,mlOffered}]
+// ============================================================
+function seasonOf(dateStr){ return (dateStr && /^\d{4}/.test(dateStr)) ? dateStr.slice(0,4) : String(new Date().getFullYear()); }
+function emptyTeamRow(){
+  return {
+    ml:   { home:{w:0,l:0,t:0}, away:{w:0,l:0,t:0} },
+    hd:   { home:{w:0,l:0},     away:{w:0,l:0}     },
+    recv: { home:{w:0,l:0},     away:{w:0,l:0}     },
+    tot:  { home:{w:0,l:0},     away:{w:0,l:0}     }
+  };
+}
+let _statsCache = { version:-1, byKey:{} };
+function bumpGamesVersion(){
+  doc.gamesVersion = (doc.gamesVersion||0) + 1;
+  _statsCache = { version:-1, byKey:{} };
+}
+function _gameResultFor(team, g){
+  if(g.awayTeam!==team && g.homeTeam!==team) return null;
+  const isAway = g.awayTeam===team;
+  const venue = isAway ? "away" : "home";
+  const teamScore = isAway ? g.awayScore : g.homeScore;
+  const oppScore  = isAway ? g.homeScore : g.awayScore;
+  const out = { venue };
+  if(teamScore!=null && oppScore!=null && g.mlOffered!==false){
+    if(teamScore === oppScore) out.ml = "t";
+    else out.ml = (teamScore-oppScore)>0 ? "w" : "l";
+  }
+  if(g.hdFav && g.hdVal!=null && teamScore!=null && oppScore!=null){
+    const favTeam = g.hdFav==="away" ? g.awayTeam : g.homeTeam;
+    const isFav = favTeam === team;
+    const favScore = isFav ? teamScore : oppScore;
+    const undScore = isFav ? oppScore : teamScore;
+    const diff = (favScore - undScore) - g.hdVal;
+    if(diff !== 0){   // 半分制不會=0;整數線 push 時兩邊都不計
+      const favCovered = diff > 0;
+      if(isFav) out.hd = favCovered ? "w" : "l";
+      else      out.recv = favCovered ? "l" : "w";
+    }
+  }
+  if(g.totBasis!=null && teamScore!=null && oppScore!=null){
+    const tot = teamScore + oppScore;
+    if(tot !== g.totBasis) out.tot = (tot > g.totBasis) ? "w" : "l";
+  }
+  return out;
+}
+function _rebuildTeamCache(league, team){
+  const bySeason = {};
+  for(const g of (doc.games||[])){
+    if(g.league!==league) continue;
+    if(g.awayTeam!==team && g.homeTeam!==team) continue;
+    if(g.awayScore==null || g.homeScore==null) continue;
+    const season = seasonOf(g.date);
+    if(!bySeason[season]) bySeason[season] = emptyTeamRow();
+    const row = bySeason[season];
+    const r = _gameResultFor(team, g);
+    if(!r) continue;
+    if(r.ml === "w") row.ml[r.venue].w++;
+    else if(r.ml === "l") row.ml[r.venue].l++;
+    else if(r.ml === "t") row.ml[r.venue].t++;
+    if(r.hd === "w") row.hd[r.venue].w++;
+    else if(r.hd === "l") row.hd[r.venue].l++;
+    if(r.recv === "w") row.recv[r.venue].w++;
+    else if(r.recv === "l") row.recv[r.venue].l++;
+    if(r.tot === "w") row.tot[r.venue].w++;
+    else if(r.tot === "l") row.tot[r.venue].l++;
+  }
+  _statsCache.byKey[league+"|"+team] = bySeason;
+}
+function _getTeamSeasonRow(league, season, team){
+  if(_statsCache.version !== (doc.gamesVersion||0)) _statsCache = { version:(doc.gamesVersion||0), byKey:{} };
+  const k = league+"|"+team;
+  if(!_statsCache.byKey[k]) _rebuildTeamCache(league, team);
+  return (_statsCache.byKey[k] && _statsCache.byKey[k][season]) || emptyTeamRow();
+}
+function statRead(league, season, team, market, venue){
+  const row = _getTeamSeasonRow(league, season, team)[market];
+  if(venue) return {...row[venue], t:row[venue].t||0};
+  const h=row.home, a=row.away;
+  return { w:(h.w||0)+(a.w||0), l:(h.l||0)+(a.l||0), t:(h.t||0)+(a.t||0) };
+}
+function pctStr(rec){ const d=(rec.w||0)+(rec.l||0); return d===0 ? null : Math.round((rec.w/d)*100)+"%"; }
+function pctNum(rec){ const d=(rec.w||0)+(rec.l||0); return d===0 ? null : rec.w/d; }
+function runsRead(league, season, team, venue){
+  let scored=0, conceded=0, games=0;
+  for(const g of (doc.games||[])){
+    if(g.league!==league) continue;
+    if(g.awayTeam!==team && g.homeTeam!==team) continue;
+    if(seasonOf(g.date) !== season) continue;
+    if(g.awayScore==null || g.homeScore==null) continue;
+    const isAway = g.awayTeam===team;
+    if(venue==="home" && isAway) continue;
+    if(venue==="away" && !isAway) continue;
+    scored += isAway ? g.awayScore : g.homeScore;
+    conceded += isAway ? g.homeScore : g.awayScore;
+    games++;
+  }
+  return { scored, conceded, games };
+}
+function streakRead(league, season, team, venue){
+  const list = (doc.games||[]).filter(g=>{
+    if(g.league!==league) return false;
+    if(g.awayTeam!==team && g.homeTeam!==team) return false;
+    if(seasonOf(g.date) !== season) return false;
+    if(g.awayScore==null || g.homeScore==null) return false;
+    if(venue){
+      const isAway = g.awayTeam===team;
+      if(venue==="home" && isAway) return false;
+      if(venue==="away" && !isAway) return false;
+    }
+    return true;
+  }).sort((a,b)=> a.date < b.date ? 1 : -1);
+  let kind = "", n = 0;
+  for(let i=0;i<list.length;i++){
+    const won = ((list[i].awayTeam===team ? list[i].awayScore : list[i].homeScore) >
+                 (list[i].awayTeam===team ? list[i].homeScore : list[i].awayScore));
+    if(i===0){ kind = won?"W":"L"; n=1; continue; }
+    if((won && kind==="W") || (!won && kind==="L")) n++;
+    else break;
+  }
+  return { n, kind };
+}
+function streakStr(s){ return (!s || s.n===0) ? "—" : `${s.n}${s.kind}`; }
+function gameUpsert(g){
+  if(!doc.games) doc.games = [];
+  let idx = g.sid ? doc.games.findIndex(x => x.sid === g.sid) : -1;
+  if(idx<0) idx = doc.games.findIndex(x => x.date===g.date && x.league===g.league && x.awayTeam===g.awayTeam && x.homeTeam===g.homeTeam);
+  if(idx<0) doc.games.push(g); else doc.games[idx] = g;
+}
+
+// ===== WNBA 種子載入（data/wnba_games.json = 管線真相源;同 sid 檔案版為準）=====
+async function loadSeedGames(){
+  try{
+    const r = await fetch(`data/wnba_games.json?t=${Date.now()}`);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j = await r.json();
+    if(!j || !Array.isArray(j.games)) throw new Error("格式不符");
+    for(const g of j.games) gameUpsert(g);
+    bumpGamesVersion(); saveDoc(doc);
+    const el = $("#stamp"); if(el) el.textContent = `WNBA 數據 ${j.count} 場 · ${String(j.builtAt||"").slice(0,10)}`;
+    if($("#statspage").classList.contains("show")) renderStatsPage();
+    render();
+  }catch(e){
+    const el = $("#stamp"); if(el) el.textContent = `種子載入失敗(${e.message}) · 用本機快取`;
+  }
+}
+
+// ===== 卡片過盤率（T6;數字全來自 statRead=隊伍統計同源）=====
+function covFill(g){
+  const lg = g.league, se = seasonOf(g.date||doc.activeDate);
+  if(!lg || !LEAGUES[lg]) return g;
+  const p = (rec)=>{ const v = pctNum(rec); return v==null ? null : Math.round(v*100); };
+  g.covMlAway = p(statRead(lg, se, g.away, "ml", "away"));
+  g.covMlHome = p(statRead(lg, se, g.home, "ml", "home"));
+  if(g.hdFavName){
+    const favIsAway = g.hdFavName===g.away;
+    g.covGive = p(statRead(lg, se, g.hdFavName, "hd", favIsAway?"away":"home"));
+    g.covRecv = p(statRead(lg, se, g.hdDogName, "recv", favIsAway?"home":"away"));
+  }
+  const oA = statRead(lg, se, g.away, "tot", "away"), oH = statRead(lg, se, g.home, "tot", "home");
+  const ow = oA.w+oH.w, ol = oA.l+oH.l;
+  g.covOver = (ow+ol)===0 ? null : Math.round(100*ow/(ow+ol));
+  g.covUnder = g.covOver==null ? null : 100-g.covOver;
+  return g;
+}
 
 // ===== 日期列 =====
 function renderDates(){
@@ -119,12 +349,16 @@ function renderDates(){
   }
 }
 
-// ===== 卡片渲染（DEMO v2 定稿版型）=====
+// ===== 卡片渲染（DEMO v2 定稿版型;covVariant:"row"=每列過盤率欄 / "strip"=區塊尾統計帶）=====
 function lightsHTML(n){ let h=""; for(let i=0;i<5;i++) h+=`<span class="dot2${i<(n||0)?" on":""}"></span>`; return `<span class="lights">${h}</span>`; }
 function renderCard(g){
   const card=document.createElement("div"); card.className="card";
   const live=g.status==="live", fin=g.status==="final";
+  const rowPct = g.covVariant!=="strip";
+  const pcell=(v,hi)=> rowPct ? `<span class="pct${hi?" g":""}">${v!=null?v+"%":"–"}</span>` : `<span class="pct"></span>`;
   const qcells=(arr)=> (arr||[]).map((v,i)=>`<td class="${live&&i===(g.curQ-1)?"liveq":""}">${v==null?"–":v}</td>`).join("");
+  const covStripHd = (!rowPct && g.hdFavName) ? `<div class="covstrip">📊 ${esc(g.hdFavName)} 讓分過盤 <b>${g.covGive!=null?g.covGive+"%":"–"}</b> ・ ${esc(g.hdDogName)} 受讓過盤 <b>${g.covRecv!=null?g.covRecv+"%":"–"}</b>（本季·對應主客場）</div>` : "";
+  const covStripTot = (!rowPct) ? `<div class="covstrip">📊 兩隊本季開大率 <b>${g.covOver!=null?g.covOver+"%":"–"}</b> ・ 獨贏 客 <b>${g.covMlAway!=null?g.covMlAway+"%":"–"}</b>／主 <b>${g.covMlHome!=null?g.covMlHome+"%":"–"}</b></div>` : "";
   card.innerHTML = `
     <div class="chead">
       <span class="t">${esc(g.time||"")}</span>
@@ -133,7 +367,7 @@ function renderCard(g){
       <span class="spacer"></span>
       ${g.lineMove?`<span class="badge b-move">⚡ 線移 ${g.lineMove}</span>`:""}
       ${g.coldStart?`<span class="badge b-note">樣本不足 ${esc(g.coldStart)}</span>`:""}
-      ${g.demo?`<span class="demoTag">示意</span>`:""}
+      ${g.demo?`<span class="demoTag">${esc(g.demoLabel||"示意")}</span>`:""}
     </div>
     ${g.moveBanner?`<div class="banner">⚡ ${esc(g.moveBanner)}</div>`:""}
     <div class="cbody">
@@ -157,52 +391,256 @@ function renderCard(g){
       </div>
       <div class="ana">
         <div class="mkt-title">獨贏 <span class="odds">賠率 <b>${esc(g.mlTrend||"—")}</b></span></div>
-        <div class="row"><span class="tag mut">客</span><span class="nm">${esc(g.away)}</span>${lightsHTML(g.L&&g.L.mlAway)}<span class="betchip">注</span><span class="pct">${g.covMlAway!=null?g.covMlAway+"%":"–"}</span></div>
-        <div class="row"><span class="tag mut">主</span><span class="nm">${esc(g.home)}</span>${lightsHTML(g.L&&g.L.mlHome)}<span class="betchip">注</span><span class="pct g">${g.covMlHome!=null?g.covMlHome+"%":"–"}</span></div>
+        <div class="row"><span class="tag mut">客</span><span class="nm">${esc(g.away)}</span>${lightsHTML(g.L&&g.L.mlAway)}<span class="betchip">注</span>${pcell(g.covMlAway,false)}</div>
+        <div class="row"><span class="tag mut">主</span><span class="nm">${esc(g.home)}</span>${lightsHTML(g.L&&g.L.mlHome)}<span class="betchip">注</span>${pcell(g.covMlHome,true)}</div>
         <div class="hr"></div>
         <div class="mkt-title">讓分 <span class="odds">賠率 <b>${esc(g.hdTrend||"—")}</b></span></div>
-        <div class="row"><span class="tag">讓</span><span class="nm">${esc(g.hdFavName||"")}<span class="ln">${g.hdLine!=null?(g.hdLine>0?"+":"")+(-Math.abs(g.hdLine)):""}</span></span>${lightsHTML(g.L&&g.L.hdGive)}<span class="betchip">注</span><span class="pct g">${g.covGive!=null?g.covGive+"%":"–"}</span></div>
-        <div class="row"><span class="tag mut">受讓</span><span class="nm">${esc(g.hdDogName||"")}<span class="ln">${g.hdLine!=null?"+"+Math.abs(g.hdLine):""}</span></span>${lightsHTML(g.L&&g.L.hdRecv)}<span class="betchip">注</span><span class="pct">${g.covRecv!=null?g.covRecv+"%":"–"}</span></div>
+        <div class="row"><span class="tag">讓</span><span class="nm">${esc(g.hdFavName||"")}<span class="ln">${g.hdLine!=null?"-"+Math.abs(g.hdLine):""}</span></span>${lightsHTML(g.L&&g.L.hdGive)}<span class="betchip">注</span>${pcell(g.covGive,true)}</div>
+        <div class="row"><span class="tag mut">受讓</span><span class="nm">${esc(g.hdDogName||"")}<span class="ln">${g.hdLine!=null?"+"+Math.abs(g.hdLine):""}</span></span>${lightsHTML(g.L&&g.L.hdRecv)}<span class="betchip">注</span>${pcell(g.covRecv,false)}</div>
+        ${covStripHd}
         ${g.intlStrip?`<div class="strip">🌐 ${esc(g.intlStrip)}</div>`:""}
         <div class="hr"></div>
         <div class="mkt-title">大小 <input class="basein" value="${g.totLine!=null?g.totLine:""}" readonly> <span class="odds">賠率 <b>${esc(g.totTrend||"—")}</b></span></div>
-        <div class="row"><span class="tag mut">大</span><span class="nm">Over<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.over)}<span class="betchip">注</span><span class="pct">${g.covOver!=null?g.covOver+"%":"–"}</span></div>
-        <div class="row"><span class="tag mut">小</span><span class="nm">Under<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.under)}<span class="betchip">注</span><span class="pct">${g.covUnder!=null?g.covUnder+"%":"–"}</span></div>
+        <div class="row"><span class="tag mut">大</span><span class="nm">Over<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.over)}<span class="betchip">注</span>${pcell(g.covOver,false)}</div>
+        <div class="row"><span class="tag mut">小</span><span class="nm">Under<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.under)}<span class="betchip">注</span>${pcell(g.covUnder,false)}</div>
+        ${covStripTot}
         ${g.paceNote?`<div class="cmt">節奏提示：${g.paceNote}</div>`:""}
       </div>
     </div>`;
   return card;
 }
 
-// ===== 示意卡（板子空的時候展示版型;開季接資料後自動消失）=====
-const DEMO_GAME = { demo:true, time:"10/24 10:30", status:"live", curQ:3, clock:"07:24",
-  away:"快艇 LAC", home:"湖人 LAL", awayScore:71, homeScore:78,
+// ===== 示意卡 =====
+const DEMO_NBA = { demo:true, league:"NBA", time:"10/24 10:30", status:"live", curQ:3, clock:"07:24",
+  away:"快艇", home:"湖人", awayScore:71, homeScore:78,
   qAway:[24,31,16,null], qHome:[29,27,22,null],
   mAway:41, oAway:44, mHome:59, oHome:56, prior:true, coldStart:"4/15",
   lineMove:"2.5", moveBanner:"線移異常：bet365 讓分 湖人 −3.5 → −6.5（開賽前 4 小時內連續同向）",
-  injAway:'<span class="q">K.Leonard 出賽成疑</span>', injHome:'<span class="o">L.Dončić 缺陣</span>',
   L:{ mlAway:1, mlHome:3, hdGive:4, hdRecv:0, over:0, under:2 },
   mlTrend:"持平", hdTrend:"看好 湖人讓分", totTrend:"大幅轉向 小分",
   hdFavName:"湖人", hdDogName:"快艇", hdLine:6.5, totLine:224.5,
   covMlAway:42, covMlHome:58, covGive:55, covRecv:45, covOver:48, covUnder:52,
-  intlStrip:"bet365 湖人讓6.5 ・ 台彩 湖人讓4.5（差 2.0）",
-  paceNote:"兩隊近況合計中位 <b>221</b>,快艇 B2B 第二天" };
+  intlStrip:"bet365 湖人讓6.5 ・ 台彩 湖人讓4.5（差 2.0）" };
+// WNBA 示意=最近一場真實賽事+真統計（T6 兩款呈現;使用者二選一後拔掉另一款）
+function wnbaDemoCards(){
+  const gs = (doc.games||[]).filter(g=>g.league==="WNBA" && g.awayScore!=null).sort((a,b)=> a.date<b.date?1:-1);
+  if(!gs.length) return [];
+  const src = gs[0];
+  const base = {
+    demo:true, league:"WNBA", status:"final",
+    time:`${src.date.slice(5).replace("-","/")} 已終場`,
+    away:src.awayTeam, home:src.homeTeam, awayScore:src.awayScore, homeScore:src.homeScore,
+    hdFavName: src.hdFav==="away"?src.awayTeam:src.homeTeam,
+    hdDogName: src.hdFav==="away"?src.homeTeam:src.awayTeam,
+    hdLine: src.hdVal, totLine: src.totBasis,
+    L:{}, mlTrend:"—", hdTrend:"—", totTrend:"—"
+  };
+  const a = covFill({ ...base, covVariant:"row",   demoLabel:"示意A·每列過盤率" });
+  const b = covFill({ ...base, covVariant:"strip", demoLabel:"示意B·統計帶" });
+  return [a, b];
+}
+
+// ===== 隊伍統計頁 =====
+let statsSort = { market:null, venue:null, dir:"desc" };
+function sortIndicator(m, v){
+  if(statsSort.market!==m || statsSort.venue!==(v||null)) return "";
+  return statsSort.dir==="desc" ? " ▼" : " ▲";
+}
+function setSort(m, v){
+  if(statsSort.market===m && statsSort.venue===(v||null)){
+    if(statsSort.dir==="desc") statsSort.dir="asc";
+    else statsSort = { market:null, venue:null, dir:"desc" };
+  } else statsSort = { market:m, venue:v||null, dir:"desc" };
+  renderStatsPage();
+}
+function sortedTeams(league, teams, season){
+  if(!statsSort.market) return teams;
+  const m = statsSort.market, v = statsSort.venue;
+  const val = (team)=>{
+    if(m==="runs"){ const r=runsRead(league, season, team, v); return r.games? (r.scored-r.conceded)/r.games : -Infinity; }
+    if(m==="streak"){ const s=streakRead(league, season, team, v); return s.kind==="W"? s.n : -s.n; }
+    const p = pctNum(statRead(league, season, team, m, v));
+    return p==null ? -Infinity : p;
+  };
+  const arr = teams.map(t=>[t, val(t)]);
+  arr.sort((a,b)=> statsSort.dir==="desc" ? b[1]-a[1] : a[1]-b[1]);
+  return arr.map(x=>x[0]);
+}
+function teamsForToday(league){
+  const s = new Set();
+  for(const g of (doc.games||[])) if(g.league===league && g.date===doc.activeDate){ s.add(g.awayTeam); s.add(g.homeTeam); }
+  const items = (doc.boards[doc.activeDate]||{}).items||[];
+  for(const it of items) if((it.league||doc.activeLeague)===league){ if(it.away) s.add(it.away); if(it.home) s.add(it.home); }
+  return s;
+}
+function isMobileLayout(){ return window.matchMedia("(max-width:700px)").matches; }
+function fillStatsSeasons(league){
+  const sel = $("#statsSeason"); const cur = sel.value;
+  const ys = [...new Set((doc.games||[]).filter(g=>g.league===league).map(g=>seasonOf(g.date)))].sort().reverse();
+  if(!ys.length) ys.push(seasonOf(doc.activeDate));
+  sel.innerHTML = ys.map(y=>`<option value="${y}">${y} 賽季</option>`).join("");
+  sel.value = ys.includes(cur) ? cur : ys[0];
+}
+function openStatsPage(){
+  $("#statsLeague").value = doc.activeLeague;
+  fillStatsSeasons(doc.activeLeague);
+  $("#statspage").classList.add("show");
+  renderStatsPage();
+}
+function closeStatsPage(){ $("#statspage").classList.remove("show"); }
+function renderStatsPage(){
+  const body = $("#statsBody"); if(!body) return;
+  const league = $("#statsLeague").value;
+  const season = $("#statsSeason").value || seasonOf(doc.activeDate);
+  const filter = $("#statsFilter").value;
+  const todaySet = teamsForToday(league);
+  let teams = LEAGUES[league].teams.slice();
+  if(filter==="today" && todaySet.size>0) teams = teams.filter(t=>todaySet.has(t));
+  teams = sortedTeams(league, teams, season);
+  const markets = [["ml","獨贏"],["hd","讓分"],["recv","受讓"],["tot","大分"]];
+  const lgColor = LEAGUES[league].colorHex;
+
+  if(isMobileLayout()){
+    body.innerHTML = "";
+    if(!teams.length){ body.innerHTML = `<div style="color:var(--ink-dim);padding:20px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</div>`; return; }
+    teams.forEach(team=>{
+      const card = document.createElement("div"); card.className="stats-team";
+      card.innerHTML = `<div class="tname"><span class="swatch" style="background:${lgColor}"></span>${esc(team)}</div>`;
+      markets.forEach(([m,label])=>{
+        const mkt = document.createElement("div"); mkt.className="mkt";
+        mkt.innerHTML = `<div class="label">${label}</div>`;
+        const cells = document.createElement("div"); cells.className="cells";
+        ["home","away",null].forEach(v=>{
+          const vlabel = v==="home"?"主":(v==="away"?"客":"全");
+          const rec = statRead(league, season, team, m, v);
+          const empty = (rec.w===0 && rec.l===0);
+          const pn = pctNum(rec);
+          const pctClass = pn==null?"":(pn>=0.55?"pcthi":(pn<0.40?"pctlo":""));
+          const cell = document.createElement("div");
+          cell.className = "statcell"+(empty?" empty":"");
+          cell.innerHTML = `<span class="colhd">${vlabel}</span><span class="wl">${rec.w}-${rec.l}</span><span class="spct ${pctClass}">${pctStr(rec)||"—"}</span>`;
+          cells.appendChild(cell);
+        });
+        mkt.appendChild(cells);
+        card.appendChild(mkt);
+      });
+      { const mkt = document.createElement("div"); mkt.className="mkt";
+        mkt.innerHTML = `<div class="label">得失分</div>`;
+        const cells = document.createElement("div"); cells.className="cells";
+        ["home","away",null].forEach(v=>{
+          const vlabel = v==="home"?"主":(v==="away"?"客":"全");
+          const r = runsRead(league, season, team, v);
+          const cell = document.createElement("div");
+          cell.className = "statcell"+(r.games===0?" empty":"");
+          cell.innerHTML = r.games===0 ? `<span class="colhd">${vlabel}</span><span class="wl">—</span><span class="spct">—</span>`
+            : `<span class="colhd">${vlabel}</span><span class="wl">${r.scored}-${r.conceded}</span><span class="spct">${(r.scored/r.games).toFixed(1)}/${(r.conceded/r.games).toFixed(1)}</span>`;
+          cells.appendChild(cell);
+        });
+        mkt.appendChild(cells); card.appendChild(mkt); }
+      { const mkt = document.createElement("div"); mkt.className="mkt";
+        mkt.innerHTML = `<div class="label">連勝</div>`;
+        const cells = document.createElement("div"); cells.className="cells";
+        ["home","away",null].forEach(v=>{
+          const vlabel = v==="home"?"主":(v==="away"?"客":"全");
+          const s = streakRead(league, season, team, v);
+          const cls = s.kind==="W"&&s.n>0 ? "pcthi" : (s.kind==="L"&&s.n>0 ? "pctlo" : "");
+          const cell = document.createElement("div");
+          cell.className = "statcell"+(s.n===0?" empty":"");
+          cell.innerHTML = `<span class="colhd">${vlabel}</span><span class="wl ${cls}">${streakStr(s)}</span>`;
+          cells.appendChild(cell);
+        });
+        mkt.appendChild(cells); card.appendChild(mkt); }
+      body.appendChild(card);
+    });
+  } else {
+    const extras = [["runs","得失分"],["streak","連勝"]];
+    let html = `<table class="stats-table"><thead><tr><th rowspan="2" style="text-align:left">隊伍</th>`;
+    markets.forEach(([_,label])=>{ html += `<th colspan="3" class="group">${label}</th>`; });
+    extras.forEach(([_,label])=>{ html += `<th colspan="3" class="group">${label}</th>`; });
+    html += `</tr><tr>`;
+    [...markets, ...extras].forEach(([m,_])=>{
+      ["home","away",null].forEach((v,idx)=>{
+        const vlabel = v==="home"?"主":(v==="away"?"客":"全");
+        html += `<th class="${idx===0?"group sortable":"sortable"}" data-sm="${m}" data-sv="${v==null?"":v}">${vlabel}${sortIndicator(m,v)}</th>`;
+      });
+    });
+    html += `</tr></thead><tbody>`;
+    const colSpan = 1 + (markets.length+extras.length)*3;
+    if(!teams.length) html += `<tr><td colspan="${colSpan}" style="color:var(--ink-dim);padding:30px;text-align:center">沒有符合條件的隊伍。試試「全部隊伍」。</td></tr>`;
+    teams.forEach(team=>{
+      html += `<tr><td class="team">${esc(team)}</td>`;
+      markets.forEach(([m,_])=>{
+        ["home","away",null].forEach((v,idx)=>{
+          const rec = statRead(league, season, team, m, v);
+          const empty = (rec.w===0 && rec.l===0);
+          const pn = pctNum(rec);
+          const pctClass = pn==null?"":(pn>=0.55?"pcthi":(pn<0.40?"pctlo":""));
+          html += `<td${idx===0?' class="group"':''}><span class="statcell${empty?' empty':''}"><span class="wl">${rec.w}-${rec.l}</span><span class="spct ${pctClass}">${pctStr(rec)||"—"}</span></span></td>`;
+        });
+      });
+      ["home","away",null].forEach((v,idx)=>{
+        const r = runsRead(league, season, team, v);
+        html += r.games===0
+          ? `<td${idx===0?' class="group"':''}><span class="statcell empty"><span class="wl">—</span><span class="spct">—</span></span></td>`
+          : `<td${idx===0?' class="group"':''}><span class="statcell"><span class="wl">${r.scored}-${r.conceded}</span><span class="spct">${(r.scored/r.games).toFixed(1)}/${(r.conceded/r.games).toFixed(1)}</span></span></td>`;
+      });
+      ["home","away",null].forEach((v,idx)=>{
+        const s = streakRead(league, season, team, v);
+        const cls = s.kind==="W"&&s.n>0 ? "pcthi" : (s.kind==="L"&&s.n>0 ? "pctlo" : "");
+        html += `<td${idx===0?' class="group"':''}><span class="statcell${s.n===0?' empty':''}"><span class="wl ${cls}">${streakStr(s)}</span></span></td>`;
+      });
+      html += `</tr>`;
+    });
+    html += `</tbody></table>`;
+    body.innerHTML = html;
+    body.querySelectorAll("th.sortable").forEach(th=>{
+      th.onclick = ()=> setSort(th.dataset.sm, th.dataset.sv || null);
+    });
+  }
+}
+["statsLeague","statsSeason","statsFilter"].forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.onchange = ()=>{ if(id==="statsLeague") fillStatsSeasons(el.value); renderStatsPage(); };
+});
+$("#statsBtn").onclick = openStatsPage;
+$("#statsClose").onclick = closeStatsPage;
+let _rsz = null;
+window.addEventListener("resize", ()=>{ clearTimeout(_rsz); _rsz = setTimeout(()=>{ if($("#statspage").classList.contains("show")) renderStatsPage(); }, 200); });
+
+// ===== 聯盟切換 =====
+function setLeague(lg){
+  doc.activeLeague = lg; saveDoc(doc);
+  render();
+}
+$("#lgNBA").onclick = ()=> setLeague("NBA");
+$("#lgWNBA").onclick = ()=> setLeague("WNBA");
 
 // ===== render =====
 function render(){
   renderDates();
+  $("#lgNBA").classList.toggle("on", doc.activeLeague==="NBA");
+  $("#lgWNBA").classList.toggle("on", doc.activeLeague==="WNBA");
+  $("#logoDot").style.background = LEAGUES[doc.activeLeague].colorHex;
   const board=document.getElementById("board"); board.innerHTML="";
-  const items=(doc.boards[doc.activeDate]||{}).items||[];
-  if(!items.length){
-    const e=document.createElement("div"); e.className="empty";
-    e.innerHTML=`<b>NBA 排盤板（骨架版）</b><br>2026-27 賽季 10 月開打;爬蟲與官方比分管線於 9 月接入（NBA_PLAN.md 階段2）。<br>下方為卡片版型示意（DEMO v2 定稿),接上真實資料後由賽程自動生成。`;
+  const items=((doc.boards[doc.activeDate]||{}).items||[]).filter(g=>(g.league||"NBA")===doc.activeLeague);
+  if(items.length){
+    for(const g of items) board.appendChild(renderCard(covFill(g)));
+    return;
+  }
+  const e=document.createElement("div"); e.className="empty";
+  if(doc.activeLeague==="WNBA"){
+    const n = (doc.games||[]).filter(g=>g.league==="WNBA").length;
+    e.innerHTML=`<b>WNBA 排盤板</b><br>本季數據 ${n} 場已入庫（📊 隊伍統計可看全隊過盤率）。<br>每日賽程/賠率/比分管線（階段2）接入後，當日卡片將自動生成。<br>下方為卡片過盤率兩款示意（真實數據），選定後拔掉另一款。`;
     board.appendChild(e);
-    board.appendChild(renderCard(DEMO_GAME));
+    for(const c of wnbaDemoCards()) board.appendChild(renderCard(c));
   } else {
-    for(const g of items) board.appendChild(renderCard(g));
+    e.innerHTML=`<b>NBA 排盤板</b><br>2026-27 賽季 10 月開打;爬蟲與官方比分管線於 9 月接入（NBA_PLAN.md 階段2）。<br>WNBA 管線上線後同架構直接沿用。下方為卡片版型示意。`;
+    board.appendChild(e);
+    board.appendChild(renderCard(DEMO_NBA));
   }
 }
 render();
+loadSeedGames();
 </script>
 </body>
 </html>
