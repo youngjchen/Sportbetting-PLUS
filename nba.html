@@ -50,10 +50,10 @@
   .qs .liveq{color:var(--grn);font-weight:700}
   .qs.mid{margin:6px 0;border-top:1px dashed var(--line);border-bottom:1px dashed var(--line);padding:4px 0}
   .qs .side{color:var(--ink-dim);font-size:12px;text-align:left;padding-left:2px}
-  .tmblk{display:flex;flex-direction:column;gap:3px}
+  .tmblk{display:flex;flex-direction:column;gap:3px;align-items:center;text-align:center}
   .bigsc{font-size:42px;font-weight:800;color:var(--lit);line-height:1.05;font-variant-numeric:tabular-nums}
   .tmnm{font-size:18.5px;font-weight:700}
-  .pcts{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-dim);padding:2px 2px}
+  .pcts{display:flex;justify-content:center;gap:14px;font-size:12.5px;color:var(--ink-dim);padding:2px 2px}
   .pcts b{color:var(--ink);font-weight:600}
   .coldtag{font-size:11px;color:var(--ink-dim);border:1px dashed var(--line);border-radius:6px;padding:1px 6px}
   .inj{margin-top:auto;font-size:12px;color:var(--ink-dim);line-height:1.6;border-top:1px dashed var(--line);padding-top:8px}
@@ -67,16 +67,20 @@
   .tag.mut{background:#26314b;color:var(--ink-dim)}
   .nm{font-weight:700;white-space:nowrap}
   .nm .ln{color:var(--lit);font-weight:800;margin-left:6px}
-  .lights{display:flex;gap:6px;justify-content:flex-end}
+  .lights{display:flex;gap:6px;justify-content:flex-end;cursor:pointer}
   .dot2{width:17px;height:17px;border-radius:50%;border:2px solid #3a4763}
   .dot2.on{background:var(--lit);border-color:var(--lit)}
+  .dot2.on.t-r{background:#ff5d5d;border-color:#ff5d5d}
+  .dot2.on.t-p{background:#b46bff;border-color:#b46bff}
   .betchip{width:24px;height:22px;border:1.5px dashed #3a4763;border-radius:5px;color:var(--ink-dim);font-size:12px;display:flex;align-items:center;justify-content:center;cursor:pointer}
   .betchip.on{border-style:solid;border-color:var(--lit);color:var(--lit);background:rgba(255,176,46,.12);box-shadow:0 0 8px rgba(255,176,46,.35)}
   .pct{text-align:right;font-weight:700;font-size:15.5px}
   .pct.g{color:var(--grn)}
   .strip{display:flex;gap:8px;align-items:center;background:rgba(58,160,255,.07);border:1px solid rgba(58,160,255,.25);border-radius:8px;padding:7px 12px;font-size:13px;color:var(--blu)}
-  .covstrip{display:flex;gap:8px;align-items:center;background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12.5px;color:var(--ink-dim)}
-  .covstrip b{color:var(--ink);font-weight:700}
+  .covtog{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;font-size:12px;font-weight:700;vertical-align:middle;margin-left:8px}
+  .covtog span{padding:2px 10px;cursor:pointer;color:var(--ink-dim)}
+  .covtog span.on{background:var(--grn);color:#06210f}
+  .covhead{display:flex;align-items:center;font-size:13px;color:var(--ink-dim)}
   .hr{border-top:1px solid var(--line)}
   .basein{width:64px;background:var(--card2);border:1px solid var(--line);border-radius:7px;color:var(--ink);font-size:14.5px;font-weight:700;text-align:center;padding:3px 4px}
   .cmt{font-size:12.5px;color:var(--ink-dim);padding-left:42px}
@@ -115,6 +119,20 @@
   .stats-team .mkt .cells{flex:1;display:flex;gap:6px}
   .stats-team .mkt .cells .statcell{flex:1;background:rgba(255,255,255,.02)}
   .statcell .colhd{font-size:10px;color:#5c6678}
+  /* ===== 明牌膠囊+面板 ===== */
+  .epcap{cursor:pointer;color:var(--lit);border-color:var(--lit);background:rgba(255,176,46,.08)}
+  #eppanel{position:fixed;inset:0;z-index:170;background:rgba(5,8,14,.72);display:none;align-items:flex-start;justify-content:center;padding:6vh 12px}
+  #eppanel.show{display:flex}
+  .epbox{width:min(460px,92vw);max-height:82vh;overflow:auto;background:var(--card);border:1px solid var(--lit);border-radius:14px;padding:14px 16px}
+  .epbox h3{font-size:15.5px;margin-bottom:4px}
+  .epbox .epupd{font-size:11.5px;color:var(--ink-dim);margin-bottom:8px}
+  .epgrp{margin:10px 0 4px;font-weight:800;font-size:14px;color:var(--lit)}
+  .eprow{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13.5px}
+  .eprow .nick{font-weight:700}
+  .eprow .wp{color:var(--grn);font-weight:700}
+  .eprow .lbl{font-size:11px;color:var(--ink-dim);border:1px solid var(--line);border-radius:5px;padding:0 5px}
+  .eprow .res-hit{color:var(--grn)} .eprow .res-miss{color:var(--red)}
+  .epclose{float:right;cursor:pointer;color:var(--ink-dim);font-size:16px;padding:0 4px}
 </style>
 </head>
 <body>
@@ -128,6 +146,9 @@
   </header>
   <div class="datebar" id="datebar"><span class="lab">日期</span></div>
   <main id="board"></main>
+
+  <!-- 明牌面板 -->
+  <div id="eppanel"><div class="epbox" id="epbox"></div></div>
 
   <!-- 隊伍統計（覆蓋頁） -->
   <div id="statspage">
@@ -316,23 +337,154 @@ async function loadSeedGames(){
   }
 }
 
-// ===== 卡片過盤率（T6;數字全來自 statRead=隊伍統計同源）=====
+// ===== 卡片過盤率（T6-A 定稿;數字全來自 statRead=隊伍統計同源）=====
+// 模式（doc.covMode 持久化,卡上「主客|綜」膠囊切換=沿棒球卡樣式）:
+//   venue=主客(客隊看客場數字/主隊看主場數字)  all=綜(全季不分主客)
 function covFill(g){
   const lg = g.league, se = seasonOf(g.date||doc.activeDate);
   if(!lg || !LEAGUES[lg]) return g;
+  const vMode = (doc.covMode||"venue")==="venue";
   const p = (rec)=>{ const v = pctNum(rec); return v==null ? null : Math.round(v*100); };
-  g.covMlAway = p(statRead(lg, se, g.away, "ml", "away"));
-  g.covMlHome = p(statRead(lg, se, g.home, "ml", "home"));
+  g.covMlAway = p(statRead(lg, se, g.away, "ml", vMode?"away":null));
+  g.covMlHome = p(statRead(lg, se, g.home, "ml", vMode?"home":null));
   if(g.hdFavName){
     const favIsAway = g.hdFavName===g.away;
-    g.covGive = p(statRead(lg, se, g.hdFavName, "hd", favIsAway?"away":"home"));
-    g.covRecv = p(statRead(lg, se, g.hdDogName, "recv", favIsAway?"home":"away"));
+    g.covGive = p(statRead(lg, se, g.hdFavName, "hd", vMode?(favIsAway?"away":"home"):null));
+    g.covRecv = p(statRead(lg, se, g.hdDogName, "recv", vMode?(favIsAway?"home":"away"):null));
   }
-  const oA = statRead(lg, se, g.away, "tot", "away"), oH = statRead(lg, se, g.home, "tot", "home");
+  const oA = statRead(lg, se, g.away, "tot", vMode?"away":null), oH = statRead(lg, se, g.home, "tot", vMode?"home":null);
   const ow = oA.w+oH.w, ol = oA.l+oH.l;
   g.covOver = (ow+ol)===0 ? null : Math.round(100*ow/(ow+ol));
   g.covUnder = g.covOver==null ? null : 100-g.covOver;
   return g;
+}
+
+// ===== 每日管線（data/wnba_pregame.json = wnba-scrape.yml 產出;5分刷新+回前景即刷）=====
+let pregameCache = { updated:null, games:[] };
+let oddsCache = { updated:null, games:{} };   // titan bet365 變盤（wnba_titan_odds.js;rows[0]=最新）
+async function loadPregame(){
+  try{
+    const r = await fetch(`data/wnba_pregame.json?t=${Date.now()}`);
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const j = await r.json();
+    if(!j || !Array.isArray(j.games)) return;
+    pregameCache = j;
+    autoSettleFromPregame();
+    render();
+  }catch(e){ /* 檔案未上線前安靜退場 */ }
+  try{
+    const r2 = await fetch(`data/wnba_odds_log.json?t=${Date.now()}`);
+    if(r2.ok){ const j2 = await r2.json(); if(j2 && j2.games){ oddsCache = j2; render(); } }
+  }catch(e){}
+  try{
+    const r3 = await fetch(`data/expert_picks_wnba.json?t=${Date.now()}`);
+    if(r3.ok){ const j3 = await r3.json(); if(j3 && Array.isArray(j3.picks)){ epCache = j3; render(); } }
+  }catch(e){}
+}
+// ===== 明牌（expert-picks-wnba.yml 產出;明牌不進燈=純資訊,2026-07-19 拍板沿用）=====
+let epCache = { updated:null, picks:[] };
+function epFor(g){
+  return (epCache.picks||[]).filter(p => p.league==="wnba" && p.date===g.date && p.away===g.away && p.home===g.home);
+}
+function openEpPanel(g, picks){
+  const box = $("#epbox");
+  const MK = { ml:"獨贏", hd:"讓分", ou:"大小" };
+  const optLabel = (p)=>{
+    if(p.market==="ou") return `${p.side==="over"||/大/.test(p.side||"")?"大":"小"} ${p.line!=null?p.line:""}`;
+    const ln = p.line!=null ? (p.line>0?`+${p.line}`:`${p.line}`) : "";
+    return `${p.team||p.side||""} ${ln}`.trim();
+  };
+  const groups = {};
+  for(const p of picks){ const k = `${MK[p.market]||p.market}｜${optLabel(p)}`; (groups[k]=groups[k]||[]).push(p); }
+  let h = `<span class="epclose" id="epclose">✕</span><h3>🎯 明牌 ${esc(g.away)} @ ${esc(g.home)}</h3>`;
+  h += `<div class="epupd">資料 ${esc(String(epCache.updated||"").slice(5,16).replace("T"," "))}</div>`;
+  const keys = Object.keys(groups).sort((a,b)=>groups[b].length-groups[a].length);
+  for(const k of keys){
+    h += `<div class="epgrp">${esc(k)}（${groups[k].length}）</div>`;
+    for(const p of groups[k].sort((a,b)=>b.wp-a.wp)){
+      h += `<div class="eprow"><span class="nick">${esc(p.nickname)}</span><span class="wp">${p.wp}%</span>`+
+           `<span style="color:var(--ink-dim);font-size:12px">${p.total}注</span>`+
+           `${p.main?`<span class="lbl">主推</span>`:""}${p.free?`<span class="lbl">免費</span>`:""}`+
+           `<span class="lbl">${esc(p.srcLabel||"")}</span>`+
+           `${p.result?`<span class="${/準/.test(p.result)?"res-hit":"res-miss"}">${esc(p.result)}</span>`:""}</div>`;
+    }
+  }
+  box.innerHTML = h;
+  $("#eppanel").classList.add("show");
+  $("#epclose").onclick = ()=> $("#eppanel").classList.remove("show");
+}
+document.getElementById("eppanel").addEventListener("click", (e)=>{ if(e.target.id==="eppanel") e.target.classList.remove("show"); });
+// 國際軸: 賽前段序列（開賽後的走地列剔除）;負=客讓（稽核實證）
+function intlFor(g){
+  const o = oddsCache.games && oddsCache.games[g.officialId];
+  if(!o || !o.hd || !o.hd.length) return null;
+  const startKey = (o.startBJ||"").slice(5,16);   // "MM-DD HH:mm"
+  const norm = (t)=>{ const m=/^(\d{1,2})-(\d{1,2})\s+(\d{1,2}:\d{2})$/.exec(t); return m?`${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")} ${m[3].padStart(5,"0")}`:t; };
+  const pre = startKey ? o.hd.filter(r=>norm(r.t) < startKey) : o.hd;
+  if(!pre.length) return null;
+  const latest = pre[0], open = pre[pre.length-1];
+  const favName = (ln)=> ln<0 ? o.away : o.home;
+  const move = (latest.line!=null && open.line!=null) ? Math.abs(latest.line-open.line) : 0;
+  const flipped = (latest.line<0) !== (open.line<0);
+  return { latest, open, move, flipped,
+    text: `bet365 ${favName(latest.line)}讓${Math.abs(latest.line)}` };
+}
+setInterval(loadPregame, 5*60e3);
+document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ loadPregame(); loadSeedGames(); } });
+// 已終場 → doc.games（結算真相=管線檔;冪等:內容相同不重寫）
+function autoSettleFromPregame(){
+  let changed = false;
+  for(const g of pregameCache.games||[]){
+    if(g.status!=="finished" || g.awayScore==null || g.homeScore==null) continue;
+    const useHd = g.hdSrc==="運彩" && g.hdFav && g.hdVal!=null;   // '過盤'退路線≠賽前讓分方,不入帳
+    const rec = { sid:g.officialId, date:g.date, league:"WNBA", awayTeam:g.away, homeTeam:g.home,
+      awayScore:g.awayScore, homeScore:g.homeScore,
+      hdFav:useHd?g.hdFav:null, hdVal:useHd?g.hdVal:null,
+      totBasis:g.totLine!=null?g.totLine:null, mlOffered:g.mlOffered!==false };
+    const old = (doc.games||[]).find(x=>x.sid===rec.sid || (x.date===rec.date && x.league==="WNBA" && x.awayTeam===rec.awayTeam && x.homeTeam===rec.homeTeam));
+    if(old && JSON.stringify(old)===JSON.stringify(rec)) continue;
+    gameUpsert(rec); changed = true;
+  }
+  if(changed){ bumpGamesVersion(); saveDoc(doc); }
+}
+// 使用者狀態（燈/注）依 officialId 存 doc.boards[date].items
+function ensureItem(date, id){
+  const b = doc.boards[date] = doc.boards[date] || {};
+  const items = b.items = b.items || [];
+  let it = items.find(x=>x.id===id);
+  if(!it){ it = { id, league:"WNBA", L:{}, bets:{} }; items.push(it); }
+  return it;
+}
+function pregameToCard(g){
+  const it = ensureItem(g.date, g.officialId);
+  const live = g.status==="inprogress";
+  const intl = intlFor(g);
+  let intlStrip = null, lineMove = null, moveBanner = null;
+  if(intl){
+    const tc = (g.hdFav && g.hdVal!=null) ? `台彩 ${g.hdFav==="away"?g.away:g.home}讓${g.hdVal}` : "台彩 未開盤";
+    intlStrip = `${intl.text} ・ ${tc}`;
+    if(intl.move >= 3){ lineMove = intl.move.toFixed(1);
+      moveBanner = `線移異常：bet365 讓分 ${intl.open.line} → ${intl.latest.line}（賽前累計 ${intl.move.toFixed(1)} 分）`; }
+    if(intl.flipped){ moveBanner = `⚠ 顛倒：bet365 讓分方換邊（${intl.open.line} → ${intl.latest.line}）` + (moveBanner?"；"+moveBanner.replace(/^線移異常：/,""):""); lineMove = lineMove || "換邊"; }
+  }
+  return covFill({
+    intlStrip, lineMove, moveBanner,
+    _ep: epFor(g),
+    _item: it, league:"WNBA", date:g.date,
+    time: `${g.date.slice(5).replace("-","/")} ${g.time||""}`,
+    status: live?"live":(g.status==="finished"?"final":null),
+    curQ: live ? Math.max((g.qAway||[]).length,1) : null,
+    clock: live ? (g.inning||"") : "",
+    away:g.away, home:g.home,
+    awayScore:g.awayScore, homeScore:g.homeScore,
+    qAway:(g.qAway&&g.qAway.length)?g.qAway.concat(Array(Math.max(0,4-g.qAway.length)).fill(null)):[null,null,null,null],
+    qHome:(g.qHome&&g.qHome.length)?g.qHome.concat(Array(Math.max(0,4-g.qHome.length)).fill(null)):[null,null,null,null],
+    hdFavName: g.hdFav ? (g.hdFav==="away"?g.away:g.home) : null,
+    hdDogName: g.hdFav ? (g.hdFav==="away"?g.home:g.away) : null,
+    hdLine: g.hdVal, totLine: g.totLine,
+    coldStart: g.status==="postponed" ? "延賽" : null,
+    L: it.L||{}
+  });
 }
 
 // ===== 日期列 =====
@@ -340,6 +492,7 @@ function renderDates(){
   const bar = document.getElementById("datebar");
   bar.querySelectorAll(".dbtn").forEach(b=>b.remove());
   const dates = Object.keys(doc.boards).sort();
+  for(const g of pregameCache.games||[]) if(!dates.includes(g.date)) dates.push(g.date);
   if(!dates.includes(doc.activeDate)) dates.push(doc.activeDate);
   for(const d of dates.sort()){
     const b=document.createElement("button"); b.className="dbtn"+(d===doc.activeDate?" on":"");
@@ -349,21 +502,29 @@ function renderDates(){
   }
 }
 
-// ===== 卡片渲染（DEMO v2 定稿版型;covVariant:"row"=每列過盤率欄 / "strip"=區塊尾統計帶）=====
-function lightsHTML(n){ let h=""; for(let i=0;i<5;i++) h+=`<span class="dot2${i<(n||0)?" on":""}"></span>`; return `<span class="lights">${h}</span>`; }
+// ===== 卡片渲染（DEMO v2 定稿版型）=====
+// 燈號 0~12（棒球 bLightSlots 同刻度）:1-5 琥珀/6-10 紅/11-12 紫;顯示=5 槽,亮 ((n-1)%5)+1 顆
+function lightsHTML(n, mk){
+  n = n||0;
+  const lit = n===0 ? 0 : ((n-1)%5)+1;
+  const tier = n>10 ? " t-p" : (n>5 ? " t-r" : "");
+  let h=""; for(let i=0;i<5;i++) h+=`<span class="dot2${i<lit?" on"+tier:""}"></span>`;
+  return `<span class="lights" ${mk?`data-lmk="${mk}" title="燈號 ${n}（點擊+1,滿12歸零）"`:""}>${h}</span>`;
+}
 function renderCard(g){
   const card=document.createElement("div"); card.className="card";
   const live=g.status==="live", fin=g.status==="final";
-  const rowPct = g.covVariant!=="strip";
-  const pcell=(v,hi)=> rowPct ? `<span class="pct${hi?" g":""}">${v!=null?v+"%":"–"}</span>` : `<span class="pct"></span>`;
+  const pcell=(v,hi)=> `<span class="pct${hi?" g":""}">${v!=null?v+"%":"–"}</span>`;
+  const bOn=(k)=> (g._item && g._item.bets && g._item.bets[k]) ? " on" : "";
   const qcells=(arr)=> (arr||[]).map((v,i)=>`<td class="${live&&i===(g.curQ-1)?"liveq":""}">${v==null?"–":v}</td>`).join("");
-  const covStripHd = (!rowPct && g.hdFavName) ? `<div class="covstrip">📊 ${esc(g.hdFavName)} 讓分過盤 <b>${g.covGive!=null?g.covGive+"%":"–"}</b> ・ ${esc(g.hdDogName)} 受讓過盤 <b>${g.covRecv!=null?g.covRecv+"%":"–"}</b>（本季·對應主客場）</div>` : "";
-  const covStripTot = (!rowPct) ? `<div class="covstrip">📊 兩隊本季開大率 <b>${g.covOver!=null?g.covOver+"%":"–"}</b> ・ 獨贏 客 <b>${g.covMlAway!=null?g.covMlAway+"%":"–"}</b>／主 <b>${g.covMlHome!=null?g.covMlHome+"%":"–"}</b></div>` : "";
+  const vMode = (doc.covMode||"venue")==="venue";
+  const covHead = `<div class="covhead">過盤率<span class="covtog"><span class="${vMode?"on":""}" data-cm="venue">主客</span><span class="${vMode?"":"on"}" data-cm="all">綜</span></span></div>`;
   card.innerHTML = `
     <div class="chead">
       <span class="t">${esc(g.time||"")}</span>
       ${live?`<span class="badge b-live">● Q${g.curQ} ${esc(g.clock||"")}</span>`:""}
       ${fin?`<span class="badge b-live">已終場</span>`:""}
+      ${(g._ep&&g._ep.length)?`<span class="badge epcap" data-ep="1">🎯 明牌 ×${g._ep.length}</span>`:""}
       <span class="spacer"></span>
       ${g.lineMove?`<span class="badge b-move">⚡ 線移 ${g.lineMove}</span>`:""}
       ${g.coldStart?`<span class="badge b-note">樣本不足 ${esc(g.coldStart)}</span>`:""}
@@ -390,23 +551,38 @@ function renderCard(g){
         ${(g.injAway||g.injHome)?`<div class="inj">傷停｜${esc(g.away)}：${g.injAway||"—"}<br>　　　${esc(g.home)}：${g.injHome||"—"}</div>`:""}
       </div>
       <div class="ana">
+        ${covHead}
         <div class="mkt-title">獨贏 <span class="odds">賠率 <b>${esc(g.mlTrend||"—")}</b></span></div>
-        <div class="row"><span class="tag mut">客</span><span class="nm">${esc(g.away)}</span>${lightsHTML(g.L&&g.L.mlAway)}<span class="betchip">注</span>${pcell(g.covMlAway,false)}</div>
-        <div class="row"><span class="tag mut">主</span><span class="nm">${esc(g.home)}</span>${lightsHTML(g.L&&g.L.mlHome)}<span class="betchip">注</span>${pcell(g.covMlHome,true)}</div>
+        <div class="row"><span class="tag mut">客</span><span class="nm">${esc(g.away)}</span>${lightsHTML(g.L&&g.L.mlAway,"mlAway")}<span class="betchip${bOn("mlAway")}" data-bmk="mlAway">注</span>${pcell(g.covMlAway,false)}</div>
+        <div class="row"><span class="tag mut">主</span><span class="nm">${esc(g.home)}</span>${lightsHTML(g.L&&g.L.mlHome,"mlHome")}<span class="betchip${bOn("mlHome")}" data-bmk="mlHome">注</span>${pcell(g.covMlHome,true)}</div>
         <div class="hr"></div>
         <div class="mkt-title">讓分 <span class="odds">賠率 <b>${esc(g.hdTrend||"—")}</b></span></div>
-        <div class="row"><span class="tag">讓</span><span class="nm">${esc(g.hdFavName||"")}<span class="ln">${g.hdLine!=null?"-"+Math.abs(g.hdLine):""}</span></span>${lightsHTML(g.L&&g.L.hdGive)}<span class="betchip">注</span>${pcell(g.covGive,true)}</div>
-        <div class="row"><span class="tag mut">受讓</span><span class="nm">${esc(g.hdDogName||"")}<span class="ln">${g.hdLine!=null?"+"+Math.abs(g.hdLine):""}</span></span>${lightsHTML(g.L&&g.L.hdRecv)}<span class="betchip">注</span>${pcell(g.covRecv,false)}</div>
-        ${covStripHd}
+        <div class="row"><span class="tag">讓</span><span class="nm">${esc(g.hdFavName||"")}<span class="ln">${g.hdLine!=null?"-"+Math.abs(g.hdLine):""}</span></span>${lightsHTML(g.L&&g.L.hdGive,"hdGive")}<span class="betchip${bOn("hdGive")}" data-bmk="hdGive">注</span>${pcell(g.covGive,true)}</div>
+        <div class="row"><span class="tag mut">受讓</span><span class="nm">${esc(g.hdDogName||"")}<span class="ln">${g.hdLine!=null?"+"+Math.abs(g.hdLine):""}</span></span>${lightsHTML(g.L&&g.L.hdRecv,"hdRecv")}<span class="betchip${bOn("hdRecv")}" data-bmk="hdRecv">注</span>${pcell(g.covRecv,false)}</div>
         ${g.intlStrip?`<div class="strip">🌐 ${esc(g.intlStrip)}</div>`:""}
         <div class="hr"></div>
         <div class="mkt-title">大小 <input class="basein" value="${g.totLine!=null?g.totLine:""}" readonly> <span class="odds">賠率 <b>${esc(g.totTrend||"—")}</b></span></div>
-        <div class="row"><span class="tag mut">大</span><span class="nm">Over<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.over)}<span class="betchip">注</span>${pcell(g.covOver,false)}</div>
-        <div class="row"><span class="tag mut">小</span><span class="nm">Under<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.under)}<span class="betchip">注</span>${pcell(g.covUnder,false)}</div>
-        ${covStripTot}
+        <div class="row"><span class="tag mut">大</span><span class="nm">Over<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.over,"over")}<span class="betchip${bOn("over")}" data-bmk="over">注</span>${pcell(g.covOver,false)}</div>
+        <div class="row"><span class="tag mut">小</span><span class="nm">Under<span class="ln">${g.totLine!=null?g.totLine:""}</span></span>${lightsHTML(g.L&&g.L.under,"under")}<span class="betchip${bOn("under")}" data-bmk="under">注</span>${pcell(g.covUnder,false)}</div>
         ${g.paceNote?`<div class="cmt">節奏提示：${g.paceNote}</div>`:""}
       </div>
     </div>`;
+  card.querySelectorAll(".covtog span").forEach(el=>{
+    el.onclick = ()=>{ doc.covMode = el.dataset.cm; saveDoc(doc); render(); };
+  });
+  const capEl = card.querySelector(".epcap");
+  if(capEl) capEl.onclick = ()=> openEpPanel(g, g._ep||[]);
+  // 互動（僅真實卡:g._item=doc 內使用者狀態物件）:燈點擊+1(滿12歸零)、注點擊切換
+  if(g._item){
+    card.querySelectorAll(".lights[data-lmk]").forEach(el=>{
+      el.onclick = ()=>{ const it=g._item; it.L=it.L||{}; const k=el.dataset.lmk;
+        it.L[k]=((it.L[k]||0)+1)%13; saveDoc(doc); render(); };
+    });
+    card.querySelectorAll(".betchip[data-bmk]").forEach(el=>{
+      el.onclick = ()=>{ const it=g._item; it.bets=it.bets||{}; const k=el.dataset.bmk;
+        it.bets[k]=!it.bets[k]; saveDoc(doc); render(); };
+    });
+  }
   return card;
 }
 
@@ -435,9 +611,7 @@ function wnbaDemoCards(){
     hdLine: src.hdVal, totLine: src.totBasis,
     L:{}, mlTrend:"—", hdTrend:"—", totTrend:"—"
   };
-  const a = covFill({ ...base, covVariant:"row",   demoLabel:"示意A·每列過盤率" });
-  const b = covFill({ ...base, covVariant:"strip", demoLabel:"示意B·統計帶" });
-  return [a, b];
+  return [covFill({ ...base, demoLabel:"示意·真實數據" })];
 }
 
 // ===== 隊伍統計頁 =====
@@ -622,7 +796,16 @@ function render(){
   $("#lgWNBA").classList.toggle("on", doc.activeLeague==="WNBA");
   $("#logoDot").style.background = LEAGUES[doc.activeLeague].colorHex;
   const board=document.getElementById("board"); board.innerHTML="";
-  const items=((doc.boards[doc.activeDate]||{}).items||[]).filter(g=>(g.league||"NBA")===doc.activeLeague);
+  // WNBA:管線卡優先（賽程檔有該日場次即自動排卡）
+  if(doc.activeLeague==="WNBA"){
+    const todays=(pregameCache.games||[]).filter(g=>g.date===doc.activeDate)
+      .sort((a,b)=> (a.time||"") < (b.time||"") ? -1 : 1);
+    if(todays.length){
+      for(const g of todays) board.appendChild(renderCard(pregameToCard(g)));
+      return;
+    }
+  }
+  const items=((doc.boards[doc.activeDate]||{}).items||[]).filter(g=>(g.league||"NBA")===doc.activeLeague && g.away);
   if(items.length){
     for(const g of items) board.appendChild(renderCard(covFill(g)));
     return;
@@ -630,7 +813,7 @@ function render(){
   const e=document.createElement("div"); e.className="empty";
   if(doc.activeLeague==="WNBA"){
     const n = (doc.games||[]).filter(g=>g.league==="WNBA").length;
-    e.innerHTML=`<b>WNBA 排盤板</b><br>本季數據 ${n} 場已入庫（📊 隊伍統計可看全隊過盤率）。<br>每日賽程/賠率/比分管線（階段2）接入後，當日卡片將自動生成。<br>下方為卡片過盤率兩款示意（真實數據），選定後拔掉另一款。`;
+    e.innerHTML=`<b>WNBA 排盤板</b><br>本季數據 ${n} 場已入庫（📊 隊伍統計可看全隊過盤率）。<br>此日期無賽程;有比賽的日子卡片由管線自動生成。`;
     board.appendChild(e);
     for(const c of wnbaDemoCards()) board.appendChild(renderCard(c));
   } else {
@@ -641,6 +824,7 @@ function render(){
 }
 render();
 loadSeedGames();
+loadPregame();
 </script>
 </body>
 </html>

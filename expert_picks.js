@@ -37,11 +37,13 @@ const MIN_BETS = 30;           // 最少注數
 const MAX_PAGES = 4;           // 勝率榜最多翻 4 頁（120 名）
 const ALLIANCES = [
   { id: 1, lg: 'mlb' }, { id: 2, lg: 'npb' }, { id: 6, lg: 'cpbl' }, { id: 9, lg: 'kbo' },
+  { id: 7, lg: 'wnba' },   // 籃球（2026-08-03 加入;deep 排 04:40、鬧鐘賽程檔=data/wnba_pregame.json）
 ];
 // 守門：EP_LEAGUE/EP_MODE 打錯字就直接擋（模組載入即擋），否則會靜默漏單（例：EP_LEAGUE='mbl' 篩出空清單卻照跑）
 if (EP_LEAGUE && !ALLIANCES.some(a => a.lg === EP_LEAGUE)) { console.error(`未知 EP_LEAGUE=${EP_LEAGUE}`); process.exit(1); }
 if (EP_MODE && EP_MODE !== 'full' && EP_MODE !== 'final') { console.error(`未知 EP_MODE=${EP_MODE}`); process.exit(1); }
-const ACTIVE_ALLIANCES = EP_LEAGUE ? ALLIANCES.filter(a => a.lg === EP_LEAGUE) : ALLIANCES;
+// 無 EP_LEAGUE=舊行為（緊急備援=四棒球聯盟,零變);wnba 只在明確指定時跑（獨立工作流,D12）
+const ACTIVE_ALLIANCES = EP_LEAGUE ? ALLIANCES.filter(a => a.lg === EP_LEAGUE) : ALLIANCES.filter(a => a.lg !== 'wnba');
 // 合格市場：billboard gametype → 市場。mode2=國際盤、mode1=運彩盤(北富盤)。gt0(全部)不用。
 const QUAL_GT = {
   2: { 11: '國際盤讓分', 12: '國際盤大小' },
@@ -49,9 +51,10 @@ const QUAL_GT = {
 };
 // 推薦 → 盤面市場歸類（使用者規則）
 //   mode2 hd→ml(獨贏)、ou→ou；mode1 hd→hd、ou→ou、ml→ml
-function boardMarket(mode, kind) {
+function boardMarket(mode, kind, lg) {
   if (kind === 'ou') return 'ou';
-  if (kind === 'hd') return mode === 2 ? 'ml' : 'hd';
+  // 棒球特規:國際盤讓分(-1(-185)型)歸獨贏;籃球兩盤讓分皆真分差 → 歸讓分（WNBA_PLAN D11,2026-08-03 使用者核准）
+  if (kind === 'hd') return (mode === 2 && lg !== 'wnba') ? 'ml' : 'hd';
   return 'ml';
 }
 // 推薦種類 → 對應 billboard gametype（判斷合格用）
@@ -164,6 +167,9 @@ function loadScheduleTimes() {
 }
 
 function loadPrev() {
+  // 檔案「不存在」=新聯盟合法冷啟動（2026-08-03 wnba 首航;10月 nba 同）→ 空殼起步。
+  // 檔案「存在但壞掉」仍走 readJsonRequired 拒跑（毒檔防覆寫保護不變）。
+  if (!fs.existsSync(OUT)) return { updated: null, picks: [] };
   return readJsonRequired(
     OUT,
     (value) => value && typeof value === 'object' && Array.isArray(value.picks),
@@ -576,7 +582,7 @@ async function run() {
           picks.push({
             league: lg, date: fixMorningDate(day, date, p, Date.now(), runTomorrow), time: p.time,
             away: feedCanon(p.away, lg) || p.away, home: feedCanon(p.home, lg) || p.home,
-            market: boardMarket(p.mode, p.kind),
+            market: boardMarket(p.mode, p.kind, lg),
             team: p.team ? (feedCanon(p.team, lg) || p.team) : null,
             side: p.side, line: p.line,
             srcMode: p.mode, srcLabel: q ? q.label : '主推',

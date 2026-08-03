@@ -1,0 +1,84 @@
+# ============================================================
+# 明牌智慧鬧鐘（wnba）：按當日賽程睡到準點抓（2026-08-03 WNBA_PLAN 階段3）
+# · 賽程源=data/wnba_pregame.json（wnba-scrape.yml 產出;expert_alarm loadGames 分檔）
+# · 保底 12/18/22、深掃 04:40（錯開 mlb 04:00/kbo 04:00/cpbl 04:20;使用者核准）
+# · 其餘設計同四棒球聯盟：cron=斷鏈重點火備援、WORKFLOW_PAT 自我接棒、concurrency 獨立
+# ============================================================
+name: expert-picks-wnba
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '23,53 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: expert-picks-wnba
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: 安裝隱形瀏覽器內核（Cloudflare 封鎖時的傳輸層）
+        run: |
+          pip -q install -r requirements-scraping.txt
+          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零，仍續跑（curl 可用時不影響）"
+      - name: 智慧鬧鐘迴圈（睡到準點抓 wnba）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          LASTW=$(node -pe "try{require('./data/expert_picks_wnba.json').updated||''}catch(e){''}" 2>/dev/null || echo "")
+          echo "LASTW 種子: ${LASTW:-（空，首航）}"
+          END=$(( SECONDS + 18600 ))
+          while [ "$SECONDS" -lt "$END" ]; do
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            W=$(node expert_alarm.js --league=wnba --after="$LASTW" 2>/dev/null) || W='{"sleepSec":600,"mode":"skip","deep":0,"label":"alarm失敗"}'
+            SLEEPS=$(node -pe 'JSON.parse(process.argv[1]).sleepSec' "$W")
+            MODE=$(node -pe 'JSON.parse(process.argv[1]).mode' "$W")
+            DEEP=$(node -pe 'JSON.parse(process.argv[1]).deep' "$W")
+            LABEL=$(node -pe 'JSON.parse(process.argv[1]).label' "$W")
+            if [ -z "$SLEEPS" ]; then SLEEPS=600; MODE=skip; LABEL=alarm解析失敗; fi
+            echo "· [$(date -u +%FT%TZ)] wave=$LABEL mode=$MODE deep=$DEEP sleep=${SLEEPS}s"
+            if [ "$MODE" = "skip" ] || [ "$SLEEPS" -gt 0 ]; then
+              sleep "$SLEEPS"
+              continue
+            fi
+            SCRAPE_OK=0
+            if EP_LEAGUE=wnba EP_MODE=$MODE EP_DEEP=$DEEP timeout 2700 node expert_picks.js; then
+              LASTW=$(date -u +%FT%TZ)
+              SCRAPE_OK=1
+            else
+              echo "WARN [$(date -u +%FT%TZ)] 抓取 rc=$?（60 秒退避，35 分補償窗內自動重試）"
+              sleep 60
+            fi
+            if [ "$SCRAPE_OK" -eq 1 ]; then
+              git add data/expert_picks_wnba.json 2>/dev/null || true
+              git add data/expert_archive 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                git commit -m "expert picks wnba $(date -u +%FT%TZ)" || true
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
+              fi
+            fi
+          done
+      - name: 自我接棒（需 WORKFLOW_PAT）
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
+          gh workflow run expert-picks-wnba.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"

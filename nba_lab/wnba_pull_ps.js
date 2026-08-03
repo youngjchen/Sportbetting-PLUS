@@ -54,7 +54,8 @@ async function fetchDay(ymd) {
   return { html, cached: false };
 }
 
-(async () => {
+module.exports = { parseDay, fetchDay };
+if (require.main === module) (async () => {
   const selfIdx = process.argv.indexOf('--selftest');
   if (selfIdx >= 0) {
     const ymd = process.argv[selfIdx + 1] || '20260801';

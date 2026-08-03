@@ -38,6 +38,15 @@
 - 玩運彩個人頁 `gameday` 只支援 `today/tomorrow/yesterday/2daysAgo/3daysAgo/4daysAgo`（第 5 天起空頁）。
 - `state/board_state.json.gz`：跨裝置盤面同步（union 合併）；`state/dv_casts.json.gz`：卜卦紀錄雲備份（union、只增不減）。
 
+## WNBA／籃球頁（2026-08-03 上線,權威文件=nba_lab/WNBA_PLAN.md）
+
+- `nba.html`＝籃球頁（NBA｜WNBA 聯盟切換;localStorage `sportbetting_nba_doc_v1` 與棒球隔離）。隊伍統計=doc.games 推導（快取鍵帶聯盟:NBA太陽≠WNBA太陽）。
+- 玩運彩 WNBA=allianceid **7**（livescore/gamesData/billboard 同號）;billboard `page` **0 起算**（0=前30名,帶 page=1 是 31-60 名——勿「修」現役 0 起算迴圈）。
+- titan 籃球庫 WNBA=聯盟 **2**、季資料夾 **26**：`matchResult/26/l2_1_{y}_{m}.js`（UTF-8;含未來賽程+進行中現場分）;變盤 `odds/Handicap.aspx?ScheId=&companyId=8`（rows[0]=最新）。**實證：titan teamA=主場、讓分負=客讓**（wnba_join_audit.js）。
+- `data/wnba_pregame.json`（wnba-scrape.yml,台灣 00~14 時窗）/`wnba_odds_log.json`（titan bet365）/`wnba_games.json`（隊伍統計種子+自動結算累積）/`expert_picks_wnba.json`（明牌,深掃 04:40）。
+- 台彩對超大熱門**不開獨贏盤**：結果頁 `td-bank-bet03` 空=未開;統計不讓分分母只算有開盤場（mlOffered）。
+- 明牌 D11：wnba 國際盤讓分歸**讓分**（棒球歸獨贏是棒球盤特性,勿混用）。
+
 ## 使用者協作鐵則
 
 - **繁體中文、白話**：術語當場解釋；前文代號重提必須展開，不准讓使用者回滑翻找。

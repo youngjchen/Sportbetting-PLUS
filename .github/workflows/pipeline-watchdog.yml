@@ -84,3 +84,9 @@ jobs:
           }
           check "data/pregame_data.json" "playsport-scrape.yml" 25
           check "data/odds_log.json"     "scrape.yml"           25
+          # wnba 管線只在台灣 00~14 時窗運轉（cron UTC 16-23,0-6）;窗外停更=正常日休不告警。
+          # 窗首小時(UTC16)跳過：檔帶前日時戳屬預期,避免與首棒 cron 重複派工。
+          H=$((10#$(date -u +%H)))
+          if [ "$H" -ge 17 ] || [ "$H" -le 6 ]; then
+            check "data/wnba_pregame.json" "wnba-scrape.yml" 25
+          fi

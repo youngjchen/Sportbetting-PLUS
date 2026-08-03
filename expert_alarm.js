@@ -20,8 +20,11 @@ const BASELINES = {
   // mlb 白天 9/12/15/18＝高手白天就陸續貼明晚單（2026-07-28 使用者查 23:05 發現 7/29 單全空案；
   // legacy 版本來就掃白天，v3.0 拆分時漏了）。無賽日規則會自動跳過無賽白天，不空轉。
   mlb:  { hot: [[9,0],[12,0],[15,0],[18,0],[22,0],[23,30],[1,0],[2,30]], deep: [4,0] },
+  // wnba 比賽=台灣清晨為主(假日偶深夜)＝類 MLB 節奏;白天保底吃「白天貼明晨單」、簇波 T-120/T-35 貼實際開賽
+  // deep 04:40 錯開 mlb 04:00/kbo 04:00/cpbl 04:20（2026-08-03 使用者核准）
+  wnba: { hot: [[12,0],[18,0],[22,0]], deep: [4,40] },
 };
-const PFX = { npb:'NPB', kbo:'KBO', cpbl:'CPBL', mlb:'MLB' };
+const PFX = { npb:'NPB', kbo:'KBO', cpbl:'CPBL', mlb:'MLB', wnba:'WNBA' };
 // 賽後公開單（殺手單）與 result 回補不在此排波：改由深掃輪加抓玩運彩 yesterday 頁完成
 // （2026-07-26 使用者釐清：單子不會消失，過午夜只是掛到昨天 → 按日期往前撈即可）。
 // 見 expert_picks.js 的 dates 建構。此處刻意不留晚間回收波，避免同資料重複掃兩次。
@@ -31,7 +34,8 @@ const SUBGROUP_MIN = 20, LOOKBACK_MIN = 45;
 function twDayStartMs(nowMs) { const d = new Date(nowMs + TZ8); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - TZ8; }
 function loadGames(lg, nowMs) {
   let arr = [];
-  try { const j = JSON.parse(fs.readFileSync('data/pregame_data.json', 'utf8')); arr = Array.isArray(j) ? j : Object.values(j); } catch (_) { return []; }
+  const file = lg === 'wnba' ? 'data/wnba_pregame.json' : 'data/pregame_data.json';   // 籃球賽程獨立檔（Q5B 拍板）
+  try { const j = JSON.parse(fs.readFileSync(file, 'utf8')); arr = Array.isArray(j) ? j : (Array.isArray(j.games) ? j.games : Object.values(j)); } catch (_) { return []; }
   const out = [];
   for (const g of arr) {
     const id = (g && g.officialId) || '';

@@ -1,0 +1,63 @@
+# ============================================================
+# WNBA 每日管線（WNBA_PLAN.md T7）：賽程+台彩線+即時比分+結算真相
+# · 與棒球工作流完全分離（D12 故障隔離）；輸出 data/wnba_pregame.json + wnba_lottery_series.json
+# · 設計=每小時一棒、棒內 55 分鐘每 5 分一輪（安裝成本攤一次、比分 5 分粒度）
+#   cron 窗=UTC 16-23,0-6（台灣 00:07~14:07）：涵蓋 WNBA 全部開賽時段（台灣清晨為主、假日深夜）
+# · 每輪先 reset --hard 自癒（7/17 棒球教訓：衝突殘留會讓後續 push 全滅）
+# · concurrency 不取消進行中：下一棒排隊等 55 分棒結束＝無縫；人工取消=有效煞車
+# ============================================================
+name: wnba-scrape
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '7 16-23 * * *'
+    - cron: '7 0-6 * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wnba-scrape
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 70
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm install
+      - name: 安裝隱形瀏覽器內核（Cloudflare 封鎖時的傳輸層）
+        run: |
+          pip -q install -r requirements-scraping.txt
+          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零，仍續跑（curl 可用時不影響）"
+      - name: 55 分鐘迴圈（每 5 分抓一輪）
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          END=$(( SECONDS + 3300 ))
+          while [ "$SECONDS" -lt "$END" ]; do
+            T0=$SECONDS
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            if timeout 240 node wnba_scraper.js; then
+              git add data/wnba_pregame.json data/wnba_lottery_series.json 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                git commit -m "wnba scrape $(date -u +%FT%TZ) [skip ci]" || true
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
+              fi
+              echo "· [$(date -u +%FT%TZ)] 輪完成"
+            else
+              echo "WARN [$(date -u +%FT%TZ)] scraper rc=$?（下一輪重試）"
+            fi
+            EL=$(( SECONDS - T0 ))
+            [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))
+          done
