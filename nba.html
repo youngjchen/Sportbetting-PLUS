@@ -21,7 +21,9 @@
   }
   *{box-sizing:border-box;margin:0;padding:0}
   body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;min-height:100vh}
-  header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:5;flex-wrap:wrap}
+  /* z-index 400：表頭建立堆疊脈絡,內含的 ⋯ 選單必須高於總結面板(150)/導覽列(140),
+     否則選單會被面板蓋住（2026-08-03 使用者回報「功能列表被蓋在最下面」的根因） */
+  header{display:flex;align-items:center;gap:10px;padding:12px 18px;border-bottom:1px solid var(--line);background:var(--panel);position:sticky;top:0;z-index:400;flex-wrap:wrap}
   .logo{font-size:20px;font-weight:800;display:flex;align-items:center;gap:8px}
   .logo .dot{width:12px;height:12px;border-radius:50%;background:var(--nba)}
   .swpill{display:inline-flex;align-items:center;gap:5px;margin:0 4px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-dim);text-decoration:none;white-space:nowrap}
@@ -76,6 +78,11 @@
   .bana{ padding:12px 16px 16px; min-width:0; }
   .bteam{ display:flex; flex-direction:column; align-items:center; gap:3px; width:100%; }
   .bteam-nm{ font-weight:500; font-size:21px; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
+  /* 模型／盤口勝率列（棒球 .bteam-pcts 原樣;先前漏移植→兩值黏在一起「模型—盤口47%」） */
+  .bteam-pcts{ display:flex; gap:12px; font-family:"Oswald",monospace; font-size:12px; line-height:1.4; }
+  .bteam-pcts .pm{ color:#9fb0c4; } .bteam-pcts .pm b{ color:#d8e6f5; font-weight:700; }
+  .bteam-pcts .pi{ color:#8a97a8; } .bteam-pcts .pi b{ color:#bcd0e4; font-weight:700; }
+  .bteam-pcts .l{ color:var(--ink-dim); letter-spacing:.03em; margin-right:3px; }
   .bteam-sc{ font-family:"Oswald",monospace; font-weight:700; font-size:42px; line-height:1.05; color:var(--lit); }
   .bteam-sc.live{ color:#3ad6a0; }
   .bvs{ font-family:"Oswald",monospace; font-size:12px; letter-spacing:.16em; color:var(--ink-dim); padding:2px 0; }
@@ -295,7 +302,7 @@
   .rv-empty{ color:var(--ink-dim); font-size:14px; padding:22px 4px; line-height:1.7; }
   /* ===== 對戰導覽列（棒球版=右側貼卡片,總結面板左鄰） ===== */
   /* 導覽列貼著卡片右緣、總結面板填滿到右緣（棒球 layoutRightColumns 同款;left 由 JS 依卡片實測設定） */
-  #matchnav{ display:none; position:fixed; left:1000px; top:74px; bottom:18px; z-index:140; flex-direction:column; width:260px; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96)); border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
+  #matchnav{ display:none; position:fixed; left:1000px; top:74px; z-index:140; flex-direction:column; width:256px; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96)); border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
   #matchnav .nvhead{ display:flex; gap:5px; padding:9px 9px 7px; border-bottom:1px solid var(--line); }
   #matchnav .nvhead button{ flex:1; font-size:13px; padding:5px 0; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
   #matchnav .nvhead button.on{ background:#28c76f; color:#06210f; font-weight:700; border-color:#28c76f; }
@@ -1537,29 +1544,37 @@ function navMatchState(m, it){
   if(it.closeOddsAway!=null && it.closeOddsHome!=null) c++;
   return c<=0 ? "st-empty" : ("st-odds"+c);
 }
-// 棒球 layoutRightColumns 同款：導覽列貼著卡片右緣、總結面板填滿到右緣
-// （使用者手動拖過/縮過總結面板時尊重其位置尺寸,不自動蓋回）
+// 棒球 index.html layoutRightColumns() 原樣移植（2026-08-03：先前自寫版本 top 寫死 74px、
+// 面板高度隨內容＝與棒球不同,使用者三度指正）。常數與行為全部照抄：
+//   top = 日期列底部 + 8（動態,不寫死）；NAVW 256 / GAP 20 / PGAP 14 / EDGE 14
+//   導覽列 maxHeight = 視窗高 − top − 16；總結面板 top→bottom:14 撐滿、sumbody 內捲
+function summaryTopPad(){
+  const d = document.querySelector("#datebar") || document.querySelector("header");
+  const b = d ? d.getBoundingClientRect().bottom : 60;
+  return Math.round(b) + 8;
+}
 function layoutRightColumns(){
-  if(window.innerWidth < 1180) return;
-  const card = document.querySelector("#board .card.bcard");
   const nav = document.getElementById("matchnav");
-  const sum = document.getElementById("summary");
-  if(!card) return;
-  const r = card.getBoundingClientRect();
-  const navW = 260, gap = 24, gap2 = 12, rightPad = 18;
-  let navLeft = Math.round(r.right + gap);
+  const panel = document.getElementById("summary");
+  if(window.innerWidth < 1180) return;
+  const firstCard = document.querySelector("#board .card.bcard");
+  const cardRight = firstCard ? Math.round(firstCard.getBoundingClientRect().right) : 900;
+  const top = summaryTopPad();
+  const NAVW = 256, GAP = 20, PGAP = 14, EDGE = 14;
+  let navRightEdge = cardRight + GAP;
   if(nav && nav.style.display !== "none"){
-    navLeft = Math.min(navLeft, window.innerWidth - rightPad - 300 - gap2 - navW);
-    nav.style.left = navLeft + "px";
-    nav.style.right = "auto";
-  }
-  if(sum && !doc.summaryPos){
-    const sumLeft = (nav && nav.style.display !== "none") ? (navLeft + navW + gap2) : navLeft;
-    sum.style.left = sumLeft + "px";
-    sum.style.right = "auto";
-    if(!(doc.summarySize && doc.summarySize.w)){
-      sum.style.width = Math.max(300, window.innerWidth - rightPad - sumLeft) + "px";
-    }
+    nav.style.left = (cardRight + GAP) + "px"; nav.style.right = "auto";
+    nav.style.top = top + "px"; nav.style.bottom = "auto";
+    nav.style.maxHeight = (window.innerHeight - top - 16) + "px";
+    navRightEdge = cardRight + GAP + (nav.offsetWidth || NAVW);
+  } else { navRightEdge = cardRight; }
+  if(panel){
+    panel.style.left = (navRightEdge + PGAP) + "px";
+    panel.style.right = EDGE + "px"; panel.style.width = "auto";
+    panel.style.top = top + "px"; panel.style.bottom = EDGE + "px";
+    panel.style.display = "flex"; panel.style.flexDirection = "column";
+    const body = panel.querySelector(".sumbody");
+    if(body){ body.style.maxHeight = "none"; body.style.flex = "1 1 auto"; body.style.minHeight = "0"; body.style.overflowY = "auto"; }
   }
 }
 window.addEventListener("resize", ()=>{ clearTimeout(window.__lrcT); window.__lrcT=setTimeout(layoutRightColumns, 150); });
