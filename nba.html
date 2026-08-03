@@ -35,6 +35,10 @@
   .dbtn{padding:5px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--ink);font-size:13.5px;font-weight:700;cursor:pointer;white-space:nowrap}
   .dbtn.on{background:var(--lit);color:#151006;border-color:var(--lit)}
   main{display:flex;flex-direction:column;align-items:center;gap:18px;padding:22px 16px 60px}
+  /* 棒球版面幾何（index.html ≥1180 同款）：卡片靠左、右側讓給導覽列＋總結面板 */
+  @media (min-width:1180px){
+    main{align-items:flex-start;padding-left:clamp(16px,3vw,48px);padding-right:24px;}
+  }
   .empty{max-width:640px;text-align:center;color:var(--ink-dim);font-size:14px;line-height:2;border:1px dashed var(--line);border-radius:14px;padding:26px 22px}
   .empty b{color:var(--ink)}
 
@@ -284,7 +288,8 @@
   .rv-samp{ font-family:"Oswald",monospace; font-size:15px; color:var(--ink-dim); }
   .rv-empty{ color:var(--ink-dim); font-size:14px; padding:22px 4px; line-height:1.7; }
   /* ===== 對戰導覽列（棒球版=右側貼卡片,總結面板左鄰） ===== */
-  #matchnav{ display:none; position:fixed; right:346px; top:74px; z-index:140; flex-direction:column; width:196px; max-height:82vh; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96)); border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
+  /* 導覽列貼著卡片右緣、總結面板填滿到右緣（棒球 layoutRightColumns 同款;left 由 JS 依卡片實測設定） */
+  #matchnav{ display:none; position:fixed; left:1000px; top:74px; bottom:18px; z-index:140; flex-direction:column; width:260px; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96)); border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
   #matchnav .nvhead{ display:flex; gap:5px; padding:9px 9px 7px; border-bottom:1px solid var(--line); }
   #matchnav .nvhead button{ flex:1; font-size:13px; padding:5px 0; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
   #matchnav .nvhead button.on{ background:#28c76f; color:#06210f; font-weight:700; border-color:#28c76f; }
@@ -367,6 +372,8 @@
     <div id="moreWrap">
       <button class="hbtn" id="moreBtn" title="更多">⋯</button>
       <div id="moreMenu">
+        <button id="autoLayoutBtn">⚡ 用賠率自動排今天的盤</button>
+        <div class="sep"></div>
         <div class="colrow">
           <span class="collabel">每排</span>
           <button class="colbtn" data-cols="auto">自動</button>
@@ -1489,6 +1496,32 @@ function navMatchState(m, it){
   if(it.settled || m.status==="finished") return "st-full";
   return (m.hdSrc==="運彩"&&m.hdVal!=null) ? "st-odds2" : "st-empty";
 }
+// 棒球 layoutRightColumns 同款：導覽列貼著卡片右緣、總結面板填滿到右緣
+// （使用者手動拖過/縮過總結面板時尊重其位置尺寸,不自動蓋回）
+function layoutRightColumns(){
+  if(window.innerWidth < 1180) return;
+  const card = document.querySelector("#board .card.bcard");
+  const nav = document.getElementById("matchnav");
+  const sum = document.getElementById("summary");
+  if(!card) return;
+  const r = card.getBoundingClientRect();
+  const navW = 260, gap = 24, gap2 = 12, rightPad = 18;
+  let navLeft = Math.round(r.right + gap);
+  if(nav && nav.style.display !== "none"){
+    navLeft = Math.min(navLeft, window.innerWidth - rightPad - 300 - gap2 - navW);
+    nav.style.left = navLeft + "px";
+    nav.style.right = "auto";
+  }
+  if(sum && !doc.summaryPos){
+    const sumLeft = (nav && nav.style.display !== "none") ? (navLeft + navW + gap2) : navLeft;
+    sum.style.left = sumLeft + "px";
+    sum.style.right = "auto";
+    if(!(doc.summarySize && doc.summarySize.w)){
+      sum.style.width = Math.max(300, window.innerWidth - rightPad - sumLeft) + "px";
+    }
+  }
+}
+window.addEventListener("resize", ()=>{ clearTimeout(window.__lrcT); window.__lrcT=setTimeout(layoutRightColumns, 150); });
 function renderMatchNav(){
   const el = document.getElementById("matchnav"); if(!el) return;
   if(document.querySelector("#statspage.show, #reviewpage.show")){ el.style.display="none"; return; }
@@ -2054,6 +2087,15 @@ window.addEventListener("resize", ()=>{ clearTimeout(_rsz); _rsz = setTimeout(()
 
 // ===== ⋯ 更多選單（棒球版移植） =====
 function closeMore(){ const m=$("#moreMenu"); if(m) m.classList.remove("show"); }
+// ⚡ 用賠率自動排今天的盤（棒球頭牌功能;籃球語義=強制重載管線＋復原本日被刪卡片）
+$("#autoLayoutBtn") && ($("#autoLayoutBtn").onclick = async ()=>{
+  closeMore();
+  const b = doc.boards[doc.activeDate];
+  if(b && b.items) b.items.forEach(it=>{ if(it.hidden) delete it.hidden; });
+  saveDoc(doc);
+  await loadPregame();
+  render();
+});
 $("#moreBtn").onclick=(e)=>{ e.stopPropagation(); $("#moreMenu").classList.toggle("show"); updateStorageGauge(); refreshMenuStates(); };
 document.addEventListener("pointerdown", e=>{ if(!e.target.closest("#moreWrap")) closeMore(); }, true);
 function refreshMenuStates(){
@@ -2212,7 +2254,7 @@ function render(){
     const visible = todays.filter(g=>{ const it=ensureItem(g.date,g.officialId); return !it.hidden; });
     if(visible.length){
       for(const g of visible) board.appendChild(renderCardW(modelFromPregame(g)));
-      renderSummary(); renderMatchNav();
+      renderSummary(); renderMatchNav(); layoutRightColumns();
       return;
     }
     const e=document.createElement("div"); e.className="empty";
@@ -2224,7 +2266,7 @@ function render(){
     e.innerHTML=`<b>NBA 排盤板</b><br>2026-27 賽季 10 月開打;管線沿用 WNBA 同架構（l1、allianceid 3）於開季前接入。`;
     board.appendChild(e);
   }
-  renderSummary(); renderMatchNav();
+  renderSummary(); renderMatchNav(); layoutRightColumns();
 }
 render();
 loadSeedGames();
