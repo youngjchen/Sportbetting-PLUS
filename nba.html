@@ -330,6 +330,10 @@
   .nv-intl.bg{ text-shadow:0 0 6px rgba(43,191,160,.95),0 0 2px rgba(43,191,160,.9); }
   .nvtip{ position:absolute; z-index:60; top:calc(100% + 5px); left:6px; right:6px; background:#0e1620; border:1px solid #3aa0ff; border-radius:9px; padding:9px 11px; font-size:13px; line-height:1.75; box-shadow:0 8px 24px rgba(0,0,0,.5); text-align:left; white-space:normal; cursor:default; }
   .card.bcard.navflash{ box-shadow:0 0 0 2px var(--lit),0 10px 26px rgba(0,0,0,.5); transition:box-shadow .2s; }
+  .bmkt-sec .banom{ margin-left:8px; font-size:11.5px; font-weight:800; padding:2px 9px; border-radius:999px; letter-spacing:.02em; white-space:nowrap; font-variant-numeric:tabular-nums; cursor:default; font-family:"Noto Sans TC"; }
+  .banom.af{ color:#ffc38a; background:rgba(255,150,40,.12); border:1px solid rgba(255,150,40,.5); }
+  .banom.aw{ color:#c7cdff; background:rgba(127,139,245,.13); border:1px solid rgba(127,139,245,.55); }
+  .banom.as{ color:#9ef0dd; background:rgba(46,196,166,.12); border:1px solid rgba(46,196,166,.5); }
   .nv-epnew{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#ffb02e; box-shadow:0 0 0 2px rgba(255,176,46,.28); margin-left:6px; vertical-align:middle; animation:epPulse 2s infinite; }
   @keyframes epPulse{ 0%,100%{opacity:1} 50%{opacity:.45} }
   /* ===== 明牌面板 ===== */
@@ -747,6 +751,16 @@ function autoSettleFromPregame(){
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
     // it.settled 同步（手動結算優先;卡片 pills／戰績／導覽全讀這份=棒球資料流）
     const it = ensureItem(g.date, g.officialId);
+    // 異常快照落印（2026-08-04）：分類依據=bet365 vs 台彩;odds 快取 5 天滾動,結算當下不落印=歷史永久失考
+    if(!it.anomSnap){
+      const _i = intlFor(g), _l = lswFor(g);
+      const _mlo = (oddsCache.games && oddsCache.games[g.officialId] && oddsCache.games[g.officialId].ml) || null;
+      it.anomSnap = {
+        flip: !!(_i && g.hdFav && ((_i.fav==="away") !== (g.hdFav==="away"))),
+        bswaps: _i ? (_i.flips||0) : 0, lsw: _l||0,
+        mlFav: (_mlo && _mlo.curH && _mlo.curA) ? (_mlo.curA < _mlo.curH ? "away" : "home") : null
+      };
+    }
     if(!it.settled || !it.settled.manual){
       const auto = computeAutoSettled(g);
       if(auto && JSON.stringify(it.settled||null)!==JSON.stringify(auto)){ it.settled = auto; changed = true; }
@@ -1243,6 +1257,102 @@ function todayHitRate(models){
   });
   return r;
 }
+// ===== 異常組合統計（棒球 collectCrossTab 移植;分類=手標優先,無手標用結算落印的 anomSnap）=====
+// 2026-08-04 使用者拍板：燈號分析可簡,異常比賽統計規範必留。前瞻累積,不回填。
+let __ctMemo=null, __ctMemoAt=0;
+function collectCrossTab(leagueFilter){
+  const cell=()=>({ n:0, cov:0, covN:0, fw:0, fwN:0, ov:0, ovN:0, games:[] });
+  const grp={ flip:{ solo:cell(), swap:cell(), div:cell(), both:cell(), all:cell() },
+              conv:{ solo:cell(), swap:cell(), div:cell(), both:cell(), all:cell() } };
+  const other={ swapOnly:cell(), bothOD:cell() };
+  let total=0;
+  for(const d of Object.keys(doc.boards||{})){
+    for(const it of ((doc.boards[d]||{}).items||[])){
+      if(!it.settled || it.settled.awayScore==null) continue;
+      const rec=(doc.games||[]).find(x=>x.sid===it.id); if(!rec) continue;
+      if(leagueFilter && leagueFilter!=="all" && String(rec.league||"").toLowerCase()!==leagueFilter) continue;
+      const snap=it.anomSnap||{};
+      const kind = it.platformFlip ? "flip" : it.flipVanished ? "was"
+                 : (it.preGameSwap || snap.lsw>0 || snap.bswaps>0) ? "swap"
+                 : (snap.flip ? "flip" : null);
+      if(!kind) continue;
+      const sw = !!(it.preGameSwap || snap.lsw>0 || snap.bswaps>0);
+      const dv = !!(snap.mlFav && rec.hdFav && snap.mlFav!==rec.hdFav);
+      const margin=rec.homeScore-rec.awayScore;
+      const o={ date:d, m:rec.awayTeam+"/"+rec.homeTeam, itId:it.id };
+      const upd=(c)=>{
+        c.n++; c.games.push(o); 
+        if(rec.hdFav && rec.hdVal!=null){ const fm=(rec.hdFav==="home"?margin:-margin)-rec.hdVal;
+          if(fm!==0){ c.covN++; if(fm>0) c.cov++; }
+          c.fwN++; if((rec.hdFav==="home"?margin:-margin)>0) c.fw++; }
+        if(rec.totBasis!=null){ const t=rec.awayScore+rec.homeScore;
+          if(t!==rec.totBasis){ c.ovN++; if(t>rec.totBasis) c.ov++; } }
+      };
+      total++;
+      if(kind==="flip"||kind==="was"){
+        const G=kind==="flip"?grp.flip:grp.conv;
+        upd(G.all);
+        upd(sw&&dv?G.both: sw?G.swap: dv?G.div: G.solo);
+      } else {
+        upd(dv?other.bothOD:other.swapOnly);
+      }
+    }
+  }
+  return { total, grp, other };
+}
+function renderAnomSection(leagueFilter){
+  const ct = collectCrossTab(leagueFilter||"all");
+  const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
+  let h=`<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">顛倒／收斂／其他異常 × 三市場（結算時落印,前瞻累積不回填）</span></div>`;
+  if(!ct.total){ return h+`<div class="rv-empty">還沒有已結算的異常場。顛倒／曾對調的比賽結算後會自動進帳。</div></div>`; }
+  const row=(name,c)=> c.n? `<tr class="rv-row"><td class="lbl">${name}</td><td>${c.n}</td><td>${pc(c.cov,c.covN)}</td><td>${pc(c.fw,c.fwN)}</td><td>${pc(c.ov,c.ovN)}</td></tr>`:"";
+  const grpBlock=(title,G)=>{
+    if(!G.all.n) return "";
+    let x=`<div class="rv-head" style="font-size:14px;margin-top:14px">${title}　<span class="rv-sub">${G.all.n} 場　讓分過盤 ${pc(G.all.cov,G.all.covN)}・熱門勝 ${pc(G.all.fw,G.all.fwN)}・開大 ${pc(G.all.ov,G.all.ovN)}</span></div>`;
+    x+=`<table class="rv-table"><tr><th class="lbl">組合</th><th>場數</th><th>讓分過盤</th><th>熱門勝</th><th>開大</th></tr>`;
+    x+=row("單獨",G.solo)+row("＋對調",G.swap)+row("＋背離",G.div)+row("＋對調＋背離",G.both);
+    return x+`</table>`;
+  };
+  h+=grpBlock("顛倒（台彩 vs bet365 收盤相反）", ct.grp.flip);
+  h+=grpBlock("收斂（曾相反,收盤一致）", ct.grp.conv);
+  if(ct.other.swapOnly.n||ct.other.bothOD.n){
+    h+=`<div class="rv-head" style="font-size:14px;margin-top:14px">其他異常　<span class="rv-sub">非顛倒非收斂,但有對調或背離</span></div>`;
+    h+=`<table class="rv-table"><tr><th class="lbl">組合</th><th>場數</th><th>讓分過盤</th><th>熱門勝</th><th>開大</th></tr>`;
+    h+=row("對調",ct.other.swapOnly)+row("對調＋背離",ct.other.bothOD)+`</table>`;
+  }
+  return h+`</div>`;
+}
+function crossTabCached(){ const n=Date.now(); if(!__ctMemo||n-__ctMemoAt>800){ try{ __ctMemo=collectCrossTab("all"); }catch(_){ __ctMemo=null; } __ctMemoAt=n; } return __ctMemo; }
+// 卡面讓分區晶片：這場屬哪型異常＋該格歷史讓分過盤率（棒球 bAnomInfo 同構）
+function bAnomInfo(model, it){
+  const snap = it.anomSnap || (function(){ const _i=intlFor(model), _l=lswFor(model);
+    return { flip: !!(_i && model.hdFav && ((_i.fav==="away")!==(model.hdFav==="away"))), bswaps:_i?(_i.flips||0):0, lsw:_l||0, mlFav:null }; })();
+  const kind = it.platformFlip ? "flip" : it.flipVanished ? "was"
+             : (it.preGameSwap || snap.lsw>0 || snap.bswaps>0) ? "swap" : (snap.flip ? "flip" : null);
+  if(!kind) return null;
+  const ct = crossTabCached(); if(!ct || !ct.total) return null;
+  const sw = !!(it.preGameSwap || snap.lsw>0 || snap.bswaps>0);
+  const dv = !!(snap.mlFav && model.hdFav && snap.mlFav!==model.hdFav);
+  const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
+  let lbl, cls, B, groupAll, groupName;
+  if(kind==="flip"||kind==="was"){
+    const G = kind==="flip"?ct.grp.flip:ct.grp.conv;
+    groupName = kind==="flip"?"顛倒":"收斂"; cls = kind==="flip"?"af":"aw";
+    const combo=(sw&&dv)?"both": sw?"swap": dv?"div":"solo";
+    B=G[combo]; groupAll=G.all;
+    lbl=groupName+(combo==="both"?"＋對調＋背離":combo==="swap"?"＋對調":combo==="div"?"＋背離":"");
+  } else {
+    cls="as"; groupName="對調";
+    B = dv?ct.other.bothOD:ct.other.swapOnly;
+    lbl = dv?"對調＋背離":"對調"; groupAll=null;
+  }
+  if(!B||!B.n) return null;
+  let tip=`${lbl}場歷史（WNBA+NBA ${B.n} 場）
+讓分過盤 ${pc(B.cov,B.covN)}・熱門勝 ${pc(B.fw,B.fwN)}・開大 ${pc(B.ov,B.ovN)}`;
+  if(groupAll&&groupAll.n) tip+=`
+${groupName}全部：讓過 ${pc(groupAll.cov,groupAll.covN)}（${groupAll.n}場）`;
+  return { lbl, cls, covTxt:pc(B.cov,B.covN), n:B.n, tip };
+}
 function jumpToCard(id){
   const card = document.querySelector('.card.bcard[data-id="'+CSS.escape(id)+'"]');
   const main = document.getElementById("board");
@@ -1478,7 +1588,8 @@ function renderMatchNav(){
   { const b=document.createElement("button"); b.textContent="異常置頂"; if(flipTop) b.classList.add("on");
     b.onclick=()=>{ doc.navFlipTop=!doc.navFlipTop; saveDoc(doc); renderMatchNav(); };
     head.appendChild(b); }
-  { const b2=document.createElement("button"); b2.textContent=showScore?"比分":"時間"; if(showScore) b2.classList.add("on");
+  // 「比分/時間」切換鈕已拔（2026-08-04 使用者拍板:開打後/結算固定顯示比分,未開賽顯示時間,無需模式）
+  if(false){ const b2=document.createElement("button"); b2.textContent=showScore?"比分":"時間"; if(showScore) b2.classList.add("on");
     b2.onclick=()=>{ doc.navShowScore=!doc.navShowScore; saveDoc(doc); renderMatchNav(); };
     head.appendChild(b2); }
   el.appendChild(head);
@@ -1490,9 +1601,10 @@ function renderMatchNav(){
     const t=document.createElement("div"); t.className="nvtag "+navMatchState(m, it);
     const teams = m.away+" / "+m.home;
     const s = it.settled || (m.status==="finished" ? computeAutoSettled(m) : null);
-    if(showScore && s){
+    // 2026-08-04 使用者拍板：開打後與已結算一律顯示比分（不看比分/時間模式）;未開賽顯示開球時間
+    if(s){
       t.innerHTML = esc(teams)+'　<span class="nvscore">'+esc(s.awayScore+":"+s.homeScore)+'</span>';
-    } else if(showScore && m.status==="inprogress" && m.awayScore!=null){
+    } else if(m.status==="inprogress" && m.awayScore!=null){
       t.innerHTML = esc(teams)+'　<span class="nvscore live">'+esc(m.awayScore+":"+m.homeScore)+'</span><span class="nvinn">'+esc(m.inning||"")+'</span>';
     } else {
       t.textContent = teams + (m.time?("　"+m.time):"");
@@ -1659,8 +1771,11 @@ function renderCardW(model){
       sc.textContent = side==="away"?model.awayScore:model.homeScore;
       return sc;
     }
-    // 模型/盤口%（棒球同構:盤口=結算視窗填的下注賠率去水;籃球無模型→「—」）
-    const _mpA = impliedAway(parseFloat(it.flipOddsAway), parseFloat(it.flipOddsHome));
+    // 模型/盤口%（棒球同構:盤口=結算視窗填的下注賠率去水;手動未填時退 bet365 歐指現盤,2026-08-04 接入）
+    // 注意 1x2 欄序=主在前;impliedAway 吃(客,主)
+    const _oML = (oddsCache.games && oddsCache.games[model.officialId] && oddsCache.games[model.officialId].ml) || null;
+    const _mpA = impliedAway(parseFloat(it.flipOddsAway), parseFloat(it.flipOddsHome))
+              ?? (_oML ? impliedAway(_oML.curA, _oML.curH) : null);
     function pctsEl(side){
       if(_mpA==null) return null;
       const imp = side==="away" ? Math.round(_mpA*100) : Math.round((1-_mpA)*100);
@@ -1745,7 +1860,17 @@ function renderCardW(model){
 
     // 獨贏
     const mlWrap=wrapDiv();
-    mlWrap.append(mktSecHead("獨贏", mlConflict, [], null),
+    // 獨贏賠率評語：bet365 歐指 初盤→現盤 位移（棒球「市場態度」同語彙;≥2.5pp=大幅）
+    function mlTrend(){
+      if(!_oML || !_oML.openH || !_oML.curH) return null;
+      const mp0 = impliedAway(_oML.openA, _oML.openH), mp1 = impliedAway(_oML.curA, _oML.curH);
+      if(mp0==null || mp1==null) return null;
+      const mv = (mp1-mp0)*100;
+      if(Math.abs(mv) < 1.0) return { html:`<span class="l">賠率</span>持平` };
+      const team = mv>0 ? model.away : model.home, strong = Math.abs(mv)>=2.5;
+      return { html:`<span class="l">賠率</span><span class="tm">${strong?"大幅轉向":"轉向"}看好 ${esc(team)}</span>`, strong };
+    }
+    mlWrap.append(mktSecHead("獨贏", mlConflict, [], mlTrend()),
       mktRow("客","", model.away, "", it.mlAway, bCoverHTML(pctInfo(model.league,season,model.away,"ml","away")), mlConflict),
       mktRow("主","", model.home, "", it.mlHome, bCoverHTML(pctInfo(model.league,season,model.home,"ml","home")), mlConflict));
     ana.appendChild(mlWrap);
@@ -1755,7 +1880,10 @@ function renderCardW(model){
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方（燈跟隊走）";
     swap.onclick=()=>{ snapshot(); it.hdSwap=!it.hdSwap; const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
     const hv = model.hdVal!=null ? String(model.hdVal) : "";
-    hdWrap.append(mktSecHead("讓分", hdConflict, [swap], hdTrend()),
+    let anomChip=null;
+    try{ const ai=bAnomInfo(model, it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
+      anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
+    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], hdTrend()),
       mktRow("讓","give", favName, hv?("−"+hv):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
       mktRow("受讓","recv", undName, hv?("+"+hv):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
     ana.appendChild(hdWrap);
@@ -2143,7 +2271,8 @@ function renderReview(){
   if(lg!=="all") rows=rows.filter(r=>r.lg===lg);
   if(mkt!=="all") rows=rows.filter(r=>r.market===mkt);
   if(!rows.length){
-    body.innerHTML=`<div class="rv-headline"><div class="big">—</div><div class="cap">還沒有已結算的帶燈選項。點燈＋比賽結算後，這裡會自動累積跨日命中率（燈數桶／各盤口）。</div></div>`;
+    body.innerHTML=`<div class="rv-headline"><div class="big">—</div><div class="cap">還沒有已結算的帶燈選項。點燈＋比賽結算後，這裡會自動累積跨日命中率（燈數桶／各盤口）。</div></div>`
+      + renderAnomSection(lg);
     return;
   }
   const hit=rows.filter(r=>r.hit).length, tot=rows.length, dates=new Set(rows.map(r=>r.date)).size;
@@ -2169,6 +2298,7 @@ function renderReview(){
     html+=`<tr><td class="lbl">${lab}</td>${seg(list)}</tr>`;
   });
   html+=`</table></div>`;
+  html += renderAnomSection(lg);
   body.innerHTML=html;
 }
 function openReview(){ $("#reviewpage").classList.add("show"); renderReview(); renderMatchNav(); }
@@ -2228,5 +2358,6 @@ loadSeedGames();
 loadPregame();
 </script>
 <script src="wnba-picks-addon.js?v=20260803wnba1"></script>
+<script src="wnba-divination-addon.js?v=20260804dv1"></script>
 </body>
 </html>

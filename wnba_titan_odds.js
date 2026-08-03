@@ -95,9 +95,28 @@ function parseChangeRows(html) {
       await sleep(600 + Math.random() * 500);
       const ouHtml = await fetchText(`https://nba.titan007.com/odds/OverDownChart.aspx?scheId=${g.scheId}&companyId=8&num=1&t=1`);
       const hd = parseChangeRows(hdHtml), ou = parseChangeRows(ouHtml);
-      store[oidOf(date, away, home)] = { scheId: g.scheId, date, away, home, startBJ: g.timeBJ, hd, ou };
+      // 獨贏歐指（2026-08-04 使用者指定接入）：/1x2/data1x2/{d0}/{d12}/{id}.js
+      // var game=Array("公司id|oddsId||初主|初客|...|現主|現客|...|時間|名*|..") ;公司 214=Bet365（已用美夢讓1.5方向驗證 主客欄序）
+      let ml = null;
+      try {
+        await sleep(500 + Math.random() * 400);
+        const sid = String(g.scheId);
+        const oddsJs = await fetchText(`https://nba.titan007.com/1x2/data1x2/${sid[0]}/${sid.slice(1, 3)}/${sid}.js`);
+        const gm = oddsJs.match(/var game=Array\(([\s\S]*?)\);/);
+        if (gm) {
+          for (const row of gm[1].match(/"[^"]+"/g) || []) {
+            const f = row.replace(/^"|"$/g, '').split('|');
+            if (f[0] === '214') {   // Bet365
+              ml = { openH: parseFloat(f[3]) || null, openA: parseFloat(f[4]) || null,
+                     curH: parseFloat(f[8]) || null, curA: parseFloat(f[9]) || null, t: f[15] || null };
+              break;
+            }
+          }
+        }
+      } catch (e2) { console.log(`  ⚠ 1x2 scheId ${g.scheId}: ${e2.message}`); }
+      store[oidOf(date, away, home)] = { scheId: g.scheId, date, away, home, startBJ: g.timeBJ, hd, ou, ml };
       ok++;
-      console.log(`✅ ${date} ${away}@${home} scheId=${g.scheId} hd=${hd.length} ou=${ou.length}`);
+      console.log(`✅ ${date} ${away}@${home} scheId=${g.scheId} hd=${hd.length} ou=${ou.length} ml=${ml ? (ml.curH + '/' + ml.curA) : '無'}`);
     } catch (e) { console.log(`❌ scheId ${g.scheId}: ${e.message}`); }
     await sleep(600 + Math.random() * 500);
   }
