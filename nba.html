@@ -9,6 +9,9 @@
      CSS/欄位網格/燈號操作(左+右−長按清零/點隊名−1)/⇄換讓分方/收合刪除/賽前✓/ⓘ近況/明牌◉欄/基準輸入/衝突框色/結算pills。
      籃球差異僅：節數表在中央 VS 位（2026-07 DEMO v2 核准位）、無投手與模型%列。
      隊伍統計=doc.games 推導引擎(快取鍵帶聯盟防撞名)。localStorage sportbetting_nba_doc_v1 與棒球板隔離。-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
 <style>
   :root{
     /* 棒球板同款調色盤（bcard CSS 原樣移植的前提） */
@@ -58,7 +61,7 @@
   .card.bcard.has-conflict{ border-color:var(--conflict); }
   .card.bcard.has-cross{ border-color:var(--cross); }
   .bhead{ display:flex; align-items:center; gap:8px; padding:11px 16px 9px; border-bottom:1px solid rgba(255,255,255,.06); flex-wrap:wrap; }
-  .btime{ font-family:"Oswald",monospace; font-size:13px; letter-spacing:.04em; color:var(--ink-dim); }
+  .btime{ font-family:"Oswald"; font-size:13px; letter-spacing:.04em; color:var(--ink-dim); }
   .bhead-sp{ flex:1 1 auto; }
   .bbadge{
     font-family:"Noto Sans TC"; font-size:12px; font-weight:700; cursor:pointer; white-space:nowrap;
@@ -82,23 +85,23 @@
   .bteam{ display:flex; flex-direction:column; align-items:center; gap:3px; width:100%; }
   .bteam-nm{ font-weight:500; font-size:21px; color:var(--ink); display:flex; align-items:center; justify-content:center; gap:6px; white-space:nowrap; }
   /* 模型／盤口勝率列（棒球 .bteam-pcts 原樣;先前漏移植→兩值黏在一起「模型—盤口47%」） */
-  .bteam-pcts{ display:flex; gap:12px; font-family:"Oswald",monospace; font-size:12px; line-height:1.4; }
+  .bteam-pcts{ display:flex; gap:12px; font-family:"Oswald"; font-size:12px; line-height:1.4; }
   .bteam-pcts .pm{ color:#9fb0c4; } .bteam-pcts .pm b{ color:#d8e6f5; font-weight:700; }
   .bteam-pcts .pi{ color:#8a97a8; } .bteam-pcts .pi b{ color:#bcd0e4; font-weight:700; }
   .bteam-pcts .l{ color:var(--ink-dim); letter-spacing:.03em; margin-right:3px; }
-  .bteam-sc{ font-family:"Oswald",monospace; font-weight:700; font-size:42px; line-height:1.05; color:var(--lit); }
+  .bteam-sc{ font-family:"Oswald"; font-weight:700; font-size:42px; line-height:1.05; color:var(--lit); }
   .bteam-sc.live{ color:#3ad6a0; }
-  .bvs{ font-family:"Oswald",monospace; font-size:12px; letter-spacing:.16em; color:var(--ink-dim); padding:2px 0; }
+  .bvs{ font-family:"Oswald"; font-size:12px; letter-spacing:.16em; color:var(--ink-dim); padding:2px 0; }
   .bmid{ display:flex; flex-direction:column; align-items:center; justify-content:center; flex:0 0 auto; }
-  .bmid-score{ font-family:"Oswald",monospace; font-weight:700; font-size:38px; line-height:1; color:var(--lit); white-space:nowrap; }
+  .bmid-score{ font-family:"Oswald"; font-weight:700; font-size:38px; line-height:1; color:var(--lit); white-space:nowrap; }
   .bmid-score .c{ color:var(--ink-dim); margin:0 4px; }
   .bmid-score.live{ color:#3ad6a0; }
-  .blivechip{ font-family:"Oswald",monospace; font-size:11px; font-weight:700; letter-spacing:.05em; padding:2px 8px; border-radius:8px; white-space:nowrap; }
+  .blivechip{ font-family:"Oswald"; font-size:11px; font-weight:700; letter-spacing:.05em; padding:2px 8px; border-radius:8px; white-space:nowrap; }
   .blivechip.on{ color:#3ad6a0; background:rgba(58,214,160,.15); border:1px solid rgba(58,214,160,.42); }
   .blivechip.fin{ color:#ffb24d; background:rgba(255,176,46,.14); border:1px solid rgba(255,176,46,.5); animation:blivepulse 1.8s ease-in-out infinite; }
   @keyframes blivepulse{ 0%,100%{ opacity:1; } 50%{ opacity:.55; } }
   /* 節數表（籃球專屬,中央 VS 位;2026-07 DEMO v2 核准） */
-  .bqs{ border-collapse:collapse; font-size:11px; color:var(--ink-dim); margin-top:5px; font-family:"Oswald",monospace; }
+  .bqs{ border-collapse:collapse; font-size:11px; color:var(--ink-dim); margin-top:5px; font-family:"Oswald"; }
   .bqs th{ font-weight:400; color:#5c6678; padding:1px 5px; }
   .bqs td{ padding:1px 5px; text-align:center; }
   .bqs .side{ color:var(--ink-dim); font-size:10px; }
@@ -106,37 +109,37 @@
   .binfo{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid var(--ink-dim); color:var(--ink-dim); font-size:11px; font-weight:700; font-family:Georgia,serif; font-style:italic; cursor:pointer; flex:0 0 auto; user-select:none; }
   .binfo:hover{ border-color:var(--lit); color:var(--lit); }
   .bpop{ position:fixed; z-index:6000; min-width:210px; max-width:320px; background:var(--panel-2); border:1px solid var(--line); border-radius:10px; box-shadow:0 14px 34px rgba(0,0,0,.6); padding:11px 13px; font-size:12px; line-height:1.75; color:var(--ink); }
-  .bpop .ph{ font-family:"Oswald",monospace; font-size:10px; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:5px; }
+  .bpop .ph{ font-family:"Oswald"; font-size:10px; letter-spacing:.08em; color:var(--ink-dim); margin-bottom:5px; }
   .bpop .boxes{ display:flex; gap:4px; flex-wrap:wrap; margin-top:3px; }
-  .bpop .bx{ width:18px; height:18px; border-radius:5px; display:grid; place-items:center; font-size:10px; font-weight:700; font-family:"Oswald",monospace; }
+  .bpop .bx{ width:18px; height:18px; border-radius:5px; display:grid; place-items:center; font-size:10px; font-weight:700; font-family:"Oswald"; }
   .bpop .bx.w{ background:rgba(40,199,111,.16); color:#2ee07f; border:1px solid rgba(40,199,111,.45); }
   .bpop .bx.l{ background:rgba(255,92,92,.10); color:#ff7a7a; border:1px solid rgba(255,92,92,.4); }
   .bpop .bx.t{ background:rgba(255,255,255,.05); color:#8a97a8; border:1px solid var(--line); }
   .bana-head{ display:flex; align-items:center; gap:8px; padding:0 0 8px; }
-  .bana-lbl{ font-family:"Oswald",monospace; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); }
+  .bana-lbl{ font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); }
   .bvenue{ display:inline-flex; border:1px solid var(--line); border-radius:7px; overflow:hidden; }
   .bvenue button{ font-size:11px; padding:3px 11px; border:none; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
   .bvenue button.on{ background:#28c76f; color:#06210f; font-weight:700; }
-  .bmkt-sec{ display:flex; align-items:center; gap:8px; padding:8px 0 4px; font-family:"Oswald",monospace; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); border-top:1px solid rgba(255,255,255,.06); }
+  .bmkt-sec{ display:flex; align-items:center; gap:8px; padding:8px 0 4px; font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); border-top:1px solid rgba(255,255,255,.06); }
   .bmkt:first-of-type .bmkt-sec{ border-top:none; }
   .bmkt-sec .mname{ color:#cdd8e6; font-size:12.5px; letter-spacing:.06em; flex:0 0 auto; font-family:"Noto Sans TC"; font-weight:700; }
   .bmkt-sec.conflict .mname{ color:var(--conflict); }
   .bmkt-sec .bswap{ cursor:pointer; color:#ff9f43; font-size:15px; line-height:1; }
   .bmkt-sec .basis{ display:inline-flex; align-items:center; gap:4px; font-size:11px; letter-spacing:0; color:var(--ink-dim); font-family:"Noto Sans TC"; }
-  .bmkt-sec .basis input{ width:58px; background:#0c0f14; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:13px; font-weight:700; text-align:center; padding:3px 2px; font-family:"Oswald",monospace; outline:none; }
+  .bmkt-sec .basis input{ width:58px; background:#0c0f14; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:13px; font-weight:700; text-align:center; padding:3px 2px; font-family:"Oswald"; outline:none; }
   .bmkt-sec .basis input:focus{ border-color:var(--lit); }
   .bmkt-sec .mksp{ flex:1 1 auto; }
   .bmkt-sec .bcmt{ font-size:11.5px; letter-spacing:0; color:#9fb0c4; white-space:nowrap; font-family:"Noto Sans TC"; text-align:right; }
-  .bmkt-sec .bcmt .l{ color:var(--ink-dim); font-family:"Oswald",monospace; font-size:10px; letter-spacing:.05em; margin-right:3px; }
+  .bmkt-sec .bcmt .l{ color:var(--ink-dim); font-family:"Oswald"; font-size:10px; letter-spacing:.05em; margin-right:3px; }
   .bmkt-sec .bcmt .tm{ color:#9bd5ff; font-weight:600; }
   .bmkt-sec .bcmt.strong .tm{ color:#ffd27f; }
   /* 六欄網格：badge｜選項名｜燈號｜明牌◉(64px)｜注(24px)｜%(48px) —— 棒球 v2.2 定案欄距 */
   .bmkt-row{ display:grid; grid-template-columns:28px minmax(88px,126px) max-content 64px 24px 48px; align-items:center; column-gap:8px; padding:6px 0; }
-  .bmkt-row .bside{ font-family:"Oswald",monospace; font-size:11px; color:#0c0f14; background:var(--ink-dim); border-radius:5px; padding:3px 0; width:100%; text-align:center; font-weight:700; justify-self:stretch; }
+  .bmkt-row .bside{ font-family:"Oswald"; font-size:11px; color:#0c0f14; background:var(--ink-dim); border-radius:5px; padding:3px 0; width:100%; text-align:center; font-weight:700; justify-self:stretch; }
   .bmkt-row .bside.give{ background:var(--lit); }
   .bmkt-row .bside.recv{ background:#5b6b80; color:#dfe6ef; }
   .bmkt-row .bnm{ font-weight:700; font-size:17px; color:var(--ink); cursor:default; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; user-select:none; }
-  .bmkt-row .bnm .hv{ color:var(--ink-dim); font-family:"Oswald",monospace; font-weight:700; margin-left:4px; }
+  .bmkt-row .bnm .hv{ color:var(--ink-dim); font-family:"Oswald"; font-weight:700; margin-left:4px; }
   .bmkt-row.conflict .bnm{ color:var(--conflict); }
   .blights{ display:flex; align-items:center; gap:7px; cursor:pointer; justify-self:start; padding:3px 0; }
   .blights .lt{ width:19px; height:19px; border-radius:50%; flex:0 0 auto; cursor:pointer; transition:.1s; }
@@ -146,7 +149,7 @@
   .blights .lt.purple{ background:radial-gradient(circle at 35% 30%, #e6c2ff, #a05aff 72%); box-shadow:0 0 9px rgba(160,90,255,.55); }
   .betchip{ font-size:11px; border:1.5px dashed #4a5a70; border-radius:6px; color:var(--ink-dim); cursor:pointer; user-select:none; width:26px; text-align:center; line-height:1.55; justify-self:center; padding:1px 0; }
   .betchip.on{ border:1.5px solid var(--lit); color:#1a1205; font-weight:700; background:var(--lit); box-shadow:0 0 8px var(--lit-glow); }
-  .bmkt-row .bcover{ font-family:"Oswald",monospace; font-weight:700; font-size:15px; color:#aeb9c8; justify-self:end; white-space:nowrap; }
+  .bmkt-row .bcover{ font-family:"Oswald"; font-weight:700; font-size:15px; color:#aeb9c8; justify-self:end; white-space:nowrap; }
   .bmkt-row .bcover.hi{ color:#28c76f; } .bmkt-row .bcover.lo{ color:var(--conflict); } .bmkt-row .bcover.ls{ color:#5b6b80; }
   .bmkt-row .bcover .ss{ font-size:9px; color:#5b6b80; }
   .intl-strip{ display:flex; align-items:center; gap:8px; background:rgba(58,160,255,.07); border:1px solid rgba(58,160,255,.3); border-radius:8px; padding:6px 10px; margin:8px 6px 2px; font-size:13px; cursor:pointer; line-height:1.6; }
@@ -180,14 +183,14 @@
   #settleModal .btn{ padding:8px 14px; border:1px solid var(--line); border-radius:9px; background:var(--panel-2); color:var(--ink); font-size:13.5px; font-weight:700; cursor:pointer; }
   #settleModal .odds-grid{ display:grid; grid-template-columns:74px 1fr 1fr; gap:8px 10px; align-items:center; margin-top:10px; }
   #settleModal .odds-grid .og-h{ font-size:11px; color:var(--ink-dim); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  #settleModal .odds-grid .og-l{ font-size:12px; color:var(--ink-dim); font-family:"Oswald",monospace; letter-spacing:.04em; }
-  #settleModal .odds-grid input{ width:100%; padding:7px 8px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:7px; color:var(--ink); font-size:15px; font-family:"Oswald",monospace; }
+  #settleModal .odds-grid .og-l{ font-size:12px; color:var(--ink-dim); font-family:"Oswald"; letter-spacing:.04em; }
+  #settleModal .odds-grid input{ width:100%; padding:7px 8px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:7px; color:var(--ink); font-size:15px; font-family:"Oswald"; }
   #settleModal .odds-grid input:focus{ outline:none; border-color:var(--lit); }
   #settleModal .odds-grid input.dash{ background:#161d27; border-style:dashed; }
   .settle-q{ margin:14px 0; }
-  .settle-q .qlabel{ font-size:13px; color:var(--ink-dim); margin-bottom:6px; font-family:"Oswald",monospace; letter-spacing:.05em; display:flex; align-items:center; gap:8px; }
+  .settle-q .qlabel{ font-size:13px; color:var(--ink-dim); margin-bottom:6px; font-family:"Oswald"; letter-spacing:.05em; display:flex; align-items:center; gap:8px; }
   .settle-q .qline{ margin-left:auto; font-size:11px; color:var(--ink-dim); display:flex; align-items:center; gap:4px; letter-spacing:0; }
-  .settle-q .qline input{ width:54px; padding:4px 5px; text-align:center; background:#161d27; border:1px dashed var(--line); border-radius:6px; color:var(--ink); font-size:13px; font-family:"Oswald",monospace; }
+  .settle-q .qline input{ width:54px; padding:4px 5px; text-align:center; background:#161d27; border:1px dashed var(--line); border-radius:6px; color:var(--ink); font-size:13px; font-family:"Oswald"; }
   .settle-q .opts{ display:flex; gap:6px; flex-wrap:wrap; }
   .settle-q .opt{ flex:1 1 auto; min-width:80px; padding:10px 12px; border-radius:9px; background:var(--panel-2); border:1px solid var(--line); color:var(--ink); font-size:14px; font-weight:700; cursor:pointer; text-align:center; }
   .settle-q .opt:hover{ border-color:#46566a; }
@@ -199,18 +202,18 @@
   .settle-q.score-row .team-name{ display:flex; align-items:center; gap:6px; font-size:17px; font-weight:600; color:var(--ink); line-height:1.2; }
   .settle-q.score-row .team-name.fav{ color:var(--lit); font-weight:700; }
   .settle-q.score-row .hdtag{ font-size:11px; font-weight:700; color:#1a1205; background:var(--lit); border-radius:999px; padding:2px 8px; line-height:1.3; }
-  .settle-q.score-row input{ width:92px; padding:13px 8px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:28px; font-weight:700; font-family:"Oswald",monospace; }
+  .settle-q.score-row input{ width:92px; padding:13px 8px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:28px; font-weight:700; font-family:"Oswald"; }
   .settle-q.score-row input:focus{ outline:none; border-color:var(--lit); }
-  .settle-q.score-row .vs{ color:var(--ink-dim); font-family:"Oswald",monospace; font-size:20px; padding-bottom:27px; }
+  .settle-q.score-row .vs{ color:var(--ink-dim); font-family:"Oswald"; font-size:20px; padding-bottom:27px; }
   #settleModal select{ padding:6px 8px; background:#1b232e; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:13px; }
-  #settleModal input.sline{ width:62px; padding:5px 6px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-family:"Oswald",monospace; }
+  #settleModal input.sline{ width:62px; padding:5px 6px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-family:"Oswald"; }
   .bflipbanner.was{ background:rgba(127,139,245,.14); border-bottom-color:rgba(127,139,245,.42); color:#c7cdff; }
   .card.bcard.flip-was{ border-color:rgba(127,139,245,.55); box-shadow:0 0 0 1px rgba(127,139,245,.28),0 10px 26px rgba(0,0,0,.5); }
   /* ===== 重點總結／今日戰績面板（棒球版移植;fixed 定位） ===== */
   #summary{ position:fixed; top:74px; right:18px; width:300px; z-index:150; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96)); border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(6px); box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
   #summary .sum-resize{ position:absolute; right:0; bottom:0; width:22px; height:22px; cursor:nwse-resize; z-index:60; background:linear-gradient(135deg, transparent 0 45%, var(--ink-dim) 45% 55%, transparent 55% 65%, var(--ink-dim) 65% 75%, transparent 75% 85%, var(--ink-dim) 85% 95%, transparent 95%); opacity:.5; border-bottom-right-radius:13px; touch-action:none; }
   #summary .sum-resize:hover{ opacity:1; }
-  #summary .sumhead{ display:flex; align-items:center; gap:8px; padding:11px 14px; cursor:grab; touch-action:none; font-family:"Oswald",monospace; font-weight:600; letter-spacing:.08em; font-size:14px; text-transform:uppercase; background:linear-gradient(180deg,rgba(255,255,255,.05),transparent); border-bottom:1px solid var(--line); }
+  #summary .sumhead{ display:flex; align-items:center; gap:8px; padding:11px 14px; cursor:grab; touch-action:none; font-family:"Oswald"; font-weight:600; letter-spacing:.08em; font-size:14px; text-transform:uppercase; background:linear-gradient(180deg,rgba(255,255,255,.05),transparent); border-bottom:1px solid var(--line); }
   #summary .sumhead .dot{ width:9px; height:9px; border-radius:50%; background:var(--hot); box-shadow:0 0 8px var(--hot-glow); }
   #summary .sumhead .count{ margin-left:auto; color:var(--ink-dim); font-family:"Noto Sans TC"; font-weight:700; font-size:13px; letter-spacing:0; }
   #summary .sumtabs{ display:inline-flex; gap:4px; }
@@ -222,7 +225,7 @@
   .sumrow .mt{ color:var(--ink-dim); font-size:12.5px; flex:0 0 74px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .sumrow .pk{ font-weight:700; flex:1; }
   .sumrow .pk .mk{ color:var(--ink-dim); font-weight:500; font-size:12.5px; margin-left:5px; }
-  .sumrow .n{ font-family:"Oswald",monospace; font-weight:700; color:var(--hot); font-size:14px; flex:0 0 auto; }
+  .sumrow .n{ font-family:"Oswald"; font-weight:700; color:var(--hot); font-size:14px; flex:0 0 auto; }
   .sumrow.conflict .pk{ color:var(--conflict); }
   .sumrow.conflict .n{ color:var(--conflict); }
   .sumrow.conflict.cross .pk{ color:var(--cross); }
@@ -234,16 +237,16 @@
   .sumgrow .sp .lw{ color:#e0803a; font-size:11px; margin-left:4px; font-weight:600; }
   .sumgrow .sp.n3{ color:#b98a4c; } .sumgrow .sp.n4{ color:#e0a020; }
   .sumgrow .sp.n5{ color:#ffc24a; } .sumgrow .sp.n6{ color:#ffe487; text-shadow:0 0 10px rgba(255,210,80,.55); }
-  .sumsec{ padding:7px 14px 2px; font-family:"Oswald",monospace; font-size:11.5px; letter-spacing:.12em; color:var(--ink-dim); text-transform:uppercase; }
+  .sumsec{ padding:7px 14px 2px; font-family:"Oswald"; font-size:11.5px; letter-spacing:.12em; color:var(--ink-dim); text-transform:uppercase; }
   .sumsec.collapsible{ display:flex; align-items:center; justify-content:space-between; padding-right:14px; user-select:none; cursor:pointer; }
   .sumsec.collapsible:hover{ color:var(--ink); }
   #summary .zhanrow{ display:flex; align-items:baseline; gap:6px; padding:6px 14px; font-size:15px; }
   #summary .zhanrow .zlbl{ font-weight:700; }
   #summary .zhanrow .zsp{ flex:1; }
-  #summary .zhanrow .zhit{ color:#2ee07f; font-weight:700; font-family:"Oswald",monospace; }
+  #summary .zhanrow .zhit{ color:#2ee07f; font-weight:700; font-family:"Oswald"; }
   #summary .zhanrow .zslash{ color:var(--ink-dim); }
-  #summary .zhanrow .zmiss{ color:#ff6b6b; font-weight:700; font-family:"Oswald",monospace; }
-  #summary .zhanrow .zrate{ margin-left:10px; font-family:"Oswald",monospace; font-weight:700; min-width:44px; text-align:right; }
+  #summary .zhanrow .zmiss{ color:#ff6b6b; font-weight:700; font-family:"Oswald"; }
+  #summary .zhanrow .zrate{ margin-left:10px; font-family:"Oswald"; font-weight:700; min-width:44px; text-align:right; }
   #summary .zhanempty{ padding:14px; color:var(--ink-dim); font-size:13px; line-height:1.7; }
   .zhanrow .zcar{ flex:0 0 12px; text-align:center; color:var(--ink-dim); font-size:11px; transition:transform .15s; }
   .zhanrow.zon .zcar{ transform:rotate(90deg); }
@@ -251,12 +254,12 @@
   .zhandetail{ margin:2px 10px 8px 26px; padding:4px 0; background:rgba(255,255,255,.035); border-radius:8px; }
   .zdrow{ display:flex; gap:8px; align-items:baseline; padding:3px 12px; font-size:13.5px; cursor:pointer; border-radius:6px; }
   .zdrow:hover{ background:rgba(255,255,255,.06); }
-  .zdlg{ padding:5px 12px 1px; font-size:11px; color:var(--ink-dim); font-family:"Oswald",monospace; letter-spacing:.1em; }
+  .zdlg{ padding:5px 12px 1px; font-size:11px; color:var(--ink-dim); font-family:"Oswald"; letter-spacing:.1em; }
   .zdrow .zmk{ flex:0 0 14px; font-weight:800; } .zdrow .zmk.ok{ color:#28c76f; } .zdrow .zmk.no{ color:var(--conflict); }
   .zdrow .zm{ color:var(--ink-dim); font-size:12px; flex:0 0 92px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .zdrow .zp{ font-weight:600; white-space:nowrap; }
   #sumLauncher{ position:fixed; right:18px; top:74px; z-index:150; display:none; padding:7px 13px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font-weight:700; font-size:13px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.45); }
-  #sumLauncher .b{ color:var(--lit); font-family:"Oswald",monospace; margin-left:5px; }
+  #sumLauncher .b{ color:var(--lit); font-family:"Oswald"; margin-left:5px; }
   /* ===== ⋯ 更多選單（棒球版移植） ===== */
   #moreWrap{ position:relative; }
   #moreMenu{ display:none; position:absolute; top:calc(100% + 8px); right:0; z-index:220; width:252px; max-height:calc(100vh - 90px); overflow-y:auto; background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line); border-radius:12px; box-shadow:0 16px 40px rgba(0,0,0,.6); padding:8px; }
@@ -272,7 +275,7 @@
   #stgauge{ display:flex; align-items:center; gap:7px; padding:7px 10px; font-size:12px; color:var(--ink-dim); }
   #stgauge .sgbar{ flex:1; height:7px; border-radius:5px; background:#232c38; overflow:hidden; }
   #stgauge .sgfill{ display:block; height:100%; width:0%; background:#28c76f; border-radius:5px; }
-  .oddsstamp{ font-family:"Oswald",monospace; font-size:11px; color:var(--ink-dim); letter-spacing:.03em; white-space:nowrap; }
+  .oddsstamp{ font-family:"Oswald"; font-size:11px; color:var(--ink-dim); letter-spacing:.03em; white-space:nowrap; }
   /* ===== 右緣快捷鍵欄（棒球 zoomctl 移植） ===== */
   #zoomctl{ position:fixed; right:12px; bottom:18px; z-index:200; display:flex; flex-direction:column; gap:8px; align-items:center; }
   #zoomctl .fit{ width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:16px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.45); }
@@ -282,11 +285,11 @@
   #reviewpage{ position:fixed; inset:0; z-index:160; background:var(--bg); display:none; flex-direction:column; overflow:hidden; }
   #reviewpage.show{ display:flex; }
   .rv-headline{ background:linear-gradient(180deg,var(--panel),var(--panel-2)); border:1px solid var(--line); border-radius:14px; padding:20px 24px; margin:0 0 26px; }
-  .rv-headline .big{ font-family:"Oswald",monospace; font-weight:700; font-size:40px; line-height:1; }
+  .rv-headline .big{ font-family:"Oswald"; font-weight:700; font-size:40px; line-height:1; }
   .rv-headline .big .unit{ font-size:20px; color:var(--ink-dim); margin-left:4px; }
   .rv-headline .cap{ color:var(--ink-dim); font-size:15px; margin-top:6px; }
   .rv-headline .row2{ display:grid; grid-template-columns:repeat(auto-fit,minmax(165px,1fr)); gap:16px 28px; margin-top:16px; }
-  .rv-headline .row2 .blk .v{ font-family:"Oswald",monospace; font-weight:700; font-size:24px; }
+  .rv-headline .row2 .blk .v{ font-family:"Oswald"; font-weight:700; font-size:24px; }
   .rv-headline .row2 .blk .k{ color:var(--ink-dim); font-size:13px; }
   .rv-section{ margin:0 0 34px; }
   #reviewBody{ padding:24px clamp(16px,4vw,56px); overflow:auto; }
@@ -296,9 +299,9 @@
   .rv-table th,.rv-table td{ padding:11px 16px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
   .rv-table th{ color:var(--ink-dim); font-weight:600; font-size:13.5px; letter-spacing:.04em; text-transform:uppercase; }
   .rv-table td.lbl,.rv-table th.lbl{ text-align:left; font-weight:700; font-size:16px; }
-  .rv-pct{ font-family:"Oswald",monospace; font-weight:700; font-size:17px; min-width:50px; display:inline-block; text-align:right; }
+  .rv-pct{ font-family:"Oswald"; font-weight:700; font-size:17px; min-width:50px; display:inline-block; text-align:right; }
   .rv-pct.hi{ color:#28c76f; } .rv-pct.lo{ color:var(--conflict); } .rv-pct.mid{ color:#aeb9c8; } .rv-pct.low-sample{ color:#5b6b80; }
-  .rv-samp{ font-family:"Oswald",monospace; font-size:15px; color:var(--ink-dim); }
+  .rv-samp{ font-family:"Oswald"; font-size:15px; color:var(--ink-dim); }
   .rv-empty{ color:var(--ink-dim); font-size:14px; padding:22px 4px; line-height:1.7; }
   /* ===== 對戰導覽列（棒球版=右側貼卡片,總結面板左鄰） ===== */
   /* 導覽列貼著卡片右緣、總結面板填滿到右緣（棒球 layoutRightColumns 同款;left 由 JS 依卡片實測設定） */
@@ -307,7 +310,7 @@
   #matchnav .nvhead button{ flex:1; font-size:13px; padding:5px 0; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
   #matchnav .nvhead button.on{ background:#28c76f; color:#06210f; font-weight:700; border-color:#28c76f; }
   #matchnav .nvbody{ overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding:6px 0 8px; }
-  #matchnav .nvsec{ font-family:"Oswald",monospace; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); padding:7px 12px 3px; }
+  #matchnav .nvsec{ font-family:"Oswald"; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); padding:7px 12px 3px; }
   #matchnav .nvtag{ display:block; transform-origin:left center; transition:transform .11s ease-out,color .11s,background .11s,border-color .11s; margin:2px 8px; padding:5px 9px; border:1px solid transparent; border-radius:8px; font-size:12.5px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; }
   #matchnav .nvtag.st-empty{ color:#8a96a6; }
   #matchnav .nvtag.st-odds1{ color:#bfa15f; border-color:rgba(255,176,46,.28); background:rgba(255,176,46,.06); }
@@ -318,9 +321,9 @@
   #matchnav .nvtag.st-flip{ color:#d9b3ff; border-color:rgba(160,90,255,.55); background:rgba(160,90,255,.14); }
   #matchnav .nvtag.st-swap{ color:#7fe8d4; border-color:rgba(43,191,160,.5); background:rgba(43,191,160,.11); }
   #matchnav .nvtag.flash{ background:rgba(255,176,46,.25); }
-  #matchnav .nvtag .nvscore{ font-family:"Oswald",monospace; font-weight:700; font-size:1.25em; color:var(--lit); letter-spacing:.02em; }
+  #matchnav .nvtag .nvscore{ font-family:"Oswald"; font-weight:700; font-size:1.25em; color:var(--lit); letter-spacing:.02em; }
   #matchnav .nvtag .nvscore.live{ color:#3ad6a0; }
-  #matchnav .nvtag .nvinn{ font-family:"Oswald",monospace; font-size:.82em; color:#6fc9a4; margin-left:5px; letter-spacing:.02em; }
+  #matchnav .nvtag .nvinn{ font-family:"Oswald"; font-size:.82em; color:#6fc9a4; margin-left:5px; letter-spacing:.02em; }
   #matchnav .nvtag .nvinn.pending{ color:#ffb24d; }
   .nv-intl{ float:right; font-size:13.5px; margin-left:6px; cursor:pointer; filter:saturate(1.2); }
   .nv-intl.bo{ text-shadow:0 0 6px rgba(224,128,32,.95),0 0 2px rgba(224,128,32,.9); }
@@ -348,7 +351,7 @@
   .stats-table td.team{text-align:left;font-weight:700;font-size:14px}
   .stats-table tr:hover td{background:rgba(255,255,255,.02)}
   .statcell{display:inline-flex;flex-direction:column;align-items:center;gap:2px;border-radius:6px;padding:4px 6px}
-  .statcell .wl{font-family:"Oswald",monospace;font-size:13px;font-weight:600}
+  .statcell .wl{font-family:"Oswald";font-size:13px;font-weight:600}
   .statcell .spct{font-size:11px;color:var(--ink-dim)}
   .statcell.empty .wl{color:#3a4756}
   .statcell.empty .spct{visibility:hidden}
