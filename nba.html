@@ -144,9 +144,6 @@
   .blights .lt.amber{ background:radial-gradient(circle at 35% 30%, #ffe39a, var(--lit) 70%); box-shadow:0 0 8px var(--lit-glow); }
   .blights .lt.red{ background:radial-gradient(circle at 35% 30%, #ffc2a0, var(--hot) 72%); box-shadow:0 0 9px var(--hot-glow); }
   .blights .lt.purple{ background:radial-gradient(circle at 35% 30%, #e6c2ff, #a05aff 72%); box-shadow:0 0 9px rgba(160,90,255,.55); }
-  .ep-cell{ width:64px; display:flex; justify-content:flex-start; align-items:center; }
-  .ep-cell .ep-n{ display:inline-flex; align-items:center; gap:4px; font-family:"Oswald",monospace; font-weight:700; font-size:12.5px; line-height:1; letter-spacing:.02em; color:#ffcf8a; background:rgba(255,176,46,.10); border:1px solid rgba(255,176,46,.42); border-radius:999px; padding:3px 8px; cursor:pointer; white-space:nowrap; font-variant-numeric:tabular-nums; }
-  .ep-cell .ep-n::before{ content:""; width:10px; height:10px; border-radius:50%; flex:0 0 auto; background:radial-gradient(circle,#ffd88a 0 2px,rgba(255,176,46,.15) 2px 3.2px,rgba(255,176,46,.95) 3.2px 4.6px,transparent 4.6px); }
   .betchip{ font-size:11px; border:1.5px dashed #4a5a70; border-radius:6px; color:var(--ink-dim); cursor:pointer; user-select:none; width:26px; text-align:center; line-height:1.55; justify-self:center; padding:1px 0; }
   .betchip.on{ border:1.5px solid var(--lit); color:#1a1205; font-weight:700; background:var(--lit); box-shadow:0 0 8px var(--lit-glow); }
   .bmkt-row .bcover{ font-family:"Oswald",monospace; font-weight:700; font-size:15px; color:#aeb9c8; justify-self:end; white-space:nowrap; }
@@ -331,21 +328,8 @@
   .nvtip{ position:absolute; z-index:60; top:calc(100% + 5px); left:6px; right:6px; background:#0e1620; border:1px solid #3aa0ff; border-radius:9px; padding:9px 11px; font-size:13px; line-height:1.75; box-shadow:0 8px 24px rgba(0,0,0,.5); text-align:left; white-space:normal; cursor:default; }
   .card.bcard.navflash{ box-shadow:0 0 0 2px var(--lit),0 10px 26px rgba(0,0,0,.5); transition:box-shadow .2s; }
   .nv-epnew{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#ffb02e; box-shadow:0 0 0 2px rgba(255,176,46,.28); margin-left:6px; vertical-align:middle; animation:epPulse 2s infinite; }
-  .ep-newdot{ position:absolute; top:-4px; right:-4px; width:9px; height:9px; border-radius:50%; background:#ff4d6d; box-shadow:0 0 0 2px rgba(255,77,109,.3); animation:epPulse 2s infinite; }
   @keyframes epPulse{ 0%,100%{opacity:1} 50%{opacity:.45} }
   /* ===== 明牌面板 ===== */
-  #eppanel{position:fixed;inset:0;z-index:170;background:rgba(5,8,14,.72);display:none;align-items:flex-start;justify-content:center;padding:6vh 12px}
-  #eppanel.show{display:flex}
-  .epbox{width:min(460px,92vw);max-height:82vh;overflow:auto;background:var(--panel);border:1px solid var(--lit);border-radius:14px;padding:14px 16px}
-  .epbox h3{font-size:15.5px;margin-bottom:4px}
-  .epbox .epupd{font-size:11.5px;color:var(--ink-dim);margin-bottom:8px}
-  .epgrp{margin:10px 0 4px;font-weight:800;font-size:14px;color:var(--lit)}
-  .eprow{display:flex;gap:8px;align-items:baseline;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05);font-size:13.5px}
-  .eprow .nick{font-weight:700}
-  .eprow .wp{color:#2ee07f;font-weight:700}
-  .eprow .lbl{font-size:11px;color:var(--ink-dim);border:1px solid var(--line);border-radius:5px;padding:0 5px}
-  .eprow .res-hit{color:#2ee07f} .eprow .res-miss{color:#ff6b6b}
-  .epclose{float:right;cursor:pointer;color:var(--ink-dim);font-size:16px;padding:0 4px}
   /* ===== 隊伍統計頁（棒球版型移植,前輪已驗收） ===== */
   #statspage{position:fixed;inset:0;z-index:160;background:var(--bg);display:none;flex-direction:column;overflow:hidden}
   #statspage.show{display:flex}
@@ -495,9 +479,6 @@
   <button id="sumLauncher">總結<span class="b" id="sumLauncherN"></span></button>
   <div id="summaryHost"></div>
 
-  <!-- 明牌面板 -->
-  <div id="eppanel"><div class="epbox" id="epbox"></div></div>
-
   <!-- 隊伍統計（覆蓋頁） -->
   <div id="statspage">
     <div class="stats-toolbar">
@@ -546,6 +527,9 @@ document.addEventListener("keydown",(e)=>{ if((e.metaKey||e.ctrlKey) && e.key.to
 function today(){ const d=new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; }
 const esc = (s)=> String(s==null?"":s).replace(/[&<>"']/g, c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const $ = (sel)=> document.querySelector(sel);
+// wnba-picks-addon.js（棒球 expert-picks-addon 複製版）依賴的棒球全域介面
+function leagueOf(){ return "wnba"; }
+function save(){ saveDoc(doc); }
 function fmtDate(d){ const p=d.split("-"); return `${parseInt(p[1])}/${parseInt(p[2])}`; }
 const SAMPLE_MIN = 8;   // WNBA 半季 44 場、主客拆分樣本天然小,門檻自棒球 15 降為 8（樣本數照樣印出）
 
@@ -728,7 +712,6 @@ async function loadSeedGames(){
 let pregameCache = { updated:null, games:[] };
 let oddsCache = { updated:null, games:{} };
 let seriesCache = {};
-let epCache = { updated:null, picks:[] };
 async function loadPregame(){
   try{
     const r = await fetch(`data/wnba_pregame.json?t=${Date.now()}`);
@@ -744,10 +727,6 @@ async function loadPregame(){
   try{
     const r3 = await fetch(`data/wnba_lottery_series.json?t=${Date.now()}`);
     if(r3.ok){ const j3 = await r3.json(); if(j3 && typeof j3==="object"){ seriesCache = j3; } }
-  }catch(e){}
-  try{
-    const r4 = await fetch(`data/expert_picks_wnba.json?t=${Date.now()}`);
-    if(r4.ok){ const j4 = await r4.json(); if(j4 && Array.isArray(j4.picks)){ epCache = j4; render(); } }
   }catch(e){}
 }
 setInterval(loadPregame, 5*60e3);
@@ -791,69 +770,6 @@ function ensureItem(date, id){
   delete it.L; delete it.bets;
   return it;
 }
-
-// ===== 明牌未讀（棒球 epSeen 機制移植）=====
-// 指紋＝該卡當日 picks 的 uid|opt|at 排序串；doc.epSeen[卡id] 存已確認指紋（跨裝置同步用同一份 doc）
-function epSigFor(g, picks){
-  return (picks||[]).map(p=>[p.uid,p.market,p.team||p.side||"",p.line==null?"":p.line,p.at||""].join("|")).sort().join(";");
-}
-function epHasNew(g, picks){
-  if(!picks || !picks.length) return false;
-  const it = g._item || ensureItem(g.date, g.officialId);
-  if(it.settled || g.status==="finished") return false;        // 已結算卡不亮未讀（賽後單無下注價值）
-  return (doc.epSeen||{})[g.officialId] !== epSigFor(g, picks);
-}
-function epMarkSeen(g, picks){
-  doc.epSeen = doc.epSeen || {};
-  doc.epSeen[g.officialId] = epSigFor(g, picks);
-  saveDoc(doc);
-}
-function epFor(g){
-  return (epCache.picks||[]).filter(p => p.league==="wnba" && p.date===g.date && p.away===g.away && p.home===g.home);
-}
-// 每列 ◉N：pick → 卡片選項列的歸屬（讓分依 line 正負推讓方;對不上卡片讓方的歸對面列）
-function epRowCounts(g, picks, favName, dogName){
-  const c = { mlAway:0, mlHome:0, hdGive:0, hdRecv:0, over:0, under:0 };
-  for(const p of picks){
-    if(p.market==="ml"){ if(p.team===g.away) c.mlAway++; else if(p.team===g.home) c.mlHome++; }
-    else if(p.market==="ou"){ if(/大|over/i.test(String(p.side||""))) c.over++; else c.under++; }
-    else if(p.market==="hd" && p.team){
-      const giveTeam = (p.line!=null && p.line>0) ? (p.team===g.away?g.home:g.away) : p.team;  // 受讓=+線 → 對面讓
-      if(giveTeam===favName) c.hdGive++; else c.hdRecv++;
-    }
-  }
-  return c;
-}
-function openEpPanel(g, picks){
-  epMarkSeen(g, picks);                                        // 開啟即已讀（紅點原地熄滅）
-  document.querySelectorAll('.ep-newdot[data-oid="'+CSS.escape(g.officialId)+'"], .nv-epnew[data-oid="'+CSS.escape(g.officialId)+'"]').forEach(el=>el.remove());
-  const box = $("#epbox");
-  const MK = { ml:"獨贏", hd:"讓分", ou:"大小" };
-  const optLabel = (p)=>{
-    if(p.market==="ou") return `${/大|over/i.test(String(p.side||""))?"大":"小"} ${p.line!=null?p.line:""}`;
-    const ln = p.line!=null ? (p.line>0?`+${p.line}`:`${p.line}`) : "";
-    return `${p.team||p.side||""} ${ln}`.trim();
-  };
-  const groups = {};
-  for(const p of picks){ const k = `${MK[p.market]||p.market}｜${optLabel(p)}`; (groups[k]=groups[k]||[]).push(p); }
-  let h = `<span class="epclose" id="epclose">✕</span><h3>🎯 明牌 ${esc(g.away)} @ ${esc(g.home)}</h3>`;
-  h += `<div class="epupd">資料 ${esc(String(epCache.updated||"").slice(5,16).replace("T"," "))}</div>`;
-  const keys = Object.keys(groups).sort((a,b)=>groups[b].length-groups[a].length);
-  for(const k of keys){
-    h += `<div class="epgrp">${esc(k)}（${groups[k].length}）</div>`;
-    for(const p of groups[k].sort((a,b)=>b.wp-a.wp)){
-      h += `<div class="eprow"><span class="nick">${esc(p.nickname)}</span><span class="wp">${p.wp}%</span>`+
-           `<span style="color:var(--ink-dim);font-size:12px">${p.total}注</span>`+
-           `${p.main?`<span class="lbl">主推</span>`:""}${p.free?`<span class="lbl">免費</span>`:""}`+
-           `<span class="lbl">${esc(p.srcLabel||"")}</span>`+
-           `${p.result?`<span class="${/準/.test(p.result)?"res-hit":"res-miss"}">${esc(p.result)}</span>`:""}</div>`;
-    }
-  }
-  box.innerHTML = h;
-  $("#eppanel").classList.add("show");
-  $("#epclose").onclick = ()=> $("#eppanel").classList.remove("show");
-}
-document.getElementById("eppanel").addEventListener("click", (e)=>{ if(e.target.id==="eppanel") e.target.classList.remove("show"); });
 
 // ===== 國際軸（titan bet365;rows[0]=最新;負=客讓,稽核實證） =====
 function intlFor(g){
@@ -967,50 +883,6 @@ function bFormHTML(league, team){
   res.forEach(e=>{ const c=e.r==="w"?"w":(e.r==="l"?"l":"t"), word=e.r==="w"?"勝":(e.r==="l"?"敗":"和"), md=e.date.slice(5).replace("-","/");
     boxes += `<span class="bx ${c}" title="${md} ${e.venue==="away"?"客":"主"} vs ${esc(e.opp)} ${e.my}:${e.op} ${word}">${c.toUpperCase()}</span>`; });
   return `<div class='ph'>${esc(team)}　近${res.length}場（左舊右新）</div><div class="boxes">${boxes}</div>`;
-}
-
-// ===== 明牌共識 epStrong（addon 版移植:K=6 加權、主導率70%、tipLine 多數決） =====
-const EP_K = 6, EP_DOM = 0.7;
-const epWeightOf = (p)=> p.wp>=70 ? 2 : 1;
-function epOptOf(p, model, favName){
-  if(p.market==="ml") return p.team===model.away ? "mlAway" : (p.team===model.home ? "mlHome" : null);
-  if(p.market==="ou") return /大|over/i.test(String(p.side||"")) ? "over" : "under";
-  if(p.market==="hd" && p.team){
-    const giveTeam = (p.line!=null && p.line>0) ? (p.team===model.away?model.home:model.away) : p.team;
-    return giveTeam===favName ? "hdGive" : "hdRecv";
-  }
-  return null;
-}
-function epStrong(model, picks){
-  const out = { recs: [], splits: [] };
-  const favName = model.hdFav==="away"?model.away:model.home;
-  const undName = model.hdFav==="away"?model.home:model.away;
-  const W={}, N={}, LINES={};
-  for(const p of picks){
-    const opt = epOptOf(p, model, favName); if(!opt) continue;
-    W[opt]=(W[opt]||0)+epWeightOf(p); N[opt]=(N[opt]||0)+1;
-    if((opt==="hdGive"||opt==="hdRecv") && p.line!=null){ (LINES[opt]=LINES[opt]||[]).push(p.line); }
-  }
-  const tipOf = (opt)=>{ const a=LINES[opt]; if(!a||!a.length) return null;
-    const cnt={}; a.forEach(v=>cnt[v]=(cnt[v]||0)+1); return +Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0]; };
-  const hdv = model.hdVal!=null?` ${model.hdVal}`:"", totv = model.totLine!=null?` ${model.totLine}`:"";
-  const PAIRS = [
-    ["mlAway","mlHome","獨贏",[model.away,"獨贏","ml"],[model.home,"獨贏","ml"]],
-    ["hdGive","hdRecv","讓分",[favName,"讓"+hdv,"hd"],[undName,"受讓"+hdv,"recv"]],
-    ["over","under","大小分",["大分","大小分"+totv,"tot"],["小分","大小分"+totv,"tot"]],
-  ];
-  PAIRS.forEach(pr=>{
-    const aW=W[pr[0]]||0, bW=W[pr[1]]||0, tot=aW+bW;
-    [[pr[0],aW,bW,pr[3]],[pr[1],bW,aW,pr[4]]].forEach(x=>{
-      if(x[1]>=EP_K && x[1]/((x[1]+x[2])||1)>=EP_DOM){
-        const tl = tipOf(x[0]);
-        const mk = (tl!=null && (x[0]==="hdGive"||x[0]==="hdRecv")) ? ((tl>0?"+":"")+tl+"（台彩）") : x[3][1];
-        out.recs.push({ opt:x[0], pick:x[3][0], mk, market:x[3][2], w:x[1], n:N[x[0]]||0, tipLine:tl!=null?tl:null });
-      }
-    });
-    if(aW && bW && tot>=EP_K+1 && Math.max(aW,bW)/tot<EP_DOM) out.splits.push({ market:pr[2], txt:aW+":"+bW });
-  });
-  return out;
 }
 
 // ===== 結算語義（it.settled=棒球同構;自動路徑由管線比分+盤口推導,手動視窗覆蓋） =====
@@ -1299,7 +1171,7 @@ function collectSummary(models){
     add(!totC, it.over.lights,  "大分", "大小分"+tv, "tot");
     add(!totC, it.under.lights, "小分", "大小分"+tv, "tot");
     try{
-      const eps = epStrong(m, epFor(m));
+      const eps = (window.__expertPicks && window.__expertPicks.epStrong) ? window.__expertPicks.epStrong(m, doc.activeDate) : {recs:[],splits:[]};
       eps.recs.forEach(r=> strong.push({matchName, league:lg, pick:r.pick, mk:r.mk, n:r.w, m, market:r.market, ep:true, np:r.n, tipLine:r.tipLine}));
       eps.splits.forEach(sp=> conflicts.push({matchName, league:lg, market:`${sp.market}明牌分歧 ${sp.txt}`, kind:"ep"}));
     }catch(_){}
@@ -1323,7 +1195,7 @@ function todayHitRate(models){
     const det = (acct,label,hit)=>r.rows.push({acct, m:matchName, label, hit, lg, itId:m.officialId});
     let epMap = null;
     const epRec = (opt)=>{
-      if(epMap===null){ epMap={}; try{ epStrong(m, epFor(m)).recs.forEach(x=>epMap[x.opt]=x); }catch(_){} }
+      if(epMap===null){ epMap={}; try{ window.__expertPicks.epStrong(m, doc.activeDate).recs.forEach(x=>epMap[x.opt]=x); }catch(_){} }
       return epMap[opt];
     };
     const epTally = (opt, litOK, hit, label)=>{
@@ -1623,7 +1495,7 @@ function renderMatchNav(){
       t.textContent = teams + (m.time?("　"+m.time):"");
     }
     t.title = teams;
-    t.draggable = true; t.dataset.oid = m.officialId;
+    t.draggable = true; t.dataset.oid = m.officialId; t.dataset.itid = m.officialId;
     t.oncontextmenu=(e)=>{ e.preventDefault(); openSettleModal(m); };
     t.onclick=()=>{ jumpToCard(m.officialId); t.classList.add("flash"); setTimeout(()=>t.classList.remove("flash"),1200); };
     t.addEventListener("dragstart", e=>{ _navDrag=m.officialId; t.classList.add("dragging");
@@ -1655,7 +1527,7 @@ function renderMatchNav(){
       };
       t.appendChild(bd);
     }
-    if(epHasNew(m, epFor(m))){ const nd=document.createElement("span"); nd.className="nv-epnew"; nd.dataset.oid=m.officialId; nd.title="有新明牌，點膠囊確認"; t.appendChild(nd); }
+    try{ if(window.__expertPicks && window.__expertPicks.hasNew(m)){ const nd=document.createElement("span"); nd.className="nv-epnew"; nd.title="有新明牌，點膠囊確認"; t.appendChild(nd); } }catch(_){}
     return t;
   }
   function sec(label){ const s=document.createElement("div"); s.className="nvsec"; s.textContent=label; body.appendChild(s); }
@@ -1713,8 +1585,6 @@ function renderCardW(model){
   const season = seasonOf(model.date);
   const intl = model.league==="WNBA" ? intlFor(model) : null;
   const lsw = model.league==="WNBA" ? lswFor(model) : 0;
-  const picks = model.league==="WNBA" ? epFor(model) : [];
-  const rowCounts = epRowCounts(model, picks, favName, undName);
 
   /* ---------- 標頭 ---------- */
   const head = document.createElement("div"); head.className="bhead";
@@ -1722,13 +1592,7 @@ function renderCardW(model){
   time.textContent = fmtDate(model.date) + (model.time ? " "+model.time : "");
   const hsp = document.createElement("span"); hsp.className="bhead-sp";
   head.append(time, hsp);
-  if(picks.length){
-    const epb=document.createElement("button"); epb.className="bbadge"; epb.textContent=`明牌 ×${picks.length}`;
-    epb.title="玩運彩合格高手推薦（點開名單）"; epb.style.position="relative";
-    if(epHasNew(model, picks)){ const nd=document.createElement("span"); nd.className="ep-newdot"; nd.dataset.oid=model.officialId; epb.appendChild(nd); }
-    epb.onclick=()=>{ openEpPanel(model,picks); renderMatchNav(); };   // 開啟＝已讀,卡片與導覽紅點同時熄
-    head.appendChild(epb);
-  }
+  // 【明牌 ×N】膠囊由 wnba-picks-addon.decorate() 插入（棒球同路徑：含未讀 .ep-new 與面板入口）
   if(settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改（手動覆蓋管線）"; sm.onclick=()=>openSettleModal(model); head.appendChild(sm); }
   if(model.status==="postponed"){ const pd=document.createElement("span"); pd.className="bbadge ppd"; pd.textContent="⏸ 延賽"; pd.title="來源判定延賽,此卡不會結算"; head.appendChild(pd); }
   const hasLine = model.hdSrc==="運彩" && model.hdVal!=null;
@@ -1837,19 +1701,17 @@ function renderCardW(model){
     ahead.append(albl, venueTog);
     ana.appendChild(ahead);
 
-    function mktRow(badge, badgeCls, name, hv, lightObj, coverHTML, conflict, epN){
+    function mktRow(badge, badgeCls, name, hv, lightObj, coverHTML, conflict){
       const row=document.createElement("div"); row.className="bmkt-row"+(conflict?" conflict":"");
       const b=document.createElement("span"); b.className="bside "+(badgeCls||""); b.textContent=badge;
       const nm=document.createElement("span"); nm.className="bnm"; nm.title="點隊名／標籤＝減一盞燈";
       nm.innerHTML = esc(name)+(hv?` <span class="hv">${esc(hv)}</span>`:"");
       nm.onclick=()=>{ if(lightObj.lights>0){ snapshot(); lightObj.lights--; saveDoc(doc); render(); } };
       const lightsEl = bLightsEl(lightObj);
-      const ep=document.createElement("span"); ep.className="ep-cell";
-      if(epN>0){ const n=document.createElement("span"); n.className="ep-n"; n.textContent=epN; n.title="這選項的明牌數（點開名單）"; n.onclick=(e)=>{ e.stopPropagation(); openEpPanel(model,picks); }; ep.appendChild(n); }
       const chip=document.createElement("span"); chip.className="betchip"+(lightObj.bet?" on":""); chip.textContent="注";
       chip.title = lightObj.bet ? "已標記自主下注（點擊取消）" : "標記：這選項我實際下注了（與明牌分開統計）";
       chip.onclick=(e)=>{ e.stopPropagation(); snapshot(); lightObj.bet=!lightObj.bet; saveDoc(doc); render(); };
-      row.append(b, nm, lightsEl, ep, chip, _firstEl(coverHTML));
+      row.append(b, nm, lightsEl, chip, _firstEl(coverHTML));   // ep 格由 wnba-picks-addon.decorate() 插在第4欄（棒球同路徑）
       return row;
     }
     function mktSecHead(label, conflict, extras, cmtHTML){
@@ -1881,8 +1743,8 @@ function renderCardW(model){
     // 獨贏
     const mlWrap=wrapDiv();
     mlWrap.append(mktSecHead("獨贏", mlConflict, [], null),
-      mktRow("客","", model.away, "", it.mlAway, bCoverHTML(pctInfo(model.league,season,model.away,"ml","away")), mlConflict, rowCounts.mlAway),
-      mktRow("主","", model.home, "", it.mlHome, bCoverHTML(pctInfo(model.league,season,model.home,"ml","home")), mlConflict, rowCounts.mlHome));
+      mktRow("客","", model.away, "", it.mlAway, bCoverHTML(pctInfo(model.league,season,model.away,"ml","away")), mlConflict),
+      mktRow("主","", model.home, "", it.mlHome, bCoverHTML(pctInfo(model.league,season,model.home,"ml","home")), mlConflict));
     ana.appendChild(mlWrap);
 
     // 讓分（⇄=手動換讓分方,燈跟隊;棒球同款）
@@ -1891,8 +1753,8 @@ function renderCardW(model){
     swap.onclick=()=>{ snapshot(); it.hdSwap=!it.hdSwap; const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
     const hv = model.hdVal!=null ? String(model.hdVal) : "";
     hdWrap.append(mktSecHead("讓分", hdConflict, [swap], hdTrend()),
-      mktRow("讓","give", favName, hv?("−"+hv):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict, rowCounts.hdGive),
-      mktRow("受讓","recv", undName, hv?("+"+hv):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict, rowCounts.hdRecv));
+      mktRow("讓","give", favName, hv?("−"+hv):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
+      mktRow("受讓","recv", undName, hv?("+"+hv):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
     ana.appendChild(hdWrap);
 
     // 國際軸藍帶（bet365＋台彩;棒球同構;唯讀）
@@ -1930,8 +1792,8 @@ function renderCardW(model){
       return `<span class="bcover ${cls}">${Math.round(pn*100)}%${ss}</span>`;
     }
     totWrap.append(mktSecHead("大小", totConflict, [basis], ouTrend()),
-      mktRow("大","", "大", tv, it.over, totCover(true), totConflict, rowCounts.over),
-      mktRow("小","", "小", tv, it.under, totCover(false), totConflict, rowCounts.under));
+      mktRow("大","", "大", tv, it.over, totCover(true), totConflict),
+      mktRow("小","", "小", tv, it.under, totCover(false), totConflict));
     ana.appendChild(totWrap);
 
     body.appendChild(ana);
@@ -1972,7 +1834,9 @@ function modelFromPregame(g){
   const it = ensureItem(g.date, g.officialId);
   let hdFav = g.hdFav;
   if(it.hdSwap && hdFav) hdFav = hdFav==="away"?"home":"away";
-  return { ...g, hdFav, _item: it };
+  // id/type/gameTime＝棒球 item 介面（wnba-picks-addon 沿用棒球比對邏輯,需要這三個欄位）
+  return { ...g, id: g.officialId, type: 'match', gameTime: g.time, hdFav, _item: it,
+    get settled(){ return it.settled; }, get expertApplied(){ return it.expertApplied; } };
 }
 
 // ===== 日期列（棒球同款:場數角標＋「＋新日期」） =====
@@ -2340,7 +2204,8 @@ function render(){
     }
     const visible = todays.filter(g=>{ const it=ensureItem(g.date,g.officialId); return !it.hidden; });
     if(visible.length){
-      for(const g of visible) board.appendChild(renderCardW(modelFromPregame(g)));
+      for(const g of visible){ const md=modelFromPregame(g); board.appendChild(renderCardW(md));
+        try{ window.__expertPicks && window.__expertPicks.decorate(md); }catch(_){} }
       renderSummary(); renderMatchNav(); layoutRightColumns();
       return;
     }
@@ -2359,5 +2224,6 @@ render();
 loadSeedGames();
 loadPregame();
 </script>
+<script src="wnba-picks-addon.js?v=20260803wnba1"></script>
 </body>
 </html>
