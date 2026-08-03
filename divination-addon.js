@@ -21,19 +21,32 @@
   const MARKETS = ['獨贏', '讓分', '大小'];
 
   // ---- 結果解析：pregame 快照優先，MLB 官方 API 補漏（比賽一結束即可結算，與板上手動結算/爬蟲頻率脫鉤） ----
+  // 2026-08-04 修「舊卦隨時間退回未結算」：終場比分永久快取（localStorage dv_res_v1）。
+  // 根因＝補漏查詢的日期窗 slice(0,6)：快照只留最近幾天，更早的卦全靠 API 補，
+  // 但日期清單砍到 6 個且照陣列順序（新卦在前）取，卦累積超過 6 個快照外日期後，
+  // 最舊的日期永遠排不進窗＝永遠查不到＝顯示未結算。快取後每場比賽一生只需查到一次
+  // （快照或 API 任一來源、含日韓中職），之後離線也能結算；日期窗改最舊優先、上限 12。
+  const RES_CACHE_KEY = 'dv_res_v1';
+  function loadResCache() { try { return JSON.parse(localStorage.getItem(RES_CACHE_KEY) || '{}') || {}; } catch (e) { return {}; } }
   async function resolveOutcomes(casts) {
     const res = {};   // officialId → {finished, as, hs}
+    const cache = loadResCache(); let dirty = false;
+    const want = new Set(casts.map(c => c.officialId));
+    for (const id of want) { const h = cache[id]; if (h && h.as != null) res[id] = { finished: true, as: h.as, hs: h.hs }; }
     let gmap = {};
     try { (await (await fetch('data/pregame_data.json?nocache=' + Date.now())).json()).forEach(g => { gmap[g.officialId] = g; }); } catch (e) {}
     const pending = [];
     for (const c of casts) {
       if (res[c.officialId]) continue;
       const g = gmap[c.officialId];
-      if (g && g.status === 'finished' && g.awayScore != null) res[c.officialId] = { finished: true, as: g.awayScore, hs: g.homeScore };
+      if (g && g.status === 'finished' && g.awayScore != null) {
+        res[c.officialId] = { finished: true, as: g.awayScore, hs: g.homeScore };
+        cache[c.officialId] = { as: g.awayScore, hs: g.homeScore }; dirty = true;
+      }
       else pending.push(c);
     }
     if (pending.length) {
-      const dates = [...new Set(pending.map(c => { const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00'); return new Date(ts).toISOString().slice(0, 10); }))].slice(0, 6);
+      const dates = [...new Set(pending.map(c => { const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00'); return new Date(ts).toISOString().slice(0, 10); }))].sort().slice(0, 12);
       const sched = [];
       for (const d of dates) {
         try { const j = await (await fetch('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=' + d)).json(); (j.dates || []).forEach(dd => (dd.games || []).forEach(g => sched.push(g))); } catch (e) {}
@@ -47,9 +60,17 @@
           if (!g.teams || g.teams.away.team.id !== aId || g.teams.home.team.id !== hId) continue;
           const d = Math.abs(Date.parse(g.gameDate) - ts); if (d < bd) { bd = d; best = g; }
         }
-        if (best && bd <= 100 * 60000 && best.status && best.status.abstractGameState === 'Final' && best.teams.away.score != null)
+        if (best && bd <= 100 * 60000 && best.status && best.status.abstractGameState === 'Final' && best.teams.away.score != null) {
           res[c.officialId] = { finished: true, as: best.teams.away.score, hs: best.teams.home.score };
+          cache[c.officialId] = { as: best.teams.away.score, hs: best.teams.home.score }; dirty = true;
+        }
       }
+    }
+    if (dirty) {
+      // 保險絲：快取只留卦單用得到的場次，超過 6000 筆時清掉無主項
+      const keys = Object.keys(cache);
+      if (keys.length > 6000) for (const k of keys) { if (!want.has(k)) delete cache[k]; }
+      try { localStorage.setItem(RES_CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
     }
     return res;
   }
