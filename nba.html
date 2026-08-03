@@ -154,15 +154,117 @@
     .bscore{ flex-direction:row; justify-content:space-between; border-right:none; border-bottom:1px solid rgba(255,255,255,.07); padding:12px 14px; }
     .bteam{ width:auto; }
   }
-  /* ===== 結算視窗（手動覆蓋） ===== */
-  #settleModal{ position:fixed; inset:0; z-index:200; background:rgba(5,8,14,.72); display:none; align-items:center; justify-content:center; padding:14px; }
+  /* ===== 結算視窗（棒球版移植） ===== */
+  #settleModal{ position:fixed; inset:0; z-index:300; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:20px; }
   #settleModal.show{ display:flex; }
-  #settleModal .box{ width:min(380px,94vw); background:var(--panel); border:1px solid var(--lit); border-radius:14px; padding:16px 18px; }
-  #settleModal h3{ font-size:15.5px; margin-bottom:10px; }
-  #settleModal .row{ display:flex; align-items:center; gap:8px; margin:8px 0; font-size:13.5px; }
-  #settleModal .row label{ flex:0 0 84px; color:var(--ink-dim); }
-  #settleModal input, #settleModal select{ background:#0c0f14; border:1px solid var(--line); border-radius:7px; color:var(--ink); font-size:14px; padding:5px 8px; width:100px; font-family:"Oswald",monospace; }
-  #settleModal .btns{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  #settleModal .box{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:18px 20px; width:464px; max-width:100%; box-shadow:0 16px 48px rgba(0,0,0,.7); max-height:90vh; overflow:auto; }
+  #settleModal h3{ margin:0 0 4px; font-size:16px; }
+  #settleModal .sub{ color:var(--ink-dim); font-size:12px; margin-bottom:14px; }
+  #settleModal .btn{ padding:8px 14px; border:1px solid var(--line); border-radius:9px; background:var(--panel-2); color:var(--ink); font-size:13.5px; font-weight:700; cursor:pointer; }
+  #settleModal .odds-grid{ display:grid; grid-template-columns:74px 1fr 1fr; gap:8px 10px; align-items:center; margin-top:10px; }
+  #settleModal .odds-grid .og-h{ font-size:11px; color:var(--ink-dim); text-align:center; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #settleModal .odds-grid .og-l{ font-size:12px; color:var(--ink-dim); font-family:"Oswald",monospace; letter-spacing:.04em; }
+  #settleModal .odds-grid input{ width:100%; padding:7px 8px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:7px; color:var(--ink); font-size:15px; font-family:"Oswald",monospace; }
+  #settleModal .odds-grid input:focus{ outline:none; border-color:var(--lit); }
+  #settleModal .odds-grid input.dash{ background:#161d27; border-style:dashed; }
+  .settle-q{ margin:14px 0; }
+  .settle-q .qlabel{ font-size:13px; color:var(--ink-dim); margin-bottom:6px; font-family:"Oswald",monospace; letter-spacing:.05em; display:flex; align-items:center; gap:8px; }
+  .settle-q .qline{ margin-left:auto; font-size:11px; color:var(--ink-dim); display:flex; align-items:center; gap:4px; letter-spacing:0; }
+  .settle-q .qline input{ width:54px; padding:4px 5px; text-align:center; background:#161d27; border:1px dashed var(--line); border-radius:6px; color:var(--ink); font-size:13px; font-family:"Oswald",monospace; }
+  .settle-q .opts{ display:flex; gap:6px; flex-wrap:wrap; }
+  .settle-q .opt{ flex:1 1 auto; min-width:80px; padding:10px 12px; border-radius:9px; background:var(--panel-2); border:1px solid var(--line); color:var(--ink); font-size:14px; font-weight:700; cursor:pointer; text-align:center; }
+  .settle-q .opt:hover{ border-color:#46566a; }
+  .settle-q .opt.on{ background:var(--lit); border-color:var(--lit); color:#1a1205; }
+  .settle-q .opt.tie{ background:#2a3340; color:#aeb9c8; }
+  .settle-q .opt.tie.on{ background:#5b6b80; color:#fff; }
+  .settle-q.score-row .score-inputs{ display:flex; align-items:flex-end; gap:18px; justify-content:center; }
+  .settle-q.score-row label{ display:flex; flex-direction:column; align-items:center; gap:9px; }
+  .settle-q.score-row .team-name{ display:flex; align-items:center; gap:6px; font-size:17px; font-weight:600; color:var(--ink); line-height:1.2; }
+  .settle-q.score-row .team-name.fav{ color:var(--lit); font-weight:700; }
+  .settle-q.score-row .hdtag{ font-size:11px; font-weight:700; color:#1a1205; background:var(--lit); border-radius:999px; padding:2px 8px; line-height:1.3; }
+  .settle-q.score-row input{ width:92px; padding:13px 8px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:8px; color:var(--ink); font-size:28px; font-weight:700; font-family:"Oswald",monospace; }
+  .settle-q.score-row input:focus{ outline:none; border-color:var(--lit); }
+  .settle-q.score-row .vs{ color:var(--ink-dim); font-family:"Oswald",monospace; font-size:20px; padding-bottom:27px; }
+  #settleModal select{ padding:6px 8px; background:#1b232e; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:13px; }
+  #settleModal input.sline{ width:62px; padding:5px 6px; text-align:center; background:#1b232e; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-family:"Oswald",monospace; }
+  .bflipbanner.was{ background:rgba(127,139,245,.14); border-bottom-color:rgba(127,139,245,.42); color:#c7cdff; }
+  .card.bcard.flip-was{ border-color:rgba(127,139,245,.55); box-shadow:0 0 0 1px rgba(127,139,245,.28),0 10px 26px rgba(0,0,0,.5); }
+  /* ===== 重點總結／今日戰績面板（棒球版移植;fixed 定位） ===== */
+  #summary{ position:fixed; top:74px; right:18px; width:300px; z-index:150; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96)); border:1px solid var(--line); border-radius:14px; backdrop-filter:blur(6px); box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
+  #summary .sum-resize{ position:absolute; right:0; bottom:0; width:22px; height:22px; cursor:nwse-resize; z-index:60; background:linear-gradient(135deg, transparent 0 45%, var(--ink-dim) 45% 55%, transparent 55% 65%, var(--ink-dim) 65% 75%, transparent 75% 85%, var(--ink-dim) 85% 95%, transparent 95%); opacity:.5; border-bottom-right-radius:13px; touch-action:none; }
+  #summary .sum-resize:hover{ opacity:1; }
+  #summary .sumhead{ display:flex; align-items:center; gap:8px; padding:11px 14px; cursor:grab; touch-action:none; font-family:"Oswald",monospace; font-weight:600; letter-spacing:.08em; font-size:14px; text-transform:uppercase; background:linear-gradient(180deg,rgba(255,255,255,.05),transparent); border-bottom:1px solid var(--line); }
+  #summary .sumhead .dot{ width:9px; height:9px; border-radius:50%; background:var(--hot); box-shadow:0 0 8px var(--hot-glow); }
+  #summary .sumhead .count{ margin-left:auto; color:var(--ink-dim); font-family:"Noto Sans TC"; font-weight:700; font-size:13px; letter-spacing:0; }
+  #summary .sumtabs{ display:inline-flex; gap:4px; }
+  #summary .sumtab{ font-size:12.5px; padding:2px 10px; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
+  #summary .sumtab.on{ background:#28c76f; color:#06210f; font-weight:700; border-color:#28c76f; }
+  #summary .sumbody{ padding:8px 0; max-height:46vh; overflow:auto; }
+  #summary .sumempty{ padding:14px; color:var(--ink-dim); font-size:13.5px; line-height:1.6; }
+  .sumrow{ display:flex; align-items:baseline; gap:9px; padding:6px 14px; font-size:15px; }
+  .sumrow .mt{ color:var(--ink-dim); font-size:12.5px; flex:0 0 74px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sumrow .pk{ font-weight:700; flex:1; }
+  .sumrow .pk .mk{ color:var(--ink-dim); font-weight:500; font-size:12.5px; margin-left:5px; }
+  .sumrow .n{ font-family:"Oswald",monospace; font-weight:700; color:var(--hot); font-size:14px; flex:0 0 auto; }
+  .sumrow.conflict .pk{ color:var(--conflict); }
+  .sumrow.conflict .n{ color:var(--conflict); }
+  .sumrow.conflict.cross .pk{ color:var(--cross); }
+  .sumgrow{ display:flex; align-items:baseline; gap:10px; padding:7px 14px; font-size:15px; border-bottom:1px solid rgba(255,255,255,.03); }
+  .sumgrow .gmt{ color:var(--ink-dim); font-size:12.5px; flex:0 0 78px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .sumgrow .gpk{ flex:1; display:flex; flex-wrap:wrap; gap:5px 12px; }
+  .sumgrow .sp{ font-weight:700; white-space:nowrap; }
+  .sumgrow .sp .mk{ color:var(--ink-dim); font-weight:500; font-size:12.5px; margin-left:4px; }
+  .sumgrow .sp .lw{ color:#e0803a; font-size:11px; margin-left:4px; font-weight:600; }
+  .sumgrow .sp.n3{ color:#b98a4c; } .sumgrow .sp.n4{ color:#e0a020; }
+  .sumgrow .sp.n5{ color:#ffc24a; } .sumgrow .sp.n6{ color:#ffe487; text-shadow:0 0 10px rgba(255,210,80,.55); }
+  .sumsec{ padding:7px 14px 2px; font-family:"Oswald",monospace; font-size:11.5px; letter-spacing:.12em; color:var(--ink-dim); text-transform:uppercase; }
+  .sumsec.collapsible{ display:flex; align-items:center; justify-content:space-between; padding-right:14px; user-select:none; cursor:pointer; }
+  .sumsec.collapsible:hover{ color:var(--ink); }
+  #summary .zhanrow{ display:flex; align-items:baseline; gap:6px; padding:6px 14px; font-size:15px; }
+  #summary .zhanrow .zlbl{ font-weight:700; }
+  #summary .zhanrow .zsp{ flex:1; }
+  #summary .zhanrow .zhit{ color:#2ee07f; font-weight:700; font-family:"Oswald",monospace; }
+  #summary .zhanrow .zslash{ color:var(--ink-dim); }
+  #summary .zhanrow .zmiss{ color:#ff6b6b; font-weight:700; font-family:"Oswald",monospace; }
+  #summary .zhanrow .zrate{ margin-left:10px; font-family:"Oswald",monospace; font-weight:700; min-width:44px; text-align:right; }
+  #summary .zhanempty{ padding:14px; color:var(--ink-dim); font-size:13px; line-height:1.7; }
+  .zhanrow .zcar{ flex:0 0 12px; text-align:center; color:var(--ink-dim); font-size:11px; transition:transform .15s; }
+  .zhanrow.zon .zcar{ transform:rotate(90deg); }
+  .zhanrow.zhas{ cursor:pointer; }
+  .zhandetail{ margin:2px 10px 8px 26px; padding:4px 0; background:rgba(255,255,255,.035); border-radius:8px; }
+  .zdrow{ display:flex; gap:8px; align-items:baseline; padding:3px 12px; font-size:13.5px; cursor:pointer; border-radius:6px; }
+  .zdrow:hover{ background:rgba(255,255,255,.06); }
+  .zdlg{ padding:5px 12px 1px; font-size:11px; color:var(--ink-dim); font-family:"Oswald",monospace; letter-spacing:.1em; }
+  .zdrow .zmk{ flex:0 0 14px; font-weight:800; } .zdrow .zmk.ok{ color:#28c76f; } .zdrow .zmk.no{ color:var(--conflict); }
+  .zdrow .zm{ color:var(--ink-dim); font-size:12px; flex:0 0 92px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .zdrow .zp{ font-weight:600; white-space:nowrap; }
+  #sumLauncher{ position:fixed; right:18px; top:74px; z-index:150; display:none; padding:7px 13px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--ink); font-weight:700; font-size:13px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.45); }
+  #sumLauncher .b{ color:var(--lit); font-family:"Oswald",monospace; margin-left:5px; }
+  /* ===== 對戰導覽列（棒球版移植;fixed 左緣） ===== */
+  #matchnav{ display:none; position:fixed; left:10px; top:50%; transform:translateY(-50%); z-index:140; flex-direction:column; width:172px; max-height:78vh; background:linear-gradient(180deg,rgba(20,26,34,.96),rgba(16,21,28,.96)); border:1px solid var(--line); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.5); overflow:hidden; }
+  #matchnav .nvhead{ display:flex; gap:5px; padding:9px 9px 7px; border-bottom:1px solid var(--line); }
+  #matchnav .nvhead button{ flex:1; font-size:13px; padding:5px 0; border:1px solid var(--line); border-radius:7px; background:transparent; color:var(--ink-dim); cursor:pointer; font-family:"Noto Sans TC"; }
+  #matchnav .nvhead button.on{ background:#28c76f; color:#06210f; font-weight:700; border-color:#28c76f; }
+  #matchnav .nvbody{ overflow-y:auto; overflow-x:hidden; overscroll-behavior:contain; padding:6px 0 8px; }
+  #matchnav .nvsec{ font-family:"Oswald",monospace; font-size:11px; letter-spacing:.1em; color:var(--ink-dim); padding:7px 12px 3px; }
+  #matchnav .nvtag{ display:block; transform-origin:left center; transition:transform .11s ease-out,color .11s,background .11s,border-color .11s; margin:2px 8px; padding:5px 9px; border:1px solid transparent; border-radius:8px; font-size:12.5px; cursor:pointer; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; position:relative; }
+  #matchnav .nvtag.st-empty{ color:#8a96a6; }
+  #matchnav .nvtag.st-odds2{ color:#ffce7a; border-color:rgba(255,176,46,.50); background:rgba(255,176,46,.14); }
+  #matchnav .nvtag.st-full{ color:#7fe8b1; border-color:rgba(40,199,111,.5); background:rgba(40,199,111,.10); }
+  #matchnav .nvtag.st-flip{ color:#d9b3ff; border-color:rgba(160,90,255,.55); background:rgba(160,90,255,.14); }
+  #matchnav .nvtag.st-swap{ color:#7fe8d4; border-color:rgba(43,191,160,.5); background:rgba(43,191,160,.11); }
+  #matchnav .nvtag.flash{ background:rgba(255,176,46,.25); }
+  #matchnav .nvtag .nvscore{ font-family:"Oswald",monospace; font-weight:700; font-size:1.25em; color:var(--lit); letter-spacing:.02em; }
+  #matchnav .nvtag .nvscore.live{ color:#3ad6a0; }
+  #matchnav .nvtag .nvinn{ font-family:"Oswald",monospace; font-size:.82em; color:#6fc9a4; margin-left:5px; letter-spacing:.02em; }
+  #matchnav .nvtag .nvinn.pending{ color:#ffb24d; }
+  .nv-intl{ float:right; font-size:13.5px; margin-left:6px; cursor:pointer; filter:saturate(1.2); }
+  .nv-intl.bo{ text-shadow:0 0 6px rgba(224,128,32,.95),0 0 2px rgba(224,128,32,.9); }
+  .nv-intl.bg{ text-shadow:0 0 6px rgba(43,191,160,.95),0 0 2px rgba(43,191,160,.9); }
+  .nvtip{ position:absolute; z-index:60; top:calc(100% + 5px); left:6px; right:6px; background:#0e1620; border:1px solid #3aa0ff; border-radius:9px; padding:9px 11px; font-size:13px; line-height:1.75; box-shadow:0 8px 24px rgba(0,0,0,.5); text-align:left; white-space:normal; cursor:default; }
+  .card.bcard.navflash{ box-shadow:0 0 0 2px var(--lit),0 10px 26px rgba(0,0,0,.5); transition:box-shadow .2s; }
+  .nv-epnew{ display:inline-block; width:8px; height:8px; border-radius:50%; background:#ffb02e; box-shadow:0 0 0 2px rgba(255,176,46,.28); margin-left:6px; vertical-align:middle; animation:epPulse 2s infinite; }
+  @keyframes epPulse{ 0%,100%{opacity:1} 50%{opacity:.45} }
   /* ===== 明牌面板 ===== */
   #eppanel{position:fixed;inset:0;z-index:170;background:rgba(5,8,14,.72);display:none;align-items:flex-start;justify-content:center;padding:6vh 12px}
   #eppanel.show{display:flex}
@@ -223,19 +325,23 @@
   <div class="datebar" id="datebar"><span class="lab">日期</span></div>
   <main id="board"></main>
 
-  <!-- 結算視窗（手動覆蓋管線結果） -->
+  <!-- 結算視窗（棒球版移植;籃球差異=無先發ERA/模型列、獨贏無和局） -->
   <div id="settleModal"><div class="box">
-    <h3 id="smTitle">結算</h3>
-    <div class="row"><label id="smAwayLb">客</label><input id="smAway" type="number" inputmode="numeric"></div>
-    <div class="row"><label id="smHomeLb">主</label><input id="smHome" type="number" inputmode="numeric"></div>
-    <div class="row"><label>讓分方</label><select id="smFav"><option value="away">客讓</option><option value="home">主讓</option><option value="">無盤</option></select><input id="smHd" type="number" step="0.5" style="width:76px"></div>
-    <div class="row"><label>大小基準</label><input id="smTot" type="number" step="0.5"></div>
-    <div class="btns">
-      <button class="hbtn" id="smSave">儲存（手動覆蓋）</button>
-      <button class="hbtn" id="smReset">還原管線結果</button>
-      <button class="hbtn" id="smClose">關閉</button>
+    <h3 id="settleTitle">結算比賽</h3>
+    <div class="sub" id="settleSub"></div>
+    <div id="settleBody"></div>
+    <div style="display:flex;gap:8px;margin-top:16px;flex-wrap:wrap;">
+      <button class="btn" id="settleCancel">取消</button>
+      <button class="btn" id="settleRemove" style="display:none;color:var(--danger);">取消結算</button>
+      <button class="btn" id="settleSaveOdds" title="只存賠率，不需填比分；賽後再回來補比分結算">💾 暫存賠率</button>
+      <button class="btn" id="settleConfirm" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">確認結算</button>
     </div>
   </div></div>
+
+  <!-- 對戰導覽列 + 總結面板啟動鈕 -->
+  <div id="matchnav"></div>
+  <button id="sumLauncher">總結<span class="b" id="sumLauncherN"></span></button>
+  <div id="summaryHost"></div>
 
   <!-- 明牌面板 -->
   <div id="eppanel"><div class="epbox" id="epbox"></div></div>
@@ -485,6 +591,12 @@ function autoSettleFromPregame(){
       totBasis:g.totLine!=null?g.totLine:null, mlOffered:g.mlOffered!==false };
     const old = gameFind(rec.sid, rec.date, "WNBA", rec.awayTeam, rec.homeTeam);
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
+    // it.settled 同步（手動結算優先;卡片 pills／戰績／導覽全讀這份=棒球資料流）
+    const it = ensureItem(g.date, g.officialId);
+    if(!it.settled || !it.settled.manual){
+      const auto = computeAutoSettled(g);
+      if(auto && JSON.stringify(it.settled||null)!==JSON.stringify(auto)){ it.settled = auto; changed = true; }
+    }
     if(old && JSON.stringify(old)===JSON.stringify(rec)) continue;
     gameUpsert(rec); changed = true;
   }
@@ -648,41 +760,661 @@ function bFormHTML(league, team){
   return `<div class='ph'>${esc(team)}　近${res.length}場（左舊右新）</div><div class="boxes">${boxes}</div>`;
 }
 
-// ===== 結算視窗（手動覆蓋管線） =====
-let _smTarget = null;
+// ===== 明牌共識 epStrong（addon 版移植:K=6 加權、主導率70%、tipLine 多數決） =====
+const EP_K = 6, EP_DOM = 0.7;
+const epWeightOf = (p)=> p.wp>=70 ? 2 : 1;
+function epOptOf(p, model, favName){
+  if(p.market==="ml") return p.team===model.away ? "mlAway" : (p.team===model.home ? "mlHome" : null);
+  if(p.market==="ou") return /大|over/i.test(String(p.side||"")) ? "over" : "under";
+  if(p.market==="hd" && p.team){
+    const giveTeam = (p.line!=null && p.line>0) ? (p.team===model.away?model.home:model.away) : p.team;
+    return giveTeam===favName ? "hdGive" : "hdRecv";
+  }
+  return null;
+}
+function epStrong(model, picks){
+  const out = { recs: [], splits: [] };
+  const favName = model.hdFav==="away"?model.away:model.home;
+  const undName = model.hdFav==="away"?model.home:model.away;
+  const W={}, N={}, LINES={};
+  for(const p of picks){
+    const opt = epOptOf(p, model, favName); if(!opt) continue;
+    W[opt]=(W[opt]||0)+epWeightOf(p); N[opt]=(N[opt]||0)+1;
+    if((opt==="hdGive"||opt==="hdRecv") && p.line!=null){ (LINES[opt]=LINES[opt]||[]).push(p.line); }
+  }
+  const tipOf = (opt)=>{ const a=LINES[opt]; if(!a||!a.length) return null;
+    const cnt={}; a.forEach(v=>cnt[v]=(cnt[v]||0)+1); return +Object.keys(cnt).sort((x,y)=>cnt[y]-cnt[x])[0]; };
+  const hdv = model.hdVal!=null?` ${model.hdVal}`:"", totv = model.totLine!=null?` ${model.totLine}`:"";
+  const PAIRS = [
+    ["mlAway","mlHome","獨贏",[model.away,"獨贏","ml"],[model.home,"獨贏","ml"]],
+    ["hdGive","hdRecv","讓分",[favName,"讓"+hdv,"hd"],[undName,"受讓"+hdv,"recv"]],
+    ["over","under","大小分",["大分","大小分"+totv,"tot"],["小分","大小分"+totv,"tot"]],
+  ];
+  PAIRS.forEach(pr=>{
+    const aW=W[pr[0]]||0, bW=W[pr[1]]||0, tot=aW+bW;
+    [[pr[0],aW,bW,pr[3]],[pr[1],bW,aW,pr[4]]].forEach(x=>{
+      if(x[1]>=EP_K && x[1]/((x[1]+x[2])||1)>=EP_DOM){
+        const tl = tipOf(x[0]);
+        const mk = (tl!=null && (x[0]==="hdGive"||x[0]==="hdRecv")) ? ((tl>0?"+":"")+tl+"（台彩）") : x[3][1];
+        out.recs.push({ opt:x[0], pick:x[3][0], mk, market:x[3][2], w:x[1], n:N[x[0]]||0, tipLine:tl!=null?tl:null });
+      }
+    });
+    if(aW && bW && tot>=EP_K+1 && Math.max(aW,bW)/tot<EP_DOM) out.splits.push({ market:pr[2], txt:aW+":"+bW });
+  });
+  return out;
+}
+
+// ===== 結算語義（it.settled=棒球同構;自動路徑由管線比分+盤口推導,手動視窗覆蓋） =====
+function computeAutoSettled(model){
+  const a=model.awayScore, h=model.homeScore;
+  if(a==null||h==null) return null;
+  const s = { awayScore:a, homeScore:h };
+  s.ml = a>h ? "away" : "home";
+  if(model.hdSrc==="運彩" && model.hdFav && model.hdVal!=null){
+    const favM = model.hdFav==="home" ? (h-a) : (a-h);
+    s.hd = favM - model.hdVal > 0 ? "cover" : (favM - model.hdVal === 0 ? "push" : "nocover");
+  }
+  if(model.totLine!=null){
+    const t=a+h; s.tot = t>model.totLine ? "over" : (t===model.totLine ? "push" : "under");
+  }
+  return s;
+}
+
+// ===== 結算視窗（棒球版移植;籃球差異=無先發ERA/模型、獨贏無和局選項） =====
+let settleTarget = null;
+function impliedAway(oa, oh){ if(isNaN(oa)||isNaN(oh)||oa<=1||oh<=1) return null; const ia=1/oa, ih=1/oh; return ia/(ia+ih); }
+function cardFlipState(it){ return it.platformFlip ? "flipped" : (it.flipVanished ? (it.flipDir||"converged_unknown") : "none"); }
 function openSettleModal(model){
-  _smTarget = model;
-  $("#smTitle").textContent = `結算：${model.away} @ ${model.home}（${fmtDate(model.date)}）`;
-  $("#smAwayLb").textContent = `客 ${model.away}`;
-  $("#smHomeLb").textContent = `主 ${model.home}`;
-  const rec = gameFind(model.officialId, model.date, model.league, model.away, model.home);
-  $("#smAway").value = rec&&rec.awayScore!=null?rec.awayScore:(model.awayScore!=null?model.awayScore:"");
-  $("#smHome").value = rec&&rec.homeScore!=null?rec.homeScore:(model.homeScore!=null?model.homeScore:"");
-  $("#smFav").value = rec?(rec.hdFav||""):(model.hdFav||"");
-  $("#smHd").value = rec&&rec.hdVal!=null?rec.hdVal:(model.hdVal!=null?model.hdVal:"");
-  $("#smTot").value = rec&&rec.totBasis!=null?rec.totBasis:(model.totLine!=null?model.totLine:"");
+  settleTarget = model;
+  const it = model._item || ensureItem(model.date, model.officialId);
+  const isRevise = !!it.settled;
+  $("#settleTitle").textContent = isRevise ? "修改結算" : "結算比賽";
+  $("#settleSub").textContent = `${model.away}（客） vs ${model.home}（主）　·　${fmtDate(model.date)}`;
+  $("#settleRemove").style.display = isRevise ? "" : "none";
+  const body = $("#settleBody");
+  body.innerHTML = "";
+  const prior = it.settled || computeAutoSettled(model) || {};
+
+  // 比分列
+  const scoreRow = document.createElement("div"); scoreRow.className="settle-q score-row";
+  const _awayFav = model.hdFav === "away";
+  const _favTag = `<span class="hdtag">讓</span>`;
+  scoreRow.innerHTML = `
+    <div class="qlabel">比分</div>
+    <div class="score-inputs">
+      <label><span class="team-name${_awayFav?" fav":""}">${esc(model.away)}（客）${_awayFav?_favTag:""}</span><input id="settleAwayScore" type="number" inputmode="numeric" min="0" max="200" value="${prior.awayScore!==undefined?prior.awayScore:(model.awayScore!=null?model.awayScore:"")}"></label>
+      <span class="vs">:</span>
+      <label><span class="team-name${_awayFav?"":" fav"}">${esc(model.home)}（主）${_awayFav?"":_favTag}</span><input id="settleHomeScore" type="number" inputmode="numeric" min="0" max="200" value="${prior.homeScore!==undefined?prior.homeScore:(model.homeScore!=null?model.homeScore:"")}"></label>
+    </div>`;
+  body.appendChild(scoreRow);
+
+  // 顛倒場狀態 + 賠率三組 + 對調 + 讓分線變動 + 成交線（棒球同構;賽前線變動預填 bet365 序列）
+  const _hdL = Math.abs(parseFloat(model.hdVal));
+  const _gA = model.hdFav === "away";
+  const _defHdA = (!isNaN(_hdL)) ? ((_gA ? it.hdGive.bet : it.hdRecv.bet) ? (_gA ? -_hdL : _hdL) : null) : null;
+  const _defHdH = (!isNaN(_hdL)) ? ((_gA ? it.hdRecv.bet : it.hdGive.bet) ? (_gA ? _hdL : -_hdL) : null) : null;
+  const intl = intlFor(model);
+  const flipWrap = document.createElement("div"); flipWrap.className="settle-q";
+  const fs0 = cardFlipState(it);
+  const _fopt = (v,l)=>`<option value="${v}"${fs0===v?" selected":""}>${l}</option>`;
+  flipWrap.innerHTML = `
+    <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;">
+      <span style="color:var(--ink-dim);">顛倒場狀態</span>
+      <select id="settleFlipState">
+        ${_fopt("none","無顛倒")}
+        ${_fopt("flipped","收盤仍顛倒（國際≠台彩）")}
+        ${_fopt("converged_intl","曾顛倒，收盤一致（國際貼回台彩）")}
+        ${_fopt("converged_lottery","曾顛倒，收盤一致（台彩貼向國際）")}
+        ${_fopt("converged_unknown","曾顛倒，收盤一致（方向未記）")}
+      </select>
+    </div>
+    <div class="odds-grid">
+      <span></span>
+      <span class="og-h">${esc(model.away)}（客）</span>
+      <span class="og-h">${esc(model.home)}（主）</span>
+      <span class="og-l">下注賠率</span>
+      <input id="flipOddsAway" type="number" inputmode="decimal" step="0.01" min="1" placeholder="賠率" value="${it.flipOddsAway!=null?it.flipOddsAway:""}">
+      <input id="flipOddsHome" type="number" inputmode="decimal" step="0.01" min="1" placeholder="賠率" value="${it.flipOddsHome!=null?it.flipOddsHome:""}">
+      <span class="og-l">初盤</span>
+      <input id="openOddsAway" class="dash" type="number" inputmode="decimal" step="0.01" min="1" placeholder="初盤" value="${it.openOddsAway!=null?it.openOddsAway:""}">
+      <input id="openOddsHome" class="dash" type="number" inputmode="decimal" step="0.01" min="1" placeholder="初盤" value="${it.openOddsHome!=null?it.openOddsHome:""}">
+      <span class="og-l">收盤</span>
+      <input id="closeOddsAway" class="dash" type="number" inputmode="decimal" step="0.01" min="1" placeholder="收盤" value="${it.closeOddsAway!=null?it.closeOddsAway:""}">
+      <input id="closeOddsHome" class="dash" type="number" inputmode="decimal" step="0.01" min="1" placeholder="收盤" value="${it.closeOddsHome!=null?it.closeOddsHome:""}">
+    </div>
+    <div id="settleOddsCalc" style="font-size:12px;color:var(--ink-dim);line-height:1.9;margin-top:8px;"></div>
+    <label class="settle-flip" style="display:flex;align-items:center;gap:9px;cursor:pointer;font-size:13px;margin-top:14px;">
+      <input type="checkbox" id="settlePreSwap" ${it.preGameSwap?"checked":""} style="width:18px;height:18px;cursor:pointer;">
+      <span>賽前讓分方曾對調</span>
+    </label>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
+      <span style="color:var(--ink-dim);">賽前讓分線變動</span>
+      <input id="settleOpenHd" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="開盤" value="${it.openHdLine!=null?it.openHdLine:(intl&&intl.open?intl.open.line:"")}">
+      <span style="color:var(--ink-dim);">→</span>
+      <input id="settleCloseHd" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="收盤" value="${it.closeHdLine!=null?it.closeHdLine:(intl&&intl.latest?intl.latest.line:"")}">
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
+      <span style="color:var(--ink-dim);">我的大小成交線</span>
+      <input id="settleMyTotLine" class="sline" type="number" inputmode="decimal" step="1" min="100" placeholder="如 165.5" style="width:70px" value="${it.myTotLine!=null?it.myTotLine:""}">
+      <span style="color:var(--ink-dim);">賠率</span>
+      <input id="settleMyTotOdds" class="sline" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="1.90" style="width:60px" value="${it.myTotOdds!=null?it.myTotOdds:""}">
+    </div>
+    <div id="myHdWrap" style="display:${((fs0&&fs0!=="none")||it.preGameSwap||it.hdGive.bet||it.hdRecv.bet)?"block":"none"};margin-top:10px;padding:8px 10px;border:1px solid rgba(224,160,32,.35);border-radius:8px;">
+      <div style="color:#e0a020;font-size:13px;margin-bottom:7px;">讓分成交線</div>
+      <div style="display:grid;grid-template-columns:minmax(92px,max-content) 66px 58px;gap:7px 8px;align-items:center;font-size:13px;">
+        <span style="color:var(--ink-dim);white-space:nowrap;">${esc(model.away)}(客)</span>
+        <input id="settleMyHdAway" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="+1.5" value="${it.myHdAwayLine!=null?it.myHdAwayLine:(_defHdA!=null?_defHdA:"")}">
+        <input id="settleMyHdAwayOdds" class="sline" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="賠率" style="width:58px" value="${it.myHdAwayOdds!=null?it.myHdAwayOdds:""}">
+        <span style="color:var(--ink-dim);white-space:nowrap;">${esc(model.home)}(主)</span>
+        <input id="settleMyHdHome" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="-1.5" value="${it.myHdHomeLine!=null?it.myHdHomeLine:(_defHdH!=null?_defHdH:"")}">
+        <input id="settleMyHdHomeOdds" class="sline" type="number" inputmode="decimal" step="0.01" min="1.01" max="50" placeholder="賠率" style="width:58px" value="${it.myHdHomeOdds!=null?it.myHdHomeOdds:""}">
+      </div>
+    </div>`;
+  body.appendChild(flipWrap);
+  { const _showMyHd = ()=>{ const w=$("#myHdWrap"); if(!w) return;
+      const fsv = $("#settleFlipState") ? $("#settleFlipState").value : "none";
+      const sw = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
+      const bet = !!(it.hdGive.bet||it.hdRecv.bet);
+      if(fsv!=="none" || sw || bet) w.style.display="block"; };
+    $("#settleFlipState").addEventListener("change", _showMyHd);
+    $("#settlePreSwap").addEventListener("change", _showMyHd);
+  }
+  // 國際軸自動判（bet365 vs 台彩;唯讀參考）
+  if(intl || (model.hdSrc==="運彩"&&model.hdVal!=null)){
+    const flip = intl && model.hdFav && ((intl.fav==="away") !== (model.hdFav==="away"));
+    const vTxt = flip ? "目前兩邊相反" : (intl&&intl.flips>0 ? "bet365 曾換邊，未見相反" : "無異常");
+    const bar=document.createElement("div");
+    bar.style.cssText="margin-top:12px;background:rgba(58,160,255,.08);border:1px solid rgba(58,160,255,.4);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;line-height:1.7;";
+    bar.innerHTML = `🌐 自動判（國際軸）：<b>${vTxt}</b><span style="float:right;color:var(--ink-dim)">▸</span>`+
+      `<div class="iad" style="display:none;margin-top:6px;color:var(--ink-dim);line-height:1.8">`+
+      (intl?`bet365：${esc(intl.fav==="home"?model.home:model.away)} 讓${intl.il}${intl.flips?`（⇄${intl.flips}）`:""}`:`bet365：無資料`)+
+      `<br>台彩：${model.hdVal!=null?esc(model.hdFav==="home"?model.home:model.away)+" 讓"+model.hdVal:"無資料"}${lswFor(model)?`　⇄${lswFor(model)}`:""}`+
+      `<br>僅供參考；下方顛倒狀態照你親眼所見選。</div>`;
+    bar.onclick=()=>{ const d=bar.querySelector(".iad"); d.style.display = d.style.display==="none" ? "block" : "none"; };
+    body.appendChild(bar);
+  }
+  // 市場態度（下注 vs 初盤隱含;籃球無模型/ERA 段）
+  function _updSettleOddsCalc(){
+    const out = $("#settleOddsCalc"); if(!out) return;
+    const oa = parseFloat($("#flipOddsAway").value), oh = parseFloat($("#flipOddsHome").value);
+    const qa = parseFloat($("#openOddsAway").value), qh = parseFloat($("#openOddsHome").value);
+    const mp = impliedAway(oa, oh);
+    let html = "";
+    if(mp != null){
+      const parts = [`盤口隱含：${esc(model.away)} <b>${(mp*100).toFixed(1)}%</b> ／ ${esc(model.home)} <b>${((1-mp)*100).toFixed(1)}%</b>`];
+      const mp0 = impliedAway(qa, qh);
+      if(mp0 != null){
+        const mv = (mp - mp0)*100;
+        if(Math.abs(mv) >= 1.0){
+          const team = mv>0 ? model.away : model.home;
+          const strong = Math.abs(mv) >= 2.5;
+          parts.push(`市場態度：<b style="color:${strong?'#ffb02e':'var(--ink)'}">${strong?"大幅":"逐漸"}轉向看好 ${esc(team)}</b>（+${Math.abs(mv).toFixed(1)}pp）`);
+        }else parts.push(`市場態度：初盤至今幾乎沒動`);
+      }
+      html = parts.join("<br>");
+    }
+    out.innerHTML = html;
+  }
+  ["flipOddsAway","flipOddsHome","openOddsAway","openOddsHome"].forEach(id=>{ $("#"+id).addEventListener("input", _updSettleOddsCalc); });
+  _updSettleOddsCalc();
+
+  // 結果三問（棒球同構;籃球獨贏無和局）
+  function q(label, key, options, lineInput){
+    const wrap = document.createElement("div"); wrap.className="settle-q"; wrap.dataset.key=key;
+    const extra = lineInput
+      ? `<span class="qline">${lineInput.lbl} <input id="${lineInput.id}" type="number" inputmode="decimal" step="${lineInput.step||"0.5"}" value="${lineInput.value!=null?lineInput.value:""}"></span>`
+      : "";
+    wrap.innerHTML = `<div class="qlabel"><span>${label}</span>${extra}</div>`;
+    const opts = document.createElement("div"); opts.className="opts";
+    options.forEach(o=>{
+      const b = document.createElement("button");
+      b.className = "opt"+(o.tie?" tie":"")+(prior[key]===o.value?" on":"");
+      b.textContent = o.label;
+      b.dataset.key = key; b.dataset.value = o.value;
+      b.onclick = ()=>{ wrap.querySelectorAll(".opt").forEach(x=>x.classList.remove("on")); b.classList.add("on"); };
+      opts.appendChild(b);
+    });
+    wrap.appendChild(opts);
+    body.appendChild(wrap);
+  }
+  q("獨贏：哪隊贏了？", "ml", [
+    { label:`${model.away}（客）`, value:"away" },
+    { label:`${model.home}（主）`, value:"home" }
+  ]);
+  const favName = model.hdFav==="away" ? model.away : model.home;
+  q(`讓分：${favName||"讓方"} 過盤了嗎？`, "hd", [
+    { label:`${favName||"讓方"} 過盤`, value:"cover" },
+    { label:`${favName||"讓方"} 沒過`, value:"nocover" },
+    { label:"走盤（不列入）", value:"push", tie:true }
+  ], { id:"settleHdVal", lbl:"盤口", value:(model.hdVal!=null) ? model.hdVal : "" });
+  q("大小：開大還是開小？", "tot", [
+    { label:"大", value:"over" },
+    { label:"小", value:"under" },
+    { label:"走盤（不列入）", value:"push", tie:true }
+  ], { id:"settleTotVal", lbl:"基準", step:"1", value:(it.totVal!=null&&it.totVal!=="")?it.totVal:(model.totLine!=null?model.totLine:"") });
+
   $("#settleModal").classList.add("show");
 }
-$("#smClose").onclick = ()=> $("#settleModal").classList.remove("show");
+$("#settleCancel").onclick = ()=> $("#settleModal").classList.remove("show");
 $("#settleModal").addEventListener("click",(e)=>{ if(e.target.id==="settleModal") e.target.classList.remove("show"); });
-$("#smSave").onclick = ()=>{
-  const m=_smTarget; if(!m) return;
-  const a=parseInt($("#smAway").value,10), h=parseInt($("#smHome").value,10);
-  if(isNaN(a)||isNaN(h)){ alert("請填兩隊比分"); return; }
-  const fav=$("#smFav").value||null, hd=parseFloat($("#smHd").value), tot=parseFloat($("#smTot").value);
-  gameUpsert({ sid:m.officialId, date:m.date, league:m.league, awayTeam:m.away, homeTeam:m.home,
-    awayScore:a, homeScore:h, hdFav:fav, hdVal:(fav&&!isNaN(hd))?Math.abs(hd):null,
-    totBasis:isNaN(tot)?null:tot, mlOffered:m.mlOffered!==false, manual:true });
-  bumpGamesVersion(); saveDoc(doc); $("#settleModal").classList.remove("show"); render();
+function _collectSettleFields(it){
+  const num=(id)=>{ const v=parseFloat($("#"+id).value); return isNaN(v)?null:v; };
+  it.flipOddsAway=num("flipOddsAway"); it.flipOddsHome=num("flipOddsHome");
+  it.openOddsAway=num("openOddsAway"); it.openOddsHome=num("openOddsHome");
+  it.closeOddsAway=num("closeOddsAway"); it.closeOddsHome=num("closeOddsHome");
+  it.openHdLine=num("settleOpenHd"); it.closeHdLine=num("settleCloseHd");
+  it.myTotLine=num("settleMyTotLine"); it.myTotOdds=num("settleMyTotOdds");
+  it.myHdAwayLine=num("settleMyHdAway"); it.myHdAwayOdds=num("settleMyHdAwayOdds");
+  it.myHdHomeLine=num("settleMyHdHome"); it.myHdHomeOdds=num("settleMyHdHomeOdds");
+  it.preGameSwap = !!$("#settlePreSwap").checked;
+  const fsv = $("#settleFlipState").value;
+  it.platformFlip = (fsv==="flipped");
+  it.flipVanished = /^converged/.test(fsv);
+  it.flipDir = it.flipVanished ? fsv : null;
+  const tv = $("#settleTotVal") ? $("#settleTotVal").value.trim() : "";
+  if(tv!=="") it.totVal = tv;
+}
+$("#settleSaveOdds").onclick = ()=>{
+  const m=settleTarget; if(!m) return;
+  const it = m._item || ensureItem(m.date, m.officialId);
+  _collectSettleFields(it);
+  saveDoc(doc); $("#settleModal").classList.remove("show"); render();
 };
-$("#smReset").onclick = ()=>{
-  const m=_smTarget; if(!m) return;
-  doc.games = (doc.games||[]).filter(x=>!(x.sid===m.officialId || (x.date===m.date && x.league===m.league && x.awayTeam===m.away && x.homeTeam===m.home)));
+$("#settleConfirm").onclick = ()=>{
+  const m=settleTarget; if(!m) return;
+  const it = m._item || ensureItem(m.date, m.officialId);
+  const a=parseInt($("#settleAwayScore").value,10), h=parseInt($("#settleHomeScore").value,10);
+  if(isNaN(a)||isNaN(h)){ alert("請填兩隊比分"); return; }
+  _collectSettleFields(it);
+  const pick=(key)=>{ const b=document.querySelector(`.settle-q[data-key="${key}"] .opt.on`); return b?b.dataset.value:null; };
+  const hdLine = parseFloat($("#settleHdVal").value);
+  const s = { awayScore:a, homeScore:h, ml:pick("ml"), hd:pick("hd"), tot:pick("tot"), manual:true };
+  // 成交線結果（顛倒/對調場個人帳;有填成交線才算）
+  const cs=(line)=>{ if(line==null) return null; const d=(line>=0? a+line-h : a+line-h); return d>0?"cover":(d===0?"push":"nocover"); };
+  if(it.myHdAwayLine!=null){ s.myHdGive = m.hdFav==="away" ? cs(it.myHdAwayLine) : null; s.myHdRecv = m.hdFav==="home" ? cs(it.myHdAwayLine) : null; }
+  if(it.myHdHomeLine!=null){ const d=h+it.myHdHomeLine-a; const rHome=d>0?"cover":(d===0?"push":"nocover");
+    if(m.hdFav==="home") s.myHdGive=rHome; else s.myHdRecv=rHome; }
+  if(it.myTotLine!=null){ const t=a+h; s.myTot = t>it.myTotLine?"over":(t===it.myTotLine?"push":"under"); }
+  it.settled = s;
+  const fav = m.hdFav||null;
+  gameUpsert({ sid:m.officialId, date:m.date, league:m.league, awayTeam:m.away, homeTeam:m.home,
+    awayScore:a, homeScore:h, hdFav:(s.hd&&s.hd!=="push")?fav:fav, hdVal:!isNaN(hdLine)?Math.abs(hdLine):(m.hdVal!=null?m.hdVal:null),
+    totBasis:(it.totVal!=null&&it.totVal!=="")?parseFloat(it.totVal):(m.totLine!=null?m.totLine:null),
+    mlOffered:m.mlOffered!==false, manual:true });
   bumpGamesVersion(); saveDoc(doc);
-  autoSettleFromPregame();                       // 管線有結果就立刻回填（非手動）
-  loadSeedGames();                               // 歷史場回種子
   $("#settleModal").classList.remove("show"); render();
 };
+$("#settleRemove").onclick = ()=>{
+  const m=settleTarget; if(!m) return;
+  const it = m._item || ensureItem(m.date, m.officialId);
+  delete it.settled;
+  doc.games = (doc.games||[]).filter(x=>!(x.sid===m.officialId || (x.date===m.date && x.league===m.league && x.awayTeam===m.away && x.homeTeam===m.home)));
+  bumpGamesVersion(); saveDoc(doc);
+  autoSettleFromPregame(); loadSeedGames();
+  $("#settleModal").classList.remove("show"); render();
+};
+
+// ===== 重點總結／今日戰績（棒球版移植） =====
+function leagueOfModel(m){ return (m.league||"WNBA").toLowerCase(); }
+function currentModels(){
+  if(doc.activeLeague!=="WNBA") return [];
+  return (pregameCache.games||[]).filter(g=>g.date===doc.activeDate)
+    .map(modelFromPregame).filter(m=>!m._item.hidden);
+}
+function collectSummary(models){
+  const strong = [], conflicts = [];
+  models.forEach(m=>{
+    const it = m._item;
+    if(it.settled || m.status==="finished") return;   // 已結算/已終場退出即時總結
+    const favSide = m.hdFav||"home", undSide = favSide==="away"?"home":"away";
+    const favName = favSide==="away"?m.away:m.home, undName = undSide==="away"?m.away:m.home;
+    const matchName = `${m.away}/${m.home}`;
+    const lg = leagueOfModel(m);
+    const mlC  = it.mlAway.lights>0 && it.mlHome.lights>0;
+    const hdC  = it.hdGive.lights>0 && it.hdRecv.lights>0;
+    const totC = it.over.lights>0  && it.under.lights>0;
+    const oppML = (undSide==="away") ? it.mlAway.lights : it.mlHome.lights;
+    const crossC = it.hdGive.lights>0 && oppML>0;
+    if(mlC)  conflicts.push({matchName, league:lg, market:"獨贏", kind:"same"});
+    if(hdC)  conflicts.push({matchName, league:lg, market:"讓分", kind:"same"});
+    if(totC) conflicts.push({matchName, league:lg, market:"大小分", kind:"same"});
+    if(crossC) conflicts.push({matchName, league:lg, market:"讓分↔對手獨贏", kind:"cross"});
+    const hv = m.hdVal!=null?` ${m.hdVal}`:"", tv = m.totLine!=null?` ${m.totLine}`:"";
+    const add=(cond,lights,pick,mk,market)=>{ if(cond && lights>=3) strong.push({matchName, league:lg, pick, mk, n:lights, m, market}); };
+    add(!mlC && !(crossC && undSide==="away"), it.mlAway.lights, m.away, "獨贏", "ml");
+    add(!mlC && !(crossC && undSide==="home"), it.mlHome.lights, m.home, "獨贏", "ml");
+    add(!hdC && !crossC, it.hdGive.lights, favName, "讓"+hv, "hd");
+    add(!hdC, it.hdRecv.lights, undName, "受讓"+hv, "recv");
+    add(!totC, it.over.lights,  "大分", "大小分"+tv, "tot");
+    add(!totC, it.under.lights, "小分", "大小分"+tv, "tot");
+    try{
+      const eps = epStrong(m, epFor(m));
+      eps.recs.forEach(r=> strong.push({matchName, league:lg, pick:r.pick, mk:r.mk, n:r.w, m, market:r.market, ep:true, np:r.n, tipLine:r.tipLine}));
+      eps.splits.forEach(sp=> conflicts.push({matchName, league:lg, market:`${sp.market}明牌分歧 ${sp.txt}`, kind:"ep"}));
+    }catch(_){}
+  });
+  strong.forEach(s=>{ if(!s.ep){ const e=strong.find(x=>x.ep && !x.drop && x.m===s.m && x.market===s.market && x.pick===s.pick
+      && (x.tipLine==null || (s.market==="hd" ? x.tipLine<0 : s.market==="recv" ? x.tipLine>0 : true))); if(e){ s.dual=true; s.epW=e.n; s.np=e.np; e.drop=true; } } });
+  const strongOut = strong.filter(s=>!s.drop);
+  strongOut.sort((a,b)=> ((b.dual?1:0)-(a.dual?1:0)) || b.n-a.n);
+  return {strong: strongOut, conflicts};
+}
+function todayHitRate(models){
+  const r = { ml:{hit:0,miss:0}, hd:{hit:0,miss:0}, tot:{hit:0,miss:0}, bet:{hit:0,miss:0}, ep:{hit:0,miss:0}, dual:{hit:0,miss:0}, any:0, rows:[] };
+  models.forEach(m=>{
+    const it = m._item;
+    const s = it.settled || computeAutoSettled(m);
+    if(!s || m.status!=="finished" && !it.settled) return;
+    const matchName = `${m.away}/${m.home}`;
+    const fav = m.hdFav==="away"?m.away:m.home, und = m.hdFav==="away"?m.home:m.away;
+    const hv = m.hdVal!=null?` ${m.hdVal}`:"";
+    const lg = leagueOfModel(m);
+    const det = (acct,label,hit)=>r.rows.push({acct, m:matchName, label, hit, lg, itId:m.officialId});
+    let epMap = null;
+    const epRec = (opt)=>{
+      if(epMap===null){ epMap={}; try{ epStrong(m, epFor(m)).recs.forEach(x=>epMap[x.opt]=x); }catch(_){} }
+      return epMap[opt];
+    };
+    const epTally = (opt, litOK, hit, label)=>{
+      const rec = epRec(opt); if(!rec) return;
+      if((opt==="hdGive"||opt==="hdRecv") && rec.tipLine!=null && s.awayScore!=null && s.homeScore!=null){
+        const aTeam = rec.pick===m.away;
+        const ts = aTeam?s.awayScore:s.homeScore, os = aTeam?s.homeScore:s.awayScore;
+        if(ts+rec.tipLine===os) return;
+        hit = (ts+rec.tipLine)>os;
+        label = `${rec.pick} ${rec.tipLine>0?"+":""}${rec.tipLine}`;
+      }
+      (hit?r.ep.hit++:r.ep.miss++); det("🎯",label,hit);
+      if(litOK){ (hit?r.dual.hit++:r.dual.miss++); det("⚡",label,hit); }
+    };
+    if(s.ml==="away"||s.ml==="home"){
+      if(it.mlAway.lights>=3){ r.any++; const h=s.ml==="away"; (h?r.ml.hit++:r.ml.miss++); det("獨贏",m.away,h); }
+      if(it.mlHome.lights>=3){ r.any++; const h=s.ml==="home"; (h?r.ml.hit++:r.ml.miss++); det("獨贏",m.home,h); }
+      epTally("mlAway", it.mlAway.lights>=3, s.ml==="away", m.away);
+      epTally("mlHome", it.mlHome.lights>=3, s.ml==="home", m.home);
+      if(it.mlAway.bet){ const h=s.ml==="away"; (h?r.bet.hit++:r.bet.miss++); det("注",m.away,h); }
+      if(it.mlHome.bet){ const h=s.ml==="home"; (h?r.bet.hit++:r.bet.miss++); det("注",m.home,h); }
+    }
+    if(s.hd==="cover"||s.hd==="nocover"){
+      const gv = (s.myHdGive!=null) ? s.myHdGive : (s.hd==="cover"?"cover":"nocover");
+      const rv = (s.myHdRecv!=null) ? s.myHdRecv : (s.hd==="cover"?"nocover":"cover");
+      if(it.hdGive.lights>=3 && gv!=="push"){ r.any++; const h=gv==="cover"; (h?r.hd.hit++:r.hd.miss++); det("讓分",fav+hv,h); }
+      if(it.hdRecv.lights>=3 && rv!=="push"){ r.any++; const h=rv==="cover"; (h?r.hd.hit++:r.hd.miss++); det("讓分",und+" 受讓",h); }
+      if(gv!=="push") epTally("hdGive", it.hdGive.lights>=3, gv==="cover", fav+hv);
+      if(rv!=="push") epTally("hdRecv", it.hdRecv.lights>=3, rv==="cover", und+" 受讓");
+      if(it.hdGive.bet && gv!=="push"){ const h=gv==="cover"; (h?r.bet.hit++:r.bet.miss++); det("注",fav+hv,h); }
+      if(it.hdRecv.bet && rv!=="push"){ const h=rv==="cover"; (h?r.bet.hit++:r.bet.miss++); det("注",und+" 受讓",h); }
+    }
+    { const st=(s.myTot!=null)?s.myTot:s.tot; if(st==="over"||st==="under"){
+      const tv = (it.totVal!=null&&it.totVal!=="")?` ${it.totVal}`:(m.totLine!=null?` ${m.totLine}`:"");
+      if(it.over.lights>=3){ r.any++; const h=st==="over"; (h?r.tot.hit++:r.tot.miss++); det("大小","大"+tv,h); }
+      if(it.under.lights>=3){ r.any++; const h=st==="under"; (h?r.tot.hit++:r.tot.miss++); det("大小","小"+tv,h); }
+      epTally("over", it.over.lights>=3, st==="over", "大"+tv);
+      epTally("under", it.under.lights>=3, st==="under", "小"+tv);
+      if(it.over.bet){ const h=st==="over"; (h?r.bet.hit++:r.bet.miss++); det("注","大"+tv,h); }
+      if(it.under.bet){ const h=st==="under"; (h?r.bet.hit++:r.bet.miss++); det("注","小"+tv,h); }
+    } }
+  });
+  return r;
+}
+function jumpToCard(id){
+  const card = document.querySelector('.card.bcard[data-id="'+CSS.escape(id)+'"]');
+  if(card){
+    card.scrollIntoView({ block:"start" });
+    window.scrollBy(0,-70);
+    card.classList.add("navflash");
+    setTimeout(()=>card.classList.remove("navflash"), 1200);
+  }
+}
+function renderSummary(){
+  const host = document.getElementById("summaryHost"); host.innerHTML="";
+  const launcher = $("#sumLauncher"); launcher.style.display="none";
+  const models = currentModels();
+  if(!models.length) return;
+  const {strong, conflicts} = collectSummary(models);
+  const zhan = todayHitRate(models);
+  const hasZhan = zhan.any>0 || zhan.ep.hit+zhan.ep.miss>0 || zhan.bet.hit+zhan.bet.miss>0;
+  const hasZhong = strong.length>0 || conflicts.length>0;
+  const wideFixed = window.innerWidth >= 1180;
+  if(!hasZhan && !hasZhong && !wideFixed) return;
+  if(doc.summaryMin){ launcher.style.display=""; $("#sumLauncherN").textContent = strong.length||"";
+    launcher.onclick=()=>{ doc.summaryMin=false; saveDoc(doc); render(); }; return; }
+
+  let tab = doc.panelTab || "重";
+  if(tab==="重" && !hasZhong && hasZhan) tab="戰";
+  if(tab==="戰" && !hasZhan && hasZhong) tab="重";
+  const LG_ORDER = ["wnba","nba"], LG_LABEL = { wnba:"WNBA", nba:"NBA" };
+
+  const box = document.createElement("div"); box.id="summary";
+  if(doc.summaryPos){ box.style.top=doc.summaryPos.t+"px"; box.style.right="auto"; box.style.left=doc.summaryPos.l+"px"; }
+  if(doc.summarySize && doc.summarySize.w) box.style.width = doc.summarySize.w+"px";
+  const head = document.createElement("div"); head.className="sumhead";
+  const dot = document.createElement("span"); dot.className="dot";
+  const tabsWrap = document.createElement("span"); tabsWrap.className="sumtabs";
+  [["戰","戰"],["重","重"]].forEach(([key,lab])=>{
+    const b=document.createElement("button"); b.className="sumtab"+(tab===key?" on":""); b.textContent=lab;
+    b.addEventListener("pointerdown",(e)=>e.stopPropagation());
+    b.addEventListener("click",(e)=>{ e.stopPropagation(); doc.panelTab=key; saveDoc(doc); render(); });
+    tabsWrap.appendChild(b);
+  });
+  const cnt = document.createElement("span"); cnt.className="count";
+  cnt.textContent = (tab==="重") ? `${strong.length} 強訊號` : `今日 ${zhan.any} 注`;
+  const mn = document.createElement("span"); mn.title="最小化"; mn.textContent="▁";
+  mn.style.cssText="cursor:pointer;margin-left:6px;font-size:15px;line-height:1;color:#9fb6c9;";
+  head.append(dot, tabsWrap, cnt, mn);
+  mn.addEventListener("pointerdown",(e)=>e.stopPropagation());
+  mn.addEventListener("click",(e)=>{ e.stopPropagation(); doc.summaryMin=true; saveDoc(doc); render(); });
+  // 拖曳移動（棒球操作）
+  head.addEventListener("pointerdown",(e)=>{
+    if(e.target!==head && e.target!==dot && e.target!==cnt) return;
+    const r=box.getBoundingClientRect(); const dx=e.clientX-r.left, dy=e.clientY-r.top;
+    const mv=(ev)=>{ box.style.left=(ev.clientX-dx)+"px"; box.style.top=(ev.clientY-dy)+"px"; box.style.right="auto"; };
+    const up=(ev)=>{ document.removeEventListener("pointermove",mv); document.removeEventListener("pointerup",up);
+      doc.summaryPos={ l:parseInt(box.style.left,10), t:parseInt(box.style.top,10) }; saveDoc(doc); };
+    document.addEventListener("pointermove",mv); document.addEventListener("pointerup",up);
+  });
+  box.appendChild(head);
+
+  const body = document.createElement("div"); body.className="sumbody";
+  if(tab==="戰"){
+    const rowFor = (label, mm)=>{
+      const tot = mm.hit + mm.miss; if(tot===0) return null;
+      const rate = Math.round(mm.hit/tot*100);
+      const rr = document.createElement("div"); rr.className="zhanrow";
+      rr.innerHTML = `<span class="zlbl">${label}</span><span class="zsp"></span>`+
+                    `<span class="zhit">${mm.hit}</span><span class="zslash">/</span><span class="zmiss">${mm.miss}</span>`+
+                    `<span class="zrate">${rate}%</span>`;
+      return rr;
+    };
+    const ACCT_KEY = {"讓分過盤":"讓分","大小過盤":"大小","獨贏命中":"獨贏","🎯 明牌軌":"🎯","⚡ 雙訊號":"⚡","自主注":"注"};
+    [["讓分過盤", zhan.hd],["大小過盤", zhan.tot],["獨贏命中", zhan.ml],["🎯 明牌軌", zhan.ep],["⚡ 雙訊號", zhan.dual],["自主注", zhan.bet]].forEach(([lab,mm])=>{
+      const rr=rowFor(lab,mm); if(!rr) return;
+      const key=ACCT_KEY[lab];
+      const mine=(zhan.rows||[]).filter(e=>e.acct===key);
+      const car=document.createElement("span"); car.className="zcar"; car.textContent = mine.length?"▸":"";
+      rr.insertBefore(car, rr.firstChild);
+      body.appendChild(rr);
+      if(!mine.length) return;
+      rr.classList.add("zhas"); rr.title="點擊展開場次明細";
+      rr.addEventListener("click",(e)=>{ e.stopPropagation(); doc.zhanOpen=(doc.zhanOpen===key?null:key); saveDoc(doc); render(); });
+      if(doc.zhanOpen===key){
+        rr.classList.add("zon");
+        const dt=document.createElement("div"); dt.className="zhandetail";
+        const lgs = LG_ORDER.filter(k=>mine.some(e=>e.lg===k));
+        const multi = lgs.length>1;
+        lgs.forEach(k=>{
+          if(multi){ const hh=document.createElement("div"); hh.className="zdlg"; hh.textContent=LG_LABEL[k]||k; dt.appendChild(hh); }
+          mine.filter(e=>e.lg===k).forEach(en=>{
+            const d=document.createElement("div"); d.className="zdrow";
+            d.innerHTML = `<span class="zmk ${en.hit?"ok":"no"}">${en.hit?"✓":"✗"}</span>`+
+                          `<span class="zm">${esc(en.m)}</span><span class="zp">${esc(en.label)}</span>`;
+            d.title="跳到該場卡片";
+            d.addEventListener("click",(e)=>{ e.stopPropagation(); jumpToCard(en.itId); });
+            dt.appendChild(d);
+          });
+        });
+        body.appendChild(dt);
+      }
+    });
+    if(!body.children.length){ const e=document.createElement("div"); e.className="zhanempty"; e.textContent="今天還沒有已結算的手動燈（≥3）、明牌軌或注章選項。"; body.appendChild(e); }
+  } else {
+    if(strong.length){
+      const t = document.createElement("div"); t.className="sumsec"; t.textContent="強訊號（手動 ≥3 燈 ∪ 🎯明牌共識）";
+      body.appendChild(t);
+      const byGame = new Map();
+      strong.forEach(s=>{ if(!byGame.has(s.matchName)) byGame.set(s.matchName, []); byGame.get(s.matchName).push(s); });
+      const games = [...byGame.values()].sort((a,b)=> Math.max(...b.map(x=>x.n)) - Math.max(...a.map(x=>x.n)));
+      games.forEach(sigs=>{
+        const rr = document.createElement("div"); rr.className="sumgrow";
+        const picksHtml = sigs.slice().sort((a,b)=>((b.dual?1:0)-(a.dual?1:0))||b.n-a.n).map(s=>{
+          const nCls = s.n>=6 ? "n6" : s.n===5 ? "n5" : s.n===4 ? "n4" : "n3";
+          const tag = s.dual ? "⚡" : (s.ep ? "🎯" : "");
+          const tip = s.dual ? `雙訊號：手動 ${s.n} 燈＋明牌加權 ${s.epW}（${s.np} 人）` : (s.ep ? `明牌加權 ${s.n}（${s.np} 人）` : `${s.n} 燈`);
+          return `<span class="sp ${nCls}" title="${tip}">${tag}${esc(s.pick)}<span class="mk">${esc(s.mk)}</span></span>`;
+        }).join("");
+        rr.innerHTML = `<span class="gmt">${esc(sigs[0].matchName)}</span><span class="gpk">${picksHtml}</span>`;
+        body.appendChild(rr);
+      });
+    }
+    if(conflicts.length){
+      const cCar = doc.conflictsCollapsed ? "▸" : "▾";
+      const t = document.createElement("div"); t.className="sumsec collapsible";
+      t.innerHTML = `<span>衝突 / 矛盾</span><span class="seccaret">${cCar}</span>`;
+      t.onclick = ()=>{ doc.conflictsCollapsed = !doc.conflictsCollapsed; saveDoc(doc); render(); };
+      body.appendChild(t);
+      if(!doc.conflictsCollapsed){
+        conflicts.forEach(c=>{
+          const rr = document.createElement("div"); rr.className="sumrow conflict"+(c.kind==="cross"?" cross":"");
+          const desc = c.kind==="ep" ? esc(c.market) : (c.kind==="cross" ? `${esc(c.market)} 矛盾` : `${esc(c.market)} 兩邊都有燈`);
+          rr.innerHTML = `<span class="mt">${esc(c.matchName)}</span><span class="pk">${desc}</span><span class="n">⚠</span>`;
+          body.appendChild(rr);
+        });
+      }
+    }
+    if(!strong.length && !conflicts.length){
+      const e = document.createElement("div"); e.className="sumempty"; e.textContent="目前沒有 3 燈以上的強訊號。";
+      body.appendChild(e);
+    }
+  }
+  if(doc.summarySize && doc.summarySize.bodyH) body.style.maxHeight = doc.summarySize.bodyH+"px";
+  box.appendChild(body);
+  const rz = document.createElement("div"); rz.className="sum-resize"; rz.title="拖曳調整大小";
+  rz.addEventListener("pointerdown", (e)=>{
+    e.preventDefault(); e.stopPropagation();
+    const r0=box.getBoundingClientRect(), b0=body.getBoundingClientRect();
+    const x0=e.clientX, y0=e.clientY, w0=r0.width, h0=b0.height;
+    const mv=(ev)=>{ const w=Math.max(240, w0+(ev.clientX-x0)), h=Math.max(120, h0+(ev.clientY-y0));
+      box.style.width=w+"px"; body.style.maxHeight=h+"px"; };
+    const up=(ev)=>{ document.removeEventListener("pointermove",mv); document.removeEventListener("pointerup",up);
+      doc.summarySize={ w:parseInt(box.style.width,10), bodyH:parseInt(body.style.maxHeight,10) }; saveDoc(doc); };
+    document.addEventListener("pointermove",mv); document.addEventListener("pointerup",up);
+  });
+  box.appendChild(rz);
+  host.appendChild(box);
+}
+
+// ===== 對戰導覽列（棒球版移植） =====
+let _navDrag=null;
+function navMatchState(m, it){
+  if(it.platformFlip) return "st-flip";
+  if(it.flipVanished) return "st-flip-was";
+  if(it.preGameSwap || lswFor(m)>0) return "st-swap";
+  if(it.settled || m.status==="finished") return "st-full";
+  return (m.hdSrc==="運彩"&&m.hdVal!=null) ? "st-odds2" : "st-empty";
+}
+function renderMatchNav(){
+  const el = document.getElementById("matchnav"); if(!el) return;
+  if(document.querySelector("#statspage.show")){ el.style.display="none"; return; }
+  const models = currentModels();
+  if(!models.length || window.innerWidth < 1180){ el.style.display="none"; return; }
+  el.style.display="flex";
+  const prevBody = el.querySelector(".nvbody");
+  const savedScroll = prevBody ? prevBody.scrollTop : 0;
+  const flipTop = !!doc.navFlipTop;
+  const showScore = !!doc.navShowScore;
+  const isAnom = (m)=>{ const it=m._item; return !!(it.platformFlip || it.flipVanished || it.preGameSwap || lswFor(m)>0 || (intlFor(m)&&intlFor(m).flips>0)); };
+  el.innerHTML = "";
+  const head = document.createElement("div"); head.className="nvhead";
+  { const b=document.createElement("button"); b.textContent="異常置頂"; if(flipTop) b.classList.add("on");
+    b.onclick=()=>{ doc.navFlipTop=!doc.navFlipTop; saveDoc(doc); renderMatchNav(); };
+    head.appendChild(b); }
+  { const b2=document.createElement("button"); b2.textContent=showScore?"比分":"時間"; if(showScore) b2.classList.add("on");
+    b2.onclick=()=>{ doc.navShowScore=!doc.navShowScore; saveDoc(doc); renderMatchNav(); };
+    head.appendChild(b2); }
+  el.appendChild(head);
+  const body = document.createElement("div"); body.className="nvbody";
+  const seqOf = (m)=> (m._item.seq==null?1e9:m._item.seq);
+  const cmp = (a,b)=> ((a.time||"99:99") < (b.time||"99:99") ? -1 : (a.time===b.time?0:1)) || (seqOf(a)-seqOf(b));
+  function tag(m){
+    const it = m._item;
+    const t=document.createElement("div"); t.className="nvtag "+navMatchState(m, it);
+    const teams = m.away+" / "+m.home;
+    const s = it.settled || (m.status==="finished" ? computeAutoSettled(m) : null);
+    if(showScore && s){
+      t.innerHTML = esc(teams)+'　<span class="nvscore">'+esc(s.awayScore+":"+s.homeScore)+'</span>';
+    } else if(showScore && m.status==="inprogress" && m.awayScore!=null){
+      t.innerHTML = esc(teams)+'　<span class="nvscore live">'+esc(m.awayScore+":"+m.homeScore)+'</span><span class="nvinn">'+esc(m.inning||"")+'</span>';
+    } else {
+      t.textContent = teams + (m.time?("　"+m.time):"");
+    }
+    t.title = teams;
+    t.draggable = true; t.dataset.oid = m.officialId;
+    t.oncontextmenu=(e)=>{ e.preventDefault(); openSettleModal(m); };
+    t.onclick=()=>{ jumpToCard(m.officialId); t.classList.add("flash"); setTimeout(()=>t.classList.remove("flash"),1200); };
+    t.addEventListener("dragstart", e=>{ _navDrag=m.officialId; t.classList.add("dragging");
+      try{ e.dataTransfer.effectAllowed="move"; }catch(_){} });
+    t.addEventListener("dragover", e=>{ if(_navDrag==null) return; e.preventDefault();
+      const d=body.querySelector(".nvtag.dragging"); if(!d || d===t) return;
+      const r=t.getBoundingClientRect(); body.insertBefore(d, (e.clientY-r.top)>r.height/2 ? t.nextSibling : t); });
+    t.addEventListener("dragend", ()=>{ t.classList.remove("dragging"); if(_navDrag!=null){ _navDrag=null;
+      let i=0; [].slice.call(body.querySelectorAll(".nvtag")).forEach(elx=>{
+        const mm=models.find(x=>x.officialId===elx.dataset.oid); if(mm) mm._item.seq=i++; });
+      saveDoc(doc); render(); } });
+    // 國際軸徽章 🌐（橙=顛倒/青綠=換過邊）
+    const intl = intlFor(m);
+    const flip = intl && m.hdFav && ((intl.fav==="away") !== (m.hdFav==="away"));
+    if(flip || (intl&&intl.flips>0) || lswFor(m)>0){
+      const bd=document.createElement("span");
+      bd.className="nv-intl "+(flip?"bo":"bg");
+      bd.textContent="🌐";
+      bd.onclick=(e)=>{ e.stopPropagation();
+        const old=t.querySelector(".nvtip"); if(old){ old.remove(); return; }
+        const tip=document.createElement("div"); tip.className="nvtip";
+        tip.onclick=(ev)=>ev.stopPropagation();
+        tip.innerHTML = `<b style="color:#3aa0ff">國際軸（bet365 vs 台彩）</b><br>`+
+          (intl?`bet365：<b>${esc(intl.fav==="home"?m.home:m.away)} 讓${intl.il}</b>${intl.flips?`　⇄${intl.flips}`:""}`:`bet365：無資料`)+
+          `<br>台彩：${m.hdVal!=null?`<b>${esc(m.hdFav==="home"?m.home:m.away)} 讓${m.hdVal}</b>`:"無資料"}${lswFor(m)?`　⇄${lswFor(m)}`:""}`;
+        t.appendChild(tip);
+        setTimeout(()=>{ const hnd=(ev)=>{ if(!tip.contains(ev.target)&&ev.target!==bd){ tip.remove(); document.removeEventListener("pointerdown",hnd,true); } };
+          document.addEventListener("pointerdown",hnd,true); },0);
+      };
+      t.appendChild(bd);
+    }
+    if(epFor(m).length){ const nd=document.createElement("span"); nd.className="nv-epnew"; nd.title="這場有明牌"; t.appendChild(nd); }
+    return t;
+  }
+  function sec(label){ const s=document.createElement("div"); s.className="nvsec"; s.textContent=label; body.appendChild(s); }
+  if(flipTop){
+    const flips = models.filter(isAnom).sort(cmp);
+    if(flips.length){ sec("異常場"); flips.forEach(m=>body.appendChild(tag(m))); }
+    const rest = models.filter(m=>!isAnom(m)).sort(cmp);
+    if(rest.length){ sec(doc.activeLeague); rest.forEach(m=>body.appendChild(tag(m))); }
+  } else {
+    sec(doc.activeLeague);
+    models.slice().sort(cmp).forEach(m=>body.appendChild(tag(m)));
+  }
+  el.appendChild(body);
+  body.scrollTop = savedScroll;
+  const tags = [].slice.call(body.querySelectorAll(".nvtag"));
+  const RANGE=46, MAX=1.7;
+  body.onmousemove = (e)=>{
+    if(_navDrag!=null) return;
+    const y=e.clientY;
+    tags.forEach(t=>{ const r=t.getBoundingClientRect(), c=r.top+r.height/2, d=Math.abs(y-c), f=Math.max(0,1-d/RANGE), sc=1+(MAX-1)*f;
+      t.style.transform="scale("+sc.toFixed(3)+")"; t.style.zIndex = f>0?String(Math.round(sc*10)):""; });
+  };
+  body.onmouseleave = ()=>{ tags.forEach(t=>{ t.style.transform=""; t.style.zIndex=""; }); };
+}
 
 // ===== 卡片（棒球 renderCardB 1:1 移植;model=管線場次+item 使用者狀態） =====
 function renderCardW(model){
@@ -909,22 +1641,19 @@ function renderCardW(model){
     el.appendChild(body);
   }
 
-  /* ---------- 已結算結果 pills（棒球同款;≥3 燈選項＋比分） ---------- */
+  /* ---------- 已結算結果 pills（棒球同款;≥3 燈選項＋比分;結算源=it.settled=戰績同帳） ---------- */
   if(settled){
-    const s = settledRec;
+    const s = it.settled || computeAutoSettled(model) || { awayScore:settledRec.awayScore, homeScore:settledRec.homeScore };
     const bs=document.createElement("div"); bs.className="bsettled";
     const sp=document.createElement("span"); sp.className="bpill sc"; sp.textContent=`${model.away} ${s.awayScore} : ${s.homeScore} ${model.home}`; bs.appendChild(sp);
-    const margin = s.homeScore - s.awayScore;
     const out=(market,side)=>{
-      if(market==="ml"){ if(margin===0) return "void"; const w = margin>0?"home":"away"; return w===side?"hit":"miss"; }
-      if(market==="hd"){ if(!s.hdFav||s.hdVal==null) return "void";
-        const favM = s.hdFav==="home"?margin:-margin; const d=favM-s.hdVal;
-        if(d===0) return "void"; const cov=d>0;
-        return side==="give"?(cov?"hit":"miss"):(cov?"miss":"hit"); }
-      if(market==="tot"){ const basis = (it.totVal!=null&&it.totVal!=="")?parseFloat(it.totVal):s.totBasis;
-        if(basis==null||isNaN(basis)) return "void";
-        const t=s.awayScore+s.homeScore; if(t===basis) return "void";
-        return (t>basis)===(side==="over")?"hit":"miss"; }
+      if(market==="ml"){ if(s.ml!=="away"&&s.ml!=="home") return "void"; return s.ml===side?"hit":"miss"; }
+      if(market==="hd"){ const my=side==="give"?s.myHdGive:s.myHdRecv;
+        if(my!=null){ if(my==="push") return "void"; return my==="cover"?"hit":"miss"; }
+        if(s.hd!=="cover"&&s.hd!=="nocover") return "void";
+        const cov=(s.hd==="cover"); return side==="give"?(cov?"hit":"miss"):(cov?"miss":"hit"); }
+      if(market==="tot"){ const st=(s.myTot!=null)?s.myTot:s.tot; if(st!=="over"&&st!=="under") return "void";
+        return st===side?"hit":"miss"; }
       return null;
     };
     const mark=o=> o==="hit"?"✓":(o==="miss"?"✗":"－");
@@ -1149,6 +1878,7 @@ function render(){
     const visible = todays.filter(g=>{ const it=ensureItem(g.date,g.officialId); return !it.hidden; });
     if(visible.length){
       for(const g of visible) board.appendChild(renderCardW(modelFromPregame(g)));
+      renderSummary(); renderMatchNav();
       return;
     }
     const e=document.createElement("div"); e.className="empty";
@@ -1160,6 +1890,7 @@ function render(){
     e.innerHTML=`<b>NBA 排盤板</b><br>2026-27 賽季 10 月開打;管線沿用 WNBA 同架構（l1、allianceid 3）於開季前接入。`;
     board.appendChild(e);
   }
+  renderSummary(); renderMatchNav();
 }
 render();
 loadSeedGames();
