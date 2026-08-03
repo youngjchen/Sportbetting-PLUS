@@ -277,7 +277,16 @@
   #stgauge .sgfill{ display:block; height:100%; width:0%; background:#28c76f; border-radius:5px; }
   .oddsstamp{ font-family:"Oswald"; font-size:11px; color:var(--ink-dim); letter-spacing:.03em; white-space:nowrap; }
   /* ===== 右緣快捷鍵欄（棒球 zoomctl 移植） ===== */
-  #zoomctl{ position:fixed; right:12px; bottom:18px; z-index:200; display:flex; flex-direction:column; gap:8px; align-items:center; }
+  /* 快捷欄＝棒球原樣：直欄、靠右對齊（#zoomctlBtns 漏抄→卦鈕跑到🔍旁邊半出畫面,2026-08-04 使用者截圖） */
+  #zoomctl{ position:fixed; right:12px; bottom:18px; z-index:200; display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  #zoomctlBtns{ display:flex; flex-direction:column; gap:6px; align-items:flex-end; }
+  /* 全頁覆蓋層一律高於站頭(400)：先前為了⋯選單把站頭提到400,把統計/回顧/卜卦頁的工具列全壓到站頭底下 */
+  #statspage, #reviewpage{ z-index:500 !important; }
+  body #divpage{ z-index:500 !important; }
+  #settleModal{ z-index:500 !important; }
+  /* 棒球全域 .btn（卜卦頁分頁鈕用;nba.html 原本只在結算視窗內有 .btn 樣式） */
+  .btn{ font-family:"Noto Sans TC"; font-size:13px; font-weight:500; color:var(--ink); background:var(--panel-2); border:1px solid var(--line); border-radius:9px; padding:8px 13px; cursor:pointer; transition:.15s; white-space:nowrap; }
+  .btn:hover{ border-color:#3a4756; background:#222a36; }
   #zoomctl .fit{ width:40px; height:40px; border-radius:50%; border:1px solid var(--line); background:var(--panel); color:var(--ink); font-size:16px; cursor:pointer; box-shadow:0 8px 22px rgba(0,0,0,.45); }
   #zoomctl .fit:hover{ border-color:var(--lit); }
   #zoomctl.collapsed #zoomctlBtns{ display:none; }
