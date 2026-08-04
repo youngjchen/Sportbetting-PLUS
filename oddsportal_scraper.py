@@ -1052,7 +1052,14 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
 
     for game in successes:
         key = build_event_key(game["league"], game["date"], game["awayTeam"], game["homeTeam"], game["startTime"], game["eventId"])
-        summary["games"][key] = merge_game_snapshot(summary["games"].get(key), _compact_for_summary(game))
+        merged_game = merge_game_snapshot(summary["games"].get(key), _compact_for_summary(game))
+        # 資料衛生（使用者鐵則「沒開打就沒有收盤」）：未開賽場身上的非定案 close
+        # 一律剝掉（舊版把當前盤複製進 close 的殘留，只在該場被重新掃到時清理）。
+        if merged_game.get("startISO") and observed_at <= merged_game["startISO"]:
+            for _mk in (merged_game.get("markets") or {}).values():
+                if isinstance(_mk.get("close"), dict) and not _mk["close"].get("final"):
+                    _mk.pop("close", None)
+        summary["games"][key] = merged_game
     summary.update({
         "version": 1, "source": "OddsPortal", "bookmaker": BOOKMAKER,
         "updatedAt": observed_at,

@@ -2,13 +2,18 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-08-05T02:04:50+08:00",
+  "updatedAt": "2026-08-05T02:11:40+08:00",
   "health": {
-    "scheduled": 40,
-    "discovered": 4,
-    "succeeded": 4,
-    "failed": 0,
-    "errors": []
+    "scheduled": 15,
+    "discovered": 15,
+    "succeeded": 11,
+    "failed": 4,
+    "errors": [
+      "mlb 2m7tKTqS: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "mlb nLrDE77k: Page.goto: Timeout 90000ms exceeded.\nCall log:\n  - navigating to \"https://www.oddsportal.com/baseball/h2h/philadelphia-phillies-QTNHA4p4/washington-nationals-CE026gRp/#nLrDE77k\", waiting until \"load\"\n",
+      "mlb fonLCox2: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "mlb AukZLkFF: Page.goto: Timeout 90000ms exceeded.\nCall log:\n  - navigating to \"https://www.oddsportal.com/baseball/h2h/cleveland-guardians-4K05MrFG/new-york-mets-I5wWW4UM/#AukZLkFF\", waiting until \"load\"\n"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -1074,7 +1079,7 @@
           "open": {
             "at": "2026-07-31T07:42:00+08:00",
             "home": 1.82,
-            "away": 2.0
+            "away": 2
           },
           "close": {
             "at": "2026-08-01T06:05:03+08:00",
@@ -1321,14 +1326,14 @@
           "close": {
             "at": "2026-08-01T06:05:03+08:00",
             "home": 1.82,
-            "away": 2.0,
+            "away": 2,
             "line": 1.5,
             "favorite": "away"
           },
           "active": {
             "at": "2026-08-01T06:05:03+08:00",
             "home": 1.82,
-            "away": 2.0,
+            "away": 2,
             "line": 1.5,
             "favorite": "away"
           }
@@ -1566,13 +1571,13 @@
         "ou": {
           "close": {
             "at": "2026-08-01T06:05:03+08:00",
-            "over": 2.0,
+            "over": 2,
             "under": 1.7,
             "line": 7.5
           },
           "active": {
             "at": "2026-08-01T06:05:03+08:00",
-            "over": 2.0,
+            "over": 2,
             "under": 1.7,
             "line": 7.5
           }
@@ -1619,21 +1624,21 @@
           "open": {
             "at": "2026-07-31T22:09:00+08:00",
             "home": 1.7,
-            "away": 2.0,
+            "away": 2,
             "line": 1.5,
             "favorite": "away"
           },
           "close": {
             "at": "2026-08-01T06:05:03+08:00",
             "home": 1.7,
-            "away": 2.0,
+            "away": 2,
             "line": 1.5,
             "favorite": "away"
           },
           "active": {
             "at": "2026-08-01T06:05:03+08:00",
             "home": 1.7,
-            "away": 2.0,
+            "away": 2,
             "line": 1.5,
             "favorite": "away"
           }
@@ -1976,7 +1981,7 @@
       "awayTeam": "天使",
       "homeTeam": "金鶯",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/baltimore-orioles-EcZwBi3N/los-angeles-angels-Mg9H0Flh/#EDeQNBp3",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -1984,44 +1989,39 @@
             "home": 1.74,
             "away": 2.11
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.64,
-            "away": 2.26
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 1.64,
             "away": 2.26
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 2.28,
             "away": 1.63,
             "line": -1.5,
             "favorite": "home"
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.28,
-            "away": 1.63,
+          "open": {
+            "at": "2026-08-04T07:00:00+08:00",
+            "home": 2.46,
+            "away": 1.56,
             "line": -1.5,
             "favorite": "home"
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "over": 1.71,
             "under": 2.15,
             "line": 8.5
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.71,
-            "under": 2.15,
+          "open": {
+            "at": "2026-08-04T07:00:00+08:00",
+            "over": 1.91,
+            "under": 1.9,
             "line": 8.5
           }
         }
@@ -2052,11 +2052,6 @@
             "home": 1.72,
             "away": 2.13
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.64,
-            "away": 2.27
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.64,
@@ -2064,13 +2059,6 @@
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.3,
-            "away": 1.62,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.3,
@@ -2080,12 +2068,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.86,
-            "under": 1.95,
-            "line": 7.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.86,
@@ -2112,7 +2094,7 @@
       "awayTeam": "紅雀",
       "homeTeam": "洋基",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/new-york-yankees-SrC4LDIT/st-louis-cardinals-IDVz16ES/#r7SFYSbL",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2120,44 +2102,39 @@
             "home": 1.59,
             "away": 2.37
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.5,
-            "away": 2.6
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 1.5,
             "away": 2.6
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 2.08,
             "away": 1.76,
             "line": -1.5,
             "favorite": "home"
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.08,
-            "away": 1.76,
+          "open": {
+            "at": "2026-08-04T07:04:00+08:00",
+            "home": 2.17,
+            "away": 1.7,
             "line": -1.5,
             "favorite": "home"
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "over": 2.01,
             "under": 1.81,
             "line": 8.5
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 2.01,
-            "under": 1.81,
+          "open": {
+            "at": "2026-08-04T07:04:00+08:00",
+            "over": 2,
+            "under": 1.82,
             "line": 8.5
           }
         }
@@ -2180,7 +2157,7 @@
       "awayTeam": "馬林魚",
       "homeTeam": "勇士",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/atlanta-braves-0UPxbDYA/miami-marlins-ddxzWOqT/#AgU7zkU8",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2188,42 +2165,37 @@
             "home": 1.72,
             "away": 2.14
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.67,
-            "away": 2.22
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 1.67,
             "away": 2.22
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 2.3,
             "away": 1.63,
             "line": -1.5,
             "favorite": "home"
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.3,
-            "away": 1.63,
+          "open": {
+            "at": "2026-08-04T06:22:00+08:00",
+            "home": 2.39,
+            "away": 1.58,
             "line": -1.5,
             "favorite": "home"
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "over": 1.68,
             "under": 2.2,
             "line": 8.5
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "open": {
+            "at": "2026-08-04T06:22:00+08:00",
             "over": 1.68,
             "under": 2.2,
             "line": 8.5
@@ -2248,7 +2220,7 @@
       "awayTeam": "巨人",
       "homeTeam": "遊騎兵",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/san-francisco-giants-bRZ9b6xj/texas-rangers-f3GcHO7j/#YiZnRpie",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2256,44 +2228,39 @@
             "home": 1.5,
             "away": 2.6
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.51,
-            "away": 2.6
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 1.51,
             "away": 2.6
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.04,
-            "away": 1.78,
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 2.06,
+            "away": 1.77,
             "line": -1.5,
             "favorite": "home"
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.04,
-            "away": 1.78,
+          "open": {
+            "at": "2026-08-04T11:10:00+08:00",
+            "home": 2.06,
+            "away": 1.77,
             "line": -1.5,
             "favorite": "home"
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "over": 1.8,
-            "under": 2.02,
+            "under": 2.03,
             "line": 7.5
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.8,
-            "under": 2.02,
+          "open": {
+            "at": "2026-08-04T11:10:00+08:00",
+            "over": 1.83,
+            "under": 1.98,
             "line": 7.5
           }
         }
@@ -2316,7 +2283,7 @@
       "awayTeam": "光芒",
       "homeTeam": "落磯",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/colorado-rockies-naYhNOaA/tampa-bay-rays-GCHgI4hp/#GC8jo6rR",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2324,13 +2291,8 @@
             "home": 2.15,
             "away": 1.71
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.38,
-            "away": 1.59
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 2.38,
             "away": 1.59
           }
@@ -2343,17 +2305,10 @@
             "line": 1.5,
             "favorite": "away"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.87,
-            "away": 1.94,
-            "line": 1.5,
-            "favorite": "away"
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.87,
-            "away": 1.94,
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 1.88,
+            "away": 1.93,
             "line": 1.5,
             "favorite": "away"
           }
@@ -2365,14 +2320,8 @@
             "under": 2.4,
             "line": 9.5
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.57,
-            "under": 2.42,
-            "line": 9.5
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "over": 1.57,
             "under": 2.42,
             "line": 9.5
@@ -2397,7 +2346,7 @@
       "awayTeam": "老虎",
       "homeTeam": "水手",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/detroit-tigers-0QIlt8pi/seattle-mariners-txYPhSac/#8AmVwOz1",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2405,44 +2354,39 @@
             "home": 1.64,
             "away": 2.27
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.7,
-            "away": 2.17
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 1.7,
             "away": 2.17
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 2.48,
             "away": 1.55,
             "line": -1.5,
             "favorite": "home"
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.48,
-            "away": 1.55,
+          "open": {
+            "at": "2026-08-04T07:08:00+08:00",
+            "home": 2.29,
+            "away": 1.63,
             "line": -1.5,
             "favorite": "home"
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "over": 1.86,
             "under": 1.95,
             "line": 7.5
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.86,
-            "under": 1.95,
+          "open": {
+            "at": "2026-08-04T07:08:00+08:00",
+            "over": 1.72,
+            "under": 2.14,
             "line": 7.5
           }
         }
@@ -2473,11 +2417,6 @@
             "home": 1.92,
             "away": 1.82
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.92,
-            "away": 1.82
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.92,
@@ -2492,13 +2431,6 @@
             "line": 1.5,
             "favorite": "away"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.5,
-            "away": 2.35,
-            "line": 1.5,
-            "favorite": "away"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.5,
@@ -2508,12 +2440,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.84,
-            "under": 1.83,
-            "line": 7.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.84,
@@ -2548,11 +2474,6 @@
             "home": 2.02,
             "away": 1.74
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.02,
-            "away": 1.74
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.02,
@@ -2567,13 +2488,6 @@
             "line": 1.5,
             "favorite": "away"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.52,
-            "away": 2.33,
-            "line": 1.5,
-            "favorite": "away"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.52,
@@ -2583,12 +2497,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.94,
-            "under": 1.74,
-            "line": 6.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.94,
@@ -2618,11 +2526,6 @@
       "observedAt": "2026-08-04T23:35:04+08:00",
       "markets": {
         "ml": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.55,
-            "away": 2.36
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.55,
@@ -2630,13 +2533,6 @@
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.1,
-            "away": 1.63,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.1,
@@ -2646,12 +2542,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.87,
-            "under": 1.8,
-            "line": 7.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.87,
@@ -2686,11 +2576,6 @@
             "home": 2.31,
             "away": 1.57
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.31,
-            "away": 1.57
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.31,
@@ -2705,13 +2590,6 @@
             "line": 1.5,
             "favorite": "away"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.73,
-            "away": 1.95,
-            "line": 1.5,
-            "favorite": "away"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.73,
@@ -2721,12 +2599,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.73,
-            "under": 1.96,
-            "line": 7.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.73,
@@ -2761,11 +2633,6 @@
             "home": 1.52,
             "away": 2.42
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.55,
-            "away": 2.35
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.55,
@@ -2780,13 +2647,6 @@
             "line": -1.5,
             "favorite": "home"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.97,
-            "away": 1.71,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.97,
@@ -2796,12 +2656,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.78,
-            "under": 1.89,
-            "line": 11.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.78,
@@ -2836,11 +2690,6 @@
             "home": 1.91,
             "away": 1.83
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.91,
-            "away": 1.83
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.91,
@@ -2855,13 +2704,6 @@
             "line": 1.5,
             "favorite": "away"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.55,
-            "away": 2.26,
-            "line": 1.5,
-            "favorite": "away"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.55,
@@ -2871,12 +2713,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.78,
-            "under": 1.89,
-            "line": 9.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.78,
@@ -2911,11 +2747,6 @@
             "home": 1.7,
             "away": 2.16
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.74,
-            "away": 2.1
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.74,
@@ -2923,13 +2754,6 @@
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.45,
-            "away": 1.56,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.45,
@@ -2939,12 +2763,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 2.22,
-            "under": 1.67,
-            "line": 9.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 2.22,
@@ -2979,11 +2797,6 @@
             "home": 1.45,
             "away": 2.8
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.38,
-            "away": 3.05
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.38,
@@ -2991,13 +2804,6 @@
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.79,
-            "away": 2.04,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.79,
@@ -3011,12 +2817,6 @@
             "at": "2026-08-04T02:42:00+08:00",
             "over": 1.58,
             "under": 2.41,
-            "line": 7.5
-          },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.58,
-            "under": 2.39,
             "line": 7.5
           },
           "active": {
@@ -3053,11 +2853,6 @@
             "home": 1.76,
             "away": 2.07
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.74,
-            "away": 2.1
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.74,
@@ -3065,13 +2860,6 @@
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.46,
-            "away": 1.55,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.46,
@@ -3085,12 +2873,6 @@
             "at": "2026-08-04T07:56:00+08:00",
             "over": 1.55,
             "under": 2.46,
-            "line": 7.5
-          },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.53,
-            "under": 2.5,
             "line": 7.5
           },
           "active": {
@@ -3119,7 +2901,7 @@
       "awayTeam": "雙城",
       "homeTeam": "皇家",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kansas-city-royals-IL2QbgJ4/minnesota-twins-OjWW1naM/#f7NePOL7",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -3127,13 +2909,8 @@
             "home": 2.2,
             "away": 1.68
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.22,
-            "away": 1.67
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 2.22,
             "away": 1.67
           }
@@ -3146,32 +2923,25 @@
             "line": 1.5,
             "favorite": "away"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.75,
-            "away": 2.09,
-            "line": 1.5,
-            "favorite": "away"
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 1.75,
-            "away": 2.09,
+            "away": 2.1,
             "line": 1.5,
             "favorite": "away"
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
             "over": 1.73,
             "under": 2.11,
             "line": 8.5
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.73,
-            "under": 2.11,
+          "open": {
+            "at": "2026-08-04T02:52:00+08:00",
+            "over": 1.92,
+            "under": 1.89,
             "line": 8.5
           }
         }
@@ -3194,7 +2964,7 @@
       "awayTeam": "教士",
       "homeTeam": "響尾蛇",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/arizona-diamondbacks-8bP2bXmH/san-diego-padres-8poQN9Ud/#CrfMup6l",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T02:11:40+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -3202,44 +2972,39 @@
             "home": 1.77,
             "away": 2.06
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.81,
-            "away": 2.01
-          },
           "active": {
-            "at": "2026-08-04T23:35:04+08:00",
+            "at": "2026-08-05T02:11:40+08:00",
             "home": 1.81,
             "away": 2.01
           }
         },
         "hd": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.55,
-            "away": 1.53,
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 2.5,
+            "away": 1.54,
             "line": -1.5,
             "favorite": "home"
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.55,
-            "away": 1.53,
+          "open": {
+            "at": "2026-08-04T07:00:00+08:00",
+            "home": 2.47,
+            "away": 1.55,
             "line": -1.5,
             "favorite": "home"
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.72,
-            "under": 2.14,
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "over": 1.74,
+            "under": 2.11,
             "line": 8.5
           },
-          "active": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.72,
-            "under": 2.14,
+          "open": {
+            "at": "2026-08-04T07:00:00+08:00",
+            "over": 1.67,
+            "under": 2.22,
             "line": 8.5
           }
         }
@@ -3270,11 +3035,6 @@
             "home": 2.14,
             "away": 1.66
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.14,
-            "away": 1.66
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.14,
@@ -3289,13 +3049,6 @@
             "line": 1.5,
             "favorite": "away"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.57,
-            "away": 2.2,
-            "line": 1.5,
-            "favorite": "away"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.57,
@@ -3305,12 +3058,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.88,
-            "under": 1.79,
-            "line": 6.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.88,
@@ -3345,11 +3092,6 @@
             "home": 1.72,
             "away": 2.04
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.72,
-            "away": 2.04
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.72,
@@ -3364,13 +3106,6 @@
             "line": -1.5,
             "favorite": "home"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.47,
-            "away": 1.46,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.47,
@@ -3380,12 +3115,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.73,
-            "under": 1.95,
-            "line": 6.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.73,
@@ -3420,11 +3149,6 @@
             "home": 1.67,
             "away": 2.12
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.67,
-            "away": 2.12
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.67,
@@ -3439,13 +3163,6 @@
             "line": -1.5,
             "favorite": "home"
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.43,
-            "away": 1.47,
-            "line": -1.5,
-            "favorite": "home"
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.43,
@@ -3455,12 +3172,6 @@
           }
         },
         "ou": {
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.88,
-            "under": 1.79,
-            "line": 6.5
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "over": 1.88,
@@ -3523,11 +3234,6 @@
             "home": 2.21,
             "away": 1.62
           },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 2.21,
-            "away": 1.62
-          },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.21,
@@ -3539,13 +3245,6 @@
             "at": "2026-08-04T21:54:00+08:00",
             "home": 1.75,
             "away": 1.93,
-            "line": 1.5,
-            "favorite": "away"
-          },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "home": 1.73,
-            "away": 1.96,
             "line": 1.5,
             "favorite": "away"
           },
@@ -3561,12 +3260,6 @@
           "open": {
             "at": "2026-08-04T21:54:00+08:00",
             "over": 1.74,
-            "under": 1.95,
-            "line": 9.5
-          },
-          "close": {
-            "at": "2026-08-04T23:35:04+08:00",
-            "over": 1.73,
             "under": 1.95,
             "line": 9.5
           },
@@ -3703,8 +3396,8 @@
           "open": {
             "at": "2026-08-04T06:11:00+08:00",
             "over": 1.82,
-            "under": 2.0,
-            "line": 9.0
+            "under": 2,
+            "line": 9
           },
           "close": {
             "at": "2026-08-04T08:04:00+08:00",
@@ -3712,7 +3405,7 @@
             "precision": "history",
             "over": 1.81,
             "under": 2.01,
-            "line": 9.0
+            "line": 9
           }
         }
       },
@@ -3779,7 +3472,7 @@
             "at": "2026-08-04T08:39:00+08:00",
             "final": true,
             "precision": "history",
-            "over": 2.0,
+            "over": 2,
             "under": 1.82,
             "line": 11.5
           }
@@ -3911,7 +3604,7 @@
             "at": "2026-08-04T06:05:00+08:00",
             "over": 1.89,
             "under": 1.92,
-            "line": 8.0
+            "line": 8
           },
           "close": {
             "at": "2026-08-04T07:31:00+08:00",
@@ -3919,7 +3612,7 @@
             "precision": "history",
             "over": 1.91,
             "under": 1.9,
-            "line": 8.0
+            "line": 8
           }
         }
       },
@@ -3954,7 +3647,7 @@
             "final": true,
             "precision": "history",
             "home": 1.39,
-            "away": 3.0
+            "away": 3
           }
         },
         "hd": {
@@ -4049,15 +3742,15 @@
             "at": "2026-08-04T05:41:00+08:00",
             "over": 1.81,
             "under": 2.01,
-            "line": 8.0
+            "line": 8
           },
           "close": {
             "at": "2026-08-04T07:37:00+08:00",
             "final": true,
             "precision": "history",
             "over": 1.82,
-            "under": 2.0,
-            "line": 8.0
+            "under": 2,
+            "line": 8
           }
         }
       },
@@ -4118,7 +3811,7 @@
             "at": "2026-08-04T04:41:00+08:00",
             "over": 1.84,
             "under": 1.97,
-            "line": 9.0
+            "line": 9
           },
           "close": {
             "at": "2026-08-04T06:37:00+08:00",
@@ -4126,7 +3819,7 @@
             "precision": "history",
             "over": 1.85,
             "under": 1.96,
-            "line": 9.0
+            "line": 9
           }
         }
       },
@@ -4135,6 +3828,195 @@
         "count": 0,
         "initialFavorite": null,
         "currentFavorite": null,
+        "first": null,
+        "last": null
+      }
+    },
+    "mlb|2026-08-05|道奇|小熊|08:05|QRVvT6Mr": {
+      "eventId": "QRVvT6Mr",
+      "league": "mlb",
+      "date": "2026-08-05",
+      "startTime": "08:05",
+      "startISO": "2026-08-05T08:05:00+08:00",
+      "awayTeam": "道奇",
+      "homeTeam": "小熊",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chicago-cubs-j7ZnBQFi/los-angeles-dodgers-nwPDBpVc/#QRVvT6Mr",
+      "observedAt": "2026-08-05T02:11:40+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-04T01:44:00+08:00",
+            "home": 2.75,
+            "away": 1.46
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 2.75,
+            "away": 1.46
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-04T01:44:00+08:00",
+            "home": 2.03,
+            "away": 1.79,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 2,
+            "away": 1.82,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-04T01:44:00+08:00",
+            "over": 1.77,
+            "under": 2.07,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "over": 1.7,
+            "under": 2.16,
+            "line": 8.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": "away",
+        "currentFavorite": "away",
+        "first": null,
+        "last": null
+      }
+    },
+    "mlb|2026-08-05|藍鳥|太空人|08:10|APIKrdFa": {
+      "eventId": "APIKrdFa",
+      "league": "mlb",
+      "date": "2026-08-05",
+      "startTime": "08:10",
+      "startISO": "2026-08-05T08:10:00+08:00",
+      "awayTeam": "藍鳥",
+      "homeTeam": "太空人",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/houston-astros-lfZXonNq/toronto-blue-jays-zcDLaZ3b/#APIKrdFa",
+      "observedAt": "2026-08-05T02:11:40+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-04T03:06:00+08:00",
+            "home": 1.75,
+            "away": 2.09
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 1.76,
+            "away": 2.07
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-04T03:06:00+08:00",
+            "home": 2.49,
+            "away": 1.54,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 2.55,
+            "away": 1.53,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-04T03:06:00+08:00",
+            "over": 1.95,
+            "under": 1.86,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "over": 1.95,
+            "under": 1.87,
+            "line": 8.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": "home",
+        "currentFavorite": "home",
+        "first": null,
+        "last": null
+      }
+    },
+    "mlb|2026-08-05|海盜|釀酒人|07:40|MDFsmSDE": {
+      "eventId": "MDFsmSDE",
+      "league": "mlb",
+      "date": "2026-08-05",
+      "startTime": "07:40",
+      "startISO": "2026-08-05T07:40:00+08:00",
+      "awayTeam": "海盜",
+      "homeTeam": "釀酒人",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/milwaukee-brewers-CGzqC60o/pittsburgh-pirates-tr9K2SqG/#MDFsmSDE",
+      "observedAt": "2026-08-05T02:11:40+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-04T02:45:00+08:00",
+            "home": 1.59,
+            "away": 2.37
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 1.67,
+            "away": 2.22
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-04T02:45:00+08:00",
+            "home": 2.23,
+            "away": 1.66,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "home": 2.41,
+            "away": 1.57,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-04T02:45:00+08:00",
+            "over": 1.88,
+            "under": 1.93,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-08-05T02:11:40+08:00",
+            "over": 2.01,
+            "under": 1.81,
+            "line": 7.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": "home",
+        "currentFavorite": "home",
         "first": null,
         "last": null
       }
