@@ -546,11 +546,18 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
         count = int(lines[-1].strip()) if lines and lines[-1].strip().isdigit() else 0
         if label == "Asian Handicap":
             number = _parse_number(label_text)
-            if number is None or abs(abs(number) - 1.5) > 0.001:
+            if number is None:
                 continue
         candidates.append((label_text, count))
     if label == "Over/Under":
         candidates.sort(key=lambda item: item[1], reverse=True)
+    if label == "Asian Handicap":
+        if os.environ.get("OP_DEBUG"):
+            print(f"DEBUG AH 候選盤口: {candidates}", file=sys.stderr)
+        # 2026-08-05 使用者指正（費城人@國民 -1.5→-2.5 案）：主盤會搬家，只抓 ±1.5 會瞎；
+        # 家數(count)在本頁常為 1~2 無法辨主盤 → 讓分各盤口全抓（實測 ≤8 檔、每檔 1~2s），
+        # 主盤判定交給 _market_summary 的「兩邊賠率最平衡」特徵。
+        pass
 
     tried: set[str] = set()
     for target_label, _ in candidates:
@@ -688,11 +695,19 @@ def _closing_from_rows(rows: list[dict[str, Any]], market: str, start_iso: str) 
 def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str, start_iso: str | None = None) -> dict[str, Any]:
     usable = rows
     if market == "hd":
-        usable = [row for row in rows if row.get("line") is not None and abs(abs(float(row["line"])) - 1.5) <= 0.001]
+        # 初盤/收盤看全部已抓盤口（主盤會搬家）；±1.5 僅供換邊判定（_inferred_switches 自濾）
+        usable = [row for row in rows if row.get("line") is not None]
     if market == "ou":
         selected = next((row for row in rows if row.get("selected") and row.get("active")), None)
         usable = [selected] if selected else rows
     active = next((row for row in usable if row.get("active")), None)
+    if market == "hd":
+        # 主盤＝兩邊賠率最平衡的活盤（-1.5 全讓到 -2.5 時，-2.5 兩邊 ~1.9x、-1.5 會歪掉）
+        live = [row for row in usable if row.get("active")
+                and (row.get("first") or {}).get("odds") is not None
+                and (row.get("second") or {}).get("odds") is not None]
+        if live:
+            active = min(live, key=lambda row: abs(row["first"]["odds"] - row["second"]["odds"]))
     candidates = [(row, _regime_open_at(row)) for row in usable]
     candidates = [(row, at) for row, at in candidates if at]
     opening_row = min(candidates, key=lambda item: item[1])[0] if candidates else active
@@ -953,7 +968,7 @@ def _row_needs(row: dict[str, Any], index: dict[str, dict[str, Any]], now_iso: s
 
 
 def pick_targets(schedule: list[dict[str, Any]], summary: dict[str, Any], now: datetime,
-                 refresh_upcoming: bool, max_games: int) -> list[dict[str, Any]]:
+                 refresh_upcoming: bool, max_games: int, match: str = "") -> list[dict[str, Any]]:
     """缺口驅動選場（使用者 2026-08-04 拍板）：先檢查哪些比賽初盤/收盤還沒填，只抓那些。
     refresh_upcoming（對調巡檢閘）＝未開賽場一律刷新＋順手回補過去缺口。"""
     now_iso = now.isoformat()
@@ -967,12 +982,15 @@ def pick_targets(schedule: list[dict[str, Any]], summary: dict[str, Any], now: d
     backfill = sorted([row for row in past if _row_needs(row, index, now_iso)],
                       key=lambda row: row["startISO"], reverse=True)
     out = chosen + backfill
+    if match:
+        keys = [m.strip() for m in match.split(",") if m.strip()]
+        out = [r for r in out if any(k in f"{r['awayTeam']}@{r['homeTeam']}" for k in keys)]
     return out[:max_games] if max_games and max_games > 0 else out
 
 
 def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues: list[str],
              from_hours: float = 0.0, to_hours: float = float(ACTIVE_WINDOW_HOURS),
-             max_games: int = 0, include_started: bool = False, refresh_upcoming: bool = False) -> dict[str, Any]:
+             max_games: int = 0, include_started: bool = False, refresh_upcoming: bool = False, match: str = "") -> dict[str, Any]:
     try:
         import scrapling.fetchers as fetchers
     except ImportError as exc:
@@ -987,7 +1005,7 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
     # 本聯盟列表頁配對歸零（2026-08-05 回補 0 場案根因三）。
     schedule = [row for row in schedule if row["league"] in leagues]
     summary = _load_summary(summary_path)
-    targets = pick_targets(schedule, summary, now, refresh_upcoming, max_games)
+    targets = pick_targets(schedule, summary, now, refresh_upcoming, max_games, match=match)
     if os.environ.get("OP_DEBUG"):
         print(f"DEBUG 視窗內賽程 {len(schedule)} 場、缺口目標 {len(targets)} 場："
               + " ".join(f"{r['date'][5:]}{r['awayTeam']}@{r['homeTeam']}" for r in targets[:8]), file=sys.stderr)
@@ -1088,6 +1106,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-games", type=int, default=0, help="單輪最多抓幾場（0=不限）")
     parser.add_argument("--include-started", action="store_true", help="含已開賽/完賽場次（收盤走勢史時戳取法）")
     parser.add_argument("--refresh-upcoming", action="store_true", help="未開賽場一律刷新（對調巡檢閘用）")
+    parser.add_argument("--match", default="", help="只抓隊名含關鍵字的比賽（逗號分隔，如 費城人,守護者）")
     args = parser.parse_args(argv)
     leagues = [item.strip().lower() for item in args.leagues.split(",") if item.strip()]
     unknown = [item for item in leagues if item not in LEAGUE_URLS]
@@ -1097,7 +1116,7 @@ def main(argv: list[str] | None = None) -> int:
         result = run_once(
             Path(args.summary), Path(args.history_dir), Path(args.schedule), leagues,
             from_hours=args.from_hours, to_hours=args.to_hours, max_games=args.max_games,
-            include_started=args.include_started, refresh_upcoming=args.refresh_upcoming,
+            include_started=args.include_started, refresh_upcoming=args.refresh_upcoming, match=args.match,
         )
         print(json.dumps(result.get("health"), ensure_ascii=False))
         return 0
