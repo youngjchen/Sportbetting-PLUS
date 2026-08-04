@@ -30,6 +30,8 @@ const FAILOVER_OUTPUT_ROOTS = ['data', 'pregame_data.json', 'lottery_series.json
 const FAILOVER_OWNED_RE = [
   /^data\/oddsportal_summary\.json$/,
   /^data\/oddsportal_history\//,
+  /^data\/oddsportal_archive\//,
+  /^data\/oddsportal_harvest_state\.json$/,
   /^data\/pregame_data\.json$/,
   /^data\/lottery_series\.json$/,
   /^data\/expert_picks_(?:mlb|npb|cpbl|kbo)\.json$/,

@@ -92,3 +92,14 @@ test('oddsPortalArgs encodes the gap-driven scraper flags', () => {
   assert.ok(args.includes('--refresh-upcoming'));
   assert.ok(args.includes('--max-games') && args.includes('40'));
 });
+
+test('harvest gate fires at fixed slots and silences when all leagues done', () => {
+  const { dueHarvestGate, GATE_LOOKBACK_MS } = loadModule();
+  const at = Date.parse('2026-08-06T05:05:00+08:00');
+  assert.equal(dueHarvestGate({}, {}, at - 1), null);
+  assert.equal(dueHarvestGate({}, {}, at + 60_000).id, 'harvest_2026-08-06_0505');
+  assert.equal(dueHarvestGate({}, { 'opg_harvest_2026-08-06_0505': at }, at + 60_000), null);
+  assert.equal(dueHarvestGate({}, {}, at + GATE_LOOKBACK_MS + 60_000)?.id, undefined);
+  const done = { mlb: { done: true }, npb: { done: true }, kbo: { done: true }, cpbl: { done: true } };
+  assert.equal(dueHarvestGate(done, {}, at + 60_000), null);
+});

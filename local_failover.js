@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest } = require('./oddsportal_local.js');
 
 const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
@@ -142,6 +142,19 @@ function run() {
       state.oddsportal_last_success = Date.now();
       saveState(state);
       log('OddsPortal 本閘完成');
+    } else {
+      // 2c) 歷史收割閘（RESULTS 4/1 至今；讓位給日常閘＝同一喚醒只跑一種）
+      let harvestState = {};
+      try { harvestState = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'oddsportal_harvest_state.json'), 'utf8')); } catch (_) {}
+      const hg = dueHarvestGate(harvestState, state, Date.now());
+      if (hg) {
+        state['opg_' + hg.id] = Date.now();
+        saveState(state);
+        log(`OddsPortal 收割閘 ${hg.id} 到點 → 歷史批次（每批≤350 場）`);
+        const outputs = runOddsPortalHarvest({ repoDir: REPO_DIR });
+        staged.push(...outputs);
+        log('OddsPortal 收割批完成');
+      }
     }
   } catch (e) {
     log('OddsPortal 閘處理失敗：' + e.message.split('\n')[0]);

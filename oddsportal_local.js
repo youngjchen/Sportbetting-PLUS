@@ -121,6 +121,39 @@ function resolvePython(env = process.env, probe = execFileSync) {
   throw new Error(`找不到已安裝 Scrapling 的 Python runtime：${errors.join(' | ')}`);
 }
 
+// ── 歷史收割閘（2026-08-05 使用者拍板：RESULTS 區 4/1 至今全量）──
+// 每天三批、每批一個聯盟 350 場（收割器自選未完成聯盟），全部 done 後自動熄火。
+const HARVEST_HHMM = Object.freeze(['05:05', '11:35', '15:05']);
+const HARVEST_OUTPUTS = Object.freeze([
+  'data/oddsportal_archive',
+  'data/oddsportal_history',
+  'data/oddsportal_harvest_state.json',
+]);
+
+function dueHarvestGate(harvestState, state, nowMs = Date.now()) {
+  const allDone = ['mlb', 'npb', 'kbo', 'cpbl'].every((lg) => ((harvestState || {})[lg] || {}).done);
+  if (allDone) return null;
+  const day = new Date(nowMs + 8 * 3600e3).toISOString().slice(0, 10);
+  for (const hhmm of HARVEST_HHMM) {
+    const at = Date.parse(`${day}T${hhmm}:00+08:00`);
+    const id = `harvest_${day}_${hhmm.replace(':', '')}`;
+    if (at <= nowMs && nowMs - at <= GATE_LOOKBACK_MS && !state[`opg_${id}`]) {
+      return { id, at, harvest: true };
+    }
+  }
+  return null;
+}
+
+function runOddsPortalHarvest({ repoDir, python = resolvePython(), timeoutMs = 100 * 60_000 }) {
+  execFileSync(python, ['oddsportal_harvest.py', '--max-games', '350'], {
+    cwd: repoDir,
+    stdio: ['ignore', 'inherit', 'inherit'],
+    timeout: timeoutMs,
+    windowsHide: true,
+  });
+  return [...HARVEST_OUTPUTS];
+}
+
 function oddsPortalArgs(gate) {
   const args = ['oddsportal_scraper.py'];
   if (!gate) return args;
@@ -145,6 +178,10 @@ function runOddsPortal({ repoDir, gate = null, python = resolvePython(), timeout
 
 module.exports = {
   INTERVAL_MS,
+  HARVEST_HHMM,
+  HARVEST_OUTPUTS,
+  dueHarvestGate,
+  runOddsPortalHarvest,
   OUTPUT_PATHS,
   ASIA_LEAGUES,
   GATE_LOOKBACK_MS,
