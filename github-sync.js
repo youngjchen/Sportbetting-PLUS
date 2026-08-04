@@ -58,6 +58,14 @@
     for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
     return await gunzipBytes(u);
   }
+  // 寫回本機一律用主檔同款壓縮格式（"gz:"+base64(gzip)，index.html load() 原生支援）。
+  // 2026-08-04 事故：這裡曾直接寫「未壓縮純 JSON」——盤面長到 2.2M 字元後，加上
+  // dvManualCasts(0.57M) 與自動備份槽(0.25M) 必爆 5MB 配額 → 下載一律 QuotaExceeded「無法載入」。
+  // 主檔 2026-07-13 就是因為同一個配額問題改壓縮存放，這兩個寫回點當時漏改。
+  async function docToStore(json) {
+    if (!hasCS()) return json;                          // 不支援壓縮 → 存純文字（load() 也吃）
+    try { return 'gz:' + b64encode(await gzipStr(json)); } catch (e) { return json; }
+  }
 
   /* ── 合併：union，衝突由 keeper 贏 ──────────────────────────────────
      為什麼不能直接覆蓋（本檔原本的「單一寫者、後寫覆蓋」假設）：
@@ -268,7 +276,7 @@
         toast('已上傳 ✓' + (merged.addedG || merged.addedC ? '（合併回 ' + merged.addedG + ' 場結算、' + merged.addedC + ' 張卡）' : ''));
         // 合併結果也寫回本機，否則這台會一直缺另一台的資料，下次又要重合併一次
         if (merged.addedG || merged.addedC) {
-          try { localStorage.setItem(DOC_KEY, JSON.stringify(merged.doc)); setTimeout(function () { location.reload(); }, 1200); }
+          try { localStorage.setItem(DOC_KEY, await docToStore(JSON.stringify(merged.doc))); setTimeout(function () { location.reload(); }, 1200); }
           catch (e) { alert('雲端已更新，但合併結果寫不回本機（' + e.message + '）。請先清理空間再「☁ 從 GitHub 載入盤面」。'); }
         }
       }
@@ -295,7 +303,13 @@
       var pat = getPAT();
       var cloudDoc;
       try { cloudDoc = await fetchCloudDoc(pat); }
-      catch (e) { alert('讀取失敗（' + e.message + '）。'); return; }
+      catch (e) {
+        // 未設權杖時 api.github.com 走「每 IP 60 次/時」共用額度，行動網路共用 IP 特別容易 403。
+        alert('讀取失敗（' + e.message + '）。' + (!pat && /403/.test(e.message)
+          ? '\n\n可能是 GitHub 對未設權杖讀取的限流。在這台也「🔑 設定 GitHub 權杖」即可避開（權杖有自己的額度）。'
+          : ''));
+        return;
+      }
       if (cloudDoc === null) { alert('GitHub 上還沒有盤面（先在電腦按「☁ 上傳盤面到 GitHub」）。'); return; }
       // 下載＝「以雲端為準」的 union：keeper=雲端（同一場雲端贏＝真的能覆蓋），
       // 本機獨有的補回來（不會像 2026-07-15 之前的整包覆蓋那樣吃掉這台沒上傳的結算）。
@@ -304,10 +318,15 @@
       try { var lp = await localDocPlain(); if (lp) localDoc = JSON.parse(lp); } catch (e) { localDoc = null; }
       var merged = mergeDocs(localDoc, cloudDoc);
       if (!merged.doc || !merged.doc.boards) { alert('合併結果不合法，已中止，沒有動到這台的資料。'); return; }
-      localStorage.setItem(DOC_KEY, JSON.stringify(merged.doc));
+      localStorage.setItem(DOC_KEY, await docToStore(JSON.stringify(merged.doc)));
       toast('已載入雲端盤面' + ((merged.addedG || merged.addedC) ? '（保留這台獨有 ' + merged.addedG + ' 場結算、' + merged.addedC + ' 張卡）' : '') + '，重新整理中…');
       setTimeout(function () { location.reload(); }, 1200);
-    } catch (err) { console.warn('[GitHub同步]', err); alert('載入失敗：' + err.message); }
+    } catch (err) {
+      console.warn('[GitHub同步]', err);
+      alert('載入失敗：' + err.message + (/quota/i.test((err && err.name || '') + ' ' + err.message)
+        ? '\n\n本機儲存空間不足。先「⋯ → 🧹 清除已結算的舊日期」再試，或先「匯出備份檔」保資料。'
+        : ''));
+    }
   }
 
   function setToken() {
