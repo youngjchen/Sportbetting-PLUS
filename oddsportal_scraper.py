@@ -302,9 +302,14 @@ def _listing_matches_schedule(event: dict[str, Any], schedule: list[dict[str, An
     ]
     event_match = re.fullmatch(r"(\d{1,2}):(\d{2})", str(event.get("listingTime") or ""))
     if candidates and not event_match:
-        # 已開賽/完賽列不信任列表時間（結果比分可能被誤讀成時間）→ 隊伍＋日期唯一時直接配對；
+        # 已開賽/完賽列不信任列表時間（結果比分可能被誤讀成時間）→ 隊伍＋日期唯一時直接配對，
+        # 並把賽程表的開賽時間寫回事件——否則比賽頁會退用內嵌 startDate，而 h2h 頁埋著
+        # 「歷史交手場」的舊時間，對不上 120 分鐘閘 ⇒ 整場作廢（2026-08-05 回補 0 場案根因）。
         # 雙重賽（同日同隊兩場）無時間無法分辨，寧可跳過等其他閘。
-        return len(candidates) == 1
+        if len(candidates) == 1:
+            event["listingTime"] = str(candidates[0].get("startTime") or "")[:5] or None
+            return True
+        return False
     if not candidates or not event_match:
         return False
     wanted = int(event_match.group(1)) * 60 + int(event_match.group(2))
@@ -978,8 +983,14 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
     now = datetime.now(TW)
     observed_at = now.isoformat(timespec="seconds")
     schedule = _load_schedule(schedule_path, now, from_hours=from_hours, to_hours=to_hours)
+    # 賽程先按本輪聯盟過濾——否則 --max-games 名額會被別聯盟的缺口占走，
+    # 本聯盟列表頁配對歸零（2026-08-05 回補 0 場案根因三）。
+    schedule = [row for row in schedule if row["league"] in leagues]
     summary = _load_summary(summary_path)
     targets = pick_targets(schedule, summary, now, refresh_upcoming, max_games)
+    if os.environ.get("OP_DEBUG"):
+        print(f"DEBUG 視窗內賽程 {len(schedule)} 場、缺口目標 {len(targets)} 場："
+              + " ".join(f"{r['date'][5:]}{r['awayTeam']}@{r['homeTeam']}" for r in targets[:8]), file=sys.stderr)
     if not targets:
         print("INFO 缺口驅動：視窗內沒有待補的初盤/收盤，跳過本輪（不動任何檔案）")
         return {"health": {"scheduled": 0, "discovered": 0, "succeeded": 0, "failed": 0,
@@ -990,16 +1001,25 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
 
     with SessionClass(**session_options) as session:
         for league in leagues:
-            try:
-                listing = session.fetch(
-                    _assert_oddsportal_url(urljoin(BASE_URL, LEAGUE_URLS[league])),
-                    network_idle=True, wait=1200, timeout=90000, disable_resources=False,
-                )
-                for event in _discover_events(listing, league, now, include_started=include_started):
-                    if _listing_matches_schedule(event, targets):
-                        discovered.append(event)
-            except Exception as exc:
-                errors.append(f"{league} discovery: {exc}")
+            # 跨日回補：昨天以前的完賽場不在聯盟主頁（當天完賽仍在），已搬去 /results/
+            # （2026-08-05 回補 0 場案根因二）→ 目標含今天以前的日期時加抓一頁結果頁。
+            listing_paths = [LEAGUE_URLS[league]]
+            today_tw = now.date().isoformat()
+            if include_started and any(r["league"] == league and r["date"] < today_tw for r in targets):
+                listing_paths.append(LEAGUE_URLS[league].rstrip("/") + "/results/")
+            for lp in listing_paths:
+                try:
+                    listing = session.fetch(
+                        _assert_oddsportal_url(urljoin(BASE_URL, lp)),
+                        network_idle=True, wait=1200, timeout=90000, disable_resources=False,
+                    )
+                    for event in _discover_events(listing, league, now, include_started=include_started):
+                        if _listing_matches_schedule(event, targets):
+                            discovered.append(event)
+                except Exception as exc:
+                    errors.append(f"{league} discovery {lp}: {exc}")
+            if os.environ.get("OP_DEBUG"):
+                print(f"DEBUG {league} 列表頁={listing_paths} 發現且配對={sum(1 for e in discovered if e['league']==league)}", file=sys.stderr)
 
     unique = {event["eventId"]: event for event in discovered}
 
