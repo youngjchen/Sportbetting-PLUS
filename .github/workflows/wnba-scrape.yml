@@ -1,10 +1,9 @@
 # ============================================================
 # WNBA 每日管線（WNBA_PLAN.md T7）：賽程+台彩線+即時比分+結算真相
-# · 與棒球工作流完全分離（D12 故障隔離）；輸出 data/wnba_pregame.json + wnba_lottery_series.json
-# · 設計=每小時一棒、棒內 55 分鐘每 5 分一輪（安裝成本攤一次、比分 5 分粒度）
-#   cron 窗=UTC 16-23,0-6（台灣 00:07~14:07）：涵蓋 WNBA 全部開賽時段（台灣清晨為主、假日深夜）
-# · 每輪先 reset --hard 自癒（7/17 棒球教訓：衝突殘留會讓後續 push 全滅）
-# · concurrency 不取消進行中：下一棒排隊等 55 分棒結束＝無縫；人工取消=有效煞車
+# · 2026-08-04 改版：GitHub cron 排程器整站停擺 3h（watchdog 的 cron 同滅=救不了人）,
+#   唯一活著的是棒球式「PAT 自我接棒鏈」→ 本工作流照改：5h10m 長迴圈+末尾接棒,cron 只當斷鏈重點火備援。
+# · 台灣 00~14 時窗內=每 5 分抓一輪;窗外=純待機（10 分醒一次看窗,不打玩運彩）。
+# · 每輪先 reset --hard 自癒;concurrency 不取消進行中（人工取消=有效煞車,接棒 if !cancelled 同棒球）。
 # ============================================================
 name: wnba-scrape
 
@@ -16,6 +15,7 @@ on:
 
 permissions:
   contents: write
+  actions: write
 
 concurrency:
   group: wnba-scrape
@@ -24,7 +24,7 @@ concurrency:
 jobs:
   loop:
     runs-on: ubuntu-latest
-    timeout-minutes: 70
+    timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -35,12 +35,18 @@ jobs:
         run: |
           pip -q install -r requirements-scraping.txt
           scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零，仍續跑（curl 可用時不影響）"
-      - name: 55 分鐘迴圈（每 5 分抓一輪）
+      - name: 5h10m 迴圈（時窗內每 5 分抓一輪;窗外待機）
         run: |
           git config user.name  "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          END=$(( SECONDS + 3300 ))
+          END=$(( SECONDS + 18600 ))
           while [ "$SECONDS" -lt "$END" ]; do
+            TWH=$(( (10#$(date -u +%H) + 8) % 24 ))
+            if [ "$TWH" -ge 14 ]; then
+              echo "· [$(date -u +%FT%TZ)] 台灣 ${TWH} 時=窗外待機"
+              sleep 600
+              continue
+            fi
             T0=$SECONDS
             git rebase --abort 2>/dev/null || true
             git fetch origin main || true
@@ -61,3 +67,10 @@ jobs:
             EL=$(( SECONDS - T0 ))
             [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))
           done
+      - name: 自我接棒（需 WORKFLOW_PAT;cron 停擺免疫的主保險）
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
+          gh workflow run wnba-scrape.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"
