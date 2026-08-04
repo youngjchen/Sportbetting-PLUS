@@ -122,24 +122,41 @@ def collect_result_rows(page: Any, league: str, now: datetime, max_pages: int, o
 
 
 def scrape_event_harvest(session: Any, event: dict[str, Any], observed_at: str) -> dict[str, Any] | None:
-    """歷史場抓取：無賽程可撮合 → 開賽時間取「頁內 startDate 中與列表日期同日者」。"""
+    """歷史場抓取：無賽程可撮合。開賽時間＝# 路由載入後「頁面顯示的日期時間」
+    （2026-08-05 實測：內嵌 startDate 是『下一場對決』的時間，歷史場只有 DOM 顯示才對）。"""
     captured: dict[str, Any] = {}
 
     def action(page: Any) -> None:
         _wait_for_market_navigation(page)
         _dismiss_consent(page)
+        page.wait_for_timeout(800)
+        try:
+            captured["displayDt"] = page.evaluate(
+                r"""() => ((document.body.innerText || '').match(/\d{1,2}\s+[A-Za-z]{3}\s+\d{4},?\s+\d{1,2}:\d{2}/g) || []).slice(0, 3)"""
+            )
+        except Exception:
+            captured["displayDt"] = []
         stub = datetime.fromisoformat(event["date"] + "T12:00:00+08:00")
         captured["ml"] = _collect_market(page, "Home/Away", stub, True)
         captured["ou"] = _collect_market(page, "Over/Under", stub, True)
         captured["hd"] = _collect_market(page, "Asian Handicap", stub, True)
 
-    response = session.fetch(
+    session.fetch(
         event["sourceUrl"], page_action=action,
         network_idle=True, wait=250, timeout=90000, disable_resources=False,
     )
-    stamps = [int(x) for x in re.findall(r'"startDate":(\d{9,12})', str(response.html_content))]
-    starts = [datetime.fromtimestamp(x, tz=TW) for x in stamps]
+    starts: list[datetime] = []
+    for text in captured.get("displayDt") or []:
+        norm = re.sub(r"\s+", " ", str(text)).replace(",", "")
+        try:
+            starts.append(datetime.strptime(norm, "%d %b %Y %H:%M").replace(tzinfo=TW))
+        except ValueError:
+            continue
     same_day = [s for s in starts if s.date().isoformat() == event["date"]]
+    if not same_day and len(starts) == 1:
+        # 顯示日期與列表標頭不同（極少數＝標頭歸組誤差）→ 以比賽頁自己顯示的為準
+        event = {**event, "date": starts[0].date().isoformat()}
+        same_day = starts
     if not same_day:
         return None
     start = min(same_day)
