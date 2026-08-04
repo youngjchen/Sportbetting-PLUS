@@ -18,8 +18,8 @@ const feed = {
       awayTeam: '金鶯', homeTeam: '費城人',
       handicapSwitch: { ever: true, count: 1, first: { detectedAt: '2026-07-31T20:05:00+08:00' }, last: { detectedAt: '2026-07-31T20:05:00+08:00' } },
       markets: {
-        ml: { open: { away: 2, home: 1.82 }, close: { away: 1.97, home: 1.84 } },
-        hd: { open: { line: -1.5, away: 2.5, home: 1.53 }, close: { line: 1.5, away: 1.52, home: 2.55 } },
+        ml: { open: { away: 2, home: 1.82 }, close: { away: 1.97, home: 1.84, final: true } },
+        hd: { open: { line: -1.5, away: 2.5, home: 1.53 }, close: { line: 1.5, away: 1.52, home: 2.55, final: true } },
         ou: { open: { line: 8.5, over: 1.91, under: 1.91 }, close: { line: 9, over: 1.87, under: 1.95 } },
       },
     },
@@ -81,6 +81,13 @@ test('settlement UI checks the switch box, fills blank moneyline fields, and ren
     assert.equal(browser.document.getElementById('openOddsAway').value, '2');
     assert.equal(browser.document.getElementById('openOddsHome').value, '9.99');
     assert.equal(browser.document.getElementById('closeOddsAway').value, '1.97');
+    // 2026-08-05 使用者鐵則：未定案（沒開打）的 close 絕不准填收盤欄、不准在證據卡當收盤顯示
+    browser.document.getElementById('closeOddsAway').value = '';
+    const feed2 = JSON.parse(JSON.stringify(feed));
+    delete feed2.games['mlb|2026-08-01|金鶯|費城人|07:05|first'].markets.ml.close.final;
+    api._setFeed(feed2);
+    api.injectSettlement({ type: 'match', away: '金鶯', home: '費城人', gameTime: '07:05', league: 'MLB' });
+    assert.equal(browser.document.getElementById('closeOddsAway').value, '');
     assert.match(browser.document.getElementById('oddsPortalEvidence').textContent, /Stake 初盤／收盤/);
     assert.match(browser.document.getElementById('oddsPortalEvidence').textContent, /曾換邊 1 次/);
   } finally {

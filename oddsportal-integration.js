@@ -133,7 +133,9 @@
     function marketText(label, market) {
       if (!market) return label + '：無資料';
       const opening = market.open || {};
-      const closing = market.close || market.active || {};
+      // 2026-08-05 使用者糾正：沒開打就沒有收盤——收盤只認定案（final），
+      // 絕不拿當前盤（active）冒充；未定案一律顯示 —。
+      const closing = (market.close && market.close.final) ? market.close : {};
       if (label === '獨贏') {
         return label + '：' + (opening.away ?? '—') + ' / ' + (opening.home ?? '—') +
           ' → ' + (closing.away ?? '—') + ' / ' + (closing.home ?? '—');
@@ -192,10 +194,11 @@
         emit(checkbox, 'change');
       }
       const ml = (game.markets || {}).ml || {};
+      const mlClose = (ml.close && ml.close.final) ? ml.close : null;   // 未定案不准填收盤欄
       setIfBlank('openOddsAway', ml.open && ml.open.away);
       setIfBlank('openOddsHome', ml.open && ml.open.home);
-      setIfBlank('closeOddsAway', ml.close && ml.close.away);
-      setIfBlank('closeOddsHome', ml.close && ml.close.home);
+      setIfBlank('closeOddsAway', mlClose && mlClose.away);
+      setIfBlank('closeOddsHome', mlClose && mlClose.home);
       renderEvidence(game);
     }
 

@@ -7,6 +7,7 @@ It never calls Stake directly and never stores browser cookies or credentials.
 from __future__ import annotations
 
 import argparse
+import os
 import copy
 import gzip
 import json
@@ -371,12 +372,32 @@ def _discover_events(response: Any, league: str, now: datetime | None = None, in
 def _row_history(cell: Any, page: Any, event_start: datetime, with_history: bool) -> dict[str, Any]:
     if not with_history:
         return {"opening": None, "movements": []}
+    # 2026-08-05 修「讓分/大小 initial 抓不到」：這些列的走勢浮窗不一定渲染在格子節點內
+    # （舊碼 cell.locator('h3') 只在格內找 → 永遠 4s 逾時），且 hover 要瞄準格內賠率本體。
+    # 改法：①先把滑鼠移開、等舊浮窗關閉（防讀到上一格的殘影）②hover 賠率連結
+    # ③改「頁面層級」等最後一個可見的 Odds movement 浮窗 ④失敗重試一次。
+    raw = None
+    hover_target = cell.locator("a.odds-link, p.odds-text").first
+    for _attempt in range(2):
+        try:
+            try:
+                page.mouse.move(2, 2)
+                page.wait_for_timeout(150)
+            except Exception:
+                pass
+            (hover_target if hover_target.count() else cell).hover(timeout=5000)
+            page.locator("h3", has_text="Odds movement").last.wait_for(state="visible", timeout=4000)
+            break
+        except Exception as exc:
+            if os.environ.get("OP_DEBUG"):
+                print(f"DEBUG row_history hover 失敗(第{_attempt + 1}次): {type(exc).__name__}: {str(exc).splitlines()[0][:160]}", file=sys.stderr)
+            if _attempt == 1:
+                return {"opening": None, "movements": []}
     try:
-        cell.hover(timeout=5000)
-        cell.locator("h3").filter(has_text="Odds movement").first.wait_for(state="attached", timeout=4000)
-        raw = cell.evaluate(
-            r"""el => {
-              const h = [...el.querySelectorAll('h3')].find(x => x.textContent.trim() === 'Odds movement');
+        raw = page.evaluate(
+            r"""() => {
+              const hs = [...document.querySelectorAll('h3')].filter(x => x.textContent.trim() === 'Odds movement');
+              const h = hs.reverse().find(x => x.offsetParent !== null) || hs[0];
               if (!h) return {opening:null, movements:[]};
               const box = h.parentElement;
               const openingBox = [...box.children].find(x => x.textContent.includes('Opening odds:'));
@@ -450,6 +471,28 @@ def _capture_stake_row(row: Any, page: Any, event_start: datetime, with_history:
 
 def _wait_for_market_navigation(page: Any) -> None:
     page.get_by_test_id("bet-types-nav").wait_for(state="visible", timeout=20000)
+
+
+def _dismiss_consent(page: Any) -> None:
+    """OneTrust 同意視窗會壓住頁面下半部：獨贏表在上方照常，但讓分/大小的
+    走勢浮窗收不到滑鼠事件（2026-08-05 實測 hd/ou opening 全 null 的根因；
+    按下拒絕後 AH 浮窗立即可見）。優先「拒絕非必要」，不行才拆遮罩節點。"""
+    for sel in ("#onetrust-reject-all-handler", "#onetrust-accept-btn-handler"):
+        try:
+            btn = page.locator(sel)
+            if btn.count():
+                btn.first.click(timeout=2500)
+                page.wait_for_timeout(400)
+                return
+        except Exception:
+            continue
+    try:
+        page.evaluate(
+            "() => {['#onetrust-consent-sdk','.onetrust-pc-dark-filter','#onetrust-banner-sdk']"
+            ".forEach(s=>document.querySelectorAll(s).forEach(e=>e.remove()));}"
+        )
+    except Exception:
+        pass
 
 
 def _collect_market(page: Any, label: str, event_start: datetime, with_history: bool) -> list[dict[str, Any]]:
@@ -672,15 +715,15 @@ def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str, s
             result["active"]["line"] = active.get("line")
         if market == "hd":
             result["active"]["favorite"] = favorite_for_line(active.get("line"))
-        result["close"] = copy.deepcopy(result["active"])
-    # 已開賽：close 改用走勢史時戳取法（開賽前最後一筆）＝真收盤並定案；
-    # 頁面上的 active 可能是走地/凍結價，只留作參考，不再充當 close。
+    # 2026-08-05 使用者糾正：比賽沒開打就沒有「收盤」這回事——賽前只有 active（當前盤），
+    # close 欄位只在開賽後產生：走勢史中開賽前最後一筆（帶時戳、final 定案）；
+    # 走勢史缺失才退回開賽當下頁面顯示值（precision 標記 page-post-start）。
     if start_iso and observed_at > start_iso:
         closing = _closing_from_rows(usable, market, start_iso)
         if closing:
             result["close"] = closing
-        elif isinstance(result.get("close"), dict):
-            result["close"] = {**copy.deepcopy(result["close"]), "final": True, "precision": "page-post-start"}
+        elif isinstance(result.get("active"), dict):
+            result["close"] = {**copy.deepcopy(result["active"]), "final": True, "precision": "page-post-start"}
     return result
 
 
@@ -752,6 +795,7 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
             stamp = page.evaluate("() => { const m=document.documentElement.innerHTML.match(/\\\"startDate\\\":(\\d{9,12})/); return m?Number(m[1]):null; }")
             event_start = datetime.fromtimestamp(stamp, tz=TW) if stamp else datetime.now(TW)
         _wait_for_market_navigation(page)
+        _dismiss_consent(page)
         captured["ml"] = _collect_market(page, "Home/Away", event_start, with_history)
         captured["ou"] = _collect_market(page, "Over/Under", event_start, with_history)
         captured["hd"] = _collect_market(page, "Asian Handicap", event_start, with_history)
