@@ -17,7 +17,7 @@
   const ZHI_WX = { 子: '水', 丑: '土', 寅: '木', 卯: '木', 辰: '土', 巳: '火', 午: '火', 未: '土', 申: '金', 酉: '金', 戌: '土', 亥: '水' };
   const GUA_WX = { 乾: '金', 兌: '金', 離: '火', 震: '木', 巽: '木', 坎: '水', 艮: '土', 坤: '土' };
   // 中文隊名 → MLB teamId（與 mlb_gamepk_join.js 同表）：統計結算直接對 MLB 官方 API，不依賴爬蟲快照
-  const TEAM_ID = { 天使: 108, 響尾蛇: 109, 金鶯: 110, 紅襪: 111, 小熊: 112, 紅人: 113, 守護者: 114, 印地安人: 114, 印第安人: 114, 落磯: 115, 老虎: 116, 太空人: 117, 皇家: 118, 道奇: 119, 國民: 120, 大都會: 121, 運動家: 133, 海盜: 134, 教士: 135, 水手: 136, 巨人: 137, 紅雀: 138, 光芒: 139, 遊騎兵: 140, 藍鳥: 141, 雙城: 142, 費城人: 143, 勇士: 144, 白襪: 145, 馬林魚: 146, 洋基: 147, 釀酒人: 158 };
+  // MLB 中文隊名→teamId 表已移除（WNBA 結算不走 MLB API）
   const MARKETS = ['獨贏', '讓分', '大小'];
 
   // ---- 結果解析：pregame 快照優先，MLB 官方 API 補漏（比賽一結束即可結算，與板上手動結算/爬蟲頻率脫鉤） ----
@@ -26,16 +26,23 @@
   // 但日期清單砍到 6 個且照陣列順序（新卦在前）取，卦累積超過 6 個快照外日期後，
   // 最舊的日期永遠排不進窗＝永遠查不到＝顯示未結算。快取後每場比賽一生只需查到一次
   // （快照或 API 任一來源、含日韓中職），之後離線也能結算；日期窗改最舊優先、上限 12。
-  const RES_CACHE_KEY = 'dv_res_v1';
+  const RES_CACHE_KEY = 'dv_res_wnba_v1';   // 與棒球分池（棒球用 dv_res_v1）
   function loadResCache() { try { return JSON.parse(localStorage.getItem(RES_CACHE_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  // ‼️ 2026-08-04 修：整份複製棒球版時,這裡兩條結算路徑都是棒球專用——
+  //   ①讀 data/pregame_data.json（棒球四聯盟檔,沒有 WNBA_* officialId）
+  //   ②退回 MLB statsapi + MLB 中文隊名表（王牌/美夢不在表內）
+  //   → WNBA 卦永遠結算不了。改為：WNBA 賽程檔（5天滾動）∪ 板子自身結算帳 doc.games（全季,含種子）。
   async function resolveOutcomes(casts) {
     const res = {};   // officialId → {finished, as, hs}
     const cache = loadResCache(); let dirty = false;
     const want = new Set(casts.map(c => c.officialId));
     for (const id of want) { const h = cache[id]; if (h && h.as != null) res[id] = { finished: true, as: h.as, hs: h.hs }; }
+    // ① WNBA 每日管線檔（近 5 天;status=finished 即為真結果）
     let gmap = {};
-    try { (await (await fetch('data/pregame_data.json?nocache=' + Date.now())).json()).forEach(g => { gmap[g.officialId] = g; }); } catch (e) {}
-    const pending = [];
+    try {
+      const j = await (await fetch('data/wnba_pregame.json?nocache=' + Date.now())).json();
+      ((j && j.games) || []).forEach(g => { gmap[g.officialId] = g; });
+    } catch (e) {}
     for (const c of casts) {
       if (res[c.officialId]) continue;
       const g = gmap[c.officialId];
@@ -43,31 +50,20 @@
         res[c.officialId] = { finished: true, as: g.awayScore, hs: g.homeScore };
         cache[c.officialId] = { as: g.awayScore, hs: g.homeScore }; dirty = true;
       }
-      else pending.push(c);
     }
-    if (pending.length) {
-      const dates = [...new Set(pending.map(c => { const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00'); return new Date(ts).toISOString().slice(0, 10); }))].sort().slice(0, 12);
-      const sched = [];
-      for (const d of dates) {
-        try { const j = await (await fetch('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=' + d)).json(); (j.dates || []).forEach(dd => (dd.games || []).forEach(g => sched.push(g))); } catch (e) {}
-      }
-      for (const c of pending) {
+    // ② 板子結算帳（doc.games;sid===officialId,涵蓋超出 5 天窗的舊場與手動結算覆蓋）
+    try {
+      const dg = (typeof doc !== 'undefined' && doc && doc.games) || [];
+      for (const c of casts) {
         if (res[c.officialId]) continue;
-        const aId = TEAM_ID[c.away], hId = TEAM_ID[c.home];
-        const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00');
-        let best = null, bd = Infinity;
-        for (const g of sched) {
-          if (!g.teams || g.teams.away.team.id !== aId || g.teams.home.team.id !== hId) continue;
-          const d = Math.abs(Date.parse(g.gameDate) - ts); if (d < bd) { bd = d; best = g; }
-        }
-        if (best && bd <= 100 * 60000 && best.status && best.status.abstractGameState === 'Final' && best.teams.away.score != null) {
-          res[c.officialId] = { finished: true, as: best.teams.away.score, hs: best.teams.home.score };
-          cache[c.officialId] = { as: best.teams.away.score, hs: best.teams.home.score }; dirty = true;
+        const rec = dg.find(x => x.sid === c.officialId && x.awayScore != null);
+        if (rec) {
+          res[c.officialId] = { finished: true, as: rec.awayScore, hs: rec.homeScore };
+          cache[c.officialId] = { as: rec.awayScore, hs: rec.homeScore }; dirty = true;
         }
       }
-    }
+    } catch (e) {}
     if (dirty) {
-      // 保險絲：快取只留卦單用得到的場次，超過 6000 筆時清掉無主項
       const keys = Object.keys(cache);
       if (keys.length > 6000) for (const k of keys) { if (!want.has(k)) delete cache[k]; }
       try { localStorage.setItem(RES_CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
