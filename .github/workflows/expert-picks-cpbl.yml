@@ -71,9 +71,15 @@ jobs:
               git add data/expert_archive 2>/dev/null || true
               if ! git diff --cached --quiet; then
                 git commit -m "expert picks cpbl $(date -u +%FT%TZ)" || true
+                # 2026-08-05 01:00 波資料遺失案：WNBA 管線每 5 分推一次，夜波(23:30/01:00/02:30)
+                # 同分鐘開跑時單次重試會連輸兩場 push 競速 → 下一輪 reset --hard 把剛抓的整包丟棄。
+                # 改三次重試、每次先 rebase（local_failover 同款已驗證模式）。
                 if ! git push; then
-                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
-                  git push || true
+                  for i in 1 2 3; do
+                    git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                    git push && break
+                    sleep 3
+                  done
                 fi
               fi
             fi
