@@ -284,5 +284,109 @@ class SnapshotMergeTests(unittest.TestCase):
         self.assertEqual(merged, old)
 
 
+class GapDrivenCadenceTests(unittest.TestCase):
+    """2026-08-04 新節奏：缺口驅動＋已開賽回補＋收盤走勢史時戳取法。"""
+
+    def _write_schedule(self, tmp, rows):
+        path = Path(tmp) / "pregame.json"
+        path.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+        return path
+
+    def test_schedule_window_accepts_negative_from_hours_for_backfill(self):
+        now = datetime(2026, 8, 4, 12, 0, tzinfo=TW)
+        rows = [
+            {"league": "mlb", "date": "2026-08-03", "gameTime": "07:05", "awayTeam": "A", "homeTeam": "B", "officialId": "x1"},
+            {"league": "mlb", "date": "2026-08-04", "gameTime": "14:00", "awayTeam": "C", "homeTeam": "D", "officialId": "x2"},
+            {"league": "mlb", "date": "2026-08-05", "gameTime": "07:05", "awayTeam": "E", "homeTeam": "F", "officialId": "x3"},
+        ]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = self._write_schedule(tmp, rows)
+            default = _load_schedule(path, now)
+            self.assertEqual([r["officialId"] for r in default], ["x2"])  # 舊行為：只有未來 18h
+            widened = _load_schedule(path, now, from_hours=-84, to_hours=36)
+            self.assertEqual([r["officialId"] for r in widened], ["x1", "x2", "x3"])
+
+    def test_closing_from_rows_takes_last_pre_start_movement(self):
+        from oddsportal_scraper import _closing_from_rows
+        history_home = {
+            "opening": {"at": "2026-08-04T02:00:00+08:00", "odds": 1.60},
+            "movements": [
+                {"at": "2026-08-04T03:00:00+08:00", "odds": 1.63},
+                {"at": "2026-08-04T08:00:00+08:00", "odds": 1.90},  # 開賽後＝走地，不可入收盤
+            ],
+        }
+        history_away = {
+            "opening": {"at": "2026-08-04T02:00:00+08:00", "odds": 2.30},
+            "movements": [{"at": "2026-08-04T04:30:00+08:00", "odds": 2.25}],
+        }
+        rows = [{
+            "line": None,
+            "first": {"odds": 1.90, "active": True, "struck": False, "history": history_home},
+            "second": {"odds": 2.05, "active": True, "struck": False, "history": history_away},
+            "active": True, "struck": False, "selected": True,
+        }]
+        close = _closing_from_rows(rows, "ml", "2026-08-04T07:05:00+08:00")
+        self.assertEqual(close["home"], 1.63)
+        self.assertEqual(close["away"], 2.25)
+        self.assertTrue(close["final"])
+        self.assertEqual(close["precision"], "history")
+        self.assertEqual(close["at"], "2026-08-04T04:30:00+08:00")
+
+    def test_market_summary_post_start_finalizes_close_from_history(self):
+        from oddsportal_scraper import _market_summary
+        history_home = {
+            "opening": {"at": "2026-08-04T02:00:00+08:00", "odds": 1.60},
+            "movements": [{"at": "2026-08-04T05:00:00+08:00", "odds": 1.66}],
+        }
+        history_away = {
+            "opening": {"at": "2026-08-04T02:00:00+08:00", "odds": 2.30},
+            "movements": [],
+        }
+        rows = [{
+            "line": None,
+            "first": {"odds": 9.99, "active": True, "struck": False, "history": history_home},
+            "second": {"odds": 9.99, "active": True, "struck": False, "history": history_away},
+            "active": True, "struck": False, "selected": True,
+        }]
+        result = _market_summary(rows, "ml", "2026-08-04T10:30:00+08:00", start_iso="2026-08-04T07:05:00+08:00")
+        self.assertTrue(result["close"]["final"])          # 已開賽＝收盤定案
+        self.assertEqual(result["close"]["home"], 1.66)     # 走勢史賽前最後一筆
+        self.assertEqual(result["close"]["away"], 2.30)     # 無走勢→退回開盤
+        self.assertEqual(result["open"]["home"], 1.60)      # 初盤照舊來自 opening
+
+    def test_merge_market_never_downgrades_final_close(self):
+        from oddsportal_scraper import _merge_market
+        old = {"close": {"home": 1.63, "away": 2.25, "final": True, "precision": "history"}}
+        merged = _merge_market(old, {"close": {"home": 9.9, "away": 9.9, "at": "later"}})
+        self.assertEqual(merged["close"]["home"], 1.63)     # 非定案不得覆寫定案
+        merged2 = _merge_market(old, {"close": {"home": 1.64, "away": 2.24, "final": True}})
+        self.assertEqual(merged2["close"]["home"], 1.64)    # 定案可被更新的定案取代
+
+    def test_pick_targets_selects_missing_open_and_unsettled_close(self):
+        from oddsportal_scraper import pick_targets
+        now = datetime(2026, 8, 4, 12, 0, tzinfo=TW)
+        mk = lambda lg, date, hhmm, away, home: {
+            "league": lg, "date": date, "startTime": hhmm,
+            "startISO": f"{date}T{hhmm}:00+08:00", "awayTeam": away, "homeTeam": home,
+        }
+        row_open_filled = mk("mlb", "2026-08-05", "07:05", "A", "B")   # 未開賽、初盤已填 → 缺口模式不抓
+        row_open_missing = mk("mlb", "2026-08-05", "08:10", "C", "D")  # 未開賽、缺初盤 → 抓
+        row_close_missing = mk("mlb", "2026-08-04", "07:05", "E", "F") # 已開賽、收盤未定案 → 抓
+        row_close_final = mk("mlb", "2026-08-03", "07:05", "G", "H")   # 已開賽、收盤定案 → 不抓
+        summary = {"games": {
+            "k1": {"league": "mlb", "date": "2026-08-05", "startTime": "07:05", "awayTeam": "A", "homeTeam": "B",
+                    "markets": {"ml": {"open": {"home": 1.5, "away": 2.5}}}},
+            "k2": {"league": "mlb", "date": "2026-08-03", "startTime": "07:05", "awayTeam": "G", "homeTeam": "H",
+                    "markets": {"ml": {"open": {"home": 1.5, "away": 2.5}, "close": {"home": 1.6, "away": 2.4, "final": True}}}},
+        }}
+        schedule = [row_open_filled, row_open_missing, row_close_missing, row_close_final]
+        picked = pick_targets(schedule, summary, now, refresh_upcoming=False, max_games=0)
+        self.assertEqual([r["awayTeam"] for r in picked], ["C", "E"])
+        refreshed = pick_targets(schedule, summary, now, refresh_upcoming=True, max_games=0)
+        self.assertEqual([r["awayTeam"] for r in refreshed], ["A", "C", "E"])  # 巡檢閘：未開賽全刷＋回補
+        capped = pick_targets(schedule, summary, now, refresh_upcoming=False, max_games=1)
+        self.assertEqual([r["awayTeam"] for r in capped], ["C"])
+
+
 if __name__ == "__main__":
     unittest.main()

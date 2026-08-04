@@ -136,3 +136,27 @@ test('local failover runs from an independent clone and fast-forwards it without
     fs.rmSync(root, { recursive: true, force: true });
   }
 });
+
+// ══ 2026-08-04 自癒收殮：自家產出殘留不再把備援卡死（8/1 卡死 3.5 天事故）══
+
+test('classifyFailoverDirt separates failover-owned outputs from foreign files', () => {
+  const { classifyFailoverDirt } = loadWorkspaceModule();
+  assert.equal(typeof classifyFailoverDirt, 'function');
+  const wedge = classifyFailoverDirt([
+    'A  data/oddsportal_history/2026-08-01.jsonl.gz',
+    'M  data/oddsportal_summary.json',
+  ]);
+  assert.deepEqual(wedge.foreign, []);          // 8/1 實際卡死的兩個檔＝可自癒
+  assert.equal(wedge.owned.length, 2);
+
+  const mixed = classifyFailoverDirt([
+    'M  data/oddsportal_summary.json',
+    ' M local_failover.js',                      // 程式碼被動過＝絕不自動處理
+  ]);
+  assert.deepEqual(mixed.foreign, ['local_failover.js']);
+
+  const renamed = classifyFailoverDirt(['R  data/x.json -> data/pregame_data.json']);
+  assert.deepEqual(renamed.foreign, []);
+  const quoted = classifyFailoverDirt(['?? "data/expert_archive/a b.json"']);
+  assert.deepEqual(quoted.foreign, []);
+});

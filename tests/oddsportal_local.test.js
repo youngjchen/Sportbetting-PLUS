@@ -45,3 +45,50 @@ test('local runner stages only the OddsPortal summary and compressed history dir
     'data/oddsportal_history',
   ]);
 });
+
+// ══ 2026-08-04 新節奏：賽程驅動 6 閘（廢 15 分鐘盯哨）══
+
+test('gates: asia same-day and mlb previous-day open plus flip/close anchors', () => {
+  const { computeOddsPortalGates } = loadModule();
+  const games = [
+    { league: 'npb', date: '2026-08-04', gameTime: '17:00' },
+    { league: 'cpbl', date: '2026-08-04', gameTime: '18:35' },
+    { league: 'kbo', date: '2026-08-04', time: '17:00' },
+    { league: 'mlb', date: '2026-08-05', gameTime: '02:20' },
+    { league: 'mlb', date: '2026-08-05', gameTime: '10:10' },
+  ];
+  const gates = computeOddsPortalGates(games);
+  const byId = Object.fromEntries(gates.map((g) => [g.id, g]));
+  assert.equal(byId['open_asia_2026-08-04'].at, Date.parse('2026-08-04T03:00:00+08:00'));
+  assert.equal(byId['flip_asia_2026-08-04'].at, Date.parse('2026-08-04T14:30:00+08:00')); // 17:00 - 2.5h
+  assert.equal(byId['close_asia_2026-08-04'].at, Date.parse('2026-08-04T18:45:00+08:00')); // 18:35 + 10m
+  assert.equal(byId['open_mlb_2026-08-05'].at, Date.parse('2026-08-04T07:00:00+08:00'));   // 前一天早上
+  assert.equal(byId['flip_mlb_2026-08-05'].at, Date.parse('2026-08-04T23:50:00+08:00'));   // 02:20 - 2.5h
+  assert.equal(byId['close_mlb_2026-08-05'].at, Date.parse('2026-08-05T10:20:00+08:00'));  // 10:10 + 10m
+  assert.equal(byId['flip_mlb_2026-08-05'].refreshUpcoming, true);
+  assert.equal(gates.length, 6);
+});
+
+test('dueOddsPortalGate honors fired-state and the 6h expiry', () => {
+  const { computeOddsPortalGates, dueOddsPortalGate, GATE_LOOKBACK_MS } = loadModule();
+  const games = [{ league: 'npb', date: '2026-08-04', gameTime: '17:00' }];
+  const gates = computeOddsPortalGates(games);
+  const openAt = Date.parse('2026-08-04T03:00:00+08:00');
+  assert.equal(dueOddsPortalGate(gates, {}, openAt - 1), null);                       // 未到點
+  assert.equal(dueOddsPortalGate(gates, {}, openAt + 60_000).id, 'open_asia_2026-08-04');
+  assert.equal(dueOddsPortalGate(gates, { 'opg_open_asia_2026-08-04': openAt }, openAt + 60_000)?.id,
+    undefined);                                                                        // 跑過不重跑
+  assert.equal(dueOddsPortalGate(gates, {}, openAt + GATE_LOOKBACK_MS + 60_000), null); // 過期不補
+});
+
+test('oddsPortalArgs encodes the gap-driven scraper flags', () => {
+  const { oddsPortalArgs, computeOddsPortalGates } = loadModule();
+  assert.deepEqual(oddsPortalArgs(null), ['oddsportal_scraper.py']);
+  const gate = computeOddsPortalGates([{ league: 'mlb', date: '2026-08-05', gameTime: '02:20' }])
+    .find((g) => g.mode === 'flip');
+  const args = oddsPortalArgs(gate);
+  assert.ok(args.includes('--leagues') && args.includes('mlb'));
+  assert.ok(args.includes('--include-started'));
+  assert.ok(args.includes('--refresh-upcoming'));
+  assert.ok(args.includes('--max-games') && args.includes('40'));
+});

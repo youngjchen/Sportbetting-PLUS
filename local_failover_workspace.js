@@ -24,6 +24,34 @@ function normalizedRemote(value) {
   return path.resolve(raw).replace(/[\\/]+$/, '').toLowerCase();
 }
 
+// 備援自家會 stage 的全部產出路徑（local_failover.js 各 staged.push 的聯集）。
+// 自癒收殮只敢動這份清單內的殘留；清單外＝可能是人手改動，一律 fail-closed。
+const FAILOVER_OUTPUT_ROOTS = ['data', 'pregame_data.json', 'lottery_series.json'];
+const FAILOVER_OWNED_RE = [
+  /^data\/oddsportal_summary\.json$/,
+  /^data\/oddsportal_history\//,
+  /^data\/pregame_data\.json$/,
+  /^data\/lottery_series\.json$/,
+  /^data\/expert_picks_(?:mlb|npb|cpbl|kbo)\.json$/,
+  /^data\/expert_archive\//,
+  /^pregame_data\.json$/,
+  /^lottery_series\.json$/,
+];
+
+function classifyFailoverDirt(lines) {
+  const owned = [], foreign = [];
+  for (const line of lines) {
+    // porcelain: XY<space>path；rename 'R  old -> new' 取箭頭後；引號路徑去引號
+    let rel = String(line).slice(3).trim();
+    const arrow = rel.indexOf(' -> ');
+    if (arrow >= 0) rel = rel.slice(arrow + 4);
+    if (rel.startsWith('"') && rel.endsWith('"')) rel = rel.slice(1, -1);
+    rel = rel.replace(/\\/g, '/');
+    (FAILOVER_OWNED_RE.some((re) => re.test(rel)) ? owned : foreign).push(rel);
+  }
+  return { owned, foreign };
+}
+
 function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   if (!originUrl) throw new Error('originUrl is required');
   if (!workspaceDir || !path.isAbsolute(workspaceDir)) {
@@ -43,12 +71,34 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   if (normalizedRemote(actualOrigin) !== normalizedRemote(originUrl)) {
     throw new Error(`failover workspace origin mismatch: ${actualOrigin}`);
   }
-  const dirty = git(['status', '--porcelain'], workspaceDir)
+  // 2026-08-04 根治：專用 clone 沒設 git 身分 → 8/1 06:14 commit 失敗、產出卡在暫存區、
+  // 潔癖檢查從此整輪拒跑 3.5 天（log「推送流程失敗：git commit」）。身分設定必須早於任何 commit。
+  git(['config', 'user.name', 'bb-failover[local]'], workspaceDir);
+  git(['config', 'user.email', 'bb-failover@local'], workspaceDir);
+  const dirtyLines = git(['status', '--porcelain'], workspaceDir)
     .split(/\r?\n/)
-    .filter(line => line && line !== '?? node_modules/')
-    .join('\n');
-  if (dirty) {
-    throw new Error(`failover workspace not clean（不乾淨），拒絕自動覆寫：\n${dirty}`);
+    .filter(line => line && line !== '?? node_modules/');
+  if (dirtyLines.length) {
+    // 自癒收殮：殘留若全是「備援自家產出檔」（上輪 commit/push 中途死掉的孤兒），
+    // 收殮成一個 commit 繼續跑（隨下一次成功輪一起推上雲）；有任何非自家檔案照舊 fail-closed。
+    const dirt = classifyFailoverDirt(dirtyLines);
+    if (dirt.foreign.length) {
+      throw new Error(`failover workspace not clean（不乾淨），拒絕自動覆寫：\n${dirtyLines.join('\n')}`);
+    }
+    for (const rel of dirt.owned) {
+      if (rel.endsWith('.json')) {
+        try { JSON.parse(fs.readFileSync(path.join(workspaceDir, rel), 'utf8')); }
+        catch (_) {
+          // 半寫壞檔：追蹤檔還原乾淨版；未追蹤壞檔直接丟（都是可再生產出）
+          try { git(['checkout', '--', rel], workspaceDir); }
+          catch (_) { try { fs.unlinkSync(path.join(workspaceDir, rel)); } catch (_) {} }
+        }
+      }
+    }
+    git(['add', '-A', '--', ...FAILOVER_OUTPUT_ROOTS], workspaceDir);
+    try { git(['commit', '-q', '-m', 'data: failover 自癒收殮上輪殘留產出（中斷孤兒，防 fail-closed 卡死）'], workspaceDir); }
+    catch (_) { /* 全被還原成乾淨版=無事可提交 */ }
+    console.log('[failover workspace] 已自癒收殮殘留產出：\n' + dirtyLines.join('\n'));
   }
 
   git(['fetch', 'origin', 'main', '--prune'], workspaceDir);
@@ -110,4 +160,4 @@ if (require.main === module) {
   }
 }
 
-module.exports = { ensureFailoverWorkspace, ensureRuntimeDependencies, normalizedRemote };
+module.exports = { ensureFailoverWorkspace, ensureRuntimeDependencies, normalizedRemote, classifyFailoverDirt, FAILOVER_OUTPUT_ROOTS };

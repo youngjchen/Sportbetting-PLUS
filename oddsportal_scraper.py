@@ -151,6 +151,10 @@ def _merge_market(old: dict[str, Any], new: dict[str, Any]) -> dict[str, Any]:
             continue
         if key == "open" and _market_has_data(merged.get("open")):
             continue
+        # 收盤一旦定案（final=走勢史時戳取法或收盤閘），不准被之後的非定案觀測覆寫
+        if key == "close" and isinstance(merged.get("close"), dict) and merged["close"].get("final") \
+                and not (isinstance(value, dict) and value.get("final")):
+            continue
         merged[key] = copy.deepcopy(value)
     return merged
 
@@ -296,6 +300,10 @@ def _listing_matches_schedule(event: dict[str, Any], schedule: list[dict[str, An
         and row.get("homeTeam") == event.get("homeTeam")
     ]
     event_match = re.fullmatch(r"(\d{1,2}):(\d{2})", str(event.get("listingTime") or ""))
+    if candidates and not event_match:
+        # 已開賽/完賽列不信任列表時間（結果比分可能被誤讀成時間）→ 隊伍＋日期唯一時直接配對；
+        # 雙重賽（同日同隊兩場）無時間無法分辨，寧可跳過等其他閘。
+        return len(candidates) == 1
     if not candidates or not event_match:
         return False
     wanted = int(event_match.group(1)) * 60 + int(event_match.group(2))
@@ -317,7 +325,7 @@ def _listing_start(event: dict[str, Any]) -> datetime | None:
         return None
 
 
-def _discover_events(response: Any, league: str, now: datetime | None = None) -> list[dict[str, Any]]:
+def _discover_events(response: Any, league: str, now: datetime | None = None, include_started: bool = False) -> list[dict[str, Any]]:
     found: dict[str, dict[str, Any]] = {}
     current_date = None
     now = now or datetime.now(TW)
@@ -327,7 +335,8 @@ def _discover_events(response: Any, league: str, now: datetime | None = None) ->
         row = container.css('div.group[data-testid="game-row"]').first
         if not row:
             continue
-        if not _is_pregame_listing(row.get_all_text(separator=" | ", strip=True)):
+        pregame = _is_pregame_listing(row.get_all_text(separator=" | ", strip=True))
+        if not pregame and not include_started:
             continue
         link = row.css('a[href*="/baseball/h2h/"]').first
         if not link:
@@ -343,7 +352,8 @@ def _discover_events(response: Any, league: str, now: datetime | None = None) ->
         home, away = team_zh(names[0]), team_zh(names[1])
         if not away or not home:
             continue
-        time_match = re.search(r"\b(\d{1,2}:\d{2})\b", row.get_all_text(separator=" | ", strip=True))
+        # 已開賽/完賽列的時間欄可能已換成比分（如 5:3），不可誤當開賽時間
+        time_match = re.search(r"\b(\d{1,2}:\d{2})\b", row.get_all_text(separator=" | ", strip=True)) if pregame else None
         url = _assert_oddsportal_url(urljoin(BASE_URL, href))
         found[event_id] = {
             "eventId": event_id,
@@ -588,7 +598,46 @@ def _inferred_switches(rows: list[dict[str, Any]], observed_at: str) -> dict[str
     }
 
 
-def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str) -> dict[str, Any]:
+def _pre_start_side(side_obj: dict[str, Any] | None, start_iso: str) -> dict[str, Any] | None:
+    """該側「開賽前最後一筆」賠率：走勢史優先，退回開盤價；全無則 None。"""
+    hist = (side_obj or {}).get("history") or {}
+    moves = [m for m in (hist.get("movements") or [])
+             if m.get("at") and m["at"] <= start_iso and m.get("odds") is not None]
+    if moves:
+        last = max(moves, key=lambda m: m["at"])
+        return {"odds": last["odds"], "at": last["at"]}
+    opening = hist.get("opening") or {}
+    if opening.get("at") and opening["at"] <= start_iso and opening.get("odds") is not None:
+        return {"odds": opening["odds"], "at": opening["at"]}
+    return None
+
+
+def _closing_from_rows(rows: list[dict[str, Any]], market: str, start_iso: str) -> dict[str, Any] | None:
+    """已開賽場次的真收盤：各列走勢史中「開賽前最後一筆」，取最晚生效的那一列。
+    這繞開了頁面開賽後可能顯示走地價的疑慮——收盤永遠取自帶時戳的賽前走勢。"""
+    best: dict[str, Any] | None = None
+    for row in rows:
+        first = _pre_start_side(row.get("first"), start_iso)
+        second = _pre_start_side(row.get("second"), start_iso)
+        if not first or not second:
+            continue
+        at = max(first["at"], second["at"])
+        if best is not None and at <= best["at"]:
+            continue
+        entry: dict[str, Any] = {"at": at, "final": True, "precision": "history"}
+        if market == "ou":
+            entry.update({"over": first["odds"], "under": second["odds"]})
+        else:
+            entry.update({"home": first["odds"], "away": second["odds"]})
+        if market != "ml":
+            entry["line"] = row.get("line")
+        if market == "hd":
+            entry["favorite"] = favorite_for_line(row.get("line"))
+        best = entry
+    return best
+
+
+def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str, start_iso: str | None = None) -> dict[str, Any]:
     usable = rows
     if market == "hd":
         usable = [row for row in rows if row.get("line") is not None and abs(abs(float(row["line"])) - 1.5) <= 0.001]
@@ -624,6 +673,14 @@ def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str) -
         if market == "hd":
             result["active"]["favorite"] = favorite_for_line(active.get("line"))
         result["close"] = copy.deepcopy(result["active"])
+    # 已開賽：close 改用走勢史時戳取法（開賽前最後一筆）＝真收盤並定案；
+    # 頁面上的 active 可能是走地/凍結價，只留作參考，不再充當 close。
+    if start_iso and observed_at > start_iso:
+        closing = _closing_from_rows(usable, market, start_iso)
+        if closing:
+            result["close"] = closing
+        elif isinstance(result.get("close"), dict):
+            result["close"] = {**copy.deepcopy(result["close"]), "final": True, "precision": "page-post-start"}
     return result
 
 
@@ -645,19 +702,18 @@ def _extract_start(response: Any) -> datetime | None:
     return datetime.fromtimestamp(int(match.group(1)), tz=TW)
 
 
-def _load_schedule(path: Path, now: datetime) -> list[dict[str, Any]]:
+def _load_schedule(path: Path, now: datetime, from_hours: float = 0.0, to_hours: float = float(ACTIVE_WINDOW_HOURS)) -> list[dict[str, Any]]:
     try:
         rows = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:
         raise RuntimeError(f"pregame_data 無法讀取，拒絕抓取：{exc}") from exc
     if not isinstance(rows, list):
         raise RuntimeError("pregame_data 必須是陣列")
-    # Never sample after first pitch: OddsPortal may already expose in-play prices,
-    # while this feed promises a pre-game closing snapshot.
-    start = now.isoformat()
-    # The first in-window scrape hydrates earlier movements from OddsPortal's
-    # hover history, so polling farther ahead only wastes the 15-minute budget.
-    end = (now + timedelta(hours=ACTIVE_WINDOW_HOURS)).isoformat()
+    # 2026-08-04 拆掉「開賽後一律不採樣」硬限制：頁面永存（含完賽），收盤已改
+    # 走勢史時戳取法（_closing_from_rows），開賽後採樣不再有走地價污染問題。
+    # 視窗由呼叫端給：from_hours 可為負（回補過去缺口），to_hours 往未來。
+    start = (now + timedelta(hours=float(from_hours))).isoformat()
+    end = (now + timedelta(hours=float(to_hours))).isoformat()
     out = []
     for row in rows:
         league = str(row.get("league") or "").lower()
@@ -723,7 +779,7 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
     if not official or abs(datetime.fromisoformat(official["startISO"]) - start) > timedelta(minutes=120):
         return None
     markets = {
-        name: _market_summary(captured.get(name) or [], name, observed_at)
+        name: _market_summary(captured.get(name) or [], name, observed_at, start_iso=official["startISO"])
         for name in ("ml", "hd", "ou")
     }
     markets = {key: value for key, value in markets.items() if _market_has_data(value)}
@@ -822,7 +878,52 @@ def _stealth_session_factory(fetchers: Any) -> tuple[Any, dict[str, Any]]:
     }
 
 
-def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues: list[str]) -> dict[str, Any]:
+def _summary_index(summary: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    """summary key 含 eventId（抓過才知道）→ 用賽程五元組建索引供缺口比對。"""
+    index: dict[str, dict[str, Any]] = {}
+    for item in (summary.get("games") or {}).values():
+        key = "|".join([
+            str(item.get("league", "")).lower(), str(item.get("date", ""))[:10],
+            str(item.get("awayTeam", "")), str(item.get("homeTeam", "")),
+            str(item.get("startTime", ""))[:5],
+        ])
+        index[key] = item
+    return index
+
+
+def _row_needs(row: dict[str, Any], index: dict[str, dict[str, Any]], now_iso: str) -> bool:
+    """缺口判定：初盤（ml.open）沒填，或已開賽而收盤未定案（close.final）。"""
+    key = "|".join([row["league"], row["date"], str(row["awayTeam"]), str(row["homeTeam"]), str(row["startTime"])[:5]])
+    markets = (index.get(key) or {}).get("markets") or {}
+    ml = markets.get("ml") or {}
+    if not _market_has_data(ml.get("open")):
+        return True
+    if row["startISO"] <= now_iso and not ((ml.get("close") or {}).get("final")):
+        return True
+    return False
+
+
+def pick_targets(schedule: list[dict[str, Any]], summary: dict[str, Any], now: datetime,
+                 refresh_upcoming: bool, max_games: int) -> list[dict[str, Any]]:
+    """缺口驅動選場（使用者 2026-08-04 拍板）：先檢查哪些比賽初盤/收盤還沒填，只抓那些。
+    refresh_upcoming（對調巡檢閘）＝未開賽場一律刷新＋順手回補過去缺口。"""
+    now_iso = now.isoformat()
+    index = _summary_index(summary)
+    upcoming = [row for row in schedule if row["startISO"] > now_iso]
+    past = [row for row in schedule if row["startISO"] <= now_iso]
+    if refresh_upcoming:
+        chosen = sorted(upcoming, key=lambda row: row["startISO"])
+    else:
+        chosen = sorted([row for row in upcoming if _row_needs(row, index, now_iso)], key=lambda row: row["startISO"])
+    backfill = sorted([row for row in past if _row_needs(row, index, now_iso)],
+                      key=lambda row: row["startISO"], reverse=True)
+    out = chosen + backfill
+    return out[:max_games] if max_games and max_games > 0 else out
+
+
+def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues: list[str],
+             from_hours: float = 0.0, to_hours: float = float(ACTIVE_WINDOW_HOURS),
+             max_games: int = 0, include_started: bool = False, refresh_upcoming: bool = False) -> dict[str, Any]:
     try:
         import scrapling.fetchers as fetchers
     except ImportError as exc:
@@ -832,8 +933,13 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
 
     now = datetime.now(TW)
     observed_at = now.isoformat(timespec="seconds")
-    schedule = _load_schedule(schedule_path, now)
+    schedule = _load_schedule(schedule_path, now, from_hours=from_hours, to_hours=to_hours)
     summary = _load_summary(summary_path)
+    targets = pick_targets(schedule, summary, now, refresh_upcoming, max_games)
+    if not targets:
+        print("INFO 缺口驅動：視窗內沒有待補的初盤/收盤，跳過本輪（不動任何檔案）")
+        return {"health": {"scheduled": 0, "discovered": 0, "succeeded": 0, "failed": 0,
+                           "errors": [], "note": "no-gaps"}}
     discovered: list[dict[str, Any]] = []
     successes: list[dict[str, Any]] = []
     errors: list[str] = []
@@ -845,8 +951,8 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
                     _assert_oddsportal_url(urljoin(BASE_URL, LEAGUE_URLS[league])),
                     network_idle=True, wait=1200, timeout=90000, disable_resources=False,
                 )
-                for event in _discover_events(listing, league, now):
-                    if _listing_matches_schedule(event, schedule):
+                for event in _discover_events(listing, league, now, include_started=include_started):
+                    if _listing_matches_schedule(event, targets):
                         discovered.append(event)
             except Exception as exc:
                 errors.append(f"{league} discovery: {exc}")
@@ -860,8 +966,9 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
             for event in batch:
                 try:
                     game = scrape_event(
-                        session, event, schedule, observed_at,
-                        with_history=not _has_opening_summary(summary, event["eventId"]),
+                        session, event, targets, observed_at,
+                        # 已開賽回補一定要走勢史（收盤時戳取法靠它）；未開賽維持只補缺
+                        with_history=include_started or not _has_opening_summary(summary, event["eventId"]),
                     )
                     if game:
                         batch_successes.append(game)
@@ -886,7 +993,7 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
         "version": 1, "source": "OddsPortal", "bookmaker": BOOKMAKER,
         "updatedAt": observed_at,
         "health": {
-            "scheduled": len(schedule), "discovered": len({item['eventId'] for item in discovered}),
+            "scheduled": len(targets), "discovered": len({item['eventId'] for item in discovered}),
             "succeeded": len(successes), "failed": len(errors), "errors": errors[:20],
         },
     })
@@ -905,13 +1012,22 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--history-dir", default="data/oddsportal_history")
     parser.add_argument("--schedule", default="data/pregame_data.json")
     parser.add_argument("--leagues", default=",".join(LEAGUE_URLS))
+    parser.add_argument("--from-hours", type=float, default=0.0, help="賽程視窗起點（相對現在的小時數，可為負＝回補過去）")
+    parser.add_argument("--to-hours", type=float, default=float(ACTIVE_WINDOW_HOURS), help="賽程視窗終點（相對現在的小時數）")
+    parser.add_argument("--max-games", type=int, default=0, help="單輪最多抓幾場（0=不限）")
+    parser.add_argument("--include-started", action="store_true", help="含已開賽/完賽場次（收盤走勢史時戳取法）")
+    parser.add_argument("--refresh-upcoming", action="store_true", help="未開賽場一律刷新（對調巡檢閘用）")
     args = parser.parse_args(argv)
     leagues = [item.strip().lower() for item in args.leagues.split(",") if item.strip()]
     unknown = [item for item in leagues if item not in LEAGUE_URLS]
     if unknown:
         parser.error(f"未知聯盟: {','.join(unknown)}")
     try:
-        result = run_once(Path(args.summary), Path(args.history_dir), Path(args.schedule), leagues)
+        result = run_once(
+            Path(args.summary), Path(args.history_dir), Path(args.schedule), leagues,
+            from_hours=args.from_hours, to_hours=args.to_hours, max_games=args.max_games,
+            include_started=args.include_started, refresh_upcoming=args.refresh_upcoming,
+        )
         print(json.dumps(result.get("health"), ensure_ascii=False))
         return 0
     except Exception as exc:

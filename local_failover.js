@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { isOddsPortalDue, runOddsPortal } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal } = require('./oddsportal_local.js');
 
 const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
@@ -124,22 +124,27 @@ function run() {
     } catch (e) { log('pregame 本機抓取失敗：' + e.message.split('\n')[0]); }
   }
 
-  // 2b) OddsPortal 的 Stake 賠率在 GitHub 美國 runner 只回空 bookmaker rows。
-  // 沿用本專用 clone 與共用 lock，住宅 IP 每 15 分鐘抓一次；只 stage 自己的摘要與日檔。
-  const oddsAttempt = Number(state.oddsportal_last_attempt) || 0;
-  if (isOddsPortalDue(oddsAttempt)) {
-    state.oddsportal_last_attempt = Date.now();
-    saveState(state);
-    log('OddsPortal / Stake 到期，本機開始抓取四聯盟');
-    try {
-      const outputs = runOddsPortal({ repoDir: REPO_DIR });
+  // 2b) OddsPortal 的 Stake 賠率在 GitHub 美國 runner 只回空 bookmaker rows → 只能本機抓。
+  // 2026-08-04 使用者拍板：廢 15 分鐘盯哨，改「賽程驅動閘」一天 5-6 次
+  // （初盤×2＋對調 T-2.5h×2＋收盤×2；細節見 oddsportal_local.js 檔頭）。
+  // 每閘缺口驅動：scraper 端只抓「初盤/收盤還沒填」的比賽（含 3.5 天回補），上限 40 場。
+  try {
+    const games = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'pregame_data.json'), 'utf8'));
+    const gate = dueOddsPortalGate(computeOddsPortalGates(games, Date.now()), state, Date.now());
+    if (gate) {
+      state['opg_' + gate.id] = Date.now();      // 先記「試過」：失敗也不重跑，等下一閘順手回補
+      pruneOddsPortalGateState(state, Date.now());
+      state.oddsportal_last_attempt = Date.now();
+      saveState(state);
+      log(`OddsPortal 閘 ${gate.id} 到點（${gate.mode}／${gate.leagues.join('+')}）→ 缺口驅動抓取`);
+      const outputs = runOddsPortal({ repoDir: REPO_DIR, gate });
       staged.push(...outputs);
       state.oddsportal_last_success = Date.now();
       saveState(state);
-      log('OddsPortal / Stake 本輪完成');
-    } catch (e) {
-      log('OddsPortal / Stake 本機抓取失敗：' + e.message.split('\n')[0]);
+      log('OddsPortal 本閘完成');
     }
+  } catch (e) {
+    log('OddsPortal 閘處理失敗：' + e.message.split('\n')[0]);
   }
 
   // 3) 明牌各聯盟：被擋指紋 qualified===0 且 updated 新鮮
