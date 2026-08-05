@@ -3454,14 +3454,39 @@ function navMatchState(it){
   return c<=0 ? "st-empty" : ("st-odds"+c);
 }
 // ===== 國際軸標示器資料（data/intl_state.json，odds 爬蟲每輪產出；bet365 vs 台彩開盤）=====
+// 2026-08-05 使用者拍板：主檔是 5 天滾動窗，舊日期改由月檔（data/intl_archive/YYYY-MM.json）
+// 接手——歷史卡片的 bet365/台彩警示條不再消失（git 歷史 7/11 起 443 場已回填月檔）。
 let __intl = null, __intlRaw = "";
+let __intlArch = {};   // month → {games}｜'loading'｜'missing'
+function intlArchFor(month){
+  const c = __intlArch[month];
+  if(c && c!=='loading' && c!=='missing') return c;
+  if(c) return null;
+  __intlArch[month] = 'loading';
+  (async ()=>{
+    let v = null;
+    try{
+      const r = await fetch("data/intl_archive/"+month+".json?t="+Date.now(), {cache:"no-store"});
+      if(r.ok) v = await r.json();
+    }catch(_){}
+    __intlArch[month] = (v && v.games) ? v : 'missing';
+    if(v && v.games){ try{ render(); }catch(_){} }   // 載到就重繪，開著的舊日期立即補上警示條
+  })();
+  return null;
+}
 function intlFor(it){
   if(!__intl || !__intl.games || !it || it.type!=="match") return null;
   const lg = (typeof leagueOf==="function") ? leagueOf(it) : (it.league||"mlb");
   const base = lg+"|"+doc.activeDate+"|"+it.away+"|"+it.home;
   const tm = String(it.gameTime||"").match(/\d{1,2}:\d{2}/);
   const timed = tm ? base+"|"+tm[0].padStart(5,"0") : null;
-  return (timed && __intl.games[timed]) || __intl.games[base] || null;
+  const live = (timed && __intl.games[timed]) || __intl.games[base] || null;
+  if(live) return live;
+  const month = String(doc.activeDate||"").slice(0,7);
+  if(!/^\d{4}-\d{2}$/.test(month)) return null;
+  const arch = intlArchFor(month);
+  if(!arch) return null;
+  return (timed && arch.games[timed]) || arch.games[base] || null;
 }
 async function loadIntlState(){
   try{

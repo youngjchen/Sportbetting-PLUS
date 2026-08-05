@@ -1012,7 +1012,29 @@ function buildIntlState(log, stamp) {
   }
   // 修剪：只留最近 3 天（板上只看今天；留兩天緩衝跨日結算）
   const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
-  for (const k of Object.keys(games)) { const d = k.split('|')[1]; if (d && d < cutoff) delete games[k]; }
+  // 2026-08-05 使用者拍板：滾動窗剪掉前先歸檔月檔（data/intl_archive/YYYY-MM.json）——
+  // 歷史卡片的 bet365/台彩警示條不再隨窗滾動消失；剪下的=該場最終狀態，同鍵直接覆蓋。
+  const pruned = {};
+  for (const k of Object.keys(games)) { const d = k.split('|')[1]; if (d && d < cutoff) { pruned[k] = games[k]; delete games[k]; } }
+  try {
+    const byMonth = {};
+    for (const [k, v] of Object.entries(pruned)) {
+      const d = k.split('|')[1] || '';
+      if (!/^\d{4}-\d{2}/.test(d)) continue;
+      (byMonth[d.slice(0, 7)] = byMonth[d.slice(0, 7)] || {})[k] = v;
+    }
+    for (const [month, adds] of Object.entries(byMonth)) {
+      const dir = path.join('data', 'intl_archive');
+      const file = path.join(dir, month + '.json');
+      let arch = { version: 1, games: {} };
+      try { arch = JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) {}
+      if (!arch.games) arch.games = {};
+      Object.assign(arch.games, adds);
+      fs.mkdirSync(dir, { recursive: true });
+      fs.writeFileSync(file, JSON.stringify(arch, null, 2));
+      console.log(`🗄️ intl 歸檔 ${month}：+${Object.keys(adds).length} 場`);
+    }
+  } catch (e) { console.log('⚠️ intl 歸檔失敗（不影響主檔）：', e.message); }
   fs.writeFileSync(INTL_FILE, JSON.stringify({ updated: stamp, games }));
   console.log(`🌐 intl_state：${Object.keys(games).length} 場（台彩側對上 ${Object.values(games).filter(g => g.ls).length}）`);
 }

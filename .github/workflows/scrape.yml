@@ -59,6 +59,7 @@ jobs:
             if [ -f data/odds_log.json ]; then
               git add data/odds_log.json
               [ -f data/intl_state.json ] && git add data/intl_state.json
+              [ -d data/intl_archive ] && git add data/intl_archive
               if ! git diff --cached --quiet; then
                 git commit -m "odds update $(date -u +%FT%TZ)" || true
                 # push 失敗多半是同分鐘別的 workflow 推了其它檔（pregame 等）→ rebase 一次再推；
