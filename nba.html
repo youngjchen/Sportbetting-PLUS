@@ -1120,6 +1120,10 @@ function _collectSettleFields(it){
   it.flipDir = it.flipVanished ? fsv : null;
   const tv = $("#settleTotVal") ? $("#settleTotVal").value.trim() : "";
   if(tv!=="") it.totVal = tv;
+  // 結算視窗填的讓分盤口要存進卡片（2026-08-06：先前只寫進結算紀錄，
+  // 卡片讓分數字仍讀賽程管線的台彩盤口＝使用者改了沒反應）
+  const hvv = $("#settleHdVal") ? $("#settleHdVal").value.trim() : "";
+  if(hvv!=="") it.hdVal = Math.abs(parseFloat(hvv));
 }
 $("#settleSaveOdds").onclick = ()=>{
   const m=settleTarget; if(!m) return;
@@ -1888,7 +1892,10 @@ function renderCardW(model){
     const hdWrap=wrapDiv();
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方（燈跟隊走）";
     swap.onclick=()=>{ snapshot(); it.hdSwap=!it.hdSwap; const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
-    const hv = model.hdVal!=null ? String(model.hdVal) : "";
+    // 使用者在結算視窗填的盤口優先；沒填才用賽程管線的台彩盤口
+    const hv = (it.hdVal!=null && it.hdVal!=="" && !isNaN(parseFloat(it.hdVal)))
+             ? String(Math.abs(parseFloat(it.hdVal)))
+             : (model.hdVal!=null ? String(model.hdVal) : "");
     let anomChip=null;
     try{ const ai=bAnomInfo(model, it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
@@ -2368,5 +2375,6 @@ loadPregame();
 </script>
 <script src="wnba-picks-addon.js?v=20260803wnba1"></script>
 <script src="wnba-divination-addon.js?v=20260804dv1"></script>
+<script src="oddsportal-integration.js?v=20260806op10"></script>
 </body>
 </html>

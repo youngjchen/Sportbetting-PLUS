@@ -58,7 +58,7 @@
     });
     if (candidates.length === 0) return null;
     if (candidates.length === 1) return candidates[0];
-    const wanted = hhmmToMin(card.gameTime);
+    const wanted = hhmmToMin(card.gameTime || card.time);   // 籃球板的賽程欄位叫 time
     if (wanted == null) return null;
     let best = null;
     let bestDiff = Infinity;
