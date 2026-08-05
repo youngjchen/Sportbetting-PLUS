@@ -2175,26 +2175,29 @@ async function load(){
       updateSaveBadge(false);
     }
   }catch(_){}
-  // ── 2026-08-05 一次性復原：OddsPortal 整合曾自動亂勾「賽前讓分方曾對調」──
-  // 汙染名單＝git 逐版聯集共 12 場（推斷邏輯已整層拆除、永不再標）。此清單內
-  // 的卡若被標了 preGameSwap 一律歸零＝恢復使用者自己的結算狀態；名單外不動。
+  // ── 2026-08-05 一次性復原 v2：OddsPortal 整合曾自動亂勾「賽前讓分方曾對調」──
+  // 假訊 9 場歸零（恢復使用者結算狀態）；8/6 三場經使用者證實「真的對調過」→
+  // 保留、若被第一版復原誤清則補回。推斷邏輯已整層拆除、永不再自動標。
   try{
-    if(!doc.opSwapRb1 && !_loadBlocked){
-      const L = [["2026-08-01","國民","勇士"],["2026-08-01","紅襪","道奇"],["2026-08-01","費城人","金鶯"],
+    if(!doc.opSwapRb2 && !_loadBlocked){
+      const FALSE9 = [["2026-08-01","國民","勇士"],["2026-08-01","紅襪","道奇"],["2026-08-01","費城人","金鶯"],
                  ["2026-08-05","國民","費城人"],["2026-08-05","大都會","守護者"],["2026-08-05","教士","響尾蛇"],
-                 ["2026-08-05","樂天","台鋼"],["2026-08-05","老虎","水手"],["2026-08-05","運動家","紅人"],
-                 ["2026-08-06","海盜","釀酒人"],["2026-08-06","白襪","紅襪"],["2026-08-06","藍鳥","太空人"]];
-      let fixed = 0;
+                 ["2026-08-05","樂天","台鋼"],["2026-08-05","老虎","水手"],["2026-08-05","運動家","紅人"]];
+      const TRUE3 = [["2026-08-06","海盜","釀酒人"],["2026-08-06","白襪","紅襪"],["2026-08-06","藍鳥","太空人"]];
+      let fixed = 0, restored = 0;
       for(const [dk, b] of Object.entries(doc.boards||{})){
         for(const it of (b && b.items) || []){
-          if(it && it.type==="match" && it.preGameSwap &&
-             L.some(([d,a,h]) => dk===d && it.away===a && it.home===h)){
+          if(!it || it.type!=="match") continue;
+          if(it.preGameSwap && FALSE9.some(([d,a,h]) => dk===d && it.away===a && it.home===h)){
             it.preGameSwap = false; fixed++;
+          }
+          if(!it.preGameSwap && TRUE3.some(([d,a,h]) => dk===d && it.away===a && it.home===h)){
+            it.preGameSwap = true; restored++;   // 使用者證實真對調（2026-08-05）
           }
         }
       }
-      doc.opSwapRb1 = true;
-      if(fixed) console.warn("[OddsPortal復原] 已清除被亂勾的賽前對調 " + fixed + " 場");
+      doc.opSwapRb1 = true; doc.opSwapRb2 = true;
+      if(fixed || restored) console.warn("[OddsPortal復原v2] 假訊歸零 " + fixed + " 場、真對調補回 " + restored + " 場");
       save();
     }
   }catch(_){}
