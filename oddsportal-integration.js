@@ -106,8 +106,44 @@
       try { value = await fetchFeed(RAW_URL); }
       catch (_) { value = await fetchFeed(FALLBACK_URL); }
       feed = value;
+      try { autoApplyOdds(); } catch (_) {}
       try { if (typeof global.render === 'function') global.render(); } catch (_) {}
       return feed;
+    }
+
+    // 2026-08-05 使用者拍板：初盤/定案收盤自動寫進卡片欄位（openOdds/closeOdds），
+    // 標籤列表照舊規則隨填寫變黃（navMatchState 數的就是這些欄位）。
+    // 鐵則：只填空白、絕不覆蓋手填值；下注賠率(flipOdds)＝使用者自己的注，永不代填。
+    function autoApplyOdds() {
+      const doc = global.doc;
+      if (!doc || !doc.boards) return 0;
+      let changed = 0;
+      for (const dk of Object.keys(doc.boards)) {
+        const board = doc.boards[dk];
+        for (const it of (board && board.items) || []) {
+          if (!it || it.type !== 'match') continue;
+          const game = gameFor(it, dk, null);
+          if (!game) continue;
+          const ml = (game.markets || {}).ml || {};
+          if (it.openOddsAway == null && it.openOddsHome == null &&
+              ml.open && ml.open.away != null && ml.open.home != null) {
+            it.openOddsAway = ml.open.away;
+            it.openOddsHome = ml.open.home;
+            changed++;
+          }
+          const close = (ml.close && ml.close.final) ? ml.close : null;
+          if (close && it.closeOddsAway == null && it.closeOddsHome == null &&
+              close.away != null && close.home != null) {
+            it.closeOddsAway = close.away;
+            it.closeOddsHome = close.home;
+            changed++;
+          }
+        }
+      }
+      if (changed) {
+        try { if (typeof global.save === 'function') global.save(); } catch (_) {}
+      }
+      return changed;
     }
 
     // 歷史月檔快取：month → feed 物件｜'loading'｜'missing'
@@ -123,7 +159,10 @@
         try { value = await fetchFeed(ARCHIVE_RAW_DIR + month + '.json'); }
         catch (_) { try { value = await fetchFeed(ARCHIVE_LOCAL_DIR + month + '.json'); } catch (_) {} }
         archives[month] = value || 'missing';
-        if (value && typeof onReady === 'function') { try { onReady(); } catch (_) {} }
+        if (value) {
+          try { autoApplyOdds(); } catch (_) {}
+          if (typeof onReady === 'function') { try { onReady(); } catch (_) {} }
+        }
       })();
       return null;
     }
@@ -251,7 +290,7 @@
     }
 
     const api = {
-      refresh, gameFor, snapshotFor, injectSettlement,
+      refresh, gameFor, snapshotFor, injectSettlement, autoApplyOdds,
       _setFeed: function (value) { if (validFeed(value)) feed = value; },
       _getFeed: function () { return feed; },
     };

@@ -111,3 +111,37 @@ test('asia full-name board cards match short-name oddsportal teams', () => {
   assert.ok(game, '全名卡必須配上短名摘要');
   assert.equal(game.eventId, 'jp1');
 });
+
+test('autoApplyOdds writes open and final close into blank card fields only', () => {
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM('<!doctype html><body></body>');
+  let saved = 0;
+  const browser = {
+    document: dom.window.document,
+    doc: { activeDate: '2026-08-05', boards: { '2026-08-05': { items: [
+      { type: 'match', league: '日職', away: '阪神虎', home: '橫濱DeNA', gameTime: '16:45' },                     // 空白→自動填
+      { type: 'match', league: '日職', away: '讀賣巨人', home: '廣島鯉魚', gameTime: '17:00', openOddsAway: 9.9, openOddsHome: 9.8 }, // 手填→不碰
+    ] } } },
+    fetch: async () => { throw new Error('not used'); },
+    setInterval: () => 0,
+    save: () => { saved++; },
+  };
+  try {
+    const api = require('../oddsportal-integration.js').install(browser);
+    api._setFeed({ source: 'OddsPortal', bookmaker: 'Stake.com', games: {
+      'npb|2026-08-05|阪神|橫濱|16:45|a': { eventId: 'a', league: 'npb', date: '2026-08-05', startTime: '16:45',
+        awayTeam: '阪神', homeTeam: '橫濱',
+        markets: { ml: { open: { away: 2.14, home: 1.66 }, close: { away: 2.3, home: 1.6, final: true } } } },
+      'npb|2026-08-05|巨人|廣島|17:00|b': { eventId: 'b', league: 'npb', date: '2026-08-05', startTime: '17:00',
+        awayTeam: '巨人', homeTeam: '廣島',
+        markets: { ml: { open: { away: 2.02, home: 1.74 } } } },
+    } });
+    const changed = api.autoApplyOdds();
+    const its = browser.doc.boards['2026-08-05'].items;
+    assert.equal(its[0].openOddsAway, 2.14);
+    assert.equal(its[0].closeOddsHome, 1.6);      // final 收盤一併寫入
+    assert.equal(its[0].flipOddsAway, undefined); // 下注賠率永不代填
+    assert.equal(its[1].openOddsAway, 9.9);       // 手填值不覆蓋
+    assert.ok(changed >= 2 && saved === 1);
+  } finally { dom.window.close(); }
+});
