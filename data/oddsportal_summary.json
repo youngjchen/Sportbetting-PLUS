@@ -2,13 +2,19 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-08-06T04:30:08+08:00",
+  "updatedAt": "2026-08-06T07:00:05+08:00",
   "health": {
-    "scheduled": 14,
-    "discovered": 6,
-    "succeeded": 6,
-    "failed": 0,
-    "errors": []
+    "scheduled": 40,
+    "discovered": 19,
+    "succeeded": 14,
+    "failed": 5,
+    "errors": [
+      "mlb Gziwx25D: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "mlb dWTPa5cK: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: BetInAsia",
+      "mlb hGUffqLs: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "mlb lrO3hNkf: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "mlb 6unTHbz3: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -5688,7 +5694,7 @@
       "awayTeam": "光芒",
       "homeTeam": "落磯",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/colorado-rockies-naYhNOaA/tampa-bay-rays-GCHgI4hp/#td768Zuh",
-      "observedAt": "2026-08-05T23:40:11+08:00",
+      "observedAt": "2026-08-06T07:00:05+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -5700,6 +5706,13 @@
             "at": "2026-08-05T23:40:11+08:00",
             "home": 2.35,
             "away": 1.6
+          },
+          "close": {
+            "at": "2026-08-06T03:09:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.3,
+            "away": 1.63
           }
         },
         "hd": {
@@ -5714,6 +5727,15 @@
             "at": "2026-08-05T23:40:11+08:00",
             "home": 1.88,
             "away": 1.93,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-06T00:38:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.86,
+            "away": 1.95,
             "line": 1.5,
             "favorite": "away"
           }
@@ -5744,7 +5766,7 @@
       "stakeSwap": {
         "ever": false,
         "transitions": [],
-        "scanFavorite": "away"
+        "scanFavorite": "home"
       }
     },
     "mlb|2026-08-06|運動家|紅人|06:40|hGUffqLs": {
@@ -6342,7 +6364,7 @@
       "awayTeam": "藍鳥",
       "homeTeam": "太空人",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/houston-astros-lfZXonNq/toronto-blue-jays-zcDLaZ3b/#6iCTtzpC",
-      "observedAt": "2026-08-05T23:40:11+08:00",
+      "observedAt": "2026-08-06T07:00:05+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -6354,6 +6376,13 @@
             "at": "2026-08-05T23:40:11+08:00",
             "home": 1.52,
             "away": 2.55
+          },
+          "close": {
+            "at": "2026-08-06T00:01:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.44,
+            "away": 2.8
           }
         },
         "hd": {
@@ -6370,6 +6399,15 @@
             "away": 1.77,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T23:35:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.87,
+            "away": 1.94,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -6381,6 +6419,14 @@
           },
           "active": {
             "at": "2026-08-05T23:40:11+08:00",
+            "over": 1.77,
+            "under": 2.06,
+            "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-05T23:35:00+08:00",
+            "final": true,
+            "precision": "history",
             "over": 1.77,
             "under": 2.06,
             "line": 7.5
@@ -6416,7 +6462,7 @@
       "awayTeam": "巨人",
       "homeTeam": "遊騎兵",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/san-francisco-giants-bRZ9b6xj/texas-rangers-f3GcHO7j/#AFNnhEeB",
-      "observedAt": "2026-08-05T23:40:11+08:00",
+      "observedAt": "2026-08-06T07:00:05+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -6428,6 +6474,13 @@
             "at": "2026-08-05T23:40:11+08:00",
             "home": 1.6,
             "away": 2.35
+          },
+          "close": {
+            "at": "2026-08-06T02:32:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.63,
+            "away": 2.3
           }
         },
         "hd": {
@@ -6442,6 +6495,15 @@
             "at": "2026-08-05T23:40:11+08:00",
             "home": 2.19,
             "away": 1.69,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-06T00:01:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.19,
+            "away": 1.68,
             "line": -1.5,
             "favorite": "home"
           }
@@ -6472,7 +6534,7 @@
       "stakeSwap": {
         "ever": false,
         "transitions": [],
-        "scanFavorite": "home"
+        "scanFavorite": "away"
       }
     },
     "mlb|2026-08-06|道奇|小熊|02:20|2kKvfzRb": {
@@ -6484,7 +6546,7 @@
       "awayTeam": "道奇",
       "homeTeam": "小熊",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chicago-cubs-j7ZnBQFi/los-angeles-dodgers-nwPDBpVc/#2kKvfzRb",
-      "observedAt": "2026-08-05T23:40:11+08:00",
+      "observedAt": "2026-08-06T07:00:05+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -6496,6 +6558,13 @@
             "at": "2026-08-05T23:40:11+08:00",
             "home": 1.78,
             "away": 2.05
+          },
+          "close": {
+            "at": "2026-08-06T01:43:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.84,
+            "away": 1.97
           }
         },
         "hd": {
@@ -6512,6 +6581,15 @@
             "away": 1.54,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T23:16:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.44,
+            "away": 1.56,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -6525,6 +6603,14 @@
             "at": "2026-08-05T23:40:11+08:00",
             "over": 1.81,
             "under": 2,
+            "line": 9.5
+          },
+          "close": {
+            "at": "2026-08-05T23:17:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.83,
+            "under": 2.01,
             "line": 9.5
           }
         }
@@ -6540,7 +6626,7 @@
       "stakeSwap": {
         "ever": false,
         "transitions": [],
-        "scanFavorite": "home"
+        "scanFavorite": "away"
       }
     },
     "wnba|2026-08-06|水星|美夢|07:00|Yg9fLlAL": {
@@ -7501,6 +7587,664 @@
         "ever": false,
         "transitions": [],
         "scanFavorite": null
+      }
+    },
+    "mlb|2026-08-07|天使|金鶯|00:35|I12V2V9T": {
+      "eventId": "I12V2V9T",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "00:35",
+      "startISO": "2026-08-07T00:35:00+08:00",
+      "awayTeam": "天使",
+      "homeTeam": "金鶯",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/baltimore-orioles-EcZwBi3N/los-angeles-angels-Mg9H0Flh/#I12V2V9T",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:28:00+08:00",
+            "home": 1.61,
+            "away": 2.34
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.57,
+            "away": 2.42
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:32:00+08:00",
+            "home": 2.16,
+            "away": 1.7,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 2.08,
+            "away": 1.76,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:32:00+08:00",
+            "over": 1.54,
+            "under": 2.49,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.55,
+            "under": 2.47,
+            "line": 8.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
+      }
+    },
+    "mlb|2026-08-07|大都會|守護者|01:10|MTc1c9Xj": {
+      "eventId": "MTc1c9Xj",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "01:10",
+      "startISO": "2026-08-07T01:10:00+08:00",
+      "awayTeam": "大都會",
+      "homeTeam": "守護者",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/cleveland-guardians-4K05MrFG/new-york-mets-I5wWW4UM/#MTc1c9Xj",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:31:00+08:00",
+            "home": 1.91,
+            "away": 1.91
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.92,
+            "away": 1.89
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:32:00+08:00",
+            "home": 1.55,
+            "away": 2.48,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.53,
+            "away": 2.5,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:32:00+08:00",
+            "over": 1.81,
+            "under": 2.0,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.84,
+            "under": 1.97,
+            "line": 7.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
+      }
+    },
+    "mlb|2026-08-07|藍鳥|小熊|02:20|8WzNBWfo": {
+      "eventId": "8WzNBWfo",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "02:20",
+      "startISO": "2026-08-07T02:20:00+08:00",
+      "awayTeam": "藍鳥",
+      "homeTeam": "小熊",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chicago-cubs-j7ZnBQFi/toronto-blue-jays-zcDLaZ3b/#8WzNBWfo",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-06-21T02:42:00+08:00",
+            "home": 2.04,
+            "away": 1.79
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.99,
+            "away": 1.83
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-06-21T02:43:00+08:00",
+            "home": 1.58,
+            "away": 2.4,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.56,
+            "away": 2.43,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-06-21T02:43:00+08:00",
+            "over": 1.75,
+            "under": 2.09,
+            "line": 6.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
+      }
+    },
+    "mlb|2026-08-07|國民|費城人|06:05|AkvdJjfA": {
+      "eventId": "AkvdJjfA",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "06:05",
+      "startISO": "2026-08-07T06:05:00+08:00",
+      "awayTeam": "國民",
+      "homeTeam": "費城人",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/philadelphia-phillies-QTNHA4p4/washington-nationals-CE026gRp/#AkvdJjfA",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:44:00+08:00",
+            "home": 1.3,
+            "away": 3.6
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.3,
+            "away": 3.55
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:44:00+08:00",
+            "over": 1.59,
+            "under": 2.38,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.56,
+            "under": 2.43,
+            "line": 7.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "mlb|2026-08-07|馬林魚|勇士|07:15|2mJzC8np": {
+      "eventId": "2mJzC8np",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "07:15",
+      "startISO": "2026-08-07T07:15:00+08:00",
+      "awayTeam": "馬林魚",
+      "homeTeam": "勇士",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/atlanta-braves-0UPxbDYA/miami-marlins-ddxzWOqT/#2mJzC8np",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:46:00+08:00",
+            "home": 1.65,
+            "away": 2.26
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.62,
+            "away": 2.31
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:48:00+08:00",
+            "home": 2.24,
+            "away": 1.66,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 2.22,
+            "away": 1.67,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:48:00+08:00",
+            "over": 1.72,
+            "under": 2.13,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.75,
+            "under": 2.08,
+            "line": 8.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
+      }
+    },
+    "mlb|2026-08-07|教士|響尾蛇|09:40|vgpyGx5F": {
+      "eventId": "vgpyGx5F",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "09:40",
+      "startISO": "2026-08-07T09:40:00+08:00",
+      "awayTeam": "教士",
+      "homeTeam": "響尾蛇",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/arizona-diamondbacks-8bP2bXmH/san-diego-padres-8poQN9Ud/#vgpyGx5F",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:47:00+08:00",
+            "home": 1.87,
+            "away": 1.94
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.86,
+            "away": 1.95
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:51:00+08:00",
+            "home": 1.52,
+            "away": 2.55,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.53,
+            "away": 2.5,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:51:00+08:00",
+            "over": 1.56,
+            "under": 2.44,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.54,
+            "under": 2.49,
+            "line": 7.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
+      }
+    },
+    "mlb|2026-08-07|運動家|紅人|00:40|ENpmLCPc": {
+      "eventId": "ENpmLCPc",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "00:40",
+      "startISO": "2026-08-07T00:40:00+08:00",
+      "awayTeam": "運動家",
+      "homeTeam": "紅人",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/athletics-xIYDcQid/cincinnati-reds-EkWXj6U9/#ENpmLCPc",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:28:00+08:00",
+            "home": 1.56,
+            "away": 2.44
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.61,
+            "away": 2.34
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:32:00+08:00",
+            "home": 2.1,
+            "away": 1.74,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 2.15,
+            "away": 1.71,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:53:00+08:00",
+            "over": 1.54,
+            "under": 2.5,
+            "line": 7.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
+      }
+    },
+    "mlb|2026-08-07|老虎|水手|04:10|zLwpEGZR": {
+      "eventId": "zLwpEGZR",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "04:10",
+      "startISO": "2026-08-07T04:10:00+08:00",
+      "awayTeam": "老虎",
+      "homeTeam": "水手",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/detroit-tigers-0QIlt8pi/seattle-mariners-txYPhSac/#zLwpEGZR",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:44:00+08:00",
+            "home": 1.76,
+            "away": 2.07
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.76,
+            "away": 2.07
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:48:00+08:00",
+            "home": 2.55,
+            "away": 1.53,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 2.55,
+            "away": 1.52,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:48:00+08:00",
+            "over": 1.88,
+            "under": 1.93,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.91,
+            "under": 1.89,
+            "line": 7.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
+      }
+    },
+    "mlb|2026-08-07|白襪|紅襪|07:10|IFs4HUOM": {
+      "eventId": "IFs4HUOM",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "07:10",
+      "startISO": "2026-08-07T07:10:00+08:00",
+      "awayTeam": "白襪",
+      "homeTeam": "紅襪",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/boston-red-sox-zaXTinF3/chicago-white-sox-SW9D1eZo/#IFs4HUOM",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:44:00+08:00",
+            "home": 1.55,
+            "away": 2.48
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.54,
+            "away": 2.5
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:48:00+08:00",
+            "home": 2.06,
+            "away": 1.77,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 2.04,
+            "away": 1.79,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:48:00+08:00",
+            "over": 1.72,
+            "under": 2.14,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.69,
+            "under": 2.18,
+            "line": 8.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
+      }
+    },
+    "mlb|2026-08-07|雙城|皇家|07:40|l4HrAnHd": {
+      "eventId": "l4HrAnHd",
+      "league": "mlb",
+      "date": "2026-08-07",
+      "startTime": "07:40",
+      "startISO": "2026-08-07T07:40:00+08:00",
+      "awayTeam": "雙城",
+      "homeTeam": "皇家",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kansas-city-royals-IL2QbgJ4/minnesota-twins-OjWW1naM/#l4HrAnHd",
+      "observedAt": "2026-08-06T07:00:05+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T02:46:00+08:00",
+            "home": 1.83,
+            "away": 1.98
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 1.83,
+            "away": 1.98
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T02:53:00+08:00",
+            "home": 1.51,
+            "away": 2.6,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "home": 2.55,
+            "away": 1.52,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T02:53:00+08:00",
+            "over": 1.91,
+            "under": 1.9,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-08-06T07:00:05+08:00",
+            "over": 1.76,
+            "under": 2.08,
+            "line": 8.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": true,
+        "transitions": [
+          {
+            "from": "away",
+            "to": "home",
+            "at": "2026-08-06T03:50+08:00"
+          }
+        ],
+        "scanFavorite": "home"
       }
     }
   }
