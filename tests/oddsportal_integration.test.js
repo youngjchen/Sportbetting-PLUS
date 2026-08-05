@@ -37,13 +37,14 @@ test('doubleheader matching uses start time and never picks the wrong game', () 
   assert.equal(game.eventId, 'second');
 });
 
-test('settlement defaults check preGameSwap and copy all three market summaries without changing hdFav', () => {
+test('settlement defaults never touch preGameSwap and copy all three market summaries without changing hdFav', () => {
   const card = { hdFav: 'away', preGameSwap: false };
   const game = feed.games['mlb|2026-08-01|金鶯|費城人|07:05|first'];
 
   applySettlementDefaults(card, game);
 
-  assert.equal(card.preGameSwap, true);
+  // 2026-08-05 守門：對調=台彩軸，整合層永不寫 preGameSwap（曾汙染 12 場結算紀錄）
+  assert.equal(card.preGameSwap, false);   // 夾具初始 false，整合層不得改動
   assert.equal(card.hdFav, 'away');
   assert.deepEqual(card.oddsPortal, {
     eventId: 'first',
@@ -90,7 +91,8 @@ test('settlement UI checks the switch box, fills blank moneyline fields, and ren
     api.injectSettlement({ type: 'match', away: '金鶯', home: '費城人', gameTime: '07:05', league: 'MLB' });
     assert.equal(browser.document.getElementById('closeOddsAway').value, '');
     assert.match(browser.document.getElementById('oddsPortalEvidence').textContent, /Stake 初盤／收盤/);
-    assert.match(browser.document.getElementById('oddsPortalEvidence').textContent, /曾換邊 1 次/);
+    // 2026-08-05 守門：證據卡不談對調——不得出現任何換邊字樣
+    assert.doesNotMatch(browser.document.getElementById('oddsPortalEvidence').textContent, /換邊|對調/);
   } finally {
     dom.window.close();
   }

@@ -2175,6 +2175,29 @@ async function load(){
       updateSaveBadge(false);
     }
   }catch(_){}
+  // ── 2026-08-05 一次性復原：OddsPortal 整合曾自動亂勾「賽前讓分方曾對調」──
+  // 汙染名單＝git 逐版聯集共 12 場（推斷邏輯已整層拆除、永不再標）。此清單內
+  // 的卡若被標了 preGameSwap 一律歸零＝恢復使用者自己的結算狀態；名單外不動。
+  try{
+    if(!doc.opSwapRb1 && !_loadBlocked){
+      const L = [["2026-08-01","國民","勇士"],["2026-08-01","紅襪","道奇"],["2026-08-01","費城人","金鶯"],
+                 ["2026-08-05","國民","費城人"],["2026-08-05","大都會","守護者"],["2026-08-05","教士","響尾蛇"],
+                 ["2026-08-05","樂天","台鋼"],["2026-08-05","老虎","水手"],["2026-08-05","運動家","紅人"],
+                 ["2026-08-06","海盜","釀酒人"],["2026-08-06","白襪","紅襪"],["2026-08-06","藍鳥","太空人"]];
+      let fixed = 0;
+      for(const [dk, b] of Object.entries(doc.boards||{})){
+        for(const it of (b && b.items) || []){
+          if(it && it.type==="match" && it.preGameSwap &&
+             L.some(([d,a,h]) => dk===d && it.away===a && it.home===h)){
+            it.preGameSwap = false; fixed++;
+          }
+        }
+      }
+      doc.opSwapRb1 = true;
+      if(fixed) console.warn("[OddsPortal復原] 已清除被亂勾的賽前對調 " + fixed + " 場");
+      save();
+    }
+  }catch(_){}
   loadActiveBoard();
 }
 
@@ -7615,6 +7638,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260805op3"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260805op4"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

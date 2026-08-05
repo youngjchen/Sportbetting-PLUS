@@ -7,6 +7,9 @@
 })(typeof window !== 'undefined' ? window : null, function () {
   const RAW_URL = 'https://raw.githubusercontent.com/youngjchen/Sportbetting-PLUS/main/data/oddsportal_summary.json';
   const FALLBACK_URL = './data/oddsportal_summary.json';
+  // 歷史月檔（oddsportal_harvest.py 收割 4/1 至今）：結算畫面看舊日期時按月懶載入
+  const ARCHIVE_RAW_DIR = 'https://raw.githubusercontent.com/youngjchen/Sportbetting-PLUS/main/data/oddsportal_archive/';
+  const ARCHIVE_LOCAL_DIR = './data/oddsportal_archive/';
   const REFRESH_MS = 5 * 60 * 1000;
   const TIME_TOLERANCE_MIN = 120;
 
@@ -61,7 +64,7 @@
 
   function applySettlementDefaults(card, game) {
     if (!card || !game) return card;
-    if (game.handicapSwitch && game.handicapSwitch.ever) card.preGameSwap = true;
+    // 2026-08-05 拆除：不准寫 card.preGameSwap（對調=台彩軸；此行曾汙染 12 場結算紀錄）
     card.oddsPortal = {
       eventId: game.eventId,
       handicapSwitch: clone(game.handicapSwitch || null),
@@ -98,11 +101,35 @@
       return feed;
     }
 
-    function gameFor(card, activeDate) {
+    // 歷史月檔快取：month → feed 物件｜'loading'｜'missing'
+    const archives = {};
+
+    function archiveFeedFor(month, onReady) {
+      const cached = archives[month];
+      if (cached && cached !== 'loading' && cached !== 'missing') return cached;
+      if (cached === 'loading' || cached === 'missing') return null;
+      archives[month] = 'loading';
+      (async function () {
+        let value = null;
+        try { value = await fetchFeed(ARCHIVE_RAW_DIR + month + '.json'); }
+        catch (_) { try { value = await fetchFeed(ARCHIVE_LOCAL_DIR + month + '.json'); } catch (_) {} }
+        archives[month] = value || 'missing';
+        if (value && typeof onReady === 'function') { try { onReady(); } catch (_) {} }
+      })();
+      return null;
+    }
+
+    function gameFor(card, activeDate, onReady) {
       let date = activeDate;
       try { if (!date && global.doc) date = global.doc.activeDate; } catch (_) {}
       try { if (!date && typeof doc !== 'undefined') date = doc.activeDate; } catch (_) {}
-      return findOddsPortalGame(feed, card, date);
+      const live = findOddsPortalGame(feed, card, date);
+      if (live) return live;
+      // 近況檔沒有 → 按月讀歷史檔（4/1 起的收割資料）；首次載入完成後回呼重填
+      const month = String(date || '').slice(0, 7);
+      if (!/^\d{4}-\d{2}$/.test(month)) return null;
+      const arch = archiveFeedFor(month, onReady);
+      return arch ? findOddsPortalGame(arch, card, date) : null;
     }
 
     function snapshotFor(card, activeDate) {
@@ -166,26 +193,15 @@
         line.textContent = marketText(entry[0], entry[1]);
         box.appendChild(line);
       });
-      const state = game.handicapSwitch || {};
-      const swap = global.document.createElement('div');
-      swap.style.cssText = state.ever ? 'color:#40d9b1;font-weight:700;margin-top:4px;' : 'margin-top:4px;';
-      if (state.ever) {
-        const first = state.first && (state.first.detectedAt || state.first.estimatedAt);
-        const last = state.last && (state.last.detectedAt || state.last.estimatedAt);
-        swap.textContent = '⇆ 曾換邊 ' + (state.count || 1) + ' 次' +
-          (first ? '；首次 ' + first.replace('T', ' ').slice(0, 16) : '') +
-          (last && last !== first ? '；最後 ' + last.replace('T', ' ').slice(0, 16) : '');
-      } else {
-        swap.textContent = '本紀錄未偵測到讓分方換邊';
-      }
-      box.appendChild(swap);
+      // 2026-08-05 使用者拍板：OddsPortal 軌不掃對調、不談對調——換邊資訊列整段移除
       const anchor = global.document.getElementById('settleOddsCalc');
       if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor.nextSibling);
       else body.appendChild(box);
     }
 
     function injectSettlement(card) {
-      const game = gameFor(card);
+      // 歷史月檔首次載入完成後自動重填一次（結算視窗還開著時舊日期也吃得到資料）
+      const game = gameFor(card, null, function () { injectSettlement(card); });
       if (!game) return;
       // 2026-08-05 使用者拍板拆除：「賽前讓分方曾對調」是台彩軸的勾，OddsPortal/Stake
       // 軌無權碰它（替代盤口曾偽造換邊、8/1 三場被亂勾）。證據卡照常顯示，勾由人手。
