@@ -2,13 +2,17 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-08-05T14:45:07+08:00",
+  "updatedAt": "2026-08-05T20:20:44+08:00",
   "health": {
-    "scheduled": 23,
-    "discovered": 12,
-    "succeeded": 12,
-    "failed": 0,
-    "errors": []
+    "scheduled": 40,
+    "discovered": 18,
+    "succeeded": 15,
+    "failed": 3,
+    "errors": [
+      "cpbl jPr0TQPb: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "cpbl Ojd7R4fB: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: Cloudbet",
+      "cpbl UkOv9dvp: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: Cloudbet"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -1919,7 +1923,7 @@
       "awayTeam": "西武",
       "homeTeam": "羅德",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chiba-lotte-marines-KKlHBnlo/seibu-lions-rZih28QN/#vHpF1Y5C",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -1931,6 +1935,13 @@
             "at": "2026-08-05T14:15:10+08:00",
             "home": 1.92,
             "away": 1.82
+          },
+          "close": {
+            "at": "2026-08-05T16:45:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.01,
+            "away": 1.81
           }
         },
         "hd": {
@@ -1943,6 +1954,15 @@
           },
           "active": {
             "at": "2026-08-05T14:15:10+08:00",
+            "home": 1.5,
+            "away": 2.35,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-04T22:33:00+08:00",
+            "final": true,
+            "precision": "history",
             "home": 1.5,
             "away": 2.35,
             "line": 1.5,
@@ -1961,6 +1981,14 @@
             "over": 1.91,
             "under": 1.77,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-05T08:42:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.83,
+            "under": 1.84,
+            "line": 7.5
           }
         }
       },
@@ -1971,6 +1999,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "npb|2026-08-05|巨人|廣島|17:00|h0n73fy0": {
@@ -1982,7 +2015,7 @@
       "awayTeam": "巨人",
       "homeTeam": "廣島",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/hiroshima-carp-j3iI2SuU/yomiuri-giants-WpwP6WBh/#h0n73fy0",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -1994,6 +2027,13 @@
             "at": "2026-08-05T14:15:10+08:00",
             "home": 2.05,
             "away": 1.72
+          },
+          "close": {
+            "at": "2026-08-05T16:44:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.08,
+            "away": 1.75
           }
         },
         "hd": {
@@ -2010,6 +2050,15 @@
             "away": 2.3,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T14:21:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.53,
+            "away": 2.29,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -2024,6 +2073,14 @@
             "over": 1.95,
             "under": 1.73,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-08-05T14:21:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.95,
+            "under": 1.73,
+            "line": 6.5
           }
         }
       },
@@ -2034,6 +2091,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "npb|2026-08-05|樂天|歐力士|17:00|zqvOaCzP": {
@@ -2045,7 +2107,7 @@
       "awayTeam": "樂天",
       "homeTeam": "歐力士",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/orix-buffaloes-lphNjEdn/rakuten-gold-eagles-OS9BZkth/#zqvOaCzP",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "active": {
@@ -2057,6 +2119,13 @@
             "at": "2026-08-04T21:41:00+08:00",
             "home": 1.53,
             "away": 2.41
+          },
+          "close": {
+            "at": "2026-08-05T16:44:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.63,
+            "away": 2.29
           }
         },
         "hd": {
@@ -2073,6 +2142,15 @@
             "away": 1.62,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T13:57:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.13,
+            "away": 1.61,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -2087,6 +2165,14 @@
             "over": 1.89,
             "under": 1.78,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-05T14:01:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.98,
+            "under": 1.71,
+            "line": 7.5
           }
         }
       },
@@ -2097,6 +2183,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
       }
     },
     "kbo|2026-08-05|恐龍|斗山熊|17:30|2kp1XedJ": {
@@ -2108,7 +2199,7 @@
       "awayTeam": "恐龍",
       "homeTeam": "斗山熊",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/doosan-bears-pGmPNh11/nc-dinos-O6x8hD4U/#2kp1XedJ",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2120,6 +2211,13 @@
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.31,
             "away": 1.57
+          },
+          "close": {
+            "at": "2026-08-05T09:02:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.26,
+            "away": 1.6
           }
         },
         "hd": {
@@ -2136,6 +2234,15 @@
             "away": 1.95,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T11:47:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.7,
+            "away": 1.99,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -2150,6 +2257,14 @@
             "over": 1.73,
             "under": 1.95,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-05T09:02:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.72,
+            "under": 1.96,
+            "line": 7.5
           }
         }
       },
@@ -2160,6 +2275,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "kbo|2026-08-05|華老鷹|三星獅|17:30|KQGRmHt0": {
@@ -2171,7 +2291,7 @@
       "awayTeam": "華老鷹",
       "homeTeam": "三星獅",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/hanwha-eagles-4tfKodg8/samsung-lions-O6nTMCG7/#KQGRmHt0",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2181,6 +2301,13 @@
           },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
+            "home": 1.55,
+            "away": 2.35
+          },
+          "close": {
+            "at": "2026-08-04T22:40:00+08:00",
+            "final": true,
+            "precision": "history",
             "home": 1.55,
             "away": 2.35
           }
@@ -2199,6 +2326,15 @@
             "away": 1.71,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T12:16:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.96,
+            "away": 1.72,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -2213,6 +2349,14 @@
             "over": 1.76,
             "under": 1.91,
             "line": 11.5
+          },
+          "close": {
+            "at": "2026-08-05T12:16:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.77,
+            "under": 1.91,
+            "line": 11.5
           }
         }
       },
@@ -2223,6 +2367,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
       }
     },
     "kbo|2026-08-05|培證|樂天|17:30|C0DJkwCm": {
@@ -2234,7 +2383,7 @@
       "awayTeam": "培證",
       "homeTeam": "樂天",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kiwoom-heroes-xjpHPEWl/lotte-giants-pGw4ggkO/#C0DJkwCm",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2244,6 +2393,13 @@
           },
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
+            "home": 1.91,
+            "away": 1.83
+          },
+          "close": {
+            "at": "2026-08-04T21:43:00+08:00",
+            "final": true,
+            "precision": "history",
             "home": 1.91,
             "away": 1.83
           }
@@ -2262,6 +2418,15 @@
             "away": 2.26,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T10:20:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.55,
+            "away": 2.25,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -2276,6 +2441,14 @@
             "over": 1.79,
             "under": 1.88,
             "line": 9.5
+          },
+          "close": {
+            "at": "2026-08-05T10:16:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.81,
+            "under": 1.86,
+            "line": 9.5
           }
         }
       },
@@ -2286,6 +2459,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "mlb|2026-08-05|運動家|紅人|06:40|2m7tKTqS": {
@@ -2592,7 +2770,7 @@
       "awayTeam": "阪神",
       "homeTeam": "橫濱",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/hanshin-tigers-4rgl3lBH/yokohama-baystars-AggJifst/#QoWQNOME",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2604,6 +2782,13 @@
             "at": "2026-08-05T14:15:10+08:00",
             "home": 2.2,
             "away": 1.62
+          },
+          "close": {
+            "at": "2026-08-05T16:44:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.03,
+            "away": 1.79
           }
         },
         "hd": {
@@ -2620,6 +2805,15 @@
             "away": 2.12,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T14:02:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.6,
+            "away": 2.15,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -2634,6 +2828,14 @@
             "over": 1.79,
             "under": 1.89,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-08-05T14:02:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.93,
+            "under": 1.75,
+            "line": 6.5
           }
         }
       },
@@ -2644,6 +2846,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "npb|2026-08-05|養樂多|中日|17:00|Wpbb5G6m": {
@@ -2655,7 +2862,7 @@
       "awayTeam": "養樂多",
       "homeTeam": "中日",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chunichi-dragons-4byX4At5/yakult-swallows-Qsi8zWQo/#Wpbb5G6m",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2667,6 +2874,13 @@
             "at": "2026-08-05T14:15:10+08:00",
             "home": 1.72,
             "away": 2.04
+          },
+          "close": {
+            "at": "2026-08-05T16:36:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.68,
+            "away": 2.2
           }
         },
         "hd": {
@@ -2679,6 +2893,15 @@
           },
           "active": {
             "at": "2026-08-05T14:15:10+08:00",
+            "home": 2.6,
+            "away": 1.42,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T13:57:00+08:00",
+            "final": true,
+            "precision": "history",
             "home": 2.6,
             "away": 1.42,
             "line": -1.5,
@@ -2697,6 +2920,14 @@
             "over": 1.76,
             "under": 1.92,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-08-05T13:13:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.71,
+            "under": 1.98,
+            "line": 6.5
           }
         }
       },
@@ -2707,6 +2938,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "npb|2026-08-05|火腿|軟銀|17:00|jeEXJFLt": {
@@ -2718,7 +2954,7 @@
       "awayTeam": "火腿",
       "homeTeam": "軟銀",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/fukuoka-s-hawks-MJ3q4UeB/nippon-ham-fighters-AyxT5jRb/#jeEXJFLt",
-      "observedAt": "2026-08-04T23:35:04+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2730,6 +2966,13 @@
             "at": "2026-08-04T23:35:04+08:00",
             "home": 1.67,
             "away": 2.12
+          },
+          "close": {
+            "at": "2026-08-05T16:44:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.78,
+            "away": 2.05
           }
         },
         "hd": {
@@ -2746,11 +2989,34 @@
             "away": 1.47,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T14:03:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.36,
+            "away": 1.5,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
           "active": {
             "at": "2026-08-04T23:35:04+08:00",
+            "over": 1.88,
+            "under": 1.79,
+            "line": 6.5
+          },
+          "open": {
+            "at": "2026-08-04T21:49:00+08:00",
+            "over": 1.9,
+            "under": 1.77,
+            "line": 6.5
+          },
+          "close": {
+            "at": "2026-08-05T14:03:00+08:00",
+            "final": true,
+            "precision": "history",
             "over": 1.88,
             "under": 1.79,
             "line": 6.5
@@ -2764,6 +3030,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
       }
     },
     "npb|2026-08-05|巨人|廣島|17:00|2NwYBeVA": {
@@ -2775,13 +3046,20 @@
       "awayTeam": "巨人",
       "homeTeam": "廣島",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/hiroshima-carp-j3iI2SuU/yomiuri-giants-WpwP6WBh/#2NwYBeVA",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
             "at": "2026-04-09T05:01:00+08:00",
             "home": 1.98,
             "away": 1.83
+          },
+          "close": {
+            "at": "2026-04-09T16:12:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.9,
+            "away": 1.95
           }
         },
         "hd": {
@@ -2791,6 +3069,15 @@
             "away": 2.6,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-04-09T16:56:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.45,
+            "away": 2.85,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -2798,6 +3085,14 @@
             "at": "2026-04-09T05:01:00+08:00",
             "over": 1.86,
             "under": 1.95,
+            "line": 5.5
+          },
+          "close": {
+            "at": "2026-04-09T16:56:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.88,
+            "under": 1.97,
             "line": 5.5
           }
         }
@@ -2809,6 +3104,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "kbo|2026-08-05|雙子|登陸者|17:30|SSymealQ": {
@@ -2820,7 +3120,7 @@
       "awayTeam": "雙子",
       "homeTeam": "登陸者",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/lg-twins-jglLOYoe/ssg-landers-fRfCQfHr/#SSymealQ",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2832,6 +3132,13 @@
             "at": "2026-08-04T23:35:04+08:00",
             "home": 2.21,
             "away": 1.62
+          },
+          "close": {
+            "at": "2026-08-05T10:27:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.24,
+            "away": 1.6
           }
         },
         "hd": {
@@ -2848,6 +3155,15 @@
             "away": 1.96,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T12:16:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.73,
+            "away": 1.95,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -2862,6 +3178,14 @@
             "over": 1.73,
             "under": 1.95,
             "line": 9.5
+          },
+          "close": {
+            "at": "2026-08-05T12:16:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.72,
+            "under": 1.96,
+            "line": 9.5
           }
         }
       },
@@ -2872,6 +3196,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "mlb|2026-08-04|教士|響尾蛇|09:40|MJ8v08hd": {
@@ -3866,13 +4195,20 @@
       "awayTeam": "巫師",
       "homeTeam": "起亞虎",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kia-tigers-rXhOpG8E/kt-wiz-suwon-444SNVEe/#GhAzneBC",
-      "observedAt": "2026-08-05T14:15:10+08:00",
+      "observedAt": "2026-08-05T20:20:44+08:00",
       "markets": {
         "ml": {
           "open": {
             "at": "2026-08-04T21:43:00+08:00",
             "home": 1.83,
             "away": 1.91
+          },
+          "close": {
+            "at": "2026-08-05T12:10:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.9,
+            "away": 1.84
           }
         },
         "hd": {
@@ -3882,6 +4218,15 @@
             "away": 2.44,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T12:10:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.51,
+            "away": 2.33,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -3889,6 +4234,14 @@
             "at": "2026-08-04T21:54:00+08:00",
             "over": 1.78,
             "under": 1.9,
+            "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-05T12:10:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.75,
+            "under": 1.92,
             "line": 8.5
           }
         }
@@ -3900,6 +4253,11 @@
         "currentFavorite": null,
         "first": null,
         "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     },
     "kbo|2026-08-04|華老鷹|三星獅|17:30|Y9hpyvcf": {
@@ -5333,6 +5691,228 @@
         "ever": false,
         "transitions": [],
         "scanFavorite": "home"
+      }
+    },
+    "npb|2026-08-05|巨人|廣島|17:00|x4AhyE36": {
+      "eventId": "x4AhyE36",
+      "league": "npb",
+      "date": "2026-08-05",
+      "startTime": "17:00",
+      "startISO": "2026-08-05T17:00:00+08:00",
+      "awayTeam": "巨人",
+      "homeTeam": "廣島",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/hiroshima-carp-j3iI2SuU/yomiuri-giants-WpwP6WBh/#x4AhyE36",
+      "observedAt": "2026-08-05T20:20:44+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-06-24T05:00:00+08:00",
+            "home": 1.89,
+            "away": 1.92
+          },
+          "close": {
+            "at": "2026-06-24T15:01:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.89,
+            "away": 1.96
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-06-24T05:00:00+08:00",
+            "home": 1.42,
+            "away": 2.6,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "close": {
+            "at": "2026-06-24T16:01:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.42,
+            "away": 2.6,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-06-24T05:00:00+08:00",
+            "over": 1.71,
+            "under": 1.98,
+            "line": 5.5
+          },
+          "close": {
+            "at": "2026-06-24T14:18:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.72,
+            "under": 1.96,
+            "line": 5.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
+      }
+    },
+    "npb|2026-08-05|阪神|橫濱|16:45|Q7gKDblo": {
+      "eventId": "Q7gKDblo",
+      "league": "npb",
+      "date": "2026-08-05",
+      "startTime": "16:45",
+      "startISO": "2026-08-05T16:45:00+08:00",
+      "awayTeam": "阪神",
+      "homeTeam": "橫濱",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/hanshin-tigers-4rgl3lBH/yokohama-baystars-AggJifst/#Q7gKDblo",
+      "observedAt": "2026-08-05T20:20:44+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-06-20T05:15:00+08:00",
+            "home": 1.73,
+            "away": 2.12
+          },
+          "close": {
+            "at": "2026-06-20T15:15:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.75,
+            "away": 2.14
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-06-20T05:15:00+08:00",
+            "home": 2.47,
+            "away": 1.46,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-06-20T14:20:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.45,
+            "away": 1.47,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-06-20T05:15:00+08:00",
+            "over": 1.85,
+            "under": 1.82,
+            "line": 6.5
+          },
+          "close": {
+            "at": "2026-06-20T11:07:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.86,
+            "under": 1.81,
+            "line": 6.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
+      }
+    },
+    "npb|2026-08-04|阪神|橫濱|16:45|4I2qBow9": {
+      "eventId": "4I2qBow9",
+      "league": "npb",
+      "date": "2026-08-04",
+      "startTime": "16:45",
+      "startISO": "2026-08-04T16:45:00+08:00",
+      "awayTeam": "阪神",
+      "homeTeam": "橫濱",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/hanshin-tigers-4rgl3lBH/yokohama-baystars-AggJifst/#4I2qBow9",
+      "observedAt": "2026-08-05T20:20:44+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-03T21:15:00+08:00",
+            "home": 2.34,
+            "away": 1.56
+          },
+          "close": {
+            "at": "2026-08-04T16:41:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.11,
+            "away": 1.73
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-03T21:18:00+08:00",
+            "home": 1.73,
+            "away": 1.96,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-04T13:37:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.71,
+            "away": 1.97,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-03T21:18:00+08:00",
+            "over": 1.93,
+            "under": 1.75,
+            "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-04T13:37:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 2.04,
+            "under": 1.67,
+            "line": 7.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     }
   }
