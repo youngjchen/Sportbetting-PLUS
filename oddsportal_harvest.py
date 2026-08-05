@@ -26,7 +26,7 @@ from oddsportal_scraper import (
     TW, BASE_URL, LEAGUE_URLS, BOOKMAKER,
     team_zh, build_event_key, merge_game_snapshot, _compact_for_summary,
     _append_daily_archive, _assert_oddsportal_url, _collect_market,
-    _market_summary, _market_has_data, _inferred_switches,
+    _market_summary, _market_has_data, _inferred_switches, stake_swap_from_rows,
     _wait_for_market_navigation, _dismiss_consent, _stealth_session_factory,
     _write_json_atomic,
 )
@@ -175,6 +175,7 @@ def scrape_event_harvest(session: Any, event: dict[str, Any], observed_at: str) 
         "eventId": event["eventId"], "sourceUrl": event["sourceUrl"],
         "observedAt": observed_at, "markets": markets,
         "handicapSwitch": _inferred_switches(captured.get("hd") or [], observed_at),
+        "stakeSwap": stake_swap_from_rows(captured.get("hd") or [], start_iso),
     }
 
 

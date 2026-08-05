@@ -392,3 +392,49 @@ class GapDrivenCadenceTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class StakeSwapSopTests(unittest.TestCase):
+    """2026-08-05 使用者核准 SOP：擴盤前窗政權接替＝真對調；擴盤窗內/並存＝不算。真資料鑑別 11/12。"""
+
+    @staticmethod
+    def _row(line, open_at, struck=False, active=True, last_move=None):
+        hist = {"opening": {"at": open_at, "odds": 1.9}, "movements": ([{"at": last_move, "odds": 1.8}] if last_move else [])}
+        return {"line": line, "first": {"history": hist}, "second": {"history": hist},
+                "active": active, "struck": struck}
+
+    def test_true_swap_white_sox_case_early_window_regime_handover(self):
+        from oddsportal_scraper import stake_swap_from_rows
+        # 白襪@紅襪 8/6 真對調：+1.5 開 02:34 已struck → -1.5 開 04:10（開賽 08:10，窗界 05:40）
+        rows = [self._row(1.5, "2026-08-05T02:34:00+08:00", struck=True, active=False),
+                self._row(-1.5, "2026-08-05T04:10:00+08:00")]
+        out = stake_swap_from_rows(rows, "2026-08-06T08:10:00+08:00")
+        self.assertTrue(out["ever"])
+        self.assertEqual(out["transitions"][0]["from"], "away")
+        self.assertEqual(out["transitions"][0]["to"], "home")
+
+    def test_widening_window_alt_line_is_not_a_swap(self):
+        from oddsportal_scraper import stake_swap_from_rows
+        # 8/5 假訊型：對向 +1.5 開在開賽前 145 分（窗外＝擴盤產物）
+        rows = [self._row(-1.5, "2026-08-04T07:00:00+08:00"),
+                self._row(1.5, "2026-08-05T07:40:00+08:00")]
+        out = stake_swap_from_rows(rows, "2026-08-05T10:05:00+08:00")
+        self.assertFalse(out["ever"])
+
+    def test_coexisting_regimes_are_alt_lines_not_swap(self):
+        from oddsportal_scraper import stake_swap_from_rows
+        # 樂天@台鋼型：兩政權並存（前者未讓位仍在走動）
+        rows = [self._row(-1.5, "2026-08-04T22:09:00+08:00", last_move="2026-08-05T02:26:00+08:00"),
+                self._row(1.5, "2026-08-04T22:13:00+08:00")]
+        out = stake_swap_from_rows(rows, "2026-08-05T18:35:00+08:00")
+        self.assertFalse(out["ever"])
+
+    def test_sticky_merge_keeps_morning_truth_after_flip_back(self):
+        from oddsportal_scraper import merge_game_snapshot
+        old = {"stakeSwap": {"ever": True, "transitions": [{"from": "away", "to": "home", "at": "2026-08-05T04:10"}], "scanFavorite": "home"},
+               "markets": {"ml": {"open": {"home": 1.5, "away": 2.5}}}}
+        new = {"markets": {"ml": {"active": {"home": 1.6, "away": 2.3}}},
+               "stakeSwap": {"ever": False, "transitions": [], "scanFavorite": "away"}}
+        merged = merge_game_snapshot(old, new)
+        self.assertTrue(merged["stakeSwap"]["ever"])                       # 曾對調只增不減
+        self.assertEqual(merged["stakeSwap"]["scanFavorite"], "away")      # 現況讓方跟最新

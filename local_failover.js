@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate } = require('./oddsportal_local.js');
 
 const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
@@ -130,7 +130,8 @@ function run() {
   // 每閘缺口驅動：scraper 端只抓「初盤/收盤還沒填」的比賽（含 3.5 天回補），上限 40 場。
   try {
     const games = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'pregame_data.json'), 'utf8'));
-    const gate = dueOddsPortalGate(computeOddsPortalGates(games, Date.now()), state, Date.now());
+    const gate = dueOddsPortalGate(computeOddsPortalGates(games, Date.now()), state, Date.now())
+      || dueSwapGate(state, Date.now());
     if (gate) {
       state['opg_' + gate.id] = Date.now();      // 先記「試過」：失敗也不重跑，等下一閘順手回補
       pruneOddsPortalGateState(state, Date.now());

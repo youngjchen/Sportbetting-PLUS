@@ -154,6 +154,23 @@ function runOddsPortalHarvest({ repoDir, python = resolvePython(), timeoutMs = 1
   return [...HARVEST_OUTPUTS];
 }
 
+// ── 對調巡檢閘（2026-08-05 使用者拍板 SOP）：每天 10:00 掃「隔天」比賽的讓分方對調──
+// 只產證據卡警示（stakeSwap），永不勾選任何狀態；規則=擴盤前窗政權接替（鑑別力 11/12）。
+const SWAP_HHMM = '10:00';
+
+function dueSwapGate(state, nowMs = Date.now()) {
+  const day = new Date(nowMs + 8 * 3600e3).toISOString().slice(0, 10);
+  const at = Date.parse(`${day}T${SWAP_HHMM}:00+08:00`);
+  const id = `swap_${day}`;
+  if (at <= nowMs && nowMs - at <= GATE_LOOKBACK_MS && !state[`opg_${id}`]) {
+    return {
+      id, at, mode: 'swap', leagues: ['mlb', 'npb', 'kbo', 'cpbl'],
+      fromHours: 12, toHours: 40, maxGames: 40, refreshUpcoming: true,
+    };
+  }
+  return null;
+}
+
 function oddsPortalArgs(gate) {
   const args = ['oddsportal_scraper.py'];
   if (!gate) return args;
@@ -178,6 +195,8 @@ function runOddsPortal({ repoDir, gate = null, python = resolvePython(), timeout
 
 module.exports = {
   INTERVAL_MS,
+  SWAP_HHMM,
+  dueSwapGate,
   HARVEST_HHMM,
   HARVEST_OUTPUTS,
   dueHarvestGate,

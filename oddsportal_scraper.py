@@ -223,6 +223,16 @@ def merge_game_snapshot(old: dict[str, Any] | None, new: dict[str, Any]) -> dict
     merged["handicapSwitch"] = _combine_switches(
         old.get("handicapSwitch"), new.get("handicapSwitch"), observed_state,
     )
+    # stakeSwap（2026-08-05 SOP）：ever 只增不減——擴盤後兩側並存會讓晚場掃描判不出
+    # 早上的真對調（紅襪@白襪 8/6 調過去又調回來案），不得覆蓋掉早鳥窗的真證據。
+    old_swap = old.get("stakeSwap")
+    new_swap = new.get("stakeSwap")
+    if isinstance(old_swap, dict) and old_swap.get("ever"):
+        merged["stakeSwap"] = copy.deepcopy(old_swap)
+        if isinstance(new_swap, dict) and new_swap.get("scanFavorite"):
+            merged["stakeSwap"]["scanFavorite"] = new_swap["scanFavorite"]
+    elif isinstance(new_swap, dict):
+        merged["stakeSwap"] = copy.deepcopy(new_swap)
     return merged
 
 
@@ -546,30 +556,13 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
         count = int(lines[-1].strip()) if lines and lines[-1].strip().isdigit() else 0
         if label == "Asian Handicap":
             number = _parse_number(label_text)
-            if number is None:
+            # 2026-08-05 使用者拍板：只抓「卡片上的讓分」＝±1.5 兩側（兩側=對調證據所需），
+            # 不掃全讓分組合（先前全檔位掃描讓單場暴增到 ~95 秒、收割批死於時限）。
+            if number is None or abs(abs(number) - 1.5) > 0.001:
                 continue
         candidates.append((label_text, count))
     if label == "Over/Under":
         candidates.sort(key=lambda item: item[1], reverse=True)
-    if label == "Asian Handicap":
-        if os.environ.get("OP_DEBUG"):
-            print(f"DEBUG AH 候選盤口: {candidates}", file=sys.stderr)
-        # 2026-08-05 使用者指正（費城人@國民 -1.5→-2.5 案）：主盤會搬家，只抓 ±1.5 會瞎；
-        # 家數(count)在本頁常為 1~2 無法辨主盤 → 讓分各盤口全抓（實測 ≤8 檔、每檔 1~2s），
-        # 主盤判定交給 _market_summary 的「兩邊賠率最平衡」特徵。
-        pass
-
-    # hover 預算（2026-08-05 批次經濟學：全檔位掏走勢史單場 ~95s → 收割批必死於時限）：
-    # 走勢史只對「±1.5 檔＋家數前二」掏（=初盤與擴盤前主盤所在），其他檔位只記賠率。
-    hover_set: set[str] = set()
-    top_by_count = sorted(candidates, key=lambda item: item[1], reverse=True)[:2]
-    for lbl, _cnt in top_by_count:
-        hover_set.add(lbl)
-    if label == "Asian Handicap":
-        for lbl, _cnt in candidates:
-            number = _parse_number(lbl)
-            if number is not None and abs(abs(number) - 1.5) <= 0.001:
-                hover_set.add(lbl)
 
     tried: set[str] = set()
     for target_label, _ in candidates:
@@ -583,9 +576,10 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
             current.first.click(timeout=5000)
             page.wait_for_timeout(500)
             before = len(collected)
-            capture_visible(selected=(label == "Over/Under" and before == 0), hover_ok=(target_label in hover_set))
-            # 2026-08-05 使用者糾正：大小分主盤也會搬家（擴盤期 7.5→8 案）——
-            # 不再「首檔成功即停」，各檔位全抓，收盤切點才挑得到擴盤前那一檔。
+            capture_visible(selected=(label == "Over/Under" and before == 0))
+            # 2026-08-05 使用者拍板：大小只抓「卡片上的主大小」（家數最多檔），首檔成功即收
+            if label == "Over/Under" and len(collected) > before:
+                break
         except Exception:
             continue
     return collected
@@ -712,6 +706,52 @@ def _closing_from_rows(rows: list[dict[str, Any]], market: str, start_iso: str) 
             entry["favorite"] = favorite_for_line(row.get("line"))
         best = entry
     return best
+
+
+def stake_swap_from_rows(rows: list[dict[str, Any]], start_iso: str | None) -> dict[str, Any]:
+    """Stake 讓分方對調偵測（2026-08-05 使用者核准 SOP）：
+    · 只用「擴盤前窗」（開賽−150 分之前）的 ±1.5 政權時間戳；窗外/賽後證據無效。
+    · 政權接替：前政權已讓位（struck 或最後走勢 ≤ 後政權開盤+10 分）才算；兩政權並存＝替代盤口不算。
+    · 產出只供證據卡「列出警示」——永不打勾、永不寫 preGameSwap、永不碰台彩軸認定。
+    12 場真資料鑑別 11/12（8/6 三場真對調全中、8/5 擴盤假訊全排）。"""
+    empty = {"ever": False, "transitions": [], "scanFavorite": None}
+    if not start_iso:
+        return empty
+    try:
+        win_end = (datetime.fromisoformat(start_iso) - timedelta(minutes=150)).timestamp() * 1000
+    except ValueError:
+        return empty
+    regimes = []
+    for row in rows or []:
+        line = _parse_number(row.get("line"))
+        if line is None or abs(abs(line) - 1.5) > 0.001:
+            continue
+        h1 = (row.get("first") or {}).get("history") or {}
+        h2 = (row.get("second") or {}).get("history") or {}
+        opens = [o for o in (h1.get("opening"), h2.get("opening")) if o and o.get("at")]
+        if not opens:
+            continue
+        open_ms = min(datetime.fromisoformat(o["at"]).timestamp() * 1000 for o in opens)
+        moves = [datetime.fromisoformat(m["at"]).timestamp() * 1000
+                 for h in (h1, h2) for m in (h.get("movements") or []) if m.get("at")]
+        regimes.append({
+            "fav": favorite_for_line(line), "open": open_ms,
+            "last": max(moves) if moves else open_ms,
+            "struck": bool(row.get("struck")), "active": bool(row.get("active")),
+        })
+    regimes.sort(key=lambda r: r["open"])
+    transitions = []
+    for a, b in zip(regimes, regimes[1:]):
+        if a["fav"] == b["fav"]:
+            continue
+        in_window = b["open"] <= win_end
+        yielded = a["struck"] or a["last"] <= b["open"] + 10 * 60e3
+        if in_window and yielded:
+            at = datetime.fromtimestamp(b["open"] / 1000, tz=TW).isoformat(timespec="minutes")
+            transitions.append({"from": a["fav"], "to": b["fav"], "at": at})
+    live = [r for r in regimes if r["active"]]
+    scan_fav = live[-1]["fav"] if live else (regimes[-1]["fav"] if regimes else None)
+    return {"ever": bool(transitions), "transitions": transitions, "scanFavorite": scan_fav}
 
 
 def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str, start_iso: str | None = None) -> dict[str, Any]:
@@ -879,6 +919,7 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
         "eventId": event["eventId"], "sourceUrl": event["sourceUrl"],
         "observedAt": observed_at, "markets": markets,
         "handicapSwitch": switch,
+        "stakeSwap": stake_swap_from_rows(captured.get("hd") or [], official["startISO"]),
     }
 
 

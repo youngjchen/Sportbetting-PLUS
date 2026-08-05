@@ -193,7 +193,19 @@
         line.textContent = marketText(entry[0], entry[1]);
         box.appendChild(line);
       });
-      // 2026-08-05 使用者拍板：OddsPortal 軌不掃對調、不談對調——換邊資訊列整段移除
+      // 2026-08-05 使用者核准 SOP：對調只「列出警示」（stakeSwap 證據），永不勾選任何狀態
+      const swap = game.stakeSwap || null;
+      if (swap && swap.ever && Array.isArray(swap.transitions) && swap.transitions.length) {
+        const line = global.document.createElement('div');
+        line.style.cssText = 'color:#e0a020;font-weight:700;margin-top:4px;';
+        const seg = swap.transitions.map(function (t) {
+          return (t.at || '').replace('T', ' ').slice(5, 16) + ' ' +
+            (t.from === 'home' ? '主讓' : '客讓') + '→' + (t.to === 'home' ? '主讓' : '客讓');
+        }).join('；');
+        line.textContent = '⚠ Stake 曾換讓分方：' + seg +
+          (swap.scanFavorite ? '（掃描時 ' + (swap.scanFavorite === 'home' ? '主讓' : '客讓') + '）' : '');
+        box.appendChild(line);
+      }
       const anchor = global.document.getElementById('settleOddsCalc');
       if (anchor && anchor.parentNode) anchor.parentNode.insertBefore(box, anchor.nextSibling);
       else body.appendChild(box);
