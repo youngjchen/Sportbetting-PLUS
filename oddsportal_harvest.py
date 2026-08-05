@@ -281,6 +281,10 @@ def main(argv: list[str] | None = None) -> int:
             if len(pending_flush) >= 8:
                 flush_harvest(pending_flush, archive_dir, history_dir, archive_cache, observed_at)
                 pending_flush = []
+                # cursor 隨增量落地推進（2026-08-05：批被時限切時 cursor 原地踏步＝下批重掃）
+                if oldest_done:
+                    state.setdefault(league, {})["cursor"] = oldest_done
+                    _write_json_atomic(state_path, state)
             if consecutive_fail >= 5:
                 errors.append("連續 5 場失敗＝熔斷，本批中止（可能被限流）")
                 break
