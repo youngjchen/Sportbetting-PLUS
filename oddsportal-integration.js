@@ -187,12 +187,8 @@
     function injectSettlement(card) {
       const game = gameFor(card);
       if (!game) return;
-      const state = game.handicapSwitch || {};
-      const checkbox = global.document.getElementById('settlePreSwap');
-      if (checkbox && state.ever && !checkbox.checked) {
-        checkbox.checked = true;
-        emit(checkbox, 'change');
-      }
+      // 2026-08-05 使用者拍板拆除：「賽前讓分方曾對調」是台彩軸的勾，OddsPortal/Stake
+      // 軌無權碰它（替代盤口曾偽造換邊、8/1 三場被亂勾）。證據卡照常顯示，勾由人手。
       const ml = (game.markets || {}).ml || {};
       const mlClose = (ml.close && ml.close.final) ? ml.close : null;   // 未定案不准填收盤欄
       setIfBlank('openOddsAway', ml.open && ml.open.away);

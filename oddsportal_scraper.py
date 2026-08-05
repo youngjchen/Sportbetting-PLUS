@@ -200,7 +200,7 @@ def merge_game_snapshot(old: dict[str, Any] | None, new: dict[str, Any]) -> dict
             merged["markets"][market] = _merge_market(merged["markets"].get(market) or {}, value)
 
     old_state = old.get("handicapSwitch") or {}
-    observed = _favorite(new)
+    observed = None  # 2026-08-05 拆除觀測型換邊偵測（對調歸台彩軸；替代盤口會偽造換邊）
     previous = old_state.get("currentFavorite")
     observed_state = copy.deepcopy(old_state) if old_state else reduce_handicap_switches([])
     if observed in {"away", "home"}:
@@ -572,8 +572,8 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
             page.wait_for_timeout(500)
             before = len(collected)
             capture_visible(selected=(label == "Over/Under" and before == 0))
-            if label == "Over/Under" and len(collected) > before:
-                break
+            # 2026-08-05 使用者糾正：大小分主盤也會搬家（擴盤期 7.5→8 案）——
+            # 不再「首檔成功即停」，各檔位全抓，收盤切點才挑得到擴盤前那一檔。
         except Exception:
             continue
     return collected
@@ -598,6 +598,16 @@ def favorite_for_line(line: Any) -> str | None:
 
 
 def _inferred_switches(rows: list[dict[str, Any]], observed_at: str) -> dict[str, Any]:
+    # 2026-08-05 使用者拍板拆除：替代盤口（±1.5 兩側同時掛盤）會被誤讀成「換邊政權」，
+    # 8/1 三場被亂標（struck-opposite ×2、line-open-time ×1）。對調偵測歸台彩軸
+    # （Titan lottery_series＋bet365 藍帶），OddsPortal 軌只記錄盤口與賠率，永不判對調。
+    return {
+        "ever": False, "count": 0, "initialFavorite": None,
+        "currentFavorite": None, "first": None, "last": None,
+    }
+
+
+def _inferred_switches_legacy(rows: list[dict[str, Any]], observed_at: str) -> dict[str, Any]:
     regimes = []
     for row in rows:
         line_number = _parse_number(row.get("line"))
@@ -698,10 +708,9 @@ def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str, s
         # 初盤/收盤看全部已抓盤口（主盤會搬家）；±1.5 僅供換邊判定（_inferred_switches 自濾）
         usable = [row for row in rows if row.get("line") is not None]
     if market == "ou":
-        selected = next((row for row in rows if row.get("selected") and row.get("active")), None)
-        usable = [selected] if selected else rows
+        usable = rows  # 大小分同讓分：全檔位入列，主盤/收盤由平衡度與切點決定
     active = next((row for row in usable if row.get("active")), None)
-    if market == "hd":
+    if market in ("hd", "ou"):
         # 主盤＝兩邊賠率最平衡的活盤（-1.5 全讓到 -2.5 時，-2.5 兩邊 ~1.9x、-1.5 會歪掉）
         live = [row for row in usable if row.get("active")
                 and (row.get("first") or {}).get("odds") is not None
@@ -735,11 +744,14 @@ def _market_summary(rows: list[dict[str, Any]], market: str, observed_at: str, s
             result["active"]["line"] = active.get("line")
         if market == "hd":
             result["active"]["favorite"] = favorite_for_line(active.get("line"))
-    # 2026-08-05 使用者糾正：比賽沒開打就沒有「收盤」這回事——賽前只有 active（當前盤），
-    # close 欄位只在開賽後產生：走勢史中開賽前最後一筆（帶時戳、final 定案）；
-    # 走勢史缺失才退回開賽當下頁面顯示值（precision 標記 page-post-start）。
+    # 2026-08-05 使用者糾正（兩層）：①沒開打就沒有收盤；②Stake 開賽前 ~2 小時會把
+    # 讓分/大小「範圍擴大」（多檔替代盤口進場）→ 讓分/大小的收盤必須取「開賽前 150 分
+    # （擴盤前）」的走勢值，獨贏不受擴盤影響維持開賽前最後一筆。
     if start_iso and observed_at > start_iso:
-        closing = _closing_from_rows(usable, market, start_iso)
+        cutoff = start_iso
+        if market in ("hd", "ou"):
+            cutoff = (datetime.fromisoformat(start_iso) - timedelta(minutes=150)).isoformat(timespec="seconds")
+        closing = _closing_from_rows(usable, market, cutoff)
         if closing:
             result["close"] = closing
         elif isinstance(result.get("active"), dict):

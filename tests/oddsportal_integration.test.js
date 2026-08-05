@@ -76,8 +76,9 @@ test('settlement UI checks the switch box, fills blank moneyline fields, and ren
       type: 'match', away: '金鶯', home: '費城人', gameTime: '07:05', league: 'MLB',
     });
 
-    assert.equal(browser.document.getElementById('settlePreSwap').checked, true);
-    assert.equal(browser.document.getElementById('myHdWrap').style.display, 'block');
+    // 2026-08-05 拆除自動打勾：對調勾=台彩軸，OddsPortal 軌永不代點（8/1 三場亂勾案）
+    assert.equal(browser.document.getElementById('settlePreSwap').checked, false);
+    assert.equal(browser.document.getElementById('myHdWrap').style.display, 'none');
     assert.equal(browser.document.getElementById('openOddsAway').value, '2');
     assert.equal(browser.document.getElementById('openOddsHome').value, '9.99');
     assert.equal(browser.document.getElementById('closeOddsAway').value, '1.97');

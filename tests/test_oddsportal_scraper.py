@@ -84,10 +84,12 @@ class HandicapSwitchTests(unittest.TestCase):
             row(-1.5, "2026-07-31T13:18:00+08:00", struck=True),
         ], "2026-08-01T03:00:00+08:00")
 
-        self.assertTrue(result["ever"])
-        self.assertEqual(result["count"], 2)
-        self.assertEqual(result["first"]["to"], "home")
-        self.assertEqual(result["last"]["to"], "away")
+        # 2026-08-05 使用者拍板守門：OddsPortal 軌永不判對調（替代盤口會偽造換邊，
+        # 8/1 三場亂標案）。對調偵測唯一權威=台彩軸。此測試守住「永遠 inert」。
+        self.assertFalse(result["ever"])
+        self.assertEqual(result["count"], 0)
+        self.assertIsNone(result["first"])
+        self.assertIsNone(result["last"])
 
     def test_struck_opposite_line_without_history_still_marks_switch(self):
         empty = {"history": {"opening": None, "movements": []}}
@@ -96,11 +98,10 @@ class HandicapSwitchTests(unittest.TestCase):
             {"line": 1.5, "first": empty, "second": empty, "active": True, "struck": False},
         ], "2026-08-01T03:00:00+08:00")
 
-        self.assertTrue(result["ever"])
-        self.assertEqual(result["count"], 1)
-        self.assertEqual(result["first"]["from"], "home")
-        self.assertEqual(result["last"]["to"], "away")
-        self.assertEqual(result["first"]["precision"], "struck-opposite-detected")
+        # 同上守門：struck-opposite 推斷已拆除（正是 8/1 亂標主犯），永遠 inert
+        self.assertFalse(result["ever"])
+        self.assertEqual(result["count"], 0)
+        self.assertIsNone(result["first"])
 
     def test_history_time_is_taipei_aware_before_year_boundary_comparison(self):
         event_start = datetime.fromisoformat("2026-08-01T07:05:00+08:00")
@@ -251,8 +252,9 @@ class SnapshotMergeTests(unittest.TestCase):
 
         merged = merge_game_snapshot(old, new)
 
-        self.assertEqual(merged["handicapSwitch"]["count"], 3)
-        self.assertEqual(merged["handicapSwitch"]["currentFavorite"], "home")
+        # 2026-08-05 守門：poll 觀測型換邊偵測已拆除——合併不得憑 active.favorite
+        # 生出新的對調紀錄（舊有紀錄原樣保留，不增不減）。
+        self.assertEqual(merged["handicapSwitch"]["count"], 2)
         self.assertNotIn("handicapObservations", merged)
 
     def test_missing_market_never_erases_previous_open_or_close(self):
