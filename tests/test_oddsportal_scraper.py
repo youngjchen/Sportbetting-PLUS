@@ -438,3 +438,52 @@ class StakeSwapSopTests(unittest.TestCase):
         merged = merge_game_snapshot(old, new)
         self.assertTrue(merged["stakeSwap"]["ever"])                       # 曾對調只增不減
         self.assertEqual(merged["stakeSwap"]["scanFavorite"], "away")      # 現況讓方跟最新
+
+
+class WnbaSupportTests(unittest.TestCase):
+    """2026-08-06 使用者要求 WNBA 也要初盤/收盤。籃球與棒球三處不同：
+    列表頁運動別（/basketball/h2h/）、隊名女子尾綴 W、讓分盤口每場不同（不是固定 ±1.5）。"""
+
+    def test_wnba_league_registered_as_basketball(self):
+        from oddsportal_scraper import LEAGUE_URLS, BASKETBALL_LEAGUES
+        self.assertEqual(LEAGUE_URLS["wnba"], "/basketball/usa/wnba/")
+        self.assertIn("wnba", BASKETBALL_LEAGUES)
+        self.assertNotIn("mlb", BASKETBALL_LEAGUES)   # 棒球仍走 ±1.5 卡片線
+
+    def test_team_zh_strips_women_suffix(self):
+        from oddsportal_scraper import team_zh
+        self.assertEqual(team_zh("Atlanta Dream W"), "美夢")
+        self.assertEqual(team_zh("Golden State Valkyries W"), "金州")
+        self.assertEqual(team_zh("Atlanta Dream"), "美夢")
+        self.assertIsNone(team_zh("Nonexistent Team W"))
+
+    def test_load_schedule_merges_wnba_file(self):
+        from oddsportal_scraper import _load_schedule, TW
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            (data / "pregame_data.json").write_text(json.dumps([
+                {"league": "mlb", "date": "2026-08-06", "gameTime": "07:05",
+                 "awayTeam": "洋基", "homeTeam": "紅襪"},
+            ]), encoding="utf-8")
+            (data / "wnba_pregame.json").write_text(json.dumps({"games": [
+                {"league": "WNBA", "date": "2026-08-06", "time": "07:00",
+                 "away": "水星", "home": "美夢"},
+            ]}), encoding="utf-8")
+            now = datetime.fromisoformat("2026-08-06T01:00:00+08:00").astimezone(TW)
+            rows = _load_schedule(data / "pregame_data.json", now, from_hours=-24, to_hours=24)
+            leagues = {r["league"] for r in rows}
+            self.assertEqual(leagues, {"mlb", "wnba"})
+            wnba = [r for r in rows if r["league"] == "wnba"][0]
+            self.assertEqual((wnba["awayTeam"], wnba["homeTeam"], wnba["startTime"]), ("水星", "美夢", "07:00"))
+
+    def test_missing_wnba_file_never_breaks_baseball(self):
+        from oddsportal_scraper import _load_schedule, TW
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            (data / "pregame_data.json").write_text(json.dumps([
+                {"league": "cpbl", "date": "2026-08-06", "gameTime": "18:35",
+                 "awayTeam": "台鋼", "homeTeam": "樂天"},
+            ]), encoding="utf-8")
+            now = datetime.fromisoformat("2026-08-06T01:00:00+08:00").astimezone(TW)
+            rows = _load_schedule(data / "pregame_data.json", now, from_hours=-24, to_hours=24)
+            self.assertEqual([r["league"] for r in rows], ["cpbl"])

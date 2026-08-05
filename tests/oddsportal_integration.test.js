@@ -145,3 +145,42 @@ test('autoApplyOdds writes open and final close into blank card fields only', ()
     assert.ok(changed >= 2 && saved === 1);
   } finally { dom.window.close(); }
 });
+
+// ── 2026-08-06 回歸：板子的 doc 是 `let doc`（全域語彙變數），不在 window 上。
+// autoApplyOdds 若只讀 global.doc 會永遠拿到 undefined → 一格都不寫 → 標籤不變色。
+test('autoApplyOdds reads the lexical doc when it is not a property of window', () => {
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const lexicalDoc = { activeDate: '2026-08-06', boards: { '2026-08-06': { items: [
+    { type: 'match', league: 'MLB', away: '藍鳥', home: '太空人', gameTime: '02:10' },
+  ] } } };
+  globalThis.doc = lexicalDoc;                 // Node 的裸識別字＝globalThis，等同瀏覽器的語彙全域
+  const browser = {                            // 關鍵：browser 物件上「沒有」doc
+    document: dom.window.document,
+    fetch: async () => { throw new Error('not used'); },
+    setInterval: () => 0,
+    save: () => {},
+  };
+  try {
+    const api = require('../oddsportal-integration.js').install(browser);
+    api._setFeed({ source: 'OddsPortal', bookmaker: 'Stake.com', games: {
+      'mlb|2026-08-06|藍鳥|太空人|02:10|z': { eventId: 'z', league: 'mlb', date: '2026-08-06', startTime: '02:10',
+        awayTeam: '藍鳥', homeTeam: '太空人', markets: { ml: { open: { away: 1.86, home: 1.95 } } } },
+    } });
+    assert.ok(api.autoApplyOdds() >= 1);
+    assert.equal(lexicalDoc.boards['2026-08-06'].items[0].openOddsAway, 1.86);
+  } finally { delete globalThis.doc; dom.window.close(); }
+});
+
+// ── 2026-08-06 回歸：WNBA 隊名不在板子 LEAGUES 表裡 → leagueOf 回 'zz'。
+// 'zz' 必須當「未知」，否則永遠配不到 wnba 場次（使用者要求 WNBA 也要初盤/收盤）。
+test('unknown league zz is treated as wildcard so WNBA cards match', () => {
+  const { normalizeLeague } = require('../oddsportal-integration.js');
+  assert.equal(normalizeLeague('zz'), '');
+  assert.equal(normalizeLeague('WNBA'), 'wnba');
+  const wnbaFeed = { games: { 'wnba|2026-08-06|水星|美夢|07:00|w': {
+    eventId: 'w', league: 'wnba', date: '2026-08-06', startTime: '07:00',
+    awayTeam: '水星', homeTeam: '美夢', markets: { ml: { open: { away: 2.9, home: 1.4 } } } } } };
+  const game = findOddsPortalGame(wnbaFeed, { type: 'match', away: '水星', home: '美夢', gameTime: '07:00', league: 'zz' }, '2026-08-06');
+  assert.equal(game && game.eventId, 'w');
+});

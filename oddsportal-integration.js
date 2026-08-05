@@ -24,6 +24,10 @@
     if (text.includes('npb') || text.includes('日職') || text === '2') return 'npb';
     if (text.includes('kbo') || text.includes('韓職') || text === '9') return 'kbo';
     if (text.includes('cpbl') || text.includes('中職') || text === '6') return 'cpbl';
+    if (text.includes('wnba') || text.includes('女籃')) return 'wnba';
+    // 'zz'＝板子 leagueOf 找不到聯盟時的兜底值（WNBA 隊名不在 LEAGUES 表裡就會落到這）。
+    // 當成「未知」而非一個真聯盟，否則永遠配不到 wnba 場次。
+    if (text === 'zz') return '';
     return text;
   }
 
@@ -114,8 +118,17 @@
     // 2026-08-05 使用者拍板：初盤/定案收盤自動寫進卡片欄位（openOdds/closeOdds），
     // 標籤列表照舊規則隨填寫變黃（navMatchState 數的就是這些欄位）。
     // 鐵則：只填空白、絕不覆蓋手填值；下注賠率(flipOdds)＝使用者自己的注，永不代填。
+    // 板子的 doc 是 `let doc` 宣告的全域語彙變數——不掛在 window 上（global.doc 永遠 undefined）。
+    // 2026-08-05 事故：autoApplyOdds 讀 global.doc 直接 return 0，賠率一格都沒寫進卡片，
+    // 標籤自然不會變黃。必須先讀裸 doc（跟 pregame-integration 同一個坑）。
+    function boardDoc() {
+      try { if (typeof doc !== 'undefined' && doc && doc.boards) return doc; } catch (_) {}
+      if (global.doc && global.doc.boards) return global.doc;
+      return null;
+    }
+
     function autoApplyOdds() {
-      const doc = global.doc;
+      const doc = boardDoc();
       if (!doc || !doc.boards) return 0;
       let changed = 0;
       for (const dk of Object.keys(doc.boards)) {

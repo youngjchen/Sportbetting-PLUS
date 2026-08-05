@@ -24,6 +24,9 @@ const T_FLIP_MIN = 150;                    // 開賽前 2.5h
 const CLOSE_LAG_MIN = 10;                  // 最晚開賽 +10 分
 const OPEN_ASIA_HHMM = '03:00';
 const OPEN_MLB_HHMM = '07:00';
+// WNBA（2026-08-05 使用者要求納入）：賽事在台灣清晨 01:00~11:00，與 MLB 同型態＝前一天開盤。
+// 07:30＝比 MLB 閘晚半小時，沿用使用者的「WNBA 跟棒球工作流錯開半小時」規則避免推送打架。
+const OPEN_WNBA_HHMM = '07:30';
 const OUTPUT_PATHS = Object.freeze([
   'data/oddsportal_summary.json',
   'data/oddsportal_history',
@@ -53,7 +56,7 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
   const groups = new Map();
   for (const game of games || []) {
     const league = String((game && game.league) || '').toLowerCase();
-    const grp = league === 'mlb' ? 'mlb' : (ASIA_LEAGUES.includes(league) ? 'asia' : null);
+    const grp = league === 'mlb' ? 'mlb' : (league === 'wnba' ? 'wnba' : (ASIA_LEAGUES.includes(league) ? 'asia' : null));
     if (!grp) continue;
     const startMs = gameStartMs(game);
     if (!startMs) continue;
@@ -67,10 +70,12 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
   const gates = [];
   for (const [key, span] of groups) {
     const [grp, date] = key.split('|');
-    const leagues = grp === 'mlb' ? ['mlb'] : [...ASIA_LEAGUES];
+    const leagues = grp === 'mlb' ? ['mlb'] : (grp === 'wnba' ? ['wnba'] : [...ASIA_LEAGUES]);
     const openAt = grp === 'mlb'
       ? Date.parse(`${dayBefore(date)}T${OPEN_MLB_HHMM}:00+08:00`)
-      : Date.parse(`${date}T${OPEN_ASIA_HHMM}:00+08:00`);
+      : (grp === 'wnba'
+        ? Date.parse(`${dayBefore(date)}T${OPEN_WNBA_HHMM}:00+08:00`)
+        : Date.parse(`${date}T${OPEN_ASIA_HHMM}:00+08:00`));
     const flipAt = span.min - T_FLIP_MIN * 60e3;
     const closeAt = span.max + CLOSE_LAG_MIN * 60e3;
     gates.push({ id: `open_${grp}_${date}`, at: openAt, mode: 'open', leagues, fromHours: -BACKFILL_HOURS, toHours: 36, maxGames: 40 });
@@ -123,7 +128,9 @@ function resolvePython(env = process.env, probe = execFileSync) {
 
 // ── 歷史收割閘（2026-08-05 使用者拍板：RESULTS 區 4/1 至今全量）──
 // 每天三批、每批一個聯盟 350 場（收割器自選未完成聯盟），全部 done 後自動熄火。
-const HARVEST_HHMM = Object.freeze(['02:35', '05:05', '11:35', '15:05']);  // 2026-08-05 加夜班；90場/批對齊100分時限
+// 2026-08-06：4 班→8 班（每 3 小時一批、90 場/批＝約 720 場/日）。使用者要研究資料，
+// 4 班的節奏 4/1 全量要跑 ~13 天；加倍後 ~5 天。單批仍受 100 分時限與增量落盤保護。
+const HARVEST_HHMM = Object.freeze(['00:35', '02:35', '05:05', '08:05', '11:35', '15:05', '18:05', '21:05']);
 const HARVEST_OUTPUTS = Object.freeze([
   'data/oddsportal_archive',
   'data/oddsportal_history',
@@ -164,10 +171,10 @@ function dueSwapGate(state, nowMs = Date.now()) {
   const id = `swap_${day}`;
   if (at <= nowMs && nowMs - at <= GATE_LOOKBACK_MS && !state[`opg_${id}`]) {
     return {
-      id, at, mode: 'swap', leagues: ['mlb', 'npb', 'kbo', 'cpbl'],
+      id, at, mode: 'swap', leagues: ['mlb', 'npb', 'kbo', 'cpbl', 'wnba'],
       // fromHours -120：順手回補過去缺口（2026-08-05 美職 09:50 收盤閘被黑窗殺掉後
       // 整天沒有任何帶回補窗的美職閘＝收盤懸空一整天的結構洞）
-      fromHours: -120, toHours: 40, maxGames: 40, refreshUpcoming: true,
+      fromHours: -120, toHours: 40, maxGames: 60, refreshUpcoming: true,
     };
   }
   return null;

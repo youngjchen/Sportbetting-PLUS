@@ -30,7 +30,15 @@ LEAGUE_URLS = {
     "npb": "/baseball/japan/npb/",
     "kbo": "/baseball/south-korea/kbo/",
     "cpbl": "/baseball/taiwan/cpbl/",
+    "wnba": "/basketball/usa/wnba/",
 }
+
+# 籃球聯盟：讓分盤口不是棒球的固定 ±1.5，每場不同（-2.5、-5.5、-8.5…）。
+# 這類聯盟的讓分改用「莊家家數最多的那條＝主盤」抓法（跟大小分同一套邏輯）。
+BASKETBALL_LEAGUES = frozenset({"wnba"})
+
+# WNBA 賽程不在 pregame_data.json，而是自己的檔（欄位也不同：away/home/time）
+WNBA_SCHEDULE_FILE = "wnba_pregame.json"
 
 
 def _norm(value: str) -> str:
@@ -38,6 +46,12 @@ def _norm(value: str) -> str:
 
 
 TEAM_ALIASES = {
+    # WNBA（2026 賽季 15 隊；中文短名同 data/wnba_pregame.json）
+    "Las Vegas Aces": "王牌", "Chicago Sky": "天空", "New York Liberty": "自由",
+    "Phoenix Mercury": "水星", "Indiana Fever": "狂熱", "Minnesota Lynx": "山貓",
+    "Los Angeles Sparks": "火花", "Portland Fire": "火焰", "Connecticut Sun": "太陽",
+    "Dallas Wings": "飛翼", "Toronto Tempo": "節奏", "Golden State Valkyries": "金州",
+    "Atlanta Dream": "美夢", "Seattle Storm": "風暴", "Washington Mystics": "神秘",
     # MLB
     "Arizona Diamondbacks": "響尾蛇", "Pittsburgh Pirates": "海盜",
     "Baltimore Orioles": "金鶯", "Detroit Tigers": "老虎",
@@ -85,7 +99,14 @@ TEAM_ALIASES_NORM[_norm("KT Wiz Suwon")] = TEAM_ALIASES_NORM[_norm("KT Wiz")]
 
 
 def team_zh(name: str) -> str | None:
-    return TEAM_ALIASES_NORM.get(_norm(name))
+    key = _norm(name)
+    hit = TEAM_ALIASES_NORM.get(key)
+    if hit:
+        return hit
+    # WNBA 在 OddsPortal 的隊名都帶女子隊尾綴 W（"Atlanta Dream W"）→ 去尾再查一次。
+    if key.endswith("w") and len(key) > 1:
+        return TEAM_ALIASES_NORM.get(key[:-1])
+    return None
 
 
 def build_event_key(
@@ -354,7 +375,10 @@ def _discover_events(response: Any, league: str, now: datetime | None = None, in
         pregame = _is_pregame_listing(row.get_all_text(separator=" | ", strip=True))
         if not pregame and not include_started:
             continue
-        link = row.css('a[href*="/baseball/h2h/"]').first
+        # 運動別由聯盟網址推出（/baseball/… 或 /basketball/…）——2026-08-05 WNBA 納入前
+        # 這行寫死 baseball，籃球列表因此永遠配到 0 場。
+        sport = (LEAGUE_URLS.get(league) or "/baseball/").strip("/").split("/")[0]
+        link = row.css(f'a[href*="/{sport}/h2h/"]').first
         if not link:
             continue
         href = link.attrib.get("href") or ""
@@ -510,7 +534,9 @@ def _dismiss_consent(page: Any) -> None:
         pass
 
 
-def _collect_market(page: Any, label: str, event_start: datetime, with_history: bool) -> list[dict[str, Any]]:
+def _collect_market(page: Any, label: str, event_start: datetime, with_history: bool,
+                    main_line: bool = False) -> list[dict[str, Any]]:
+    """main_line=True（籃球）：讓分不篩 ±1.5，改抓莊家家數最多的主盤。"""
     nav = page.get_by_test_id("bet-types-nav")
     tab = nav.get_by_text(label, exact=True)
     if not tab.count():
@@ -554,14 +580,15 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
         lines = option.first.inner_text().splitlines() if option.count() else row.inner_text().splitlines()
         label_text = lines[0].strip() if lines else ""
         count = int(lines[-1].strip()) if lines and lines[-1].strip().isdigit() else 0
-        if label == "Asian Handicap":
+        if label == "Asian Handicap" and not main_line:
             number = _parse_number(label_text)
             # 2026-08-05 使用者拍板：只抓「卡片上的讓分」＝±1.5 兩側（兩側=對調證據所需），
             # 不掃全讓分組合（先前全檔位掃描讓單場暴增到 ~95 秒、收割批死於時限）。
             if number is None or abs(abs(number) - 1.5) > 0.001:
                 continue
         candidates.append((label_text, count))
-    if label == "Over/Under":
+    pick_main = (label == "Over/Under") or (label == "Asian Handicap" and main_line)
+    if pick_main:
         candidates.sort(key=lambda item: item[1], reverse=True)
 
     tried: set[str] = set()
@@ -576,9 +603,9 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
             current.first.click(timeout=5000)
             page.wait_for_timeout(500)
             before = len(collected)
-            capture_visible(selected=(label == "Over/Under" and before == 0))
+            capture_visible(selected=(pick_main and before == 0))
             # 2026-08-05 使用者拍板：大小只抓「卡片上的主大小」（家數最多檔），首檔成功即收
-            if label == "Over/Under" and len(collected) > before:
+            if pick_main and len(collected) > before:
                 break
         except Exception:
             continue
@@ -839,6 +866,20 @@ def _load_schedule(path: Path, now: datetime, from_hours: float = 0.0, to_hours:
     # 2026-08-04 拆掉「開賽後一律不採樣」硬限制：頁面永存（含完賽），收盤已改
     # 走勢史時戳取法（_closing_from_rows），開賽後採樣不再有走地價污染問題。
     # 視窗由呼叫端給：from_hours 可為負（回補過去缺口），to_hours 往未來。
+    # WNBA 賽程住在自己的檔（data/wnba_pregame.json，物件包 games，欄位 away/home/time）
+    # ——2026-08-05 使用者要求 WNBA 也要初盤/收盤。這裡正規化成跟棒球同一種列。
+    try:
+        wnba_raw = json.loads((path.parent / WNBA_SCHEDULE_FILE).read_text(encoding="utf-8"))
+        for g in (wnba_raw.get("games") or []) if isinstance(wnba_raw, dict) else []:
+            rows.append({
+                "league": "wnba", "date": g.get("date"),
+                "gameTime": g.get("time") or g.get("gameTime"),
+                "awayTeam": g.get("away") or g.get("awayTeam"),
+                "homeTeam": g.get("home") or g.get("homeTeam"),
+                "officialId": g.get("officialId"),
+            })
+    except Exception:
+        pass          # WNBA 檔缺席不影響棒球（球季外／檔案還沒推上來都算正常）
     start = (now + timedelta(hours=float(from_hours))).isoformat()
     end = (now + timedelta(hours=float(to_hours))).isoformat()
     out = []
@@ -880,9 +921,10 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
             event_start = datetime.fromtimestamp(stamp, tz=TW) if stamp else datetime.now(TW)
         _wait_for_market_navigation(page)
         _dismiss_consent(page)
+        _basket = str(event.get("league") or "").lower() in BASKETBALL_LEAGUES
         captured["ml"] = _collect_market(page, "Home/Away", event_start, with_history)
         captured["ou"] = _collect_market(page, "Over/Under", event_start, with_history)
-        captured["hd"] = _collect_market(page, "Asian Handicap", event_start, with_history)
+        captured["hd"] = _collect_market(page, "Asian Handicap", event_start, with_history, main_line=_basket)
         try:
             captured["visibleBookmakers"] = page.locator(
                 '[data-testid="over-under-expanded-row"] img[alt]'

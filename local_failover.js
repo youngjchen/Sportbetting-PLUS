@@ -130,6 +130,14 @@ function run() {
   // 每閘缺口驅動：scraper 端只抓「初盤/收盤還沒填」的比賽（含 3.5 天回補），上限 40 場。
   try {
     const games = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'pregame_data.json'), 'utf8'));
+    // WNBA 賽程是獨立檔（2026-08-05 使用者要求 WNBA 也抓初盤/收盤）；缺席不影響棒球閘。
+    try {
+      const w = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'wnba_pregame.json'), 'utf8'));
+      for (const g of (w.games || [])) {
+        games.push({ league: 'wnba', date: g.date, gameTime: g.time || g.gameTime,
+          awayTeam: g.away || g.awayTeam, homeTeam: g.home || g.homeTeam });
+      }
+    } catch (_) {}
     const gate = dueOddsPortalGate(computeOddsPortalGates(games, Date.now()), state, Date.now())
       || dueSwapGate(state, Date.now());
     if (gate) {

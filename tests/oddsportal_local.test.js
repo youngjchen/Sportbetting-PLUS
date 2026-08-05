@@ -95,14 +95,27 @@ test('oddsPortalArgs encodes the gap-driven scraper flags', () => {
 
 test('harvest gate fires at fixed slots and silences when all leagues done', () => {
   const { dueHarvestGate, GATE_LOOKBACK_MS } = loadModule();
+  // 2026-08-06：班次 4→8（00:35 起每 3 小時），首班之前仍必須靜默
+  const first = Date.parse('2026-08-06T00:35:00+08:00');
   const night = Date.parse('2026-08-06T02:35:00+08:00');
   const at = Date.parse('2026-08-06T05:05:00+08:00');
-  assert.equal(dueHarvestGate({}, {}, night - 1), null);
-  assert.equal(dueHarvestGate({}, {}, night + 60_000).id, 'harvest_2026-08-06_0235');
-  assert.equal(dueHarvestGate({}, {}, at + 60_000).id, 'harvest_2026-08-06_0235'); // 夜班未跑先補（6h內）
-  assert.equal(dueHarvestGate({}, { 'opg_harvest_2026-08-06_0235': night }, at + 60_000).id, 'harvest_2026-08-06_0505');
-  assert.equal(dueHarvestGate({}, { 'opg_harvest_2026-08-06_0235': night, 'opg_harvest_2026-08-06_0505': at }, at + 60_000), null);
-  assert.equal(dueHarvestGate({}, {}, at + GATE_LOOKBACK_MS + 60_000)?.id, undefined);
+  assert.equal(dueHarvestGate({}, {}, first - 1), null);
+  assert.equal(dueHarvestGate({}, {}, first + 60_000).id, 'harvest_2026-08-06_0035');
+  assert.equal(dueHarvestGate({}, { 'opg_harvest_2026-08-06_0035': first }, night - 1), null);
+  const fired0035 = { 'opg_harvest_2026-08-06_0035': first };
+  assert.equal(dueHarvestGate({}, { ...fired0035 }, night + 60_000).id, 'harvest_2026-08-06_0235');
+  assert.equal(dueHarvestGate({}, { ...fired0035 }, at + 60_000).id, 'harvest_2026-08-06_0235'); // 夜班未跑先補（6h內）
+  assert.equal(dueHarvestGate({}, { ...fired0035, 'opg_harvest_2026-08-06_0235': night }, at + 60_000).id, 'harvest_2026-08-06_0505');
+  assert.equal(dueHarvestGate({}, { ...fired0035, 'opg_harvest_2026-08-06_0235': night, 'opg_harvest_2026-08-06_0505': at }, at + 60_000), null);
+  // 末班 21:05 也要會發射（8 班全到齊）
+  const late = Date.parse('2026-08-06T21:05:00+08:00');
+  const allEarlier = {};
+  for (const hhmm of ['0035', '0235', '0505', '0805', '1135', '1505', '1805']) allEarlier['opg_harvest_2026-08-06_' + hhmm] = late - 3600e3;
+  assert.equal(dueHarvestGate({}, allEarlier, late + 60_000).id, 'harvest_2026-08-06_2105');
+  // 過期（>6h）的班永不補跑：把其後各班標成已跑，只剩過期的 00:35 → 靜默
+  const expired = Date.parse('2026-08-06T00:35:00+08:00') + GATE_LOOKBACK_MS + 60_000;
+  const laterFired = { 'opg_harvest_2026-08-06_0235': expired, 'opg_harvest_2026-08-06_0505': expired };
+  assert.equal(dueHarvestGate({}, laterFired, expired), null);
   const done = { mlb: { done: true }, npb: { done: true }, kbo: { done: true }, cpbl: { done: true } };
   assert.equal(dueHarvestGate(done, {}, at + 60_000), null);
 });

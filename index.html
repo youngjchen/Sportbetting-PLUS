@@ -765,6 +765,11 @@
   #stgauge .sgfill{height:100%;width:0;border-radius:3px;background:var(--ok,#3fb950);transition:width .25s,background .25s;}
   #stgauge .sgpct{font-size:11px;color:var(--ink-dim);min-width:30px;text-align:right;font-variant-numeric:tabular-nums;}
   #stgauge.warn .sgfill{background:#e0a020;} #stgauge.warn .sgpct{color:#e0a020;}
+  #hvgauge{display:flex;align-items:center;gap:7px;padding:6px 10px 7px;cursor:default;}
+  #hvgauge .sgicon{font-size:13px;line-height:1;}
+  #hvgauge .sgbar{flex:0 0 54px;height:6px;border-radius:3px;background:#22303e;overflow:hidden;}
+  #hvgauge .sgfill{height:100%;width:0;border-radius:3px;background:#3aa0ff;transition:width .3s;}
+  #hvgauge .sgtxt{font-size:11px;color:var(--ink-dim);font-variant-numeric:tabular-nums;white-space:nowrap;}
   #stgauge.crit .sgfill{background:#e5534b;} #stgauge.crit .sgpct{color:#ff8a80;}
   #moreMenu .colrow{display:flex;align-items:center;gap:5px;padding:4px 10px 6px;}
   #moreMenu .colrow .collabel{font-size:12px;color:var(--ink-dim);margin-right:2px;}
@@ -1018,6 +1023,7 @@
         <button id="statsBtn">📊 隊伍統計</button>
         <button id="reviewBtn">🔍 燈號回顧</button>
         <div class="sep"></div>
+        <div id="hvgauge" title="OddsPortal 歷史賠率回抓進度（4/1 起）"><span class="sgicon">📥</span><span class="sgbar"><span class="sgfill" id="hvfill"></span></span><span class="sgtxt" id="hvtxt">回抓進度載入中…</span></div>
         <div id="stgauge" title="本機儲存空間用量"><span class="sgicon">💾</span><span class="sgbar"><span class="sgfill"></span></span><span class="sgpct">—</span></div>
         <!-- 很少使用：備份與清理 -->
         <button id="exportDataBtn">💾 匯出備份檔</button>
@@ -2178,26 +2184,35 @@ async function load(){
   // ── 2026-08-05 一次性復原 v2：OddsPortal 整合曾自動亂勾「賽前讓分方曾對調」──
   // 假訊 9 場歸零（恢復使用者結算狀態）；8/6 三場經使用者證實「真的對調過」→
   // 保留、若被第一版復原誤清則補回。推斷邏輯已整層拆除、永不再自動標。
+  // v3（2026-08-05 晚）：v2 只洗了卡片（doc.boards），已結算的歷史紀錄（doc.games）沒洗到
+  // ——燈號回顧的統計吃的是 doc.games，所以假對調仍在「只對調」桶裡污染命中率。兩邊都要洗。
   try{
-    if(!doc.opSwapRb2 && !_loadBlocked){
+    if(!doc.opSwapRb3 && !_loadBlocked){
       const FALSE9 = [["2026-08-01","國民","勇士"],["2026-08-01","紅襪","道奇"],["2026-08-01","費城人","金鶯"],
                  ["2026-08-05","國民","費城人"],["2026-08-05","大都會","守護者"],["2026-08-05","教士","響尾蛇"],
                  ["2026-08-05","樂天","台鋼"],["2026-08-05","老虎","水手"],["2026-08-05","運動家","紅人"]];
       const TRUE3 = [["2026-08-06","海盜","釀酒人"],["2026-08-06","白襪","紅襪"],["2026-08-06","藍鳥","太空人"]];
-      let fixed = 0, restored = 0;
+      let fixed = 0, restored = 0, recFixed = 0;
       for(const [dk, b] of Object.entries(doc.boards||{})){
         for(const it of (b && b.items) || []){
           if(!it || it.type!=="match") continue;
           if(it.preGameSwap && FALSE9.some(([d,a,h]) => dk===d && it.away===a && it.home===h)){
             it.preGameSwap = false; fixed++;
+            if(it.settled) it.settled.preGameSwap = false;   // 卡片內嵌的結算副本也要洗
           }
           if(!it.preGameSwap && TRUE3.some(([d,a,h]) => dk===d && it.away===a && it.home===h)){
             it.preGameSwap = true; restored++;   // 使用者證實真對調（2026-08-05）
           }
         }
       }
-      doc.opSwapRb1 = true; doc.opSwapRb2 = true;
-      if(fixed || restored) console.warn("[OddsPortal復原v2] 假訊歸零 " + fixed + " 場、真對調補回 " + restored + " 場");
+      for(const g of (doc.games||[])){
+        if(!g || !g.preGameSwap) continue;
+        if(FALSE9.some(([d,a,h]) => g.date===d && g.awayTeam===a && g.homeTeam===h)){
+          g.preGameSwap = false; recFixed++;     // ← 統計污染的真正來源
+        }
+      }
+      doc.opSwapRb1 = true; doc.opSwapRb2 = true; doc.opSwapRb3 = true;
+      if(fixed || restored || recFixed) console.warn("[OddsPortal復原v3] 卡片歸零 " + fixed + " 場、歷史紀錄歸零 " + recFixed + " 場、真對調補回 " + restored + " 場");
       save();
     }
   }catch(_){}
@@ -3016,11 +3031,21 @@ function renderCardB(it){
     // 「⚠疑顛倒場」晶片已移除（2026-07-26 使用者拍板）：警示條時代前的老提醒，
     // 現由頂部紫色「平台顛倒」橫幅＋異常晶片承擔，重複警示徒增版面噪音。
     const hv = it.hdVal || "1.5";
+    // 盤口輸入框（2026-08-05）：大小分早就有「基準」框可直接改，讓分卻只有純文字＝改不動。
+    // 補上同款輸入框，卡片上就能改讓分數字（不必開結算視窗）。
+    const hdline=document.createElement("span"); hdline.className="basis no-drag";
+    hdline.innerHTML="盤口 ";
+    const hinp=document.createElement("input"); hinp.type="number"; hinp.step="0.5"; hinp.min="0.5"; hinp.inputMode="decimal"; hinp.value=hv;
+    hinp.title="讓分盤口（直接改，立即存檔）";
+    hinp.onclick=(e)=>e.stopPropagation();
+    hinp.onpointerdown=(e)=>e.stopPropagation();
+    hinp.oninput=()=>{ it.hdVal = hinp.value.trim(); save(); };
+    hdline.appendChild(hinp);
     // 異常場即時晶片：這場屬於哪種異常＋該類歷史讓分過盤率（tooltip=組合細分）
     let anomChip=null;
     try{ const ai=bAnomInfo(it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    const hdH=mktSecHead("讓分", hdConflict, [swap, anomChip], "hd");
+    const hdH=mktSecHead("讓分", hdConflict, [swap, hdline, anomChip], "hd");
     hdWrap.append(hdH.sec,
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
@@ -4821,6 +4846,7 @@ $("#moreBtn").onclick = (e)=>{
   menu.classList.toggle("show");
   if(willShow){
     updateStorageGauge();
+    try{ refreshHarvestGauge(); }catch(_){}   // 歷史賠率回抓進度（每次開選單即時算）
     // header is CSS-zoomed by uiScale; vh-based max-height miscomputes under zoom,
     // so set an explicit pixel cap = (real viewport below the menu top) / zoom.
     const z = uiScale || 1;
@@ -6767,6 +6793,37 @@ function renderFlipBackfill(){
     renderFlipBackfill(); if(typeof render==="function"){ try{ render(); }catch(_){} }
   });
 }
+// ── 歷史賠率回抓進度（2026-08-06 使用者要求「看得見進度」）──
+// 讀 data/oddsportal_harvest_state.json（游標＝已回抓到哪一天，從今天往 4/1 倒著走）
+// ＋月檔實際場數，換算成百分比顯示在 ⋯ 選單裡。
+const HARVEST_START = "2026-04-01";
+async function refreshHarvestGauge(){
+  const txt = document.getElementById("hvtxt"), fill = document.getElementById("hvfill");
+  if(!txt) return;
+  try{
+    const r = await fetch("data/oddsportal_harvest_state.json?t="+Date.now(), {cache:"no-store"});
+    if(!r.ok) throw new Error("state "+r.status);
+    const st = await r.json();
+    const today = new Date(Date.now()+8*3600e3).toISOString().slice(0,10);
+    const span = (a,b)=> Math.max(1, Math.round((Date.parse(b+"T00:00:00Z")-Date.parse(a+"T00:00:00Z"))/86400e3));
+    const total = span(HARVEST_START, today);
+    const LG = [["mlb","美職"],["npb","日職"],["kbo","韓職"],["cpbl","中職"]];
+    let doneDays = 0; const bits = [];
+    for(const [k,label] of LG){
+      const s = st[k] || {};
+      const cur = String(s.cursor || "").slice(0,10);
+      const d = s.done ? total : (/^\d{4}-\d{2}-\d{2}$/.test(cur) ? span(cur, today) : 0);
+      doneDays += Math.min(d, total);
+      bits.push(label + (s.done ? " ✓" : (cur ? " 到"+cur.slice(5) : " 未開始")));
+    }
+    const pct = Math.min(100, Math.round(doneDays / (total*LG.length) * 100));
+    if(fill) fill.style.width = pct + "%";
+    txt.textContent = pct + "%　" + bits.join("・");
+    txt.title = "回抓範圍 " + HARVEST_START + " ~ " + today + "（每聯盟 " + total + " 天）；游標＝已抓到的最舊日期，往 4/1 倒著推進";
+  }catch(_){
+    txt.textContent = "回抓進度：讀不到狀態檔";
+  }
+}
 function openFlipBackfill(){ closeMore(); renderFlipBackfill(); const m=$("#flipBackfill"); if(m) m.classList.add("show"); }
 $("#flipBackfillBtn") && ($("#flipBackfillBtn").onclick = openFlipBackfill);
 $("#flipBackfillClose") && ($("#flipBackfillClose").onclick = ()=>{ const m=$("#flipBackfill"); if(m) m.classList.remove("show"); });
@@ -7666,6 +7723,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260805op7"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260806op8"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
