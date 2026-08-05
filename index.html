@@ -1029,6 +1029,7 @@
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
+        <button id="rescueBtn" style="display:none">🛟 救回被清空的盤面</button>
         <button id="clearOldDates">🧹 清除已結算的舊日期</button>
         <button id="flipBackfillBtn">🩹 補顛倒狀態（點不到的舊場）</button>
         <div class="sep"></div>
@@ -1709,13 +1710,39 @@ function prevDateWithMatches(date){
   }
   return null;
 }
+// state.items 目前代表「哪一天」的盤面。null＝還沒載入任何一天。
+// 2026-08-06 資料毀損事故：save() 會把 state.items 回寫到 doc.boards[activeDate]，
+// 若在 loadActiveBoard() 之前（或切日期途中）有任何程式呼叫 save()，就會把整天的卡片
+// 覆蓋成空陣列。加成器 autoApplyOdds 修好後第一次真的會走到 save()，於是 8/6 整天被清空。
+// 守門：state 還沒對應到 activeDate 時，一律不准回寫。
+let _stateDate = null;
 function syncStateToDoc(){
+  if(_stateDate !== doc.activeDate) return;      // state 還沒對應到這一天＝不准回寫（防整天被清空）
   const b = ensureBoard(doc.activeDate);
+  // 第二道保險：真的要把「有卡片」變成「零卡片」時，先留一份救援副本。
+  // 正常刪光是使用者自己一張張刪（走 snapshot/undo），不會突然整批歸零。
+  if((b.items||[]).length > 0 && (state.items||[]).length === 0){
+    doc._rescue = { date: doc.activeDate, at: Date.now(), items: b.items };
+    console.warn("[救援] 盤面即將被清空，已留副本：" + doc.activeDate + " " + b.items.length + " 場（⋯ 選單可還原）");
+  }
   b.items = state.items; b.summaryPos = state.summaryPos; b.view = state.view || view;
+}
+// 救援副本還原：⋯ 選單按鈕；沒有副本時按鈕自己隱藏
+function rescueRestore(){
+  const r = doc._rescue;
+  if(!r || !r.items || !r.items.length){ alert("目前沒有救援副本。"); return; }
+  const when = new Date(r.at).toLocaleString();
+  if(!confirm("要把 " + r.date + " 的 " + r.items.length + " 場救回來嗎？" + String.fromCharCode(10,10) + "副本時間：" + when + String.fromCharCode(10) + "（會覆蓋該日目前的內容）")) return;
+  snapshot();
+  doc.activeDate = r.date;
+  ensureBoard(r.date).items = r.items.slice();
+  loadActiveBoard(); save(); render(); buildDateBar();
+  alert("已還原 " + r.items.length + " 場到 " + r.date + "。");
 }
 function loadActiveBoard(){
   const b = ensureBoard(doc.activeDate);
   state.items = b.items; state.summaryPos = b.summaryPos;
+  _stateDate = doc.activeDate;
   state.view = b.view || null;
   view = state.view ? {...state.view} : { x:0, y:0, k:1 };
   state.items.forEach(i=>{ if(i.id>=uid) uid=i.id+1; });
@@ -4847,6 +4874,7 @@ $("#moreBtn").onclick = (e)=>{
   if(willShow){
     updateStorageGauge();
     try{ refreshHarvestGauge(); }catch(_){}   // 歷史賠率回抓進度（每次開選單即時算）
+    try{ const rb=$("#rescueBtn"); if(rb) rb.style.display = (doc._rescue && (doc._rescue.items||[]).length) ? "" : "none"; }catch(_){}
     // header is CSS-zoomed by uiScale; vh-based max-height miscomputes under zoom,
     // so set an explicit pixel cap = (real viewport below the menu top) / zoom.
     const z = uiScale || 1;
@@ -4867,6 +4895,7 @@ $("#trayHandle").onclick = ()=>{ const t=$("#tray"); collapseTray(!t.classList.c
 $("#exportDataBtn").onclick = exportData;
 $("#importDataBtn").onclick = importData;
 $("#restoreAutoBtn") && ($("#restoreAutoBtn").onclick = ()=>{ closeMore(); restoreFromAutoSlot(); });
+$("#rescueBtn") && ($("#rescueBtn").onclick = ()=>{ closeMore(); rescueRestore(); });
 
 /* ---- flip odds quick-entry modal (pre-game, triggered by card ⇅) ---- */
 let _flipOddsTarget = null;
@@ -7723,6 +7752,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260806op8"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260806op9"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
