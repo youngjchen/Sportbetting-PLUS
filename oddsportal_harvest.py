@@ -38,7 +38,9 @@ MONTHS = {m: i + 1 for i, m in enumerate(
 
 def parse_header_date(text: str, now: datetime) -> str | None:
     """結果頁日期標頭：'Today, 05 Aug' / 'Yesterday, 04 Aug' / '28 Jul' / '28 Jul 2026'。"""
-    m = re.search(r"(?:(?:Yesterday|Today|Tomorrow),\s*)?(\d{1,2})\s+([A-Za-z]{3})(?:\s+(\d{4}))?", str(text or ""))
+    # 年份只認 20xx：標頭常黏比賽時間（'Tomorrow, 06 Aug 1207'＝12:07 被誤當西元 1207 年
+    # → 全頁 stop、翻頁永不執行——2026-08-05 三輪冤案的真兇）
+    m = re.search(r"(?:(?:Yesterday|Today|Tomorrow),\s*)?(\d{1,2})\s+([A-Za-z]{3})(?:\s+(20\d{2}))?", str(text or ""))
     if not m or m.group(2) not in MONTHS:
         return None
     year = int(m.group(3) or now.year)
@@ -54,67 +56,94 @@ def parse_header_date(text: str, now: datetime) -> str | None:
     return d.isoformat()
 
 
-def collect_result_rows(page: Any, league: str, now: datetime, max_pages: int, oldest_date: str) -> list[dict[str, Any]]:
-    """在瀏覽器內逐頁擷取結果列（純 JS 取結構化資料，翻頁用分頁鈕），直到日期早於 oldest_date。"""
+def _extract_result_rows(page: Any) -> list[dict[str, Any]]:
+    """單頁擷取（純 JS 取結構化資料）。"""
+    page.wait_for_timeout(1200)
+    return page.evaluate(r"""() => {
+      const out = [];
+      let header = null;
+      for (const ev of document.querySelectorAll('div.eventRow[id]')) {
+        const t = ev.textContent || '';
+        const hm = t.match(/(?:(?:Yesterday|Today|Tomorrow),\s*)?\d{1,2}\s+[A-Za-z]{3}(?:\s+\d{4})?/);
+        const g = ev.querySelector('div.group[data-testid="game-row"]');
+        if (hm && (!g || t.indexOf(hm[0]) < 60)) header = hm[0];
+        if (!g) continue;
+        const alts = [...g.querySelectorAll('[data-testid="event-participants"] img[alt]')].map(i => i.alt).filter(Boolean);
+        const link = g.querySelector('a[href*="/baseball/h2h/"]');
+        if (!link || alts.length < 2) continue;
+        out.push({
+          header, eventId: ev.id || ((link.getAttribute('href') || '').match(/#([A-Za-z0-9]+)/) || [])[1] || null,
+          namesHomeAway: alts.slice(0, 2), href: link.getAttribute('href'),
+        });
+      }
+      return out;
+    }""") or []
+
+
+def collect_result_rows(session: Any, league: str, now: datetime, max_pages: int, oldest_date: str) -> list[dict[str, Any]]:
+    """結果頁收集：單次載入＋【Playwright 真滑鼠點擊】逐頁翻（2026-08-05 三連敗實驗定案：
+    JS 假點擊與 location.hash 都被路由器忽略，只有真事件會換頁）。每頁等 active 頁碼確認。"""
     rows: list[dict[str, Any]] = []
-    for page_no in range(1, max_pages + 1):
-        page.wait_for_timeout(900)
-        raw = page.evaluate(r"""() => {
-          const out = [];
-          let header = null;
-          for (const ev of document.querySelectorAll('div.eventRow[id]')) {
-            const t = ev.textContent || '';
-            const hm = t.match(/(?:(?:Yesterday|Today|Tomorrow),\s*)?\d{1,2}\s+[A-Za-z]{3}(?:\s+\d{4})?/);
-            // 標頭列與比賽列同容器：eventRow 首列常帶日期字樣
-            const g = ev.querySelector('div.group[data-testid="game-row"]');
-            if (hm && (!g || t.indexOf(hm[0]) < 60)) header = hm[0];
-            if (!g) continue;
-            const alts = [...g.querySelectorAll('[data-testid="event-participants"] img[alt]')].map(i => i.alt).filter(Boolean);
-            const link = g.querySelector('a[href*="/baseball/h2h/"]');
-            if (!link || alts.length < 2) continue;
-            out.push({
-              header, eventId: ev.id || ((link.getAttribute('href') || '').match(/#([A-Za-z0-9]+)/) || [])[1] || null,
-              namesHomeAway: alts.slice(0, 2), href: link.getAttribute('href'),
-            });
-          }
-          return out;
-        }""")
-        stop = False
-        for item in raw or []:
-            date = parse_header_date(item.get("header"), now)
-            if not date or not item.get("eventId") or not item.get("href"):
-                continue
-            if date < oldest_date:
-                stop = True
-                continue
-            if date >= now.date().isoformat():
-                continue  # 今天的交給日常閘
-            home, away = team_zh(item["namesHomeAway"][0]), team_zh(item["namesHomeAway"][1])
-            if not home or not away:
-                continue
-            rows.append({
-                "league": league, "date": date, "awayTeam": away, "homeTeam": home,
-                "eventId": item["eventId"], "sourceUrl": _assert_oddsportal_url(urljoin(BASE_URL, item["href"])),
-            })
-        if stop:
-            break
-        # 翻頁：找「下一頁」數字鈕
-        moved = page.evaluate(r"""() => {
-          const links = [...document.querySelectorAll('a[data-number]')];
-          const cur = links.find(a => a.classList.contains('active'))
-            || [...document.querySelectorAll('a')].find(a => /pagination/i.test(a.className) && a.getAttribute('aria-current'));
-          let curNo = cur ? Number(cur.getAttribute('data-number') || cur.textContent) : null;
-          if (!curNo) {
-            const hash = location.hash.match(/page\/(\d+)/);
-            curNo = hash ? Number(hash[1]) : 1;
-          }
-          const next = links.find(a => Number(a.getAttribute('data-number')) === curNo + 1);
-          if (next) { next.click(); return true; }
-          return false;
-        }""")
-        if not moved:
-            break
-    # 去重（同 eventId 只留一筆）
+
+    def action(page: Any) -> None:
+        _dismiss_consent(page)
+        page.wait_for_timeout(1200)
+        for page_no in range(1, max_pages + 1):
+            if page_no > 1:
+                try:
+                    page.locator(f'a[data-number="{page_no}"]').first.click(timeout=5000)
+                except Exception as exc:
+                    import os as _os, sys as _sys
+                    if _os.environ.get("OP_DEBUG"):
+                        print(f"DEBUG 翻頁點擊失敗 p{page_no}: {type(exc).__name__} {str(exc).splitlines()[0][:120]}", file=_sys.stderr)
+                    break
+                ok = False
+                for _ in range(20):
+                    page.wait_for_timeout(400)
+                    active = page.evaluate(
+                        "() => (document.querySelector('a[data-number].active')||{textContent:''}).textContent.trim()")
+                    if str(active) == str(page_no):
+                        ok = True
+                        break
+                if not ok:
+                    import os as _os, sys as _sys
+                    if _os.environ.get("OP_DEBUG"):
+                        st = page.evaluate("() => ({a:(document.querySelector('a[data-number].active')||{textContent:''}).textContent.trim(), h:location.hash, n:document.querySelectorAll('a[data-number]').length})")
+                        print(f"DEBUG p{page_no} 等待active超時: 現況={st}", file=_sys.stderr)
+                    break
+                page.wait_for_timeout(600)
+            got = _extract_result_rows(page)
+            import os as _os, sys as _sys
+            if _os.environ.get("OP_DEBUG"):
+                act = page.evaluate("() => (document.querySelector('a[data-number].active')||{textContent:''}).textContent.trim()")
+                print(f"DEBUG p{page_no} active={act} 擷取={len(got)} 首列={(got[0] or {}).get('eventId') if got else None}", file=_sys.stderr)
+            stop = False
+            for item in got:
+                date = parse_header_date(item.get("header"), now)
+                if not date or not item.get("eventId") or not item.get("href"):
+                    continue
+                if date < oldest_date:
+                    import os as _os, sys as _sys
+                    if _os.environ.get("OP_DEBUG"):
+                        print(f"DEBUG STOP兇手列: header={item.get('header')!r} date={date} teams={item.get('namesHomeAway')}", file=_sys.stderr)
+                    stop = True
+                    continue
+                if date >= now.date().isoformat():
+                    continue  # 今天的交給日常閘
+                home, away = team_zh(item["namesHomeAway"][0]), team_zh(item["namesHomeAway"][1])
+                if not home or not away:
+                    continue
+                rows.append({
+                    "league": league, "date": date, "awayTeam": away, "homeTeam": home,
+                    "eventId": item["eventId"], "sourceUrl": _assert_oddsportal_url(urljoin(BASE_URL, item["href"])),
+                })
+            if stop:
+                break
+
+    session.fetch(
+        _assert_oddsportal_url(urljoin(BASE_URL, LEAGUE_URLS[league].rstrip("/") + "/results/")),
+        page_action=action, network_idle=True, wait=1500, timeout=180000, disable_resources=False,
+    )
     uniq: dict[str, dict[str, Any]] = {}
     for r in rows:
         uniq.setdefault(r["eventId"], r)
@@ -232,10 +261,6 @@ def main(argv: list[str] | None = None) -> int:
 
     rows: list[dict[str, Any]] = []
 
-    def listing_action(page: Any) -> None:
-        _dismiss_consent(page)
-        rows.extend(collect_result_rows(page, league, now, args.max_pages, args.from_date))
-
     archive_dir = Path(args.archive_dir)
     archive_cache: dict[str, dict] = {}
     successes: list[dict[str, Any]] = []
@@ -248,10 +273,7 @@ def main(argv: list[str] | None = None) -> int:
     oldest_done: str | None = None
 
     with SessionClass(**session_options) as session:
-        session.fetch(
-            _assert_oddsportal_url(urljoin(BASE_URL, LEAGUE_URLS[league].rstrip("/") + "/results/")),
-            page_action=listing_action, network_idle=True, wait=1500, timeout=90000, disable_resources=False,
-        )
+        rows.extend(collect_result_rows(session, league, now, args.max_pages, args.from_date))
         # cursor 之後(較新)的日期已收割過 → 只處理 date <= cursor；缺口(補漏)仍會因 archive_has_final=False 被重抓
         todo = [r for r in rows if r["date"] <= cursor]
         todo.sort(key=lambda r: (r["date"], r["awayTeam"]), reverse=True)  # 由新到舊逐日
