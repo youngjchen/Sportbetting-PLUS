@@ -1029,7 +1029,6 @@
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
-        <button id="rescueBtn">🛟 救回被清空的盤面</button>
         <button id="clearOldDates">🧹 清除已結算的舊日期</button>
         <button id="flipBackfillBtn">🩹 補顛倒狀態（點不到的舊場）</button>
         <div class="sep"></div>
@@ -1719,53 +1718,7 @@ let _stateDate = null;
 function syncStateToDoc(){
   if(_stateDate !== doc.activeDate) return;      // state 還沒對應到這一天＝不准回寫（防整天被清空）
   const b = ensureBoard(doc.activeDate);
-  // 第二道保險：真的要把「有卡片」變成「零卡片」時，先留一份救援副本。
-  // 正常刪光是使用者自己一張張刪（走 snapshot/undo），不會突然整批歸零。
-  if((b.items||[]).length > 0 && (state.items||[]).length === 0){
-    doc._rescue = { date: doc.activeDate, at: Date.now(), items: b.items };
-    console.warn("[救援] 盤面即將被清空，已留副本：" + doc.activeDate + " " + b.items.length + " 場（⋯ 選單可還原）");
-  }
   b.items = state.items; b.summaryPos = state.summaryPos; b.view = state.view || view;
-}
-// 救援還原：① 本機救援副本 ② 沒有副本時，從雲端同步檔補「整天空掉」的日期
-// （2026-08-06 事故：舊版 save() 清空的盤面沒有本機副本，只能靠雲端檔補洞。
-//   只補目前 0 場的日期，其他日期與所有結算紀錄完全不動。）
-async function rescueRestore(){
-  const r = doc._rescue;
-  if(!r || !r.items || !r.items.length){ return rescueFromCloud(); }
-  const when = new Date(r.at).toLocaleString();
-  if(!confirm("要把 " + r.date + " 的 " + r.items.length + " 場救回來嗎？" + String.fromCharCode(10,10) + "副本時間：" + when + String.fromCharCode(10) + "（會覆蓋該日目前的內容）")) return;
-  snapshot();
-  doc.activeDate = r.date;
-  ensureBoard(r.date).items = r.items.slice();
-  loadActiveBoard(); save(); render(); buildDateBar();
-  alert("已還原 " + r.items.length + " 場到 " + r.date + "。");
-}
-async function rescueFromCloud(){
-  let cloud = null;
-  try{
-    const res = await fetch("state/board_state.json.gz?t=" + Date.now(), {cache:"no-store"});
-    if(!res.ok) throw new Error("HTTP " + res.status);
-    const txt = await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).text();
-    cloud = JSON.parse(txt);
-  }catch(e){ alert("讀不到雲端備份檔：" + e.message); return; }
-  if(!cloud || !cloud.boards){ alert("雲端備份檔內容不正確。"); return; }
-  const holes = [];
-  for(const [d, b] of Object.entries(cloud.boards)){
-    const now = ((doc.boards[d] || {}).items || []).length;
-    const had = ((b || {}).items || []).length;
-    if(had > 0 && now === 0) holes.push([d, had]);
-  }
-  if(!holes.length){ alert("沒有發現整天空掉的日期，不需要補。"); return; }
-  const when = cloud.savedAt ? new Date(cloud.savedAt).toLocaleString() : "（雲端最後一次上傳）";
-  const list = holes.map(([d,n]) => d + "　" + n + " 場").join(String.fromCharCode(10));
-  if(!confirm("發現整天空掉的日期，要從雲端備份補回嗎？" + String.fromCharCode(10,10) + list
-      + String.fromCharCode(10,10) + "備份時間：" + when
-      + String.fromCharCode(10) + "只補這些空日期，其他日期與結算紀錄完全不動。")) return;
-  snapshot();
-  for(const [d] of holes) ensureBoard(d).items = cloud.boards[d].items;
-  loadActiveBoard(); save(); render(); buildDateBar();
-  alert("已補回 " + holes.length + " 天。");
 }
 function loadActiveBoard(){
   const b = ensureBoard(doc.activeDate);
@@ -3086,21 +3039,11 @@ function renderCardB(it){
     // 「⚠疑顛倒場」晶片已移除（2026-07-26 使用者拍板）：警示條時代前的老提醒，
     // 現由頂部紫色「平台顛倒」橫幅＋異常晶片承擔，重複警示徒增版面噪音。
     const hv = it.hdVal || "1.5";
-    // 盤口輸入框（2026-08-05）：大小分早就有「基準」框可直接改，讓分卻只有純文字＝改不動。
-    // 補上同款輸入框，卡片上就能改讓分數字（不必開結算視窗）。
-    const hdline=document.createElement("span"); hdline.className="basis no-drag";
-    hdline.innerHTML="盤口 ";
-    const hinp=document.createElement("input"); hinp.type="number"; hinp.step="0.5"; hinp.min="0.5"; hinp.inputMode="decimal"; hinp.value=hv;
-    hinp.title="讓分盤口（直接改，立即存檔）";
-    hinp.onclick=(e)=>e.stopPropagation();
-    hinp.onpointerdown=(e)=>e.stopPropagation();
-    hinp.oninput=()=>{ it.hdVal = hinp.value.trim(); save(); };
-    hdline.appendChild(hinp);
     // 異常場即時晶片：這場屬於哪種異常＋該類歷史讓分過盤率（tooltip=組合細分）
     let anomChip=null;
     try{ const ai=bAnomInfo(it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    const hdH=mktSecHead("讓分", hdConflict, [swap, hdline, anomChip], "hd");
+    const hdH=mktSecHead("讓分", hdConflict, [swap, anomChip], "hd");
     hdWrap.append(hdH.sec,
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
@@ -4902,7 +4845,6 @@ $("#moreBtn").onclick = (e)=>{
   if(willShow){
     updateStorageGauge();
     try{ refreshHarvestGauge(); }catch(_){}   // 歷史賠率回抓進度（每次開選單即時算）
-    try{ const rb=$("#rescueBtn"); if(rb) rb.style.display = ""; }catch(_){}   // 一律顯示：沒有本機副本時改從雲端補整天空掉的日期
     // header is CSS-zoomed by uiScale; vh-based max-height miscomputes under zoom,
     // so set an explicit pixel cap = (real viewport below the menu top) / zoom.
     const z = uiScale || 1;
@@ -4923,7 +4865,6 @@ $("#trayHandle").onclick = ()=>{ const t=$("#tray"); collapseTray(!t.classList.c
 $("#exportDataBtn").onclick = exportData;
 $("#importDataBtn").onclick = importData;
 $("#restoreAutoBtn") && ($("#restoreAutoBtn").onclick = ()=>{ closeMore(); restoreFromAutoSlot(); });
-$("#rescueBtn") && ($("#rescueBtn").onclick = ()=>{ closeMore(); rescueRestore(); });
 
 /* ---- flip odds quick-entry modal (pre-game, triggered by card ⇅) ---- */
 let _flipOddsTarget = null;
@@ -7780,6 +7721,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260806op9"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260806op10"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
