@@ -241,6 +241,11 @@ def main(argv: list[str] | None = None) -> int:
     errors: list[str] = []
     consecutive_fail = 0
 
+    history_dir = Path(args.history_dir)
+    pending_flush: list[dict[str, Any]] = []
+    done_count = 0
+    oldest_done: str | None = None
+
     with SessionClass(**session_options) as session:
         session.fetch(
             _assert_oddsportal_url(urljoin(BASE_URL, LEAGUE_URLS[league].rstrip("/") + "/results/")),
@@ -250,8 +255,6 @@ def main(argv: list[str] | None = None) -> int:
         todo = [r for r in rows if r["date"] <= cursor]
         todo.sort(key=lambda r: (r["date"], r["awayTeam"]), reverse=True)  # 由新到舊逐日
         print(f"INFO {league} 結果頁發現 {len(rows)} 場、cursor({cursor}) 內待辦 {len(todo)} 場", file=sys.stderr)
-        done_count = 0
-        oldest_done: str | None = None
         for event in todo:
             if done_count >= args.max_games:
                 break
@@ -265,38 +268,25 @@ def main(argv: list[str] | None = None) -> int:
                     consecutive_fail += 1
                 else:
                     successes.append(game)
+                    pending_flush.append(game)
                     done_count += 1
                     oldest_done = event["date"]
                     consecutive_fail = 0
             except Exception as exc:
                 errors.append(f"{event['eventId']} {str(exc).splitlines()[0][:160]}")
                 consecutive_fail += 1
+            # 增量落地：每 8 場寫一次月檔＋波動檔——時限/中斷只損失未 flush 的尾巴
+            # （2026-08-05 重收批 58 分被切、整批蒸發案）
+            if len(pending_flush) >= 8:
+                flush_harvest(pending_flush, archive_dir, history_dir, archive_cache, observed_at)
+                pending_flush = []
             if consecutive_fail >= 5:
                 errors.append("連續 5 場失敗＝熔斷，本批中止（可能被限流）")
                 break
             time.sleep(random.uniform(0.6, 1.2))
 
-    # 寫月檔（壓縮版＋幕後波動）
-    by_month: dict[str, list[dict[str, Any]]] = {}
-    for game in successes:
-        by_month.setdefault(game["date"][:7], []).append(game)
-    for month, games in by_month.items():
-        arch_path = archive_dir / f"{month}.json"
-        arch = archive_cache.get(month) or load_json(arch_path, {})
-        arch.setdefault("version", 1)
-        arch.setdefault("source", "OddsPortal")
-        arch.setdefault("bookmaker", BOOKMAKER)
-        arch.setdefault("games", {})
-        for game in games:
-            key = build_event_key(game["league"], game["date"], game["awayTeam"], game["homeTeam"], game["startTime"], game["eventId"])
-            arch["games"][key] = merge_game_snapshot(arch["games"].get(key), _compact_for_summary(game))
-        arch["updatedAt"] = observed_at
-        _write_json_atomic(arch_path, arch)
-        archive_cache[month] = arch
-        _append_daily_archive(Path(args.history_dir) / f"harvest-{month}.jsonl.gz", {
-            "observedAt": observed_at, "source": "OddsPortal", "bookmaker": BOOKMAKER,
-            "games": games, "errors": [],
-        })
+    if pending_flush:
+        flush_harvest(pending_flush, archive_dir, history_dir, archive_cache, observed_at)
 
     # 推進 cursor：本批處理到的最舊日期；若批內全數完成且已到底 → 標 done
     if oldest_done:
@@ -317,6 +307,32 @@ def main(argv: list[str] | None = None) -> int:
               "errors": errors[:8]}
     print(json.dumps(health, ensure_ascii=False))
     return 0 if (successes or not errors) else 1
+
+
+def flush_harvest(successes, archive_dir, history_dir, archive_cache, observed_at):
+    """增量落地：被時限/中斷切掉時只損失未 flush 的尾巴（2026-08-05 重收批 58 分整批蒸發案）。"""
+    by_month: dict[str, list[dict[str, Any]]] = {}
+    for game in successes:
+        by_month.setdefault(game["date"][:7], []).append(game)
+    for month, games in by_month.items():
+        arch_path = archive_dir / f"{month}.json"
+        arch = archive_cache.get(month) or load_json(arch_path, {})
+        arch.setdefault("version", 1)
+        arch.setdefault("source", "OddsPortal")
+        arch.setdefault("bookmaker", BOOKMAKER)
+        arch.setdefault("games", {})
+        for game in games:
+            key = build_event_key(game["league"], game["date"], game["awayTeam"], game["homeTeam"], game["startTime"], game["eventId"])
+            arch["games"][key] = merge_game_snapshot(arch["games"].get(key), _compact_for_summary(game))
+        arch["updatedAt"] = observed_at
+        _write_json_atomic(arch_path, arch)
+        archive_cache[month] = arch
+        _append_daily_archive(history_dir / f"harvest-{month}.jsonl.gz", {
+            "observedAt": observed_at, "source": "OddsPortal", "bookmaker": BOOKMAKER,
+            "games": games, "errors": [],
+        })
+
+
 
 
 if __name__ == "__main__":

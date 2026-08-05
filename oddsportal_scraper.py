@@ -518,13 +518,13 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
     collected: list[dict[str, Any]] = []
     seen: set[tuple[Any, ...]] = set()
 
-    def capture_visible(selected: bool = False) -> None:
+    def capture_visible(selected: bool = False, hover_ok: bool = True) -> None:
         rows = page.get_by_test_id("over-under-expanded-row")
         for index in range(rows.count()):
             row = rows.nth(index)
             if row.locator('img[alt="Stake.com"]').count() == 0:
                 continue
-            item = _capture_stake_row(row, page, event_start, with_history, selected=selected)
+            item = _capture_stake_row(row, page, event_start, with_history and hover_ok, selected=selected)
             if not item:
                 continue
             sig = (item.get("line"), item["first"].get("odds"), item["second"].get("odds"), item.get("active"), item.get("struck"))
@@ -559,6 +559,18 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
         # 主盤判定交給 _market_summary 的「兩邊賠率最平衡」特徵。
         pass
 
+    # hover 預算（2026-08-05 批次經濟學：全檔位掏走勢史單場 ~95s → 收割批必死於時限）：
+    # 走勢史只對「±1.5 檔＋家數前二」掏（=初盤與擴盤前主盤所在），其他檔位只記賠率。
+    hover_set: set[str] = set()
+    top_by_count = sorted(candidates, key=lambda item: item[1], reverse=True)[:2]
+    for lbl, _cnt in top_by_count:
+        hover_set.add(lbl)
+    if label == "Asian Handicap":
+        for lbl, _cnt in candidates:
+            number = _parse_number(lbl)
+            if number is not None and abs(abs(number) - 1.5) <= 0.001:
+                hover_set.add(lbl)
+
     tried: set[str] = set()
     for target_label, _ in candidates:
         if not target_label or target_label in tried:
@@ -571,7 +583,7 @@ def _collect_market(page: Any, label: str, event_start: datetime, with_history: 
             current.first.click(timeout=5000)
             page.wait_for_timeout(500)
             before = len(collected)
-            capture_visible(selected=(label == "Over/Under" and before == 0))
+            capture_visible(selected=(label == "Over/Under" and before == 0), hover_ok=(target_label in hover_set))
             # 2026-08-05 使用者糾正：大小分主盤也會搬家（擴盤期 7.5→8 案）——
             # 不再「首檔成功即停」，各檔位全抓，收盤切點才挑得到擴盤前那一檔。
         except Exception:

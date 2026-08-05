@@ -123,7 +123,7 @@ function resolvePython(env = process.env, probe = execFileSync) {
 
 // ── 歷史收割閘（2026-08-05 使用者拍板：RESULTS 區 4/1 至今全量）──
 // 每天三批、每批一個聯盟 350 場（收割器自選未完成聯盟），全部 done 後自動熄火。
-const HARVEST_HHMM = Object.freeze(['05:05', '11:35', '15:05']);
+const HARVEST_HHMM = Object.freeze(['02:35', '05:05', '11:35', '15:05']);  // 2026-08-05 加夜班；90場/批對齊100分時限
 const HARVEST_OUTPUTS = Object.freeze([
   'data/oddsportal_archive',
   'data/oddsportal_history',
@@ -145,7 +145,7 @@ function dueHarvestGate(harvestState, state, nowMs = Date.now()) {
 }
 
 function runOddsPortalHarvest({ repoDir, python = resolvePython(), timeoutMs = 100 * 60_000 }) {
-  execFileSync(python, ['oddsportal_harvest.py', '--max-games', '350'], {
+  execFileSync(python, ['oddsportal_harvest.py', '--max-games', '90'], {
     cwd: repoDir,
     stdio: ['ignore', 'inherit', 'inherit'],
     timeout: timeoutMs,
