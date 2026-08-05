@@ -2,15 +2,15 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-08-05T07:00:03+08:00",
+  "updatedAt": "2026-08-05T10:00:04+08:00",
   "health": {
     "scheduled": 40,
-    "discovered": 20,
-    "succeeded": 18,
+    "discovered": 10,
+    "succeeded": 8,
     "failed": 2,
     "errors": [
-      "mlb 8AmVwOz1: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
-      "mlb 2kKvfzRb: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+      "mlb APIKrdFa: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "mlb YiZnRpie: Page.goto: Timeout 90000ms exceeded.\nCall log:\n  - navigating to \"https://www.oddsportal.com/baseball/h2h/san-francisco-giants-bRZ9b6xj/texas-rangers-f3GcHO7j/#YiZnRpie\", waiting until \"load\"\n"
     ]
   },
   "games": {
@@ -2228,7 +2228,7 @@
       "awayTeam": "馬林魚",
       "homeTeam": "勇士",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/atlanta-braves-0UPxbDYA/miami-marlins-ddxzWOqT/#AgU7zkU8",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2240,6 +2240,13 @@
             "at": "2026-08-05T04:05:04+08:00",
             "home": 1.67,
             "away": 2.22
+          },
+          "close": {
+            "at": "2026-08-05T07:07:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.64,
+            "away": 2.27
           }
         },
         "hd": {
@@ -2256,6 +2263,15 @@
             "away": 1.58,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T07:14:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 4.9,
+            "away": 1.18,
+            "line": -4.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -2270,6 +2286,14 @@
             "over": 1.68,
             "under": 2.2,
             "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-05T07:14:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.86,
+            "under": 1.95,
+            "line": 9.0
           }
         }
       },
@@ -2354,7 +2378,7 @@
       "awayTeam": "光芒",
       "homeTeam": "落磯",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/colorado-rockies-naYhNOaA/tampa-bay-rays-GCHgI4hp/#GC8jo6rR",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2382,6 +2406,15 @@
             "away": 1.94,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T08:35:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 3.55,
+            "away": 1.3,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -2392,10 +2425,18 @@
             "line": 9.5
           },
           "active": {
-            "at": "2026-08-05T02:11:40+08:00",
-            "over": 1.57,
-            "under": 2.42,
-            "line": 9.5
+            "at": "2026-08-05T10:00:04+08:00",
+            "over": 2.0,
+            "under": 1.82,
+            "line": 11.0
+          },
+          "close": {
+            "at": "2026-08-05T08:32:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 2.06,
+            "under": 1.77,
+            "line": 11.0
           }
         }
       },
@@ -2417,7 +2458,7 @@
       "awayTeam": "老虎",
       "homeTeam": "水手",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/detroit-tigers-0QIlt8pi/seattle-mariners-txYPhSac/#8AmVwOz1",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -2426,16 +2467,23 @@
             "away": 2.27
           },
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "home": 1.7,
-            "away": 2.05
+            "at": "2026-08-05T10:00:04+08:00",
+            "home": 1.8,
+            "away": 1.95
+          },
+          "close": {
+            "at": "2026-08-05T09:39:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.8,
+            "away": 1.95
           }
         },
         "hd": {
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "home": 2.6,
-            "away": 1.5,
+            "at": "2026-08-05T10:00:04+08:00",
+            "home": 2.55,
+            "away": 1.45,
             "line": -1.5,
             "favorite": "home"
           },
@@ -2445,13 +2493,22 @@
             "away": 1.63,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T09:39:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.55,
+            "away": 1.45,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "over": 1.86,
-            "under": 1.95,
+            "at": "2026-08-05T10:00:04+08:00",
+            "over": 1.8,
+            "under": 1.9,
             "line": 7.5
           },
           "open": {
@@ -2459,16 +2516,36 @@
             "over": 1.72,
             "under": 2.14,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-05T09:39:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.8,
+            "under": 1.9,
+            "line": 7.5
           }
         }
       },
       "handicapSwitch": {
-        "ever": false,
-        "count": 0,
-        "initialFavorite": null,
+        "ever": true,
+        "count": 2,
+        "initialFavorite": "home",
         "currentFavorite": "home",
-        "first": null,
-        "last": null
+        "first": {
+          "from": "home",
+          "to": "away",
+          "estimatedAt": "2026-08-05T07:40:00+08:00",
+          "detectedAt": null,
+          "precision": "line-open-time"
+        },
+        "last": {
+          "from": "away",
+          "to": "home",
+          "estimatedAt": "2026-08-05T10:00:04+08:00",
+          "detectedAt": "2026-08-05T10:00:04+08:00",
+          "precision": "detected-after-old-line"
+        }
       }
     },
     "npb|2026-08-05|西武|羅德|17:00|vHpF1Y5C": {
@@ -3026,7 +3103,7 @@
       "awayTeam": "白襪",
       "homeTeam": "紅襪",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/boston-red-sox-zaXTinF3/chicago-white-sox-SW9D1eZo/#fonLCox2",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -3035,9 +3112,16 @@
             "away": 2.07
           },
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "home": 1.75,
-            "away": 2.09
+            "at": "2026-08-05T10:00:04+08:00",
+            "home": 1.65,
+            "away": 2.25
+          },
+          "close": {
+            "at": "2026-08-05T06:54:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.66,
+            "away": 2.23
           }
         },
         "hd": {
@@ -3054,6 +3138,15 @@
             "away": 1.56,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T07:09:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 5.0,
+            "away": 1.18,
+            "line": -4.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -3064,9 +3157,17 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "over": 1.53,
-            "under": 2.5,
+            "at": "2026-08-05T10:00:04+08:00",
+            "over": 1.54,
+            "under": 2.49,
+            "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-05T04:58:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.54,
+            "under": 2.49,
             "line": 7.5
           }
         }
@@ -3089,7 +3190,7 @@
       "awayTeam": "雙城",
       "homeTeam": "皇家",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kansas-city-royals-IL2QbgJ4/minnesota-twins-OjWW1naM/#f7NePOL7",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -3098,9 +3199,16 @@
             "away": 1.68
           },
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
+            "at": "2026-08-05T10:00:04+08:00",
             "home": 2.22,
             "away": 1.67
+          },
+          "close": {
+            "at": "2026-08-05T07:34:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.26,
+            "away": 1.65
           }
         },
         "hd": {
@@ -3117,19 +3225,36 @@
             "away": 2.09,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T07:36:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.77,
+            "away": 2.06,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "over": 1.68,
-            "under": 2.2,
+            "at": "2026-08-05T10:00:04+08:00",
+            "over": 1.69,
+            "under": 2.19,
             "line": 8.5
           },
           "open": {
             "at": "2026-08-04T02:52:00+08:00",
             "over": 1.92,
             "under": 1.89,
+            "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-05T07:34:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.7,
+            "under": 2.16,
             "line": 8.5
           }
         }
@@ -3152,7 +3277,7 @@
       "awayTeam": "教士",
       "homeTeam": "響尾蛇",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/arizona-diamondbacks-8bP2bXmH/san-diego-padres-8poQN9Ud/#CrfMup6l",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -3161,16 +3286,23 @@
             "away": 2.06
           },
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
+            "at": "2026-08-05T10:00:04+08:00",
+            "home": 1.82,
+            "away": 2.0
+          },
+          "close": {
+            "at": "2026-08-05T08:57:00+08:00",
+            "final": true,
+            "precision": "history",
             "home": 1.81,
             "away": 2.01
           }
         },
         "hd": {
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "home": 2.55,
-            "away": 1.53,
+            "at": "2026-08-05T10:00:04+08:00",
+            "home": 2.48,
+            "away": 1.55,
             "line": -1.5,
             "favorite": "home"
           },
@@ -3180,13 +3312,22 @@
             "away": 1.55,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T09:19:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 3.2,
+            "away": 1.36,
+            "line": -2.5,
+            "favorite": "home"
           }
         },
         "ou": {
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "over": 1.74,
-            "under": 2.11,
+            "at": "2026-08-05T10:00:04+08:00",
+            "over": 1.78,
+            "under": 2.05,
             "line": 8.5
           },
           "open": {
@@ -3194,16 +3335,36 @@
             "over": 1.67,
             "under": 2.22,
             "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-05T09:19:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.78,
+            "under": 2.05,
+            "line": 8.5
           }
         }
       },
       "handicapSwitch": {
-        "ever": false,
-        "count": 0,
-        "initialFavorite": null,
+        "ever": true,
+        "count": 2,
+        "initialFavorite": "home",
         "currentFavorite": "home",
-        "first": null,
-        "last": null
+        "first": {
+          "from": "home",
+          "to": "away",
+          "estimatedAt": "2026-08-05T07:40:00+08:00",
+          "detectedAt": null,
+          "precision": "line-open-time"
+        },
+        "last": {
+          "from": "away",
+          "to": "home",
+          "estimatedAt": "2026-08-05T10:00:04+08:00",
+          "detectedAt": "2026-08-05T10:00:04+08:00",
+          "precision": "detected-after-old-line"
+        }
       }
     },
     "npb|2026-08-05|阪神|橫濱|16:45|QoWQNOME": {
@@ -4029,7 +4190,7 @@
       "awayTeam": "道奇",
       "homeTeam": "小熊",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chicago-cubs-j7ZnBQFi/los-angeles-dodgers-nwPDBpVc/#QRVvT6Mr",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -4038,9 +4199,16 @@
             "away": 1.46
           },
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "home": 2.75,
-            "away": 1.46
+            "at": "2026-08-05T10:00:04+08:00",
+            "home": 2.65,
+            "away": 1.49
+          },
+          "close": {
+            "at": "2026-08-05T06:50:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.65,
+            "away": 1.49
           }
         },
         "hd": {
@@ -4057,6 +4225,15 @@
             "away": 1.83,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-05T08:04:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.68,
+            "away": 2.19,
+            "line": 2.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -4067,10 +4244,18 @@
             "line": 8.5
           },
           "active": {
-            "at": "2026-08-05T04:05:04+08:00",
-            "over": 1.7,
-            "under": 2.16,
+            "at": "2026-08-05T10:00:04+08:00",
+            "over": 1.72,
+            "under": 2.13,
             "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-05T10:00:04+08:00",
+            "over": 1.72,
+            "under": 2.13,
+            "line": 8.5,
+            "final": true,
+            "precision": "page-post-start"
           }
         }
       },
@@ -4155,7 +4340,7 @@
       "awayTeam": "海盜",
       "homeTeam": "釀酒人",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/milwaukee-brewers-CGzqC60o/pittsburgh-pirates-tr9K2SqG/#MDFsmSDE",
-      "observedAt": "2026-08-05T04:05:04+08:00",
+      "observedAt": "2026-08-05T10:00:04+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -4167,6 +4352,13 @@
             "at": "2026-08-05T04:05:04+08:00",
             "home": 1.67,
             "away": 2.22
+          },
+          "close": {
+            "at": "2026-08-05T06:45:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.66,
+            "away": 2.23
           }
         },
         "hd": {
@@ -4183,6 +4375,15 @@
             "away": 1.58,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-05T07:34:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.38,
+            "away": 1.59,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -4196,6 +4397,14 @@
             "at": "2026-08-05T04:05:04+08:00",
             "over": 2.01,
             "under": 1.81,
+            "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-05T07:34:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.99,
+            "under": 1.82,
             "line": 7.5
           }
         }
