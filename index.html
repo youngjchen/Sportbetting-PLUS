@@ -1029,7 +1029,7 @@
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
-        <button id="rescueBtn" style="display:none">🛟 救回被清空的盤面</button>
+        <button id="rescueBtn">🛟 救回被清空的盤面</button>
         <button id="clearOldDates">🧹 清除已結算的舊日期</button>
         <button id="flipBackfillBtn">🩹 補顛倒狀態（點不到的舊場）</button>
         <div class="sep"></div>
@@ -1727,10 +1727,12 @@ function syncStateToDoc(){
   }
   b.items = state.items; b.summaryPos = state.summaryPos; b.view = state.view || view;
 }
-// 救援副本還原：⋯ 選單按鈕；沒有副本時按鈕自己隱藏
-function rescueRestore(){
+// 救援還原：① 本機救援副本 ② 沒有副本時，從雲端同步檔補「整天空掉」的日期
+// （2026-08-06 事故：舊版 save() 清空的盤面沒有本機副本，只能靠雲端檔補洞。
+//   只補目前 0 場的日期，其他日期與所有結算紀錄完全不動。）
+async function rescueRestore(){
   const r = doc._rescue;
-  if(!r || !r.items || !r.items.length){ alert("目前沒有救援副本。"); return; }
+  if(!r || !r.items || !r.items.length){ return rescueFromCloud(); }
   const when = new Date(r.at).toLocaleString();
   if(!confirm("要把 " + r.date + " 的 " + r.items.length + " 場救回來嗎？" + String.fromCharCode(10,10) + "副本時間：" + when + String.fromCharCode(10) + "（會覆蓋該日目前的內容）")) return;
   snapshot();
@@ -1738,6 +1740,32 @@ function rescueRestore(){
   ensureBoard(r.date).items = r.items.slice();
   loadActiveBoard(); save(); render(); buildDateBar();
   alert("已還原 " + r.items.length + " 場到 " + r.date + "。");
+}
+async function rescueFromCloud(){
+  let cloud = null;
+  try{
+    const res = await fetch("state/board_state.json.gz?t=" + Date.now(), {cache:"no-store"});
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    const txt = await new Response(res.body.pipeThrough(new DecompressionStream("gzip"))).text();
+    cloud = JSON.parse(txt);
+  }catch(e){ alert("讀不到雲端備份檔：" + e.message); return; }
+  if(!cloud || !cloud.boards){ alert("雲端備份檔內容不正確。"); return; }
+  const holes = [];
+  for(const [d, b] of Object.entries(cloud.boards)){
+    const now = ((doc.boards[d] || {}).items || []).length;
+    const had = ((b || {}).items || []).length;
+    if(had > 0 && now === 0) holes.push([d, had]);
+  }
+  if(!holes.length){ alert("沒有發現整天空掉的日期，不需要補。"); return; }
+  const when = cloud.savedAt ? new Date(cloud.savedAt).toLocaleString() : "（雲端最後一次上傳）";
+  const list = holes.map(([d,n]) => d + "　" + n + " 場").join(String.fromCharCode(10));
+  if(!confirm("發現整天空掉的日期，要從雲端備份補回嗎？" + String.fromCharCode(10,10) + list
+      + String.fromCharCode(10,10) + "備份時間：" + when
+      + String.fromCharCode(10) + "只補這些空日期，其他日期與結算紀錄完全不動。")) return;
+  snapshot();
+  for(const [d] of holes) ensureBoard(d).items = cloud.boards[d].items;
+  loadActiveBoard(); save(); render(); buildDateBar();
+  alert("已補回 " + holes.length + " 天。");
 }
 function loadActiveBoard(){
   const b = ensureBoard(doc.activeDate);
@@ -4874,7 +4902,7 @@ $("#moreBtn").onclick = (e)=>{
   if(willShow){
     updateStorageGauge();
     try{ refreshHarvestGauge(); }catch(_){}   // 歷史賠率回抓進度（每次開選單即時算）
-    try{ const rb=$("#rescueBtn"); if(rb) rb.style.display = (doc._rescue && (doc._rescue.items||[]).length) ? "" : "none"; }catch(_){}
+    try{ const rb=$("#rescueBtn"); if(rb) rb.style.display = ""; }catch(_){}   // 一律顯示：沒有本機副本時改從雲端補整天空掉的日期
     // header is CSS-zoomed by uiScale; vh-based max-height miscomputes under zoom,
     // so set an explicit pixel cap = (real viewport below the menu top) / zoom.
     const z = uiScale || 1;
