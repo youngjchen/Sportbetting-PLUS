@@ -35,12 +35,21 @@
     return '';
   }
 
+  // 2026-08-05 阪神虎@橫濱DeNA 案：板卡用全名、OddsPortal 摘要用短名 → 嚴格相等
+  // 讓亞洲場全部配不上（美職兩邊同名倖免）。改「相等或互為包含」（聯盟已先過濾，
+  // 樂天金鷲/樂天桃猿等歧義由 league 隔開）。
+  function teamMatch(a, b) {
+    const x = String(a || ''), y = String(b || '');
+    if (!x || !y) return false;
+    return x === y || x.includes(y) || y.includes(x);
+  }
+
   function findOddsPortalGame(feed, card, activeDate) {
     if (!feed || !feed.games || !card) return null;
     const league = cardLeague(card);
     const candidates = Object.values(feed.games).filter(function (game) {
       return game && String(game.date || '').slice(0, 10) === String(activeDate || '').slice(0, 10) &&
-        game.awayTeam === card.away && game.homeTeam === card.home &&
+        teamMatch(game.awayTeam, card.away) && teamMatch(game.homeTeam, card.home) &&
         (!league || normalizeLeague(game.league) === league);
     });
     if (candidates.length === 0) return null;
