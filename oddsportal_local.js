@@ -165,7 +165,9 @@ function dueSwapGate(state, nowMs = Date.now()) {
   if (at <= nowMs && nowMs - at <= GATE_LOOKBACK_MS && !state[`opg_${id}`]) {
     return {
       id, at, mode: 'swap', leagues: ['mlb', 'npb', 'kbo', 'cpbl'],
-      fromHours: 12, toHours: 40, maxGames: 40, refreshUpcoming: true,
+      // fromHours -120：順手回補過去缺口（2026-08-05 美職 09:50 收盤閘被黑窗殺掉後
+      // 整天沒有任何帶回補窗的美職閘＝收盤懸空一整天的結構洞）
+      fromHours: -120, toHours: 40, maxGames: 40, refreshUpcoming: true,
     };
   }
   return null;
