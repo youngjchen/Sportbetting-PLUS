@@ -161,6 +161,24 @@ function runOddsPortalHarvest({ repoDir, python = resolvePython(), timeoutMs = 1
   return [...HARVEST_OUTPUTS];
 }
 
+// ── BetExplorer 主來源（2026-08-07 使用者拍板）──
+// OddsPortal 上架列表當日場次大量缺漏（8/7 實測美職僅 1 場、韓職整頁空），
+// BetExplorer 同時段 9 場全在、與 OddsPortal 共用 eventId、歷史初盤抽驗 5/5 一致，
+// 且純 HTTP 免瀏覽器（單場 ~8 秒 vs ~60 秒）。日常閘改由它主跑，失敗才退回 OddsPortal。
+const BETEXPLORER_OUTPUTS = Object.freeze(['data/oddsportal_summary.json']);
+
+function runBetExplorer({ repoDir, python = resolvePython(), leagues = null, timeoutMs = 25 * 60_000 }) {
+  const args = ['betexplorer_run.py'];
+  if (leagues && leagues.length) args.push('--leagues', leagues.join(','));
+  execFileSync(python, args, {
+    cwd: repoDir,
+    stdio: ['ignore', 'inherit', 'inherit'],
+    timeout: timeoutMs,
+    windowsHide: true,
+  });
+  return [...BETEXPLORER_OUTPUTS];
+}
+
 // ── 對調巡檢閘（2026-08-05 使用者拍板 SOP）：每天 10:00 掃「隔天」比賽的讓分方對調──
 // 只產證據卡警示（stakeSwap），永不勾選任何狀態；規則=擴盤前窗政權接替（鑑別力 11/12）。
 const SWAP_HHMM = '10:00';
@@ -222,4 +240,6 @@ module.exports = {
   pythonCandidates,
   resolvePython,
   runOddsPortal,
+  runBetExplorer,
+  BETEXPLORER_OUTPUTS,
 };

@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer } = require('./oddsportal_local.js');
 
 const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
@@ -145,8 +145,17 @@ function run() {
       pruneOddsPortalGateState(state, Date.now());
       state.oddsportal_last_attempt = Date.now();
       saveState(state);
-      log(`OddsPortal 閘 ${gate.id} 到點（${gate.mode}／${gate.leagues.join('+')}）→ 缺口驅動抓取`);
-      const outputs = runOddsPortal({ repoDir: REPO_DIR, gate });
+      log(`閘 ${gate.id} 到點（${gate.mode}／${gate.leagues.join('+')}）→ 抓取`);
+      // 2026-08-07 使用者拍板：BetExplorer 當主來源（OddsPortal 上架列表當日場次大量缺漏）。
+      // 兩道防線：BetExplorer 先跑，丟例外才退回 OddsPortal，避免單一來源故障就整輪空手。
+      let outputs;
+      try {
+        outputs = runBetExplorer({ repoDir: REPO_DIR, leagues: gate.leagues });
+        log('BetExplorer 主來源完成');
+      } catch (error) {
+        log(`BetExplorer 失敗（${String(error.message).split(/\r?\n/)[0]}）→ 退回 OddsPortal`);
+        outputs = runOddsPortal({ repoDir: REPO_DIR, gate });
+      }
       staged.push(...outputs);
       state.oddsportal_last_success = Date.now();
       saveState(state);
