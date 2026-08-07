@@ -192,6 +192,21 @@ def harvest_game(row: dict, offset: float) -> dict:
     }
 
 
+def _score(game) -> int:
+    """完整度分數：三市場各有初盤/收盤各記 1 分，帶時戳的初盤額外加分。
+    用來擋下「重抓結果比原本更差還覆蓋上去」。"""
+    markets = (game or {}).get("markets") or {}
+    score = 0
+    for key in ("ml", "hd", "ou"):
+        block = markets.get(key) or {}
+        opened = block.get("open")
+        if opened:
+            score += 2 if opened.get("at") else 1     # 沒時戳的初盤是誤標殘骸，只給 1 分
+        if block.get("close"):
+            score += 2
+    return score
+
+
 def _load(path: Path, default):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -284,6 +299,15 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
                             game["homeTeam"], game["startTime"], game["eventId"]])
             if row["matchId"] in refill:
                 game["refilled"] = True             # 補過一次就打標，避免永遠重抓
+            # 不准降級：重抓結果若比原本【更不完整】就保留原本（只補打 refilled 標記）。
+            # 2026-08-08 發現：補正會覆蓋掉舊 OddsPortal 收割的高品質條目，
+            # 若新結果反而缺欄位就是淨損失。
+            old_game = archive["games"].get(key)
+            if old_game and _score(old_game) > _score(game):
+                old_game["refilled"] = True
+                done_count += 1
+                total_new += 1
+                continue
             archive["games"][key] = game
             done_count += 1
             total_new += 1
