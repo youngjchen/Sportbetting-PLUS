@@ -220,3 +220,21 @@ class SeasonDateTests(unittest.TestCase):
         rows = discover_season("cpbl", zh, "2026-04-01", today_tw=self.today, html=html)
         self.assertEqual([r["matchId"] for r in rows], ["GOODGAME"])
         self.assertEqual(rows[0]["date"], "2026-04-30")
+
+
+class OffsetMidnightTests(unittest.TestCase):
+    """2026-08-07 深夜實例：站方 23:40 對應台灣隔天 06:40，實際時差 +7h，
+    但只比對時分會算成 -17h。必須正規化到 (-12, +12]。"""
+
+    def test_offset_across_midnight(self):
+        schedule = [
+            {"awayTeam": "藍鳥", "homeTeam": "費城人", "time": "06:40"},
+            {"awayTeam": "大都會", "homeTeam": "海盜", "time": "06:40"},
+            {"awayTeam": "紅人", "homeTeam": "國民", "time": "06:45"},
+        ]
+        listing = [
+            {"awayZh": "藍鳥", "homeZh": "費城人", "siteStart": datetime(2026, 8, 7, 23, 40)},
+            {"awayZh": "大都會", "homeZh": "海盜", "siteStart": datetime(2026, 8, 7, 23, 40)},
+            {"awayZh": "紅人", "homeZh": "國民", "siteStart": datetime(2026, 8, 7, 23, 45)},
+        ]
+        self.assertEqual(detect_offset_hours(schedule, listing), 7.0)

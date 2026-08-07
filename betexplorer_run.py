@@ -176,6 +176,8 @@ def main() -> int:
     parser.add_argument("--leagues", default="mlb,npb,kbo,cpbl")
     parser.add_argument("--summary", default="data/oddsportal_summary.json")
     parser.add_argument("--schedule", default="data/pregame_data.json")
+    parser.add_argument("--horizon-hours", type=float, default=36.0,
+                        help="賽程頁只取這個時數內的場次（預設 36 小時＝今天＋明天）")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -183,14 +185,43 @@ def main() -> int:
     team_zh = _team_zh()
     now_tw = datetime.now(TW)
 
-    games = BE.discover_upcoming(team_zh, leagues=leagues)
-    if not games:
-        print(json.dumps({"discovered": 0, "note": "上架頁沒有目標聯盟的比賽"}, ensure_ascii=False))
-        return 0
+    # 時差是「全站屬性」，用所有聯盟一起推（只挑一個聯盟時常常湊不到 3 場可比對）
+    all_games = BE.discover_upcoming(team_zh)
+    games = [g for g in all_games if g["league"] in leagues]
 
     schedule = json.loads(Path(args.schedule).read_text(encoding="utf-8"))
-    offset = BE.detect_offset_hours(schedule, games)      # 第二重：對不上就丟例外，不猜
-    print(f"INFO 發現 {len(games)} 場、站方時差 {offset:+.1f}h", file=sys.stderr)
+    # 基準＝我們的賽程檔 ∪ 官方 statsapi。深夜時我們的檔還沒有隔日場次，官方已經有，
+    # 少了這一段就會因「可比對場次不足」整輪中止（2026-08-07 23:3x 實例）。
+    reference = list(schedule)
+    for date in sorted({(g["siteStart"]).date().isoformat() for g in all_games} |
+                       {now_tw.date().isoformat(), (now_tw + timedelta(days=1)).date().isoformat()}):
+        try:
+            for (away, home), hhmm in OT.mlb_start_map(date, team_zh).items():
+                reference.append({"awayTeam": away, "homeTeam": home, "time": hhmm})
+        except Exception:
+            pass
+    offset = BE.detect_offset_hours(reference, all_games)  # 第二重：對不上就丟例外，不猜
+    print(f"INFO 首頁發現 {len(games)} 場、站方時差 {offset:+.1f}h", file=sys.stderr)
+
+    # 2026-08-07 使用者反映「8/8 美職初盤沒填」：/baseball/ 首頁只列少數場次
+    # （當時 8/8 美職只有 3 場），完整隔日賽程要讀各聯盟的 fixtures 頁。
+    # 時差先由首頁的絕對 data-dt 推出來，再用它換算 fixtures 頁的 Today/Tomorrow。
+    site_today = (now_tw - timedelta(hours=offset)).date()
+    seen = {g["matchId"] for g in games}
+    horizon = now_tw + timedelta(hours=float(args.horizon_hours))
+    for league in leagues:
+        try:
+            for game in BE.discover_fixtures(league, team_zh, site_today):
+                if game["matchId"] in seen:
+                    continue
+                start = (game["siteStart"] + timedelta(hours=offset)).replace(tzinfo=TW)
+                if not (now_tw - timedelta(hours=6) <= start <= horizon):
+                    continue                              # 只要近期的，不抓整季賽程
+                seen.add(game["matchId"])
+                games.append(game)
+        except Exception as exc:
+            print(f"WARN {league} 賽程頁讀取失敗（不影響其他聯盟）：{str(exc)[:80]}", file=sys.stderr)
+    print(f"INFO 併入賽程頁後共 {len(games)} 場", file=sys.stderr)
 
     # 第三重（2026-08-07 使用者要求）：換算成台灣時間後，再跟官方賽事網對照。
     # 官方說不一致就中止本輪——寧可沒資料，也不要寫錯日期/時間進資料庫。
@@ -215,7 +246,11 @@ def main() -> int:
     collected, failed = [], []
     for game in games:
         try:
-            collected.append(collect(game, offset, now_tw))
+            entry = collect(game, offset, now_tw)
+            if not any((entry["markets"].get(k) or {}).get("open") or (entry["markets"].get(k) or {}).get("active")
+                       for k in ("ml", "hd", "ou")):
+                continue          # Stake 還沒開盤（常見於後天的場）→ 不寫空殼進資料庫
+            collected.append(entry)
         except Exception as exc:
             failed.append(f"{game['awayZh']}@{game['homeZh']}: {str(exc)[:90]}")
 

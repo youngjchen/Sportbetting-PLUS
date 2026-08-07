@@ -79,6 +79,35 @@ def npb_start_times(date_tw: str) -> list[str]:
     return sorted(out)
 
 
+def mlb_start_map(date_tw: str, team_zh) -> dict[tuple[str, str], str]:
+    """官方 statsapi：{(客隊中文, 主隊中文): 'HH:MM'(台灣時間)}。
+    用途：推導 BetExplorer 站方時差時的基準——官方比我們自己的賽程檔更早有隔日資料
+    （2026-08-07 23:3x 實例：我們的 pregame 還沒有 8/8，官方已經有）。"""
+    if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date_tw):
+        raise ValueError(f"日期格式不對：{date_tw}")
+    day = datetime.fromisoformat(date_tw)
+    lo = (day - timedelta(days=1)).date().isoformat()
+    hi = (day + timedelta(days=1)).date().isoformat()
+    url = f"https://statsapi.mlb.com/api/v1/schedule?sportId=1&startDate={lo}&endDate={hi}"
+    payload = json.loads(_get(url))
+    out: dict[tuple[str, str], str] = {}
+    for block in payload.get("dates", []):
+        for game in block.get("games", []):
+            raw = str(game.get("gameDate") or "")
+            if not raw.endswith("Z"):
+                continue
+            tw = datetime.fromisoformat(raw.replace("Z", "+00:00")).astimezone(TW)
+            if tw.date().isoformat() != date_tw:
+                continue
+            teams = game.get("teams") or {}
+            away = ((teams.get("away") or {}).get("team") or {}).get("name")
+            home = ((teams.get("home") or {}).get("team") or {}).get("name")
+            away_zh, home_zh = team_zh(away), team_zh(home)
+            if away_zh and home_zh:
+                out[(away_zh, home_zh)] = tw.strftime("%H:%M")
+    return out
+
+
 SUPPORTED = {"mlb": mlb_start_times, "npb": npb_start_times}
 
 

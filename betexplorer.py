@@ -108,6 +108,88 @@ def parse_result_date(cell_text: str, month_param: str, today_tw: datetime) -> s
     return f"{year:04d}-{month:02d}-{day:02d}"
 
 
+LEAGUE_FIXTURES_PATH = {
+    "mlb": "/baseball/usa/mlb/fixtures/",
+    "npb": "/baseball/japan/npb/fixtures/",
+    "kbo": "/baseball/south-korea/kbo/fixtures/",
+    "cpbl": "/baseball/taiwan/cpbl/fixtures/",
+}
+
+_FIXTURE_ROW_RE = re.compile(
+    r'<tr>\s*<td class="table-main__datetime">([^<]*)</td>\s*'
+    r'<td class="h-text-left"><a href="([^"]+)" class="in-match">'
+    r'<span>([^<]+)</span> - <span>([^<]+)</span>', re.S)
+
+
+def parse_fixture_datetime(text: str, site_today, last: datetime | None) -> datetime:
+    """賽程頁的時間欄：'Today 23:40'／'Tomorrow 00:05'／'31.08. 23:45'／空白。
+    空白＝與上一列同一開賽時刻（站方把同時開打的場次分組，只有第一列標時間）。
+    ——這是站方的既定語意，不是解析失誤；但仍加防火牆：還沒看到任何明確時間就跳過，
+    絕不憑空生出日期（2026-08-07 髒資料事故的教訓）。"""
+    raw = str(text or "").replace(" ", " ").replace("&nbsp;", " ").strip()
+    if not raw:
+        if last is None:
+            raise ValueError("空白時間欄且尚無可繼承的時刻")
+        return last
+    hit = re.search(r"(\d{1,2}):(\d{2})\s*$", raw)
+    if not hit:
+        raise ValueError(f"賽程頁時間格式不認得：{text!r}")
+    hour, minute = int(hit.group(1)), int(hit.group(2))
+    if not (0 <= hour <= 23 and 0 <= minute <= 59):
+        raise ValueError(f"時間數值不合法：{text!r}")
+    head = raw[:hit.start()].strip().lower()
+    if head.startswith("today"):
+        day = site_today
+    elif head.startswith("tomorrow"):
+        day = site_today + timedelta(days=1)
+    else:
+        date_hit = re.fullmatch(r"(\d{1,2})\.(\d{1,2})\.?", head)
+        if not date_hit:
+            raise ValueError(f"賽程頁日期格式不認得：{text!r}")
+        dd, mm = int(date_hit.group(1)), int(date_hit.group(2))
+        if not (1 <= mm <= 12 and 1 <= dd <= 31):
+            raise ValueError(f"日期數值不合法：{text!r}")
+        for year in (site_today.year, site_today.year + 1):
+            try:
+                candidate = datetime(year, mm, dd).date()
+            except ValueError:
+                continue
+            if candidate >= site_today:                # 賽程頁只會有未來場次
+                day = candidate
+                break
+        else:
+            raise ValueError(f"{text} 推不出未來的日期")
+    return datetime(day.year, day.month, day.day, hour, minute)
+
+
+def discover_fixtures(league: str, team_zh, site_today, html: str | None = None) -> list[dict[str, Any]]:
+    """聯盟賽程頁：完整的未來場次（美職實測 331 場）。
+    2026-08-07 換站後發現：/baseball/ 首頁只列少數場次（8/8 美職只有 3 場），
+    要拿整份隔日賽程必須讀這一頁。site_today＝站方時區的今天（由時差反推）。"""
+    if league not in LEAGUE_FIXTURES_PATH:
+        raise ValueError(f"未知聯盟 {league}")
+    page = html if html is not None else _open(f"{BASE}{LEAGUE_FIXTURES_PATH[league]}")
+    out: list[dict[str, Any]] = []
+    last: datetime | None = None
+    for cell, href, home, away in _FIXTURE_ROW_RE.findall(page):
+        try:
+            start = parse_fixture_datetime(cell, site_today, last)
+        except ValueError:
+            last = None                                # 壞掉就斷開繼承鏈，不讓錯誤往下傳染
+            continue
+        last = start
+        home_zh, away_zh = team_zh(home.strip()), team_zh(away.strip())
+        if not home_zh or not away_zh:
+            continue
+        out.append({
+            "league": league, "matchId": href.rstrip("/").split("/")[-1],
+            "homeName": home.strip(), "awayName": away.strip(),
+            "homeZh": home_zh, "awayZh": away_zh,
+            "siteStart": start, "url": BASE + href,
+        })
+    return out
+
+
 def parse_season_date(cell_text: str, today_tw: datetime, season_start: str) -> str:
     """整季結果頁（?month=all）的日期：只有 'DD.MM.'，沒有年份也沒有 month 參數可比對。
     年份用「不可能是未來」推定，並強制落在 [season_start, 今天] 區間內，否則拒收。
@@ -183,7 +265,15 @@ def detect_offset_hours(schedule: Iterable[dict[str, Any]], listing: Iterable[di
         if not target or not isinstance(site, datetime):
             continue
         th, tm = int(target[:2]), int(target[3:5])
-        diffs.append(((th * 60 + tm) - (site.hour * 60 + site.minute)) / 60.0)
+        # 只比對時分會在跨午夜時算錯：站方 23:40 → 台灣 06:40 實際是 +7h，
+        # 直接相減卻得 -17h（2026-08-07 深夜實例，被官方時間對照擋下）。
+        # 正規化到 (-12, +12]，因為真實時區差不可能超出這個範圍。
+        raw = ((th * 60 + tm) - (site.hour * 60 + site.minute)) / 60.0
+        while raw <= -12:
+            raw += 24
+        while raw > 12:
+            raw -= 24
+        diffs.append(raw)
     if len(diffs) < min_agree:
         raise RuntimeError(f"可比對場次僅 {len(diffs)} 場（需 {min_agree}），拒絕猜測時差")
     uniq = set(round(d, 2) for d in diffs)
