@@ -20,6 +20,7 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 import betexplorer as BE
+import official_times as OT
 
 TW = BE.TW
 HD_CLOSE_LEAD_MIN = 150       # 讓分/大小的收盤切點＝開賽前 150 分（避開 Stake 擴盤；使用者 8/5 拍板）
@@ -188,8 +189,28 @@ def main() -> int:
         return 0
 
     schedule = json.loads(Path(args.schedule).read_text(encoding="utf-8"))
-    offset = BE.detect_offset_hours(schedule, games)      # 對不上就丟例外，不猜
+    offset = BE.detect_offset_hours(schedule, games)      # 第二重：對不上就丟例外，不猜
     print(f"INFO 發現 {len(games)} 場、站方時差 {offset:+.1f}h", file=sys.stderr)
+
+    # 第三重（2026-08-07 使用者要求）：換算成台灣時間後，再跟官方賽事網對照。
+    # 官方說不一致就中止本輪——寧可沒資料，也不要寫錯日期/時間進資料庫。
+    checks = []
+    for league in sorted({g["league"] for g in games}):
+        same_day = [g for g in games if g["league"] == league]
+        by_date: dict[str, list[str]] = {}
+        for g in same_day:
+            start = (g["siteStart"] + timedelta(hours=offset)).replace(tzinfo=TW)
+            by_date.setdefault(start.date().isoformat(), []).append(start.strftime("%H:%M"))
+        for date, times in by_date.items():
+            result = OT.cross_check(league, date, times)
+            checks.append((league, date, result))
+            mark = {True: "三重一致", False: "不一致", None: "僅雙重（無官方來源）"}[result["ok"]]
+            print(f"INFO 官方對照 {league} {date}: {mark}"
+                  f"｜我們 {sorted(set(result['ours']))}｜官方 {sorted(set(result['official'] or []))[:8]}",
+                  file=sys.stderr)
+    mismatched = [f"{lg} {d}" for lg, d, r in checks if r["ok"] is False]
+    if mismatched:
+        raise SystemExit(f"ERROR 官方時間對照不一致（{', '.join(mismatched)}），本輪中止不寫檔")
 
     collected, failed = [], []
     for game in games:

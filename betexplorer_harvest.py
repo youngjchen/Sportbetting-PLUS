@@ -1,0 +1,248 @@
+"""BetExplorer 歷史收割（4/1 至今，四聯盟）→ data/oddsportal_archive/YYYY-MM.json
+
+2026-08-07 使用者拍板從 OddsPortal 搬過來。實測差距：
+  探索：結果頁 ?month=YYYY-MM 一次請求 ~3 秒 ~400 場（OddsPortal 要 Playwright 逐頁真點擊）
+  單場：三市場＋初盤 5 次 HTTP ~8 秒（OddsPortal ~60 秒）→ 約 7 倍
+  一致性：兩站 eventId 共用（7 月 350 場中 347 場相同）、初盤抽驗 5/5 完全相同
+
+日期不猜：月份來自網址參數，列上 DD.MM. 必須同月，否則整列拒收（見 betexplorer.parse_result_date）。
+狀態檔：data/betexplorer_harvest_state.json（每聯盟記已完成的月份，可中斷續跑）。
+
+用法：
+  python betexplorer_harvest.py --month 2026-07 --league mlb
+  python betexplorer_harvest.py --max-games 200          # 自動挑未完成的月份接著跑
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+import betexplorer as BE
+
+TW = BE.TW
+HD_CLOSE_LEAD_MIN = 150
+LEAGUES = ("mlb", "npb", "kbo", "cpbl")
+SEASON_MONTHS = ("2026-04", "2026-05", "2026-06", "2026-07", "2026-08")
+
+
+def _team_zh():
+    import importlib.util
+    spec = importlib.util.spec_from_file_location("ops", str(Path(__file__).with_name("oddsportal_scraper.py")))
+    ops = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(ops)
+    return ops.team_zh
+
+
+def _hist_rows(history, year_hint, offset):
+    """變動史 → [(台灣時間, 賠率)]，由舊到新。"""
+    rows = []
+    for item in (history or []):
+        hit = re.fullmatch(r"(\d{1,2})\.(\d{1,2})\.?\s+(\d{1,2}):(\d{2})", str(item.get("date") or "").strip())
+        if not hit:
+            continue
+        day, month, hour, minute = (int(hit.group(i)) for i in (1, 2, 3, 4))
+        if not (1 <= month <= 12 and 1 <= day <= 31 and 0 <= hour <= 23 and 0 <= minute <= 59):
+            continue
+        try:
+            stamp = datetime(year_hint, month, day, hour, minute) + timedelta(hours=offset)
+            rows.append((stamp.replace(tzinfo=TW), float(item.get("odd"))))
+        except (TypeError, ValueError):
+            continue
+    rows.sort()
+    return rows
+
+
+def _open_close(cell, year_hint, offset, cutoff_tw):
+    """初盤＝最舊；收盤＝cutoff 前最後一筆。查不到變動史就退回現值當初盤。"""
+    rows = _hist_rows(BE.archive_history(cell), year_hint, offset)
+    if not rows:
+        try:
+            value = float(cell.get("data-odd"))
+        except (TypeError, ValueError):
+            return (None, None), (None, None)
+        return (value, None), (None, None)
+    open_at, open_odd = rows[0]
+    before = [r for r in rows if r[0] <= cutoff_tw]
+    if before:
+        close_at, close_odd = before[-1]
+        return (open_odd, open_at.isoformat(timespec="seconds")), (close_odd, close_at.isoformat(timespec="seconds"))
+    return (open_odd, open_at.isoformat(timespec="seconds")), (None, None)
+
+
+def _start_tw(row: dict, offset: float) -> datetime:
+    """歷史場的開賽時刻：從【該場自己的網址】抓站方時間再換算。
+    2026-08-07 實測教訓：原本用捏造路徑 /baseball/x/x/{id}/ 去抓，撈到別場的 data-dt，
+    中職 18:35 的比賽被寫成 02:00、收盤時戳還晚於開賽 → 收盤切點全錯。
+    防火牆：換算後若不落在該列日期當天，一律退回當日 23:59（保守切點＝當天最後一刻）。"""
+    date = row["date"]
+    year, month, day = (int(x) for x in date.split("-"))
+    fallback = datetime(year, month, day, 23, 59, tzinfo=TW)
+    try:
+        page = BE._open(row["url"])
+    except Exception:
+        return fallback
+    for raw in re.findall(r'data-dt="(\d{1,2},\d{1,2},\d{4},\d{1,2},\d{2})"', page):
+        try:
+            start = (BE.parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW)
+        except ValueError:
+            continue
+        if start.date().isoformat() == date:          # 必須是這一天，否則不是這場的時間
+            return start
+    return fallback
+
+
+def harvest_game(row: dict, offset: float) -> dict:
+    match_id, date = row["matchId"], row["date"]
+    start_tw = _start_tw(row, offset)
+    year_hint = start_tw.year
+    markets: dict[str, dict] = {}
+
+    ha = BE.stake_lines(match_id, "ha")
+    if ha:
+        (oh, oh_at), (ch, ch_at) = _open_close(ha[0]["first"], year_hint, offset, start_tw)
+        (oa, _), (ca, _) = _open_close(ha[0]["second"], year_hint, offset, start_tw)
+        block = {"open": {"at": oh_at, "home": oh, "away": oa}}
+        if ch is not None and ca is not None:
+            block["close"] = {"at": ch_at, "home": ch, "away": ca, "final": True}
+        markets["ml"] = block
+
+    cutoff = start_tw - timedelta(minutes=HD_CLOSE_LEAD_MIN)
+    ah = BE.stake_lines(match_id, "ah")
+    swap = BE.handicap_swap(ah)
+    main = next((x for x in sorted([y for y in ah if y.get("line") is not None],
+                                   key=lambda y: (not y.get("active"), abs(y["line"]))) ), None)
+    if main:
+        (oh, oh_at), (ch, ch_at) = _open_close(main["first"], year_hint, offset, cutoff)
+        (oa, _), (ca, _) = _open_close(main["second"], year_hint, offset, cutoff)
+        favorite = "home" if main["line"] < 0 else "away"
+        block = {"open": {"at": oh_at, "home": oh, "away": oa,
+                          "line": abs(main["line"]), "favorite": favorite}}
+        if ch is not None and ca is not None:
+            block["close"] = {"at": ch_at, "home": ch, "away": ca,
+                              "line": abs(main["line"]), "favorite": favorite, "final": True}
+        markets["hd"] = block
+
+    ou = BE.stake_lines(match_id, "ou")
+    main_ou = next((x for x in sorted([y for y in ou if y.get("line") is not None],
+                                      key=lambda y: (not y.get("active"), abs(y["line"] - 8)))), None)
+    if main_ou:
+        (oo, oo_at), (co, co_at) = _open_close(main_ou["first"], year_hint, offset, cutoff)
+        (uu, _), (cu, _) = _open_close(main_ou["second"], year_hint, offset, cutoff)
+        block = {"open": {"at": oo_at, "over": oo, "under": uu, "line": main_ou["line"]}}
+        if co is not None and cu is not None:
+            block["close"] = {"at": co_at, "over": co, "under": cu,
+                              "line": main_ou["line"], "final": True}
+        markets["ou"] = block
+
+    return {
+        "eventId": match_id, "league": row["league"], "date": date,
+        "startTime": start_tw.strftime("%H:%M"), "startISO": start_tw.isoformat(timespec="seconds"),
+        "awayTeam": row["awayZh"], "homeTeam": row["homeZh"],
+        "sourceUrl": row["url"], "source": "BetExplorer",
+        "markets": markets,
+        "stakeSwap": {"ever": swap["ever"], "activeSide": swap["activeSide"],
+                      "struckSide": swap["struckSide"]},
+    }
+
+
+def _load(path: Path, default):
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return default
+
+
+def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--league", default="")
+    parser.add_argument("--month", default="")
+    parser.add_argument("--max-games", type=int, default=400)
+    parser.add_argument("--offset", type=float, default=7.0,
+                        help="站方時區→台灣的時差；日常抓取會反推，收割用固定值（歷史頁無法反推）")
+    parser.add_argument("--archive-dir", default="data/oddsportal_archive")
+    parser.add_argument("--state", default="data/betexplorer_harvest_state.json")
+    parser.add_argument("--season-start", default="2026-04-01")
+    args = parser.parse_args()
+
+    team_zh = _team_zh()
+    state_path = Path(args.state)
+    state = _load(state_path, {})
+
+    today_tw = datetime.now(TW).replace(tzinfo=None)
+    total_new = 0
+    # 整季模式（預設）：?month=all 一次拿全季（美職 1731 場 3 秒）。中職站方只留近期，
+    # 其餘由 OddsPortal 舊檔補（8/1 前）。指定 --month 才走單月頁。
+    targets = [args.league] if args.league else list(LEAGUES)
+    for league in targets:
+        if args.month:
+            rows = BE.discover_month(league, args.month, team_zh, today_tw=today_tw)
+        else:
+            rows = BE.discover_season(league, team_zh, args.season_start, today_tw=today_tw)
+        by_month: dict[str, list[dict]] = {}
+        for row in rows:
+            by_month.setdefault(row["date"][:7], []).append(row)
+        for month in sorted(by_month, reverse=True):
+            if total_new >= args.max_games:
+                break
+            total_new = _harvest_month(league, month, by_month[month], args, state, state_path, total_new)
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    print(json.dumps({"totalHarvested": total_new}, ensure_ascii=False))
+    return 0
+
+
+def _harvest_month(league, month, rows, args, state, state_path, total_new):
+        archive_path = Path(args.archive_dir) / f"{month}.json"
+        archive = _load(archive_path, {"version": 1, "source": "BetExplorer",
+                                       "bookmaker": "Stake.com", "games": {}})
+        archive.setdefault("games", {})
+        have = {g.get("eventId") for g in archive["games"].values()}
+        pending = [r for r in rows if r["matchId"] not in have]
+        print(f"INFO {league} {month}: 結果頁 {len(rows)} 場、待抓 {len(pending)} 場", file=sys.stderr)
+
+        done_count = fail = 0
+        for row in pending:
+            if total_new >= args.max_games:
+                break
+            try:
+                game = harvest_game(row, args.offset)
+            except Exception as exc:
+                fail += 1
+                if fail >= 5:
+                    print(f"WARN {league} {month} 連續失敗過多，中止本月：{str(exc)[:80]}", file=sys.stderr)
+                    break
+                continue
+            fail = 0
+            key = "|".join([game["league"], game["date"], game["awayTeam"],
+                            game["homeTeam"], game["startTime"], game["eventId"]])
+            archive["games"][key] = game
+            done_count += 1
+            total_new += 1
+            if done_count % 20 == 0:
+                archive_path.parent.mkdir(parents=True, exist_ok=True)
+                archive_path.write_text(json.dumps(archive, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+                print(f"INFO   ...已落盤 {done_count} 場", file=sys.stderr)
+
+        archive["updatedAt"] = datetime.now(TW).isoformat(timespec="seconds")
+        archive_path.parent.mkdir(parents=True, exist_ok=True)
+        archive_path.write_text(json.dumps(archive, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+        if not pending or done_count >= len(pending):
+            slot = state.setdefault(league, {})
+            months = set(slot.get("months") or [])
+            months.add(month)
+            slot["months"] = sorted(months)
+            slot["updatedAt"] = datetime.now(TW).isoformat(timespec="seconds")
+        state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        print(json.dumps({"league": league, "month": month, "found": len(rows),
+                          "harvested": done_count, "totalInMonth": len(archive["games"])},
+                         ensure_ascii=False))
+        return total_new
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

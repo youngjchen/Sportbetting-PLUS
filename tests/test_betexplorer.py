@@ -122,18 +122,48 @@ class StakeAndSwapTests(unittest.TestCase):
     """2026-08-07 兄弟@台鋼實證：+1.5 已下架、-1.5 在架上；使用者於 Stake 現場確認
     只剩台鋼 -1.5 ⇒ 確實對調過。判別依據＝該格有無 data-oid。"""
 
+    # 取自 2026-08-07 兄弟@台鋼實際回應：已下架的列帶 class="... inactive"，
+    # 仍在架上的列沒有。data-oid 只出現在「被 highlight 的主盤」，不能拿來判在不在架上。
     AH_HTML = '''
 <tr data-bid="997" data-bookie-id="1089"><td class="h-text-left">Stake.com</td>
 <td class="table-main__doubleparameter">-1.5</td>
-<td data-odd="2.08" data-created="07,08,2026,06,26" data-oid="abc" data-bid="997" data-bt="5" data-sc="1" data-hcp="E-5-1-0--1.5-0"></td>
-<td data-odd="1.67" data-created="07,08,2026,05,59" data-oid="abd" data-bid="997" data-bt="5" data-sc="1" data-hcp="E-5-1-0--1.5-0"></td></tr>
+<td class="archiveOddsMovement__odds table-main__detail-odds" data-odd="2.08" data-created="07,08,2026,06,26" data-oid="abc" data-bid="997" data-bt="5" data-sc="1" data-hcp="E-5-1-0--1.5-0"></td>
+<td class="archiveOddsMovement__odds table-main__detail-odds" data-odd="1.67" data-created="07,08,2026,05,59" data-oid="abd" data-bid="997" data-bt="5" data-sc="1" data-hcp="E-5-1-0--1.5-0"></td></tr>
 <tr data-bid="997" data-bookie-id="1089"><td class="h-text-left">Stake.com</td>
 <td class="table-main__doubleparameter">+1.5</td>
-<td data-odd="1.44" data-created="06,08,2026,20,41"></td>
-<td data-odd="2.60" data-created="06,08,2026,20,31"></td></tr>
+<td class="archiveOddsMovement__odds table-main__detail-odds inactive " data-odd="1.44" data-created="06,08,2026,20,41"></td>
+<td class="archiveOddsMovement__odds table-main__detail-odds inactive " data-odd="2.60" data-created="06,08,2026,20,31"></td></tr>
 '''
 
-    def test_active_flag_comes_from_data_oid(self):
+    # 歐力士@羅德實際回應：同時掛著 +1.5/+2.5/+4.5（都沒有 data-oid，但都在架上），
+    # 下架的是 -2.5/-1.5（帶 inactive）。用 data-oid 判會把 +2.5/+4.5 誤判成已下架。
+    ALT_LINES_HTML = '''
+<tr data-bid="997"><td>Stake.com</td><td class="table-main__doubleparameter">-1.5</td>
+<td class="table-main__detail-odds inactive " data-odd="2.55" data-created="07,08,2026,08,01"></td>
+<td class="table-main__detail-odds inactive " data-odd="1.47" data-created="07,08,2026,08,20"></td></tr>
+<tr data-bid="997"><td>Stake.com</td><td class="table-main__doubleparameter">+1.5</td>
+<td class="table-main__detail-odds" data-odd="1.48" data-created="07,08,2026,08,25" data-oid="a" data-bid="997" data-bt="5" data-sc="1" data-hcp="h"></td>
+<td class="table-main__detail-odds" data-odd="2.55" data-created="07,08,2026,08,25" data-oid="b" data-bid="997" data-bt="5" data-sc="1" data-hcp="h"></td></tr>
+<tr data-bid="997"><td>Stake.com</td><td class="table-main__doubleparameter">+2.5</td>
+<td class="table-main__detail-odds" data-odd="1.30" data-created="07,08,2026,08,25"></td>
+<td class="table-main__detail-odds" data-odd="3.30" data-created="07,08,2026,08,25"></td></tr>
+'''
+
+    def test_alt_lines_without_data_oid_are_still_on_the_board(self):
+        """使用者質疑歐力士@羅德後的修正：+2.5/+4.5 沒有 data-oid 但仍在架上，
+        用 data-oid 判會把它們誤判成已下架、進而誤報對調方向。"""
+        lines = stake_lines("fNDeRIp4", "ah", odds_html=self.ALT_LINES_HTML)
+        by_line = {x["line"]: x for x in lines}
+        self.assertTrue(by_line[1.5]["active"])
+        self.assertTrue(by_line[2.5]["active"])      # 沒有 data-oid，但沒有 inactive ⇒ 在架上
+        self.assertFalse(by_line[2.5]["primary"])
+        self.assertFalse(by_line[-1.5]["active"])    # 帶 inactive ⇒ 已下架
+        swap = handicap_swap(lines)
+        self.assertTrue(swap["ever"])
+        self.assertEqual(swap["activeSide"], ["away"])
+        self.assertEqual(swap["struckSide"], ["home"])
+
+    def test_active_flag_comes_from_inactive_class(self):
         lines = stake_lines("U9EYUw13", "ah", odds_html=self.AH_HTML)
         self.assertEqual(len(lines), 2)
         self.assertEqual(lines[0]["line"], -1.5)
@@ -160,3 +190,33 @@ class StakeAndSwapTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class SeasonDateTests(unittest.TestCase):
+    """整季頁（?month=all）只有 DD.MM.，沒有年份也沒有 month 參數可比對。
+    年份用『不可能是未來』推定，且必須落在球季區間內，否則整列拒收。"""
+
+    today = datetime(2026, 8, 7, 15, 0)
+
+    def test_infers_year_without_guessing_format(self):
+        from betexplorer import parse_season_date
+        self.assertEqual(parse_season_date("30.04.", self.today, "2026-04-01"), "2026-04-30")
+        self.assertEqual(parse_season_date("1.8.", self.today, "2026-04-01"), "2026-08-01")
+        self.assertEqual(parse_season_date("Today", self.today, "2026-04-01"), "2026-08-07")
+        self.assertEqual(parse_season_date("Yesterday", self.today, "2026-04-01"), "2026-08-06")
+
+    def test_rejects_future_and_pre_season_rows(self):
+        from betexplorer import parse_season_date
+        for text in ("30.09.", "08.08.", "01.03.", "31.12.", "garbage", "", "45.01."):
+            with self.assertRaises(ValueError, msg=text):
+                parse_season_date(text, self.today, "2026-04-01")
+
+    def test_season_discovery_drops_unparseable_rows(self):
+        from betexplorer import discover_season
+        html = '''
+<tr><td class="h-text-left"><a data-test="1" href="/baseball/taiwan/cpbl/a-b/GOODGAME/" class="in-match"><span>TSG Hawks</span> - <span>Chinatrust Brothers</span></a></td><td class="h-text-center"><a href="#">1:0</a></td><td class="h-text-right h-text-no-wrap">30.04.</td></tr>
+<tr><td class="h-text-left"><a data-test="2" href="/baseball/taiwan/cpbl/c-d/FUTUREGM/" class="in-match"><span>TSG Hawks</span> - <span>Chinatrust Brothers</span></a></td><td class="h-text-center"><a href="#">2:0</a></td><td class="h-text-right h-text-no-wrap">30.09.</td></tr>
+'''
+        rows = discover_season("cpbl", zh, "2026-04-01", today_tw=self.today, html=html)
+        self.assertEqual([r["matchId"] for r in rows], ["GOODGAME"])
+        self.assertEqual(rows[0]["date"], "2026-04-30")

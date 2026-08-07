@@ -108,6 +108,62 @@ def parse_result_date(cell_text: str, month_param: str, today_tw: datetime) -> s
     return f"{year:04d}-{month:02d}-{day:02d}"
 
 
+def parse_season_date(cell_text: str, today_tw: datetime, season_start: str) -> str:
+    """整季結果頁（?month=all）的日期：只有 'DD.MM.'，沒有年份也沒有 month 參數可比對。
+    年份用「不可能是未來」推定，並強制落在 [season_start, 今天] 區間內，否則拒收。
+    ——同樣不繼承、不猜格式，超出區間一律丟掉。"""
+    text = str(cell_text or "").strip()
+    low = text.lower()
+    if low in ("today", "yesterday"):
+        return (today_tw.date() - timedelta(days=1 if low == "yesterday" else 0)).isoformat()
+    match = re.fullmatch(r"(\d{1,2})\.(\d{1,2})\.?", text)
+    if not match:
+        raise ValueError(f"整季頁日期格式不認得：{text!r}")
+    day, month = int(match.group(1)), int(match.group(2))
+    if not (1 <= month <= 12 and 1 <= day <= 31):
+        raise ValueError(f"日期數值不合法：{text!r}")
+    for year in (today_tw.year, today_tw.year - 1):
+        try:
+            candidate = datetime(year, month, day).date()
+        except ValueError:
+            continue
+        if candidate > today_tw.date():
+            continue
+        if candidate.isoformat() < season_start:
+            continue
+        return candidate.isoformat()
+    raise ValueError(f"{text} 推不出落在 [{season_start}, {today_tw.date()}] 內的日期")
+
+
+def discover_season(league: str, team_zh, season_start: str, today_tw: datetime | None = None,
+                    html: str | None = None) -> list[dict[str, Any]]:
+    """整季結果頁一次抓完（?month=all）。實測 2026 球季：
+    美職 1731 場 3.0s、日職 594 場 4.8s、韓職 540 場 8.0s；中職站方只留近期 61 場。"""
+    if league not in LEAGUE_RESULTS_PATH:
+        raise ValueError(f"未知聯盟 {league}")
+    today_tw = today_tw or datetime.now(TW).replace(tzinfo=None)
+    page = html if html is not None else _open(f"{BASE}{LEAGUE_RESULTS_PATH[league]}?month=all")
+    out: list[dict[str, Any]] = []
+    for href, match_id, title, date_cell in _RESULT_ROW_RE.findall(page):
+        names = re.findall(r"<span>(?:<strong>)?([^<]+)(?:</strong>)?</span>", title)
+        if len(names) < 2:
+            continue
+        home, away = names[0].strip(), names[1].strip()
+        home_zh, away_zh = team_zh(home), team_zh(away)
+        if not home_zh or not away_zh:
+            continue
+        try:
+            date = parse_season_date(date_cell, today_tw, season_start)
+        except ValueError:
+            continue
+        out.append({
+            "league": league, "matchId": match_id, "date": date,
+            "homeName": home, "awayName": away, "homeZh": home_zh, "awayZh": away_zh,
+            "url": BASE + href,
+        })
+    return out
+
+
 def detect_offset_hours(schedule: Iterable[dict[str, Any]], listing: Iterable[dict[str, Any]],
                         min_agree: int = 3) -> float:
     """用我們自己的賽程反推「站方時間→台灣時間」的時差。
@@ -235,10 +291,16 @@ def stake_lines(match_id: str, market: str, odds_html: str | None = None) -> lis
             line = float(line_text) if line_text else None
         except ValueError:
             line = None
+        # 2026-08-07 使用者質疑後修正：判斷「還掛不掛」要看 class 有沒有 inactive，
+        # 不是看有沒有 data-oid。data-oid 只標記「被 highlight 的主盤」，同時掛著的
+        # 其他盤口（如 +2.5、+4.5）也沒有 data-oid，用它會把在架上的盤口誤判成已下架。
+        # 對照：兄弟@台鋼此法得「架上只剩 -1.5」，與使用者在 Stake 現場所見完全一致。
+        classes = str(cells[0].get("class", "")) + " " + str(cells[1].get("class", ""))
         out.append({
             "market": market, "line": line, "lineText": line_text,
             "first": cells[0], "second": cells[1],
-            "active": "data-oid" in cells[0],
+            "active": "inactive" not in classes,
+            "primary": "data-oid" in cells[0],
             "created": cells[0].get("data-created"),
         })
     return out
