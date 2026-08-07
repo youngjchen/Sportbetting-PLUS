@@ -58,14 +58,27 @@ def _hist_rows(history, year_hint, offset):
 
 
 def _open_close(cell, year_hint, offset, cutoff_tw):
-    """初盤＝最舊；收盤＝cutoff 前最後一筆。查不到變動史就退回現值當初盤。"""
+    """初盤＝變動史最舊一筆；收盤＝cutoff 前最後一筆。
+
+    2026-08-07 修正：查不到變動史時（該列已下架且無 data-oid），我們手上只有
+    「最後一筆賠率＋它的建立時間」。那是【收盤】不是初盤——舊版把它當初盤記錄，
+    等於把收盤數字寫進初盤欄位污染走向分析。改成記成收盤、初盤留空。"""
     rows = _hist_rows(BE.archive_history(cell), year_hint, offset)
     if not rows:
         try:
             value = float(cell.get("data-odd"))
         except (TypeError, ValueError):
             return (None, None), (None, None)
-        return (value, None), (None, None)
+        stamp = None
+        raw = cell.get("data-created")
+        if raw:
+            try:
+                stamp = (BE.parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW)
+            except ValueError:
+                stamp = None
+        if stamp is not None and stamp <= cutoff_tw:
+            return (None, None), (value, stamp.isoformat(timespec="seconds"))
+        return (None, None), (None, None)
     open_at, open_odd = rows[0]
     before = [r for r in rows if r[0] <= cutoff_tw]
     if before:
@@ -96,6 +109,31 @@ def _start_tw(row: dict, offset: float) -> datetime:
     return fallback
 
 
+def _pick_line(lines, prefer_abs=None):
+    """挑主盤。2026-08-07 實測教訓：原本只按「線值接近目標」挑，會挑到沒有 data-oid 的那條，
+    查不到變動史 ⇒ 整場沒有收盤（大小分收盤覆蓋率只剩 11%）。
+    優先序：仍在架上 → 查得到變動史(primary) → 線值最接近目標（大小分則取賠率最平衡的）。"""
+    cand = [x for x in lines if x.get("line") is not None]
+    if not cand:
+        return None
+
+    def key(item):
+        not_active = 0 if item.get("active") else 1
+        no_history = 0 if item.get("primary") else 1
+        if prefer_abs is not None:
+            dist = abs(abs(item["line"]) - prefer_abs)
+        else:
+            try:
+                first = float(item["first"].get("data-odd"))
+                second = float(item["second"].get("data-odd"))
+                dist = abs(first - second)          # 賠率最接近的＝市場主盤
+            except (TypeError, ValueError):
+                dist = 99.0
+        return (not_active, no_history, dist)
+
+    return sorted(cand, key=key)[0]
+
+
 def harvest_game(row: dict, offset: float) -> dict:
     match_id, date = row["matchId"], row["date"]
     start_tw = _start_tw(row, offset)
@@ -106,7 +144,9 @@ def harvest_game(row: dict, offset: float) -> dict:
     if ha:
         (oh, oh_at), (ch, ch_at) = _open_close(ha[0]["first"], year_hint, offset, start_tw)
         (oa, _), (ca, _) = _open_close(ha[0]["second"], year_hint, offset, start_tw)
-        block = {"open": {"at": oh_at, "home": oh, "away": oa}}
+        block = {}
+        if oh is not None or oa is not None:
+            block["open"] = {"at": oh_at, "home": oh, "away": oa}
         if ch is not None and ca is not None:
             block["close"] = {"at": ch_at, "home": ch, "away": ca, "final": True}
         markets["ml"] = block
@@ -114,26 +154,28 @@ def harvest_game(row: dict, offset: float) -> dict:
     cutoff = start_tw - timedelta(minutes=HD_CLOSE_LEAD_MIN)
     ah = BE.stake_lines(match_id, "ah")
     swap = BE.handicap_swap(ah)
-    main = next((x for x in sorted([y for y in ah if y.get("line") is not None],
-                                   key=lambda y: (not y.get("active"), abs(y["line"]))) ), None)
+    main = _pick_line(ah, prefer_abs=1.5)          # 棒球卡片盤口＝±1.5（使用者拍板）
     if main:
         (oh, oh_at), (ch, ch_at) = _open_close(main["first"], year_hint, offset, cutoff)
         (oa, _), (ca, _) = _open_close(main["second"], year_hint, offset, cutoff)
         favorite = "home" if main["line"] < 0 else "away"
-        block = {"open": {"at": oh_at, "home": oh, "away": oa,
-                          "line": abs(main["line"]), "favorite": favorite}}
+        block = {}
+        if oh is not None or oa is not None:
+            block["open"] = {"at": oh_at, "home": oh, "away": oa,
+                             "line": abs(main["line"]), "favorite": favorite}
         if ch is not None and ca is not None:
             block["close"] = {"at": ch_at, "home": ch, "away": ca,
                               "line": abs(main["line"]), "favorite": favorite, "final": True}
         markets["hd"] = block
 
     ou = BE.stake_lines(match_id, "ou")
-    main_ou = next((x for x in sorted([y for y in ou if y.get("line") is not None],
-                                      key=lambda y: (not y.get("active"), abs(y["line"] - 8)))), None)
+    main_ou = _pick_line(ou)                       # 大小分主盤＝賠率最平衡的那條
     if main_ou:
         (oo, oo_at), (co, co_at) = _open_close(main_ou["first"], year_hint, offset, cutoff)
         (uu, _), (cu, _) = _open_close(main_ou["second"], year_hint, offset, cutoff)
-        block = {"open": {"at": oo_at, "over": oo, "under": uu, "line": main_ou["line"]}}
+        block = {}
+        if oo is not None or uu is not None:
+            block["open"] = {"at": oo_at, "over": oo, "under": uu, "line": main_ou["line"]}
         if co is not None and cu is not None:
             block["close"] = {"at": co_at, "over": co, "under": cu,
                               "line": main_ou["line"], "final": True}
@@ -200,8 +242,29 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
         archive = _load(archive_path, {"version": 1, "source": "BetExplorer",
                                        "bookmaker": "Stake.com", "games": {}})
         archive.setdefault("games", {})
-        have = {g.get("eventId") for g in archive["games"].values()}
+        def _complete(game):
+            """齊全＝三市場都有收盤，且不存在「沒有時戳的初盤」。
+            後者是舊版把收盤誤標成初盤留下的殘骸，必須重抓修正。"""
+            markets = game.get("markets") or {}
+            if not all((markets.get(k) or {}).get("close") for k in ("ml", "hd", "ou")):
+                return False
+            for k in ("ml", "hd", "ou"):
+                opened = (markets.get(k) or {}).get("open")
+                if opened and opened.get("at") is None:
+                    return False
+            return True
+        have, refill = set(), set()
+        for game in archive["games"].values():
+            eid = game.get("eventId")
+            if not eid:
+                continue
+            if _complete(game) or game.get("refilled"):
+                have.add(eid)                       # 齊全、或已補過一次就不再重抓
+            else:
+                refill.add(eid)
         pending = [r for r in rows if r["matchId"] not in have]
+        if refill:
+            print(f"INFO   其中 {len(refill)} 場缺收盤，重抓一次補齊", file=sys.stderr)
         print(f"INFO {league} {month}: 結果頁 {len(rows)} 場、待抓 {len(pending)} 場", file=sys.stderr)
 
         done_count = fail = 0
@@ -219,6 +282,8 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
             fail = 0
             key = "|".join([game["league"], game["date"], game["awayTeam"],
                             game["homeTeam"], game["startTime"], game["eventId"]])
+            if row["matchId"] in refill:
+                game["refilled"] = True             # 補過一次就打標，避免永遠重抓
             archive["games"][key] = game
             done_count += 1
             total_new += 1
