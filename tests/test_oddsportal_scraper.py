@@ -487,3 +487,39 @@ class WnbaSupportTests(unittest.TestCase):
             now = datetime.fromisoformat("2026-08-06T01:00:00+08:00").astimezone(TW)
             rows = _load_schedule(data / "pregame_data.json", now, from_hours=-24, to_hours=24)
             self.assertEqual([r["league"] for r in rows], ["cpbl"])
+
+
+class ListingDateHeaderTests(unittest.TestCase):
+    """2026-08-07 髒資料事故：列表頁未來區塊標頭是「18 Aug 2026」寫法，
+    舊版 _parse_listing_date 只認 Today/Yesterday/Tomorrow → 回 None → 該列繼承
+    上一個日期（今天）。日職三連戰同兩隊連打，九月場次因而配成今天的場次入庫。"""
+
+    def setUp(self):
+        from oddsportal_scraper import TW
+        self.now = datetime.fromisoformat("2026-08-07T13:00:00+08:00").astimezone(TW)
+
+    def test_explicit_year_header_is_parsed(self):
+        from oddsportal_scraper import _parse_listing_date
+        cases = {
+            "18 Aug 2026 | 1 | 2 | 01:40 | Cincinnati Reds | – | St.Louis Cardinals": "2026-08-18",
+            "22 Sep 2026  - Second stage | 1 | 2 | 18:35 | Fubon Guardians": "2026-09-22",
+            "03 Oct 2026  - Second stage | 1 | 2 | 17:05 | Uni Lions": "2026-10-03",
+            "14 Sep 2026, 17:00": "2026-09-14",
+        }
+        for text, expected in cases.items():
+            self.assertEqual(_parse_listing_date(text, self.now), expected, text)
+
+    def test_relative_headers_still_win(self):
+        from oddsportal_scraper import _parse_listing_date
+        self.assertEqual(
+            _parse_listing_date("Baseball | / | USA | / | MLB | Today, 07 Aug | 1 | 2 | Finished", self.now),
+            "2026-08-07")
+        self.assertEqual(_parse_listing_date("Yesterday, 06 Aug | FIN", self.now), "2026-08-06")
+        self.assertEqual(_parse_listing_date("Tomorrow, 08 Aug | 07:05", self.now), "2026-08-08")
+
+    def test_game_rows_without_header_stay_none(self):
+        from oddsportal_scraper import _parse_listing_date
+        for text in ("18:35 | Rakuten Monkeys | – | TSG Hawks | - | -",
+                     "01:05 | New York Yankees | – | Boston Red Sox | 1.85 | 1.95",
+                     "Finished | FIN | Cincinnati Reds | 6 | – | 5 | Athletics | 1.64 | 2.59"):
+            self.assertIsNone(_parse_listing_date(text, self.now), text)

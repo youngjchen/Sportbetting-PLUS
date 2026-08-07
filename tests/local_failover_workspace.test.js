@@ -160,3 +160,29 @@ test('classifyFailoverDirt separates failover-owned outputs from foreign files',
   const quoted = classifyFailoverDirt(['?? "data/expert_archive/a b.json"']);
   assert.deepEqual(quoted.foreign, []);
 });
+
+// 2026-08-07 卡死事故：git() 對 porcelain 輸出做 .trim()，第一行的狀態欄空格被吃掉，
+// 舊版固定 slice(3) 多砍兩字元 → 自家產出檔被誤判成外來檔 → 整輪 fail-closed 12 小時。
+test('classifyFailoverDirt tolerates the leading space trimmed off the first porcelain line', () => {
+  const { classifyFailoverDirt } = require('../local_failover_workspace.js');
+  // git() 回傳的是 .trim() 過的整段 → 第一行少了開頭空格
+  const trimmed = [' M lottery_series.json', ' M pregame_data.json'].join('\n').trim().split('\n');
+  const dirt = classifyFailoverDirt(trimmed);
+  assert.deepEqual(dirt.foreign, []);
+  assert.deepEqual(dirt.owned, ['lottery_series.json', 'pregame_data.json']);
+
+  // 任何自家產出檔排在第一行都必須通過（實測任一種都會卡死）
+  for (const first of [' M data/oddsportal_summary.json', ' M data/oddsportal_harvest_state.json',
+                       'M  data/pregame_data.json', '?? data/oddsportal_archive/2026-05.json']) {
+    const one = classifyFailoverDirt([first].join('\n').trim().split('\n'));
+    assert.deepEqual(one.foreign, [], `應判為自家產出：${first}`);
+  }
+
+  // 外來檔仍必須 fail-closed（守門不能被放寬掉）
+  const mixed = classifyFailoverDirt([' M index.html', ' M data/oddsportal_summary.json'].join('\n').trim().split('\n'));
+  assert.deepEqual(mixed.foreign, ['index.html']);
+
+  // 改名列仍取箭頭後的新路徑
+  const renamed = classifyFailoverDirt(['R  data/old.json -> data/oddsportal_summary.json']);
+  assert.deepEqual(renamed.owned, ['data/oddsportal_summary.json']);
+});

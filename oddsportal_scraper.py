@@ -304,10 +304,17 @@ def _is_pregame_listing(text: str) -> bool:
 
 
 def _parse_listing_date(text: str, now: datetime) -> str | None:
+    raw = str(text or "")
     match = re.search(
         r"(?:Yesterday|Today|Tomorrow),\s*(\d{1,2})\s+([A-Za-z]{3})(?:\s+(\d{4}))?",
-        str(text or ""), re.IGNORECASE,
+        raw, re.IGNORECASE,
     )
+    if not match:
+        # 2026-08-07 事故：未來日期的區塊標頭是「18 Aug 2026」「22 Sep 2026 - Second stage」
+        # 這種寫法，舊版只認 Today/Yesterday/Tomorrow → 回 None → 該列繼承上一個日期＝今天。
+        # 日職三連戰同兩隊連打，於是九月的場次被當成今天的場次配對入庫（7 筆髒資料）。
+        # 必須帶四位數年份才算標頭，避免比分/賠率誤判。
+        match = re.search(r"\b(\d{1,2})\s+([A-Za-z]{3})\s+(20\d{2})\b", raw)
     if not match:
         return None
     year = int(match.group(3) or now.year)

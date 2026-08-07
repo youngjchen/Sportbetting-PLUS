@@ -44,7 +44,11 @@ function classifyFailoverDirt(lines) {
   const owned = [], foreign = [];
   for (const line of lines) {
     // porcelain: XY<space>path；rename 'R  old -> new' 取箭頭後；引號路徑去引號
-    let rel = String(line).slice(3).trim();
+    // 2026-08-07 卡死事故：git() 對整段輸出做 .trim()，第一行開頭的狀態欄空格被吃掉
+    // （' M x' → 'M x'），固定 slice(3) 會多砍兩個字元（lottery_series.json →
+    // ottery_series.json）→ 誤判成外來檔 → 整輪 fail-closed，排程空轉 12 小時。
+    // 改成剝除「1~2 個狀態字元 + 空白」，被 trim 過與沒被 trim 過都吃得下。
+    let rel = String(line).replace(/^[ MADRCU?!]{1,2}\s+/, '').trim();
     const arrow = rel.indexOf(' -> ');
     if (arrow >= 0) rel = rel.slice(arrow + 4);
     if (rel.startsWith('"') && rel.endsWith('"')) rel = rel.slice(1, -1);
