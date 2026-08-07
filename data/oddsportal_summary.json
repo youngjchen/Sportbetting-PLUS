@@ -2,13 +2,15 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-08-07T13:40:07+08:00",
+  "updatedAt": "2026-08-07T13:45:06+08:00",
   "health": {
-    "scheduled": 10,
-    "discovered": 3,
-    "succeeded": 3,
-    "failed": 0,
-    "errors": []
+    "scheduled": 60,
+    "discovered": 9,
+    "succeeded": 8,
+    "failed": 1,
+    "errors": [
+      "wnba Ekr6S5Hl: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -8835,7 +8837,7 @@
       "awayTeam": "雙城",
       "homeTeam": "皇家",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kansas-city-royals-IL2QbgJ4/minnesota-twins-OjWW1naM/#l4HrAnHd",
-      "observedAt": "2026-08-06T23:20:06+08:00",
+      "observedAt": "2026-08-07T13:45:06+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -8847,6 +8849,13 @@
             "at": "2026-08-06T23:20:06+08:00",
             "home": 1.79,
             "away": 2.04
+          },
+          "close": {
+            "at": "2026-08-07T06:35:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 1.76,
+            "away": 2.07
           }
         },
         "hd": {
@@ -8863,6 +8872,15 @@
             "away": 1.54,
             "line": -1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-07T05:01:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.45,
+            "away": 1.56,
+            "line": -1.5,
+            "favorite": "home"
           }
         },
         "ou": {
@@ -8876,6 +8894,14 @@
             "at": "2026-08-06T23:20:06+08:00",
             "over": 1.76,
             "under": 2.08,
+            "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-07T05:01:00+08:00",
+            "final": true,
+            "precision": "history",
+            "over": 1.81,
+            "under": 2.01,
             "line": 8.5
           }
         }
@@ -9173,7 +9199,7 @@
       "awayTeam": "軟銀",
       "homeTeam": "西武",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/fukuoka-s-hawks-MJ3q4UeB/seibu-lions-rZih28QN/#0OKnTvGi",
-      "observedAt": "2026-08-07T13:26:29+08:00",
+      "observedAt": "2026-08-07T13:45:06+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -9182,7 +9208,7 @@
             "away": 1.61
           },
           "active": {
-            "at": "2026-08-07T13:26:29+08:00",
+            "at": "2026-08-07T13:45:06+08:00",
             "home": 2.21,
             "away": 1.62
           }
@@ -9196,7 +9222,7 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-08-07T13:26:29+08:00",
+            "at": "2026-08-07T13:45:06+08:00",
             "home": 1.65,
             "away": 2.07,
             "line": 1.5,
@@ -9211,7 +9237,7 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-08-07T13:26:29+08:00",
+            "at": "2026-08-07T13:45:06+08:00",
             "over": 1.87,
             "under": 1.8,
             "line": 7.5
@@ -9241,7 +9267,7 @@
       "awayTeam": "中日",
       "homeTeam": "阪神",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chunichi-dragons-4byX4At5/hanshin-tigers-4rgl3lBH/#v9pDmva6",
-      "observedAt": "2026-08-07T13:26:29+08:00",
+      "observedAt": "2026-08-07T13:45:06+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -9291,7 +9317,7 @@
       "awayTeam": "歐力士",
       "homeTeam": "羅德",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chiba-lotte-marines-KKlHBnlo/orix-buffaloes-lphNjEdn/#GvREpSke",
-      "observedAt": "2026-08-07T13:26:29+08:00",
+      "observedAt": "2026-08-07T13:45:06+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -9341,7 +9367,7 @@
       "awayTeam": "樂天",
       "homeTeam": "火腿",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/nippon-ham-fighters-AyxT5jRb/rakuten-gold-eagles-OS9BZkth/#YHS05yOp",
-      "observedAt": "2026-08-07T13:26:29+08:00",
+      "observedAt": "2026-08-07T13:45:06+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -9350,7 +9376,7 @@
             "away": 3.15
           },
           "active": {
-            "at": "2026-08-07T13:26:29+08:00",
+            "at": "2026-08-07T13:45:06+08:00",
             "home": 1.34,
             "away": 3.1
           }
@@ -9364,7 +9390,7 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-08-07T13:26:29+08:00",
+            "at": "2026-08-07T13:45:06+08:00",
             "home": 1.69,
             "away": 2.01,
             "line": -1.5,
@@ -9379,7 +9405,7 @@
             "line": 8.5
           },
           "active": {
-            "at": "2026-08-07T13:26:29+08:00",
+            "at": "2026-08-07T13:45:06+08:00",
             "over": 1.84,
             "under": 1.83,
             "line": 8.5
@@ -9409,7 +9435,7 @@
       "awayTeam": "中日",
       "homeTeam": "阪神",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chunichi-dragons-4byX4At5/hanshin-tigers-4rgl3lBH/#t0HVWhDD",
-      "observedAt": "2026-08-07T13:26:29+08:00",
+      "observedAt": "2026-08-07T13:45:06+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -9522,6 +9548,142 @@
         "ever": false,
         "transitions": [],
         "scanFavorite": null
+      }
+    },
+    "wnba|2026-08-08|美夢|神秘|07:30|MFoEQqn1": {
+      "eventId": "MFoEQqn1",
+      "league": "wnba",
+      "date": "2026-08-08",
+      "startTime": "07:30",
+      "startISO": "2026-08-08T07:30:00+08:00",
+      "awayTeam": "美夢",
+      "homeTeam": "神秘",
+      "sourceUrl": "https://www.oddsportal.com/basketball/h2h/atlanta-dream-z1xwbiiQ/washington-mystics-Akq9bDMD/#MFoEQqn1",
+      "observedAt": "2026-08-07T13:45:06+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T12:48:00+08:00",
+            "home": 2.29,
+            "away": 1.6
+          },
+          "active": {
+            "at": "2026-08-07T13:45:06+08:00",
+            "home": 2.35,
+            "away": 1.57
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T12:48:00+08:00",
+            "home": 1.89,
+            "away": 1.88,
+            "line": 3.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-07T13:45:06+08:00",
+            "home": 1.9,
+            "away": 1.87,
+            "line": 3.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T12:48:00+08:00",
+            "over": 1.89,
+            "under": 1.87,
+            "line": 170.5
+          },
+          "active": {
+            "at": "2026-08-07T13:45:06+08:00",
+            "over": 1.84,
+            "under": 1.93,
+            "line": 170.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "wnba|2026-08-08|金州|飛翼|09:30|fTqMONGD": {
+      "eventId": "fTqMONGD",
+      "league": "wnba",
+      "date": "2026-08-08",
+      "startTime": "09:30",
+      "startISO": "2026-08-08T09:30:00+08:00",
+      "awayTeam": "金州",
+      "homeTeam": "飛翼",
+      "sourceUrl": "https://www.oddsportal.com/basketball/h2h/dallas-wings-WlAAvRyL/golden-state-valkyries-jJ2zZYLs/#fTqMONGD",
+      "observedAt": "2026-08-07T13:45:06+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T12:35:00+08:00",
+            "home": 1.84,
+            "away": 1.93
+          },
+          "active": {
+            "at": "2026-08-07T13:45:06+08:00",
+            "home": 1.83,
+            "away": 1.95
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T12:35:00+08:00",
+            "home": 1.94,
+            "away": 1.83,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-07T13:45:06+08:00",
+            "home": 1.93,
+            "away": 1.84,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T12:35:00+08:00",
+            "over": 1.92,
+            "under": 1.85,
+            "line": 163.5
+          },
+          "active": {
+            "at": "2026-08-07T13:45:06+08:00",
+            "over": 1.87,
+            "under": 1.9,
+            "line": 163.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
       }
     }
   }
