@@ -2,7 +2,7 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-08-07T13:45:06+08:00",
+  "updatedAt": "2026-08-07T15:15:37+08:00",
   "health": {
     "scheduled": 60,
     "discovered": 9,
@@ -8753,7 +8753,7 @@
       "awayTeam": "軟銀",
       "homeTeam": "西武",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/fukuoka-s-hawks-MJ3q4UeB/seibu-lions-rZih28QN/#0OKnTvGi",
-      "observedAt": "2026-08-07T13:45:06+08:00",
+      "observedAt": "2026-08-07T15:15:37+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -8762,9 +8762,9 @@
             "away": 1.61
           },
           "active": {
-            "at": "2026-08-07T13:45:06+08:00",
-            "home": 2.21,
-            "away": 1.62
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 2.26,
+            "away": 1.65
           }
         },
         "hd": {
@@ -8776,11 +8776,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-08-07T13:45:06+08:00",
-            "home": 1.65,
-            "away": 2.07,
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.68,
+            "away": 2.11,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-08-07T08:10:00+08:00",
+            "home": 1.66,
+            "away": 2.06,
+            "line": 1.5,
+            "favorite": "away",
+            "final": false
           }
         },
         "ou": {
@@ -8791,10 +8799,17 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-08-07T13:45:06+08:00",
-            "over": 1.87,
-            "under": 1.8,
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.9,
+            "under": 1.84,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-08-07T10:54:00+08:00",
+            "over": 1.88,
+            "under": 1.79,
+            "line": 7.5,
+            "final": false
           }
         }
       },
@@ -8808,8 +8823,29 @@
       },
       "stakeSwap": {
         "ever": false,
-        "transitions": [],
-        "scanFavorite": "away"
+        "activeSide": [
+          "away"
+        ],
+        "struckSide": [
+          "away"
+        ],
+        "lines": [
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "07,08,2026,08,01"
+          },
+          {
+            "line": 2.5,
+            "active": false,
+            "created": "07,08,2026,08,01"
+          },
+          {
+            "line": 3.5,
+            "active": false,
+            "created": "07,08,2026,08,01"
+          }
+        ]
       }
     },
     "npb|2026-08-07|樂天|火腿|17:00|YHS05yOp": {
@@ -8821,7 +8857,7 @@
       "awayTeam": "樂天",
       "homeTeam": "火腿",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/nippon-ham-fighters-AyxT5jRb/rakuten-gold-eagles-OS9BZkth/#YHS05yOp",
-      "observedAt": "2026-08-07T13:45:06+08:00",
+      "observedAt": "2026-08-07T15:15:37+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -8830,9 +8866,9 @@
             "away": 3.15
           },
           "active": {
-            "at": "2026-08-07T13:45:06+08:00",
-            "home": 1.34,
-            "away": 3.1
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.36,
+            "away": 3.2
           }
         },
         "hd": {
@@ -8844,11 +8880,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-08-07T13:45:06+08:00",
-            "home": 1.69,
-            "away": 2.01,
-            "line": -1.5,
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.71,
+            "away": 2.05,
+            "line": 1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-07T12:47:00+08:00",
+            "home": 1.68,
+            "away": 2.02,
+            "line": 1.5,
+            "favorite": "home",
+            "final": false
           }
         },
         "ou": {
@@ -8859,10 +8903,17 @@
             "line": 8.5
           },
           "active": {
-            "at": "2026-08-07T13:45:06+08:00",
-            "over": 1.84,
-            "under": 1.83,
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.88,
+            "under": 1.86,
             "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-07T12:47:00+08:00",
+            "over": 1.83,
+            "under": 1.84,
+            "line": 8.5,
+            "final": false
           }
         }
       },
@@ -8876,8 +8927,29 @@
       },
       "stakeSwap": {
         "ever": false,
-        "transitions": [],
-        "scanFavorite": "home"
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [
+          "home"
+        ],
+        "lines": [
+          {
+            "line": -3.5,
+            "active": false,
+            "created": "07,08,2026,08,01"
+          },
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "07,08,2026,08,01"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "07,08,2026,08,01"
+          }
+        ]
       }
     },
     "wnba|2026-08-07|火花|山貓|09:00|r7izYRgR": {
@@ -9088,6 +9160,610 @@
         "ever": false,
         "transitions": [],
         "scanFavorite": "home"
+      }
+    },
+    "npb|2026-08-07|歐力士|羅德|17:00|fNDeRIp4": {
+      "eventId": "fNDeRIp4",
+      "league": "npb",
+      "date": "2026-08-07",
+      "startTime": "17:00",
+      "startISO": "2026-08-07T17:00:00+08:00",
+      "awayTeam": "歐力士",
+      "homeTeam": "羅德",
+      "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/chiba-lotte-marines-orix-buffaloes/fNDeRIp4/",
+      "observedAt": "2026-08-07T15:15:37+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T22:26:00+08:00",
+            "home": 1.76,
+            "away": 1.99
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.81,
+            "away": 2.01
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T22:30:00+08:00",
+            "home": 2.48,
+            "away": 1.46,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 2.55,
+            "away": 1.48,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-07T08:09:00+08:00",
+            "home": 2.48,
+            "away": 1.46,
+            "line": 1.5,
+            "favorite": "home",
+            "final": false
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T22:30:00+08:00",
+            "over": 1.92,
+            "under": 1.76,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.98,
+            "under": 1.77,
+            "line": 8.5
+          },
+          "close": {
+            "at": "2026-08-07T07:02:00+08:00",
+            "over": 1.95,
+            "under": 1.73,
+            "line": 8.5,
+            "final": false
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": true,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [
+          "away",
+          "home"
+        ],
+        "lines": [
+          {
+            "line": -2.5,
+            "active": false,
+            "created": "07,08,2026,08,01"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "07,08,2026,08,01"
+          },
+          {
+            "line": 1.5,
+            "active": false,
+            "created": "07,08,2026,08,01"
+          }
+        ]
+      }
+    },
+    "npb|2026-08-07|中日|阪神|17:00|lpiUAc0N": {
+      "eventId": "lpiUAc0N",
+      "league": "npb",
+      "date": "2026-08-07",
+      "startTime": "17:00",
+      "startISO": "2026-08-07T17:00:00+08:00",
+      "awayTeam": "中日",
+      "homeTeam": "阪神",
+      "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/hanshin-tigers-chunichi-dragons/lpiUAc0N/",
+      "observedAt": "2026-08-07T15:15:37+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T22:27:00+08:00",
+            "home": 1.53,
+            "away": 2.4
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.5,
+            "away": 2.6
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T22:32:00+08:00",
+            "home": 2.19,
+            "away": 1.58,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 2.13,
+            "away": 1.66,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-07T14:04:00+08:00",
+            "home": 2.13,
+            "away": 1.61,
+            "line": 1.5,
+            "favorite": "home",
+            "final": false
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T22:42:00+08:00",
+            "over": 1.7,
+            "under": 1.99,
+            "line": 5.5
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.74,
+            "under": 2.02,
+            "line": 5.5
+          },
+          "close": {
+            "at": "2026-08-07T13:56:00+08:00",
+            "over": 1.72,
+            "under": 1.97,
+            "line": 5.5,
+            "final": false
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [
+          "home"
+        ],
+        "lines": [
+          {
+            "line": -3.5,
+            "active": false,
+            "created": "07,08,2026,08,02"
+          },
+          {
+            "line": -2.5,
+            "active": false,
+            "created": "07,08,2026,08,02"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "07,08,2026,08,02"
+          }
+        ]
+      }
+    },
+    "npb|2026-08-07|廣島|橫濱|17:00|tKmMCJVA": {
+      "eventId": "tKmMCJVA",
+      "league": "npb",
+      "date": "2026-08-07",
+      "startTime": "17:00",
+      "startISO": "2026-08-07T17:00:00+08:00",
+      "awayTeam": "廣島",
+      "homeTeam": "橫濱",
+      "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/yokohama-baystars-hiroshima-carp/tKmMCJVA/",
+      "observedAt": "2026-08-07T15:15:37+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": null,
+            "home": 1.43,
+            "away": 2.7
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.43,
+            "away": 2.85
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T22:31:00+08:00",
+            "home": 1.88,
+            "away": 1.79,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.87,
+            "away": 1.87,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-07T10:27:00+08:00",
+            "home": 1.88,
+            "away": 1.8,
+            "line": 1.5,
+            "favorite": "home",
+            "final": false
+          }
+        },
+        "ou": {
+          "open": {
+            "at": null,
+            "over": 1.56,
+            "under": 2.32,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.56,
+            "under": 2.32,
+            "line": 6.5
+          },
+          "close": {
+            "at": null,
+            "over": 1.56,
+            "under": 2.32,
+            "line": 6.5,
+            "final": false
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": -3.5,
+            "active": true,
+            "created": "07,08,2026,08,15"
+          },
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "07,08,2026,08,15"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "07,08,2026,08,15"
+          }
+        ]
+      }
+    },
+    "npb|2026-08-07|養樂多|巨人|17:00|z7ILEu1b": {
+      "eventId": "z7ILEu1b",
+      "league": "npb",
+      "date": "2026-08-07",
+      "startTime": "17:00",
+      "startISO": "2026-08-07T17:00:00+08:00",
+      "awayTeam": "養樂多",
+      "homeTeam": "巨人",
+      "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/yomiuri-giants-yakult-swallows/z7ILEu1b/",
+      "observedAt": "2026-08-07T15:15:37+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-06T22:27:00+08:00",
+            "home": 1.65,
+            "away": 2.16
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.61,
+            "away": 2.34
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-06T22:32:00+08:00",
+            "home": 2.41,
+            "away": 1.48,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 2.36,
+            "away": 1.55,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-07T12:32:00+08:00",
+            "home": 2.3,
+            "away": 1.51,
+            "line": 1.5,
+            "favorite": "home",
+            "final": false
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-06T22:32:00+08:00",
+            "over": 1.96,
+            "under": 1.72,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.99,
+            "under": 1.76,
+            "line": 6.5
+          },
+          "close": {
+            "at": "2026-08-07T06:59:00+08:00",
+            "over": 1.94,
+            "under": 1.74,
+            "line": 6.5,
+            "final": false
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [
+          "home"
+        ],
+        "lines": [
+          {
+            "line": -3.5,
+            "active": false,
+            "created": "07,08,2026,08,02"
+          },
+          {
+            "line": -2.5,
+            "active": false,
+            "created": "07,08,2026,08,02"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "07,08,2026,08,02"
+          }
+        ]
+      }
+    },
+    "cpbl|2026-08-07|統一|富邦|18:35|8KFlRe0S": {
+      "eventId": "8KFlRe0S",
+      "league": "cpbl",
+      "date": "2026-08-07",
+      "startTime": "18:35",
+      "startISO": "2026-08-07T18:35:00+08:00",
+      "awayTeam": "統一",
+      "homeTeam": "富邦",
+      "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/fubon-guardians-uni-lions/8KFlRe0S/",
+      "observedAt": "2026-08-07T15:15:37+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-07T03:37:00+08:00",
+            "home": 1.96,
+            "away": 1.76
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.9,
+            "away": 1.81
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-07T03:41:00+08:00",
+            "home": 1.51,
+            "away": 2.4,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.46,
+            "away": 2.55,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-07T03:41:00+08:00",
+            "over": 1.84,
+            "under": 1.87,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.86,
+            "under": 1.84,
+            "line": 6.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "away"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "07,08,2026,08,15"
+          }
+        ]
+      }
+    },
+    "cpbl|2026-08-07|味全|樂天|18:35|z7HtTHVF": {
+      "eventId": "z7HtTHVF",
+      "league": "cpbl",
+      "date": "2026-08-07",
+      "startTime": "18:35",
+      "startISO": "2026-08-07T18:35:00+08:00",
+      "awayTeam": "味全",
+      "homeTeam": "樂天",
+      "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/rakuten-monkeys-wei-chuan-dragons/z7HtTHVF/",
+      "observedAt": "2026-08-07T15:15:37+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-07T05:47:00+08:00",
+            "home": 1.88,
+            "away": 1.82
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 2.01,
+            "away": 1.71
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-07T06:51:00+08:00",
+            "home": 1.51,
+            "away": 2.38,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.52,
+            "away": 2.36,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": null,
+            "over": 2.01,
+            "under": 1.72,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 2.01,
+            "under": 1.71,
+            "line": 6.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "away"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "07,08,2026,05,13"
+          }
+        ]
+      }
+    },
+    "cpbl|2026-08-07|兄弟|台鋼|18:35|U9EYUw13": {
+      "eventId": "U9EYUw13",
+      "league": "cpbl",
+      "date": "2026-08-07",
+      "startTime": "18:35",
+      "startISO": "2026-08-07T18:35:00+08:00",
+      "awayTeam": "兄弟",
+      "homeTeam": "台鋼",
+      "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/tsg-hawks-chinatrust-brothers/U9EYUw13/",
+      "observedAt": "2026-08-07T15:15:37+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-07T03:21:00+08:00",
+            "home": 1.82,
+            "away": 1.88
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 1.49,
+            "away": 2.44
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-07T04:15:00+08:00",
+            "home": 2.65,
+            "away": 1.43,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "home": 2.08,
+            "away": 1.67,
+            "line": 1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-07T03:24:00+08:00",
+            "over": 1.86,
+            "under": 1.85,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-08-07T15:15:37+08:00",
+            "over": 1.71,
+            "under": 2.02,
+            "line": 6.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": true,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [
+          "away"
+        ],
+        "lines": [
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "07,08,2026,07,50"
+          },
+          {
+            "line": 1.5,
+            "active": false,
+            "created": "06,08,2026,20,41"
+          }
+        ]
       }
     }
   }
