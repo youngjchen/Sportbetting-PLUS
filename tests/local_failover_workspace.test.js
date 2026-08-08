@@ -186,3 +186,34 @@ test('classifyFailoverDirt tolerates the leading space trimmed off the first por
   const renamed = classifyFailoverDirt(['R  data/old.json -> data/oddsportal_summary.json']);
   assert.deepEqual(renamed.owned, ['data/oddsportal_summary.json']);
 });
+
+// 2026-08-09 卡死事故：上一輪 rebase 中途死掉留下 .git/rebase-merge，
+// 之後每輪都撞「already a rebase-merge directory」→ 連續 33 小時沒抓任何資料。
+test('a leftover rebase directory is cleaned up instead of wedging every run', () => {
+  const fs = require('node:fs'), os = require('node:os'), pathMod = require('node:path');
+  const { ensureFailoverWorkspace } = require('../local_failover_workspace.js');
+  const root = fs.mkdtempSync(pathMod.join(os.tmpdir(), 'bbwedge-'));
+  const origin = pathMod.join(root, 'origin.git');
+  const ws = pathMod.join(root, 'ws');
+  const run = (args, cwd) => require('node:child_process').execFileSync('git', args, { cwd, stdio: 'ignore' });
+  try {
+    // 建一個最小的上游 repo
+    fs.mkdirSync(origin); run(['init', '--bare', '-b', 'main'], origin);
+    const seed = pathMod.join(root, 'seed');
+    fs.mkdirSync(seed); run(['init', '-b', 'main'], seed);
+    run(['config', 'user.email', 't@t'], seed); run(['config', 'user.name', 't'], seed);
+    fs.writeFileSync(pathMod.join(seed, 'a.txt'), 'one');
+    run(['add', '-A'], seed); run(['commit', '-m', 'seed'], seed);
+    run(['remote', 'add', 'origin', origin], seed); run(['push', 'origin', 'main'], seed);
+
+    ensureFailoverWorkspace({ originUrl: origin, workspaceDir: ws });   // 首次 clone
+    // 偽造上一輪殘留的 rebase 目錄
+    fs.mkdirSync(pathMod.join(ws, '.git', 'rebase-merge'), { recursive: true });
+    fs.writeFileSync(pathMod.join(ws, '.git', 'rebase-merge', 'head-name'), 'refs/heads/main');
+
+    ensureFailoverWorkspace({ originUrl: origin, workspaceDir: ws });   // 不該丟例外
+    assert.equal(fs.existsSync(pathMod.join(ws, '.git', 'rebase-merge')), false, '殘留的 rebase 應被收拾');
+  } finally {
+    try { fs.rmSync(root, { recursive: true, force: true }); } catch (_) {}
+  }
+});

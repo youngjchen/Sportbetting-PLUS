@@ -248,38 +248,54 @@ def discover_season(league: str, team_zh, season_start: str, today_tw: datetime 
 
 def detect_offset_hours(schedule: Iterable[dict[str, Any]], listing: Iterable[dict[str, Any]],
                         min_agree: int = 3) -> float:
-    """用我們自己的賽程反推「站方時間→台灣時間」的時差。
-    至少 min_agree 場一致才採用；不一致就丟例外（寧可不抓，也不要抓錯日期）。"""
-    want: dict[tuple[str, str], str] = {}
+    """用已知開賽時間（我們的賽程檔／官方來源）反推「站方時間→台灣時間」的時差。
+
+    2026-08-09 修正：同一組對戰在連續系列賽會出現在好幾天，若把 (客,主) 當唯一鍵
+    就會取到別天的時間，算出一堆互相矛盾的時差（實例 2.5/4.42/4.5/5.5）而整輪中止。
+    改成每組對戰保留所有候選時間，各場投票，取得票最高者；票數需達 min_agree
+    且不得與第二名同票，否則拒絕採用（寧可不抓也不要抓錯日期）。
+    """
+    want: dict[tuple[str, str], set[str]] = {}
     for row in schedule or []:
         away, home = row.get("awayTeam"), row.get("homeTeam")
         text = str(row.get("gameTime") or row.get("time") or "")
         hit = re.search(r"(\d{1,2}):(\d{2})", text)
         if away and home and hit:
-            want[(away, home)] = f"{int(hit.group(1)):02d}:{hit.group(2)}"
-    diffs: list[float] = []
+            want.setdefault((away, home), set()).add(f"{int(hit.group(1)):02d}:{hit.group(2)}")
+
+    def norm(value: float) -> float:
+        # 跨午夜：站方 23:40 對應台灣隔天 06:40 實際是 +7h，直接相減會得 −17h
+        while value <= -12:
+            value += 24
+        while value > 12:
+            value -= 24
+        return round(value, 2)
+
+    votes: dict[float, int] = {}
+    matched = 0
     for game in listing or []:
-        key = (game.get("awayZh"), game.get("homeZh"))
-        target = want.get(key)
+        targets = want.get((game.get("awayZh"), game.get("homeZh")))
         site = game.get("siteStart")
-        if not target or not isinstance(site, datetime):
+        if not targets or not isinstance(site, datetime):
             continue
-        th, tm = int(target[:2]), int(target[3:5])
-        # 只比對時分會在跨午夜時算錯：站方 23:40 → 台灣 06:40 實際是 +7h，
-        # 直接相減卻得 -17h（2026-08-07 深夜實例，被官方時間對照擋下）。
-        # 正規化到 (-12, +12]，因為真實時區差不可能超出這個範圍。
-        raw = ((th * 60 + tm) - (site.hour * 60 + site.minute)) / 60.0
-        while raw <= -12:
-            raw += 24
-        while raw > 12:
-            raw -= 24
-        diffs.append(raw)
-    if len(diffs) < min_agree:
-        raise RuntimeError(f"可比對場次僅 {len(diffs)} 場（需 {min_agree}），拒絕猜測時差")
-    uniq = set(round(d, 2) for d in diffs)
-    if len(uniq) != 1:
-        raise RuntimeError(f"時差不一致 {sorted(uniq)}，拒絕採用")
-    return diffs[0]
+        matched += 1
+        seen = set()
+        for target in targets:
+            th, tm = int(target[:2]), int(target[3:5])
+            value = norm(((th * 60 + tm) - (site.hour * 60 + site.minute)) / 60.0)
+            if value in seen:
+                continue
+            seen.add(value)
+            votes[value] = votes.get(value, 0) + 1
+    if not votes:
+        raise RuntimeError(f"可比對場次僅 {matched} 場（需 {min_agree}），拒絕猜測時差")
+    ranked = sorted(votes.items(), key=lambda kv: -kv[1])
+    best, support = ranked[0]
+    if support < min_agree:
+        raise RuntimeError(f"最高票時差 {best}h 只有 {support} 場支持（需 {min_agree}），拒絕採用")
+    if len(ranked) > 1 and ranked[1][1] == support:
+        raise RuntimeError(f"時差同票無法決定：{ranked[:2]}，拒絕採用")
+    return best
 
 
 # ── 探索 ──────────────────────────────────────────────────────────────

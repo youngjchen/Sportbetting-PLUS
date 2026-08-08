@@ -108,6 +108,21 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   }
 
   git(['fetch', 'origin', 'main', '--prune'], workspaceDir);
+  // 2026-08-09 卡死事故：上一輪的 rebase 中途死掉，留下 .git/rebase-merge，
+  // 之後每 5 分鐘的排程一進來就撞「already a rebase-merge directory」而整輪失敗
+  // ——從 8/7 14:35 起連續 33 小時完全沒抓資料，直到使用者發現 8/9 初盤沒填。
+  // 這個 clone 是可重建的產出區，殘留的 rebase 沒有保留價值：先收拾再繼續。
+  const rebaseDir = path.join(workspaceDir, '.git', 'rebase-merge');
+  const rebaseApply = path.join(workspaceDir, '.git', 'rebase-apply');
+  if (fs.existsSync(rebaseDir) || fs.existsSync(rebaseApply)) {
+    console.warn('[failover workspace] 偵測到上一輪殘留的 rebase，自動收拾後重跑');
+    try { git(['rebase', '--abort'], workspaceDir); }
+    catch (_) {
+      try { fs.rmSync(rebaseDir, { recursive: true, force: true }); } catch (_) {}
+      try { fs.rmSync(rebaseApply, { recursive: true, force: true }); } catch (_) {}
+    }
+    git(['reset', '--hard', 'origin/main'], workspaceDir);   // 產出以雲端為準，本機殘留丟掉
+  }
   git(['rebase', 'origin/main'], workspaceDir);
   return workspaceDir;
 }

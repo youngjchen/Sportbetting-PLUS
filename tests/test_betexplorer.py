@@ -238,3 +238,34 @@ class OffsetMidnightTests(unittest.TestCase):
             {"awayZh": "紅人", "homeZh": "國民", "siteStart": datetime(2026, 8, 7, 23, 45)},
         ]
         self.assertEqual(detect_offset_hours(schedule, listing), 7.0)
+
+
+class OffsetSeriesCollisionTests(unittest.TestCase):
+    """2026-08-09 事故：連續系列賽同一組對戰會出現在好幾天，
+    若把 (客,主) 當唯一鍵就取到別天的時間，算出 2.5/4.42/4.5/5.5 這種互相矛盾的時差
+    → 整輪中止、33 小時沒抓資料。改成多候選投票，取得票最高者。"""
+
+    def _listing(self):
+        return [
+            {"awayZh": "勇士", "homeZh": "洋基", "siteStart": datetime(2026, 8, 8, 20, 5)},
+            {"awayZh": "運動家", "homeZh": "紅襪", "siteStart": datetime(2026, 8, 8, 21, 10)},
+            {"awayZh": "天使", "homeZh": "馬林魚", "siteStart": datetime(2026, 8, 8, 21, 10)},
+            {"awayZh": "藍鳥", "homeZh": "費城人", "siteStart": datetime(2026, 8, 8, 23, 5)},
+        ]
+
+    def test_series_duplicates_do_not_break_detection(self):
+        # 每組對戰都有「昨天」與「今天」兩個時間；正確時差 +7 應該勝出
+        schedule = []
+        for away, home, right, wrong in (("勇士", "洋基", "03:05", "07:05"),
+                                         ("運動家", "紅襪", "04:10", "07:10"),
+                                         ("天使", "馬林魚", "04:10", "07:10"),
+                                         ("藍鳥", "費城人", "06:05", "06:40")):
+            schedule.append({"awayTeam": away, "homeTeam": home, "time": right})
+            schedule.append({"awayTeam": away, "homeTeam": home, "time": wrong})
+        self.assertEqual(detect_offset_hours(schedule, self._listing()), 7.0)
+
+    def test_refuses_on_tie(self):
+        schedule = [{"awayTeam": "勇士", "homeTeam": "洋基", "time": "03:05"},
+                    {"awayTeam": "運動家", "homeTeam": "紅襪", "time": "05:10"}]
+        with self.assertRaises(RuntimeError):
+            detect_offset_hours(schedule, self._listing())
