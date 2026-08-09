@@ -2,13 +2,15 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-08-09T21:55:14+08:00",
+  "updatedAt": "2026-08-09T22:00:26+08:00",
   "health": {
-    "scheduled": 11,
-    "discovered": 5,
-    "succeeded": 5,
-    "failed": 0,
-    "errors": []
+    "scheduled": 7,
+    "discovered": 3,
+    "succeeded": 2,
+    "failed": 1,
+    "errors": [
+      "wnba 4fs1y10J: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -14820,6 +14822,142 @@
             "created": "09,08,2026,12,38"
           }
         ]
+      }
+    },
+    "wnba|2026-08-10|王牌|自由|00:30|CnPgwNV6": {
+      "eventId": "CnPgwNV6",
+      "league": "wnba",
+      "date": "2026-08-10",
+      "startTime": "00:30",
+      "startISO": "2026-08-10T00:30:00+08:00",
+      "awayTeam": "王牌",
+      "homeTeam": "自由",
+      "sourceUrl": "https://www.oddsportal.com/basketball/h2h/las-vegas-aces-nZjYLTCd/new-york-liberty-h4iAv3Jl/#CnPgwNV6",
+      "observedAt": "2026-08-09T22:00:26+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-09T03:21:00+08:00",
+            "home": 1.87,
+            "away": 1.9
+          },
+          "active": {
+            "at": "2026-08-09T22:00:26+08:00",
+            "home": 1.25,
+            "away": 3.85
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-09T06:09:00+08:00",
+            "home": 2.02,
+            "away": 1.77,
+            "line": -9.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-08-09T22:00:26+08:00",
+            "home": 1.94,
+            "away": 1.84,
+            "line": -9.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-09T06:09:00+08:00",
+            "over": 1.8,
+            "under": 1.98,
+            "line": 177.5
+          },
+          "active": {
+            "at": "2026-08-09T22:00:26+08:00",
+            "over": 1.9,
+            "under": 1.87,
+            "line": 177.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "wnba|2026-08-10|金州|火花|07:00|4GrIQ43b": {
+      "eventId": "4GrIQ43b",
+      "league": "wnba",
+      "date": "2026-08-10",
+      "startTime": "07:00",
+      "startISO": "2026-08-10T07:00:00+08:00",
+      "awayTeam": "金州",
+      "homeTeam": "火花",
+      "sourceUrl": "https://www.oddsportal.com/basketball/h2h/golden-state-valkyries-jJ2zZYLs/los-angeles-sparks-Ia6UdBZF/#4GrIQ43b",
+      "observedAt": "2026-08-09T22:00:26+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-08-08T11:56:00+08:00",
+            "home": 2.8,
+            "away": 1.42
+          },
+          "active": {
+            "at": "2026-08-09T22:00:26+08:00",
+            "home": 3.05,
+            "away": 1.37
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-08-08T11:56:00+08:00",
+            "home": 1.94,
+            "away": 1.84,
+            "line": 5.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-08-09T22:00:26+08:00",
+            "home": 2.05,
+            "away": 1.75,
+            "line": 5.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-08-08T12:11:00+08:00",
+            "over": 1.89,
+            "under": 1.88,
+            "line": 169.5
+          },
+          "active": {
+            "at": "2026-08-09T22:00:26+08:00",
+            "over": 1.89,
+            "under": 1.89,
+            "line": 169.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
       }
     }
   }
