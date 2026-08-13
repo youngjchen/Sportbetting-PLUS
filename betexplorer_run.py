@@ -23,7 +23,10 @@ import betexplorer as BE
 import official_times as OT
 
 TW = BE.TW
-HD_CLOSE_LEAD_MIN = 150       # 讓分/大小的收盤切點＝開賽前 150 分（避開 Stake 擴盤；使用者 8/5 拍板）
+# 2026-08-13 使用者拍板：讓分/大小收盤＝【開賽前最後一組】（與獨贏同義）。
+# 擴盤造成的多線歧義不靠時間切點解決，改「照卡片上的讓分線取對應賠率」
+# （_active_line 本來就挑絕對值最小＝卡片 ±1.5 主盤）。舊的 T−150 規則作廢。
+HD_CLOSE_LEAD_MIN = 0
 
 
 def _team_zh():
@@ -127,13 +130,12 @@ def collect(game, offset, now_tw):
                                "line": line, "favorite": favorite}
         except (TypeError, ValueError):
             pass
-        cutoff = start_tw - timedelta(minutes=HD_CLOSE_LEAD_MIN)
-        if now_tw >= cutoff:
-            ch, cat = _pick(BE.archive_history(first), first, offset, year_hint, cutoff)
-            ca, _ = _pick(BE.archive_history(second), second, offset, year_hint, cutoff)
+        if started:
+            ch, cat = _pick(BE.archive_history(first), first, offset, year_hint, start_tw)
+            ca, _ = _pick(BE.archive_history(second), second, offset, year_hint, start_tw)
             if ch is not None and ca is not None:
                 block["close"] = {"at": cat, "home": ch, "away": ca, "line": line,
-                                  "favorite": favorite, "final": started}
+                                  "favorite": favorite, "final": True}
         markets["hd"] = block
 
     ou = BE.stake_lines(game["matchId"], "ou")
@@ -149,13 +151,12 @@ def collect(game, offset, now_tw):
                                "under": float(under_cell.get("data-odd")), "line": main_ou["line"]}
         except (TypeError, ValueError):
             pass
-        cutoff = start_tw - timedelta(minutes=HD_CLOSE_LEAD_MIN)
-        if now_tw >= cutoff:
-            co, cat = _pick(BE.archive_history(over_cell), over_cell, offset, year_hint, cutoff)
-            cu, _ = _pick(BE.archive_history(under_cell), under_cell, offset, year_hint, cutoff)
+        if started:
+            co, cat = _pick(BE.archive_history(over_cell), over_cell, offset, year_hint, start_tw)
+            cu, _ = _pick(BE.archive_history(under_cell), under_cell, offset, year_hint, start_tw)
             if co is not None and cu is not None:
                 block["close"] = {"at": cat, "over": co, "under": cu,
-                                  "line": main_ou["line"], "final": started}
+                                  "line": main_ou["line"], "final": True}
         markets["ou"] = block
 
     return {

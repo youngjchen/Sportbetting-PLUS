@@ -25,7 +25,7 @@ from pathlib import Path
 import betexplorer as BE
 
 TW = BE.TW
-HD_CLOSE_LEAD_MIN = 150
+HD_CLOSE_LEAD_MIN = 0   # 2026-08-13 使用者拍板：收盤＝開賽前最後一組（T−150 作廢）
 LEAGUES = ("mlb", "npb", "kbo", "cpbl")
 SEASON_MONTHS = ("2026-04", "2026-05", "2026-06", "2026-07", "2026-08")
 
@@ -94,6 +94,7 @@ def _start_tw(row: dict, offset: float) -> datetime:
     防火牆：換算後若不落在該列日期當天，一律退回當日 23:59（保守切點＝當天最後一刻）。"""
     date = row["date"]
     year, month, day = (int(x) for x in date.split("-"))
+    site_date = datetime(year, month, day).date()
     fallback = datetime(year, month, day, 23, 59, tzinfo=TW)
     try:
         page = BE._open(row["url"])
@@ -104,7 +105,10 @@ def _start_tw(row: dict, offset: float) -> datetime:
             start = (BE.parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW)
         except ValueError:
             continue
-        if start.date().isoformat() == date:          # 必須是這一天，否則不是這場的時間
+        # 結果頁的日期是【站方日期】，台灣時間可能落在同一天或隔天（站方 +7h 才是台灣）。
+        # 2026-08-08 事故：舊版只接受「同一天」，美職清晨場（台灣 00:00~07:00＝站方前一晚）
+        # 全部被拒 → 退回 23:59，52% 的美職條目日期寫成前一天。
+        if start.date() in (site_date, site_date + timedelta(days=1)):
             return start
     return fallback
 
@@ -135,8 +139,10 @@ def _pick_line(lines, prefer_abs=None):
 
 
 def harvest_game(row: dict, offset: float) -> dict:
-    match_id, date = row["matchId"], row["date"]
+    match_id = row["matchId"]
     start_tw = _start_tw(row, offset)
+    # 以推導出的台灣開賽時刻為準（結果頁的日期是站方日期，清晨場會差一天）
+    date = start_tw.date().isoformat()
     year_hint = start_tw.year
     markets: dict[str, dict] = {}
 
@@ -151,7 +157,7 @@ def harvest_game(row: dict, offset: float) -> dict:
             block["close"] = {"at": ch_at, "home": ch, "away": ca, "final": True}
         markets["ml"] = block
 
-    cutoff = start_tw - timedelta(minutes=HD_CLOSE_LEAD_MIN)
+    cutoff = start_tw   # 2026-08-13：三市場收盤統一＝開賽前最後一筆
     ah = BE.stake_lines(match_id, "ah")
     swap = BE.handicap_swap(ah)
     main = _pick_line(ah, prefer_abs=1.5)          # 棒球卡片盤口＝±1.5（使用者拍板）
@@ -182,6 +188,7 @@ def harvest_game(row: dict, offset: float) -> dict:
         markets["ou"] = block
 
     return {
+        "closeSem": "v2",                       # 收盤語意版本：v2＝開賽前最後一組（2026-08-13）
         "eventId": match_id, "league": row["league"], "date": date,
         "startTime": start_tw.strftime("%H:%M"), "startISO": start_tw.isoformat(timespec="seconds"),
         "awayTeam": row["awayZh"], "homeTeam": row["homeZh"],
@@ -261,20 +268,24 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
             """齊全＝三市場都有收盤，且不存在「沒有時戳的初盤」。
             後者是舊版把收盤誤標成初盤留下的殘骸，必須重抓修正。"""
             markets = game.get("markets") or {}
+            if game.get("closeSem") != "v2":
+                return False                    # 舊語意（T−150）條目：強制重抓對齊新定義
             if not all((markets.get(k) or {}).get("close") for k in ("ml", "hd", "ou")):
                 return False
             for k in ("ml", "hd", "ou"):
                 opened = (markets.get(k) or {}).get("open")
                 if opened and opened.get("at") is None:
                     return False
+            if game.get("startTime") == "23:59":       # 抓不到真開賽時刻的退回值 → 日期可能差一天
+                return False
             return True
         have, refill = set(), set()
         for game in archive["games"].values():
             eid = game.get("eventId")
             if not eid:
                 continue
-            if _complete(game) or game.get("refilled"):
-                have.add(eid)                       # 齊全、或已補過一次就不再重抓
+            if _complete(game) or (game.get("refilled") and game.get("closeSem") == "v2"):
+                have.add(eid)                       # 齊全、或已在新語意下補過一次就不再重抓
             else:
                 refill.add(eid)
         pending = [r for r in rows if r["matchId"] not in have]
