@@ -148,7 +148,27 @@
   var CASTS_PATH = 'state/dv_casts.json.gz';
   var CASTS_API = 'https://api.github.com/repos/' + REPO + '/contents/' + CASTS_PATH;
   function castKey(e) { return (e && e.ts || '') + '|' + (e && e.officialId || '') + '|' + (e && e.market || '') + '|' + (e && e.method || ''); }
-  function readLocalCasts() { try { return JSON.parse(localStorage.getItem(CASTS_KEY) || '[]') || []; } catch (e) { return []; } }
+  // 2026-08-13 卜卦快取改存 gz:（divination-addon dv2）：這裡讀不懂 gz 會把卦當空陣列
+  // → 上傳空卦=雲端卦全滅。讀取相容 gz/純文字兩態；寫回也存 gz（省配額）。
+  async function readLocalCasts() {
+    try {
+      var raw = localStorage.getItem(CASTS_KEY) || '[]';
+      if (raw.slice(0, 3) === 'gz:') {
+        var bin = atob(raw.slice(3)); var u = new Uint8Array(bin.length);
+        for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+        var txt = await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
+        return JSON.parse(txt) || [];
+      }
+      return JSON.parse(raw) || [];
+    } catch (e) { return []; }
+  }
+  async function writeLocalCasts(list) {
+    try {
+      var buf = new Uint8Array(await new Response(new Blob([JSON.stringify(list)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+      var bin = ''; for (var i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+      localStorage.setItem(CASTS_KEY, 'gz:' + btoa(bin));
+    } catch (e) { try { localStorage.setItem(CASTS_KEY, JSON.stringify(list)); } catch (_) {} }
+  }
   function mergeCasts(a, b) {
     var m = {}, out = [];
     (a || []).concat(b || []).forEach(function (e) { if (e && e.ts) m[castKey(e)] = e; });
@@ -167,7 +187,7 @@
   // 回傳 {ok, added, total}；silent=true 時不彈窗（自動備份用）
   async function pushCasts(silent) {
     var pat = getPAT(); if (!pat) { if (!silent) alert('尚未設定 GitHub 權杖，無法備份卜卦紀錄。'); return { ok: false }; }
-    var local = readLocalCasts();
+    var local = await readLocalCasts();
     try {
       var cloud = await fetchCloudCasts(pat);
       var merged = mergeCasts(cloud, local);
@@ -186,7 +206,7 @@
       });
       if (!put.ok) throw new Error('HTTP ' + put.status);
       if (addedFromCloud > 0) {                            // 雲端有本機沒有的（另一台起的卦）→ 一併補回本機
-        try { localStorage.setItem(CASTS_KEY, JSON.stringify(merged)); } catch (e) {}
+        try { await writeLocalCasts(merged); } catch (e) {}
       }
       if (!silent) toast('卜卦紀錄已備份 ✓（雲端共 ' + merged.length + ' 筆）');
       return { ok: true, total: merged.length, added: addedFromCloud };
@@ -200,7 +220,7 @@
     var pat = getPAT();
     try {
       var cloud = await fetchCloudCasts(pat);
-      var local = readLocalCasts();
+      var local = await readLocalCasts();
       var merged = mergeCasts(cloud, local);
       var gained = merged.length - local.length;
       if (gained > 0) { try { localStorage.setItem(CASTS_KEY, JSON.stringify(merged)); } catch (e) { if (!silent) alert('卜卦紀錄寫回本機失敗（空間不足？）：' + e.message); return { ok: false }; } }

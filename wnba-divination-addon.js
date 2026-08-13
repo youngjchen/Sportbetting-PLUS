@@ -11,6 +11,36 @@
   const V = '20260713a';
   const LS_KEY = 'dvManualCastsWnba';   // 與棒球分池（整份複製版,2026-08-04）
 
+  /* ── 快取壓縮層（2026-08-13 使用者拍板：dvManualCasts 吃掉儲存空間的主嫌，壓縮但不破壞內容）──
+     存檔＝gz:+base64（同盤面主檔格式）；讀取相容三態：gz、舊版純 JSON、空。
+     所有讀寫走 dvLoad()/dvSave()（常駐記憶體，跨呼叫共用同一份），開機時舊純文字自動轉存壓縮。 */
+  let _dvCache = null;
+  async function _dvGz(str){ const buf = new Uint8Array(await new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); let bin=''; for(let i=0;i<buf.length;i+=0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i,i+0x8000)); return btoa(bin); }
+  async function _dvUnGz(b64){ const bin = atob(b64); const u = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+  function dvLoad(){
+    if(_dvCache) return _dvCache;
+    try{
+      const raw = localStorage.getItem(LS_KEY) || '[]';
+      if(raw.slice(0,3) === 'gz:'){ _dvCache = []; return _dvCache; }   // gz 由開機解壓填入；空窗期回空陣列
+      _dvCache = JSON.parse(raw) || [];
+    }catch(e){ _dvCache = []; }
+    return _dvCache;
+  }
+  function dvSave(list){
+    _dvCache = list;
+    (async () => {
+      try{ localStorage.setItem(LS_KEY, 'gz:' + await _dvGz(JSON.stringify(list))); }
+      catch(e){ try{ localStorage.setItem(LS_KEY, JSON.stringify(list)); }catch(_){} }   // 壓縮不可用就退回純文字，寧可佔空間不可掉卦
+    })();
+  }
+  (async () => {   // 開機：gz 解壓進記憶體；舊純文字轉存壓縮（內容不動）
+    try{
+      const raw = localStorage.getItem(LS_KEY) || '';
+      if(raw.slice(0,3) === 'gz:'){ _dvCache = JSON.parse(await _dvUnGz(raw.slice(3))) || []; }
+      else if(raw){ _dvCache = JSON.parse(raw) || []; dvSave(_dvCache); }
+    }catch(e){ console.warn('[卜卦快取] 解壓失敗，保留原樣不動：', e); }
+  })();
+
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
   async function loadEngine(src) { const t = await (await fetch(src + '?v=' + V)).text(); (0, eval)(t); }
 
@@ -27,7 +57,22 @@
   // 最舊的日期永遠排不進窗＝永遠查不到＝顯示未結算。快取後每場比賽一生只需查到一次
   // （快照或 API 任一來源、含日韓中職），之後離線也能結算；日期窗改最舊優先、上限 12。
   const RES_CACHE_KEY = 'dv_res_wnba_v1';   // 與棒球分池（棒球用 dv_res_v1）
-  function loadResCache() { try { return JSON.parse(localStorage.getItem(RES_CACHE_KEY) || '{}') || {}; } catch (e) { return {}; } }
+  function loadResCache() {
+    try {
+      const raw = localStorage.getItem(RES_CACHE_KEY) || '{}';
+      if (raw.slice(0, 3) === 'gz:') { _resGzBoot(raw.slice(3)); return _resCacheMem || {}; }
+      return JSON.parse(raw) || {};
+    } catch (e) { return {}; }
+  }
+  let _resCacheMem = null;
+  async function _resGzBoot(b64) { try { _resCacheMem = JSON.parse(await _dvUnGz(b64)) || {}; } catch (e) { _resCacheMem = {}; } }
+  function saveResCache(cache) {
+    _resCacheMem = cache;
+    (async () => {
+      try { localStorage.setItem(RES_CACHE_KEY, 'gz:' + await _dvGz(JSON.stringify(cache))); }
+      catch (e) { try { localStorage.setItem(RES_CACHE_KEY, JSON.stringify(cache)); } catch (_) {} }
+    })();
+  }
   // ‼️ 2026-08-04 修：整份複製棒球版時,這裡兩條結算路徑都是棒球專用——
   //   ①讀 data/pregame_data.json（棒球四聯盟檔,沒有 WNBA_* officialId）
   //   ②退回 MLB statsapi + MLB 中文隊名表（王牌/美夢不在表內）
@@ -66,7 +111,7 @@
     if (dirty) {
       const keys = Object.keys(cache);
       if (keys.length > 6000) for (const k of keys) { if (!want.has(k)) delete cache[k]; }
-      try { localStorage.setItem(RES_CACHE_KEY, JSON.stringify(cache)); } catch (e) {}
+      try { saveResCache(cache); } catch (e) {}
     }
     return res;
   }
@@ -275,7 +320,7 @@
   // 一事不二問防呆：同場＋同市場＋同起卦法已占過（含棄場）→ 鎖起卦鈕
   function alreadyCast() {
     if (!sel.game) return false;
-    try { const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+    try { const list = dvLoad().slice();
       return list.some(e => e.officialId === sel.game.officialId && e.market === sel.market && e.method === sel.method);
     } catch (_) { return false; }
   }
@@ -333,9 +378,9 @@
       // 手動卦紀錄保存（2026-07-27 修）：原本硬砍 300 筆＝約 5 天就把舊紀錄無聲擠掉，
       // 命中率母體每天縮水、數字跳動（使用者回報「只保留到 7/23」）。改 8000 筆（約 4 個月），
       // 且配額爆掉時「降級保留 + 明講」，絕不再無聲丟資料。
-      const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]'); list.unshift(entry);
+      const list = dvLoad().slice(); list.unshift(entry);
       (function saveCasts(cap) {
-        try { localStorage.setItem(LS_KEY, JSON.stringify(list.slice(0, cap))); }
+        try { dvSave(list.slice(0, cap)); }
         catch (err) {
           if (cap > 500) { saveCasts(Math.floor(cap / 2)); return; }        // 配額不足→逐級減半再試
           try { alert('⚠ 瀏覽器儲存空間已滿，占卜紀錄只能保留最近 ' + cap + ' 筆；請先匯出備份。'); } catch (_) {}
@@ -463,7 +508,7 @@
 
   async function renderStats() {
     const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中（即時對 MLB 官方結果結算）…</div></div>';
-    const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
+    const list = dvLoad().slice();
     const res = await resolveOutcomes(list);
     const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花'), qiu = list.filter(e => e.method === '求籤'), xlr = list.filter(e => e.method === '小六壬');
     let machine = { n: 0, ab: 0, big: 0, missed: 0 };
@@ -509,7 +554,7 @@
   async function renderHist() {
     const box = document.getElementById('dv-p-hist');
     box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">整理中…</div></div>';
-    const list = JSON.parse(localStorage.getItem(LS_KEY) || '[]');   // unshift 序：越前越新
+    const list = dvLoad().slice();   // unshift 序：越前越新
     const res = await resolveOutcomes(list);
     const latest = {}, counts = {};
     list.forEach((e, i) => { const k = e.method + '|' + e.officialId + '|' + e.market; if (!(k in latest)) latest[k] = i; counts[k] = (counts[k] || 0) + 1; });
@@ -571,8 +616,8 @@
         ev.stopPropagation();
         const i = +b.dataset.i, e = list[i];
         if (!confirm(`刪除這筆卦？\n${e.market}｜${e.verdict}｜${e.ts.slice(5, 16)}Z`)) return;
-        const cur = JSON.parse(localStorage.getItem(LS_KEY) || '[]');
-        cur.splice(i, 1); localStorage.setItem(LS_KEY, JSON.stringify(cur)); renderHist();
+        const cur = dvLoad().slice();
+        cur.splice(i, 1); dvSave(cur); renderHist();
       });
       det.style.display = '';
     });

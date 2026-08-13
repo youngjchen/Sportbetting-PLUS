@@ -4126,19 +4126,11 @@ canvas.addEventListener("pointerup", endGesturePointer);
 window.addEventListener("pointerdown", ()=>{ if(inertia) stopInertia(); }, true);
 // desktop wheel / trackpad zoom
 canvas.addEventListener("wheel", e=>{
+  if(RESPONSIVE) return;   // 響應式版面：滾輪 = 原生上下捲動，不縮放
   if(isInteractive(e.target)) return;
-  if(e.ctrlKey){              // Ctrl+滾輪（含觸控板捏合）＝維持原本縮放
-    if(RESPONSIVE) return;
-    e.preventDefault();
-    const factor = e.deltaY<0 ? 1.12 : 1/1.12;
-    setZoom(view.k*factor, e.clientX, e.clientY);
-    return;
-  }
-  // 2026-08-13 使用者拍板：滾輪一格＝跳一張卡片（上滾=上一張、下滾=下一張）
-  if(_navModalOpen()) return;
   e.preventDefault();
-  gotoCard._acc = (gotoCard._acc||0) + e.deltaY;
-  if(Math.abs(gotoCard._acc) >= 40){ gotoCard(gotoCard._acc>0 ? +1 : -1); gotoCard._acc = 0; }
+  const factor = e.deltaY<0 ? 1.12 : 1/1.12;
+  setZoom(view.k*factor, e.clientX, e.clientY);
 }, {passive:false});
 
 /* ---------------- date bar ---------------- */
@@ -4679,7 +4671,18 @@ function _navModalOpen(){
 }
 function gotoCard(step){
   const cards = _navCards(); if(!cards.length) return;
-  _navIdx = Math.max(0, Math.min(cards.length-1, (_navIdx<0 ? (step>0?-1:cards.length) : _navIdx) + step));
+  // 錨定＝視野中央最近的那張卡（不信任上次索引：使用者可能已用標籤列/拖曳捲到別處，
+  // 沿用舊索引會「先跳回原地再動」＝2026-08-13 回報的 BUG）。
+  const mid = window.innerHeight / 2;
+  let anchor = -1, best = Infinity;
+  cards.forEach((c, idx) => {
+    const r = c.getBoundingClientRect();
+    if(r.bottom < -window.innerHeight || r.top > window.innerHeight * 2) return;
+    const d = Math.abs((r.top + r.bottom) / 2 - mid);
+    if(d < best){ best = d; anchor = idx; }
+  });
+  if(anchor < 0) anchor = (step > 0 ? -1 : cards.length);   // 視野內沒卡＝從頭/尾進場
+  _navIdx = Math.max(0, Math.min(cards.length-1, anchor + step));
   const el = cards[_navIdx];
   el.scrollIntoView({ block:"center", behavior:"smooth" });
   cards.forEach(c=>c.classList.remove("kbd-focus"));
@@ -7748,6 +7751,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260804sync5"></script><script src="./divination-addon.js?v=20260804dv1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260813dv2"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
