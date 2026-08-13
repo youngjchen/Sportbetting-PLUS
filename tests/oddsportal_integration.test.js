@@ -184,3 +184,15 @@ test('unknown league zz is treated as wildcard so WNBA cards match', () => {
   const game = findOddsPortalGame(wnbaFeed, { type: 'match', away: '水星', home: '美夢', gameTime: '07:00', league: 'zz' }, '2026-08-06');
   assert.equal(game && game.eventId, 'w');
 });
+
+// 2026-08-13 斗山熊@韓華鷹案：板上「韓華鷹」、feed「華老鷹」互不包含 → 配對斷裂，
+// 使用者被迫手動填初收盤。同義橋必須把這對接起來，且不得放寬其他比對。
+test('hanwha synonym bridge matches both namings without loosening others', () => {
+  const kboFeed = { games: { 'kbo|2026-08-13|華老鷹|斗山熊|18:00|k1': {
+    eventId: 'k1', league: 'kbo', date: '2026-08-13', startTime: '18:00',
+    awayTeam: '華老鷹', homeTeam: '斗山熊', markets: { ml: { open: { away: 1.62, home: 2.2 } } } } } };
+  const hit = findOddsPortalGame(kboFeed, { type: 'match', away: '韓華鷹', home: '斗山熊', gameTime: '18:00', league: 'kbo' }, '2026-08-13');
+  assert.equal(hit && hit.eventId, 'k1');
+  const missSameLeague = findOddsPortalGame(kboFeed, { type: 'match', away: '樂天巨人', home: '斗山熊', gameTime: '18:00', league: 'kbo' }, '2026-08-13');
+  assert.equal(missSameLeague, null);      // 別隊不得被同義橋誤配
+});

@@ -42,10 +42,17 @@
   // 2026-08-05 阪神虎@橫濱DeNA 案：板卡用全名、OddsPortal 摘要用短名 → 嚴格相等
   // 讓亞洲場全部配不上（美職兩邊同名倖免）。改「相等或互為包含」（聯盟已先過濾，
   // 樂天金鷲/樂天桃猿等歧義由 league 隔開）。
+  // 同隊異名橋（2026-08-13 斗山熊@韓華鷹案）：板上「韓華鷹」、feed「華老鷹」
+  // 互不為子字串 → 包含式比對斷裂 → 該卡永遠配不到、初收盤都要手動填。
+  // 這裡只放「確定同隊」的異名，寧缺勿濫（樂天/巨人歧義靠 league 隔離，不進表）。
+  const TEAM_SYNONYM = { '韓華鷹': '華老鷹', '華老鷹': '韓華鷹', '韓華': '華老鷹' };
   function teamMatch(a, b) {
     const x = String(a || ''), y = String(b || '');
     if (!x || !y) return false;
-    return x === y || x.includes(y) || y.includes(x);
+    if (x === y || x.includes(y) || y.includes(x)) return true;
+    const xs = TEAM_SYNONYM[x], ys = TEAM_SYNONYM[y];
+    return !!((xs && (xs === y || y.includes(xs) || xs.includes(y))) ||
+              (ys && (ys === x || x.includes(ys) || ys.includes(x))));
   }
 
   function findOddsPortalGame(feed, card, activeDate) {
