@@ -194,7 +194,14 @@ def collect(game, offset, now_tw):
                                   "line": main_ou["line"], "final": True}
         markets["ou"] = block
 
+    bet365 = None
+    try:
+        bet365 = BE.bet365_summary(BE.bet365_lines(game["matchId"]), offset)
+    except Exception:
+        bet365 = None                      # bet365 缺列不影響其他市場（Titan 作複查備援）
+
     return {
+        "bet365": bet365,
         "eventId": game["matchId"], "league": game["league"],
         "date": start_tw.date().isoformat(), "startTime": start_tw.strftime("%H:%M"),
         "startISO": start_tw.isoformat(timespec="seconds"),
@@ -305,6 +312,8 @@ def main() -> int:
                         continue
                     slot[name] = value
             old["stakeSwap"] = entry["stakeSwap"]
+            if entry.get("bet365") is not None:
+                old["bet365"] = entry["bet365"]      # 警示條 bet365 軸（2026-08-15 拍板 BE 為主）
             old["observedAt"] = entry["observedAt"]
             updated += 1
         else:

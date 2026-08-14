@@ -412,6 +412,61 @@ def stake_lines(match_id: str, market: str, odds_html: str | None = None) -> lis
     return out
 
 
+def bet365_lines(match_id: str, odds_html: str | None = None) -> list[dict[str, Any]]:
+    """bet365 的讓分列（2026-08-15 使用者拍板：警示條 bet365 軸改以本站為主、Titan 複查）。
+    與 stake_lines 同構：line 為主隊視角（負=主讓）、active=class 無 inactive、
+    created=該列建立時戳（站方時區）。下架列＝翻轉證據。"""
+    if odds_html is None:
+        payload = _json(f"{BASE}/match-odds-old/{match_id}/0/ah/1/en/?sportname=baseball")
+        odds_html = payload.get("odds", "") if isinstance(payload, dict) else ""
+    out: list[dict[str, Any]] = []
+    for row in re.findall(r"<tr[^>]*>(.*?)</tr>", odds_html, re.S):
+        if "bet365" not in row:
+            continue
+        param = re.search(r"doubleparameter[^>]*>([^<]*)<", row)
+        cells = [dict(_ATTR_RE.findall(attrs))
+                 for attrs in re.findall(r"<td([^>]*data-odd[^>]*)>", row)]
+        if len(cells) < 2 or not param:
+            continue
+        try:
+            line = float(param.group(1))
+        except ValueError:
+            continue
+        classes = str(cells[0].get("class", "")) + " " + str(cells[1].get("class", ""))
+        out.append({
+            "line": line,
+            "active": "inactive" not in classes,
+            "created": cells[0].get("data-created"),
+            "home": cells[0].get("data-odd"), "away": cells[1].get("data-odd"),
+        })
+    return out
+
+
+def bet365_summary(lines: list[dict[str, Any]], offset: float) -> dict[str, Any] | None:
+    """壓成警示條要的形狀：現行方向＋線＋時戳；下架列全部保留當翻轉證據。
+    side：home=主讓、away=客讓（line<0 → 主讓）。"""
+    def stamp(raw):
+        if not raw:
+            return None
+        try:
+            return (parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW).isoformat(timespec="seconds")
+        except ValueError:
+            return None
+    act = [x for x in lines if x.get("active") and x.get("line")]
+    struck = [x for x in lines if not x.get("active") and x.get("line")]
+    if not act:
+        return None
+    main = sorted(act, key=lambda x: abs(x["line"]))[0]
+    side = "home" if main["line"] < 0 else "away"
+    ever = any((("home" if x["line"] < 0 else "away") != side) for x in struck)
+    return {
+        "side": side, "line": abs(main["line"]), "at": stamp(main.get("created")),
+        "flipEver": ever,
+        "struck": [{"line": x["line"], "side": "home" if x["line"] < 0 else "away",
+                    "at": stamp(x.get("created"))} for x in struck],
+    }
+
+
 def archive_history(cell: dict[str, str]) -> list[dict[str, str]] | None:
     """該格的賠率變動史（新→舊）；已下架的格沒有 data-oid，查不到。"""
     need = ("data-oid", "data-bid", "data-bt", "data-sc", "data-hcp")

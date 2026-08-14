@@ -269,3 +269,39 @@ class OffsetSeriesCollisionTests(unittest.TestCase):
                     {"awayTeam": "運動家", "homeTeam": "紅襪", "time": "05:10"}]
         with self.assertRaises(RuntimeError):
             detect_offset_hours(schedule, self._listing())
+
+
+class Bet365LinesTests(unittest.TestCase):
+    """2026-08-15 使用者拍板：警示條 bet365 軸改 BetExplorer 為主（Titan 複查）。
+    真實案例：皇家@天使 -1.5 已下架、+1.5 在架 ＝ 曾翻到天使讓又翻回皇家讓。"""
+
+    AH = '''
+<tr data-bid="16"><td class="h-text-left"><a href="/bookmaker/16/x">bet365</a></td>
+<td class="table-main__doubleparameter">-1.5</td>
+<td class="table-main__odds inactive " data-odd="2.75" data-created="14,08,2026,09,00"></td>
+<td class="table-main__odds inactive " data-odd="1.42" data-created="14,08,2026,09,00"></td></tr>
+<tr data-bid="16"><td class="h-text-left"><a href="/bookmaker/16/x">bet365</a></td>
+<td class="table-main__doubleparameter">+1.5</td>
+<td class="table-main__odds" data-odd="1.54" data-created="15,08,2026,03,10"></td>
+<td class="table-main__odds" data-odd="2.40" data-created="15,08,2026,03,10"></td></tr>
+<tr data-bid="997"><td>Stake.com</td><td class="table-main__doubleparameter">+1.5</td>
+<td class="table-main__odds" data-odd="1.54"></td><td class="table-main__odds" data-odd="2.43"></td></tr>
+'''
+
+    def test_extract_and_summarize_flip_back(self):
+        from betexplorer import bet365_lines, bet365_summary
+        lines = bet365_lines('x', odds_html=self.AH)
+        self.assertEqual(len(lines), 2)                     # Stake 列不得混入
+        s = bet365_summary(lines, 7.0)
+        self.assertEqual(s['side'], 'away')                 # +1.5＝客讓（皇家讓）
+        self.assertEqual(s['line'], 1.5)
+        self.assertTrue(s['flipEver'])                      # 下架的 -1.5＝曾翻到主讓
+        self.assertEqual(s['at'], '2026-08-15T10:10:00+08:00')   # 站方+7=台灣
+        self.assertEqual(s['struck'][0]['side'], 'home')
+
+    def test_no_active_rows_returns_none(self):
+        from betexplorer import bet365_lines, bet365_summary
+        html = self.AH.replace('class="table-main__odds" data-odd="1.54"', 'class="table-main__odds inactive" data-odd="1.54"') \
+                      .replace('class="table-main__odds" data-odd="2.40"', 'class="table-main__odds inactive" data-odd="2.40"')
+        s = bet365_summary(bet365_lines('x', odds_html=html), 7.0)
+        self.assertIsNone(s)
