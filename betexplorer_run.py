@@ -49,8 +49,12 @@ def _hist_dt(text: str, year_hint: int) -> datetime | None:
 
 
 def _pick(history, cell, offset, year_hint, cutoff_tw=None):
-    """從變動史挑一筆：cutoff 為 None → 最舊（初盤）；否則 → cutoff 之前最後一筆（收盤）。
-    回傳 (odd, iso_tw)。"""
+    """從完整賠率序列挑一筆：cutoff 為 None → 最舊（初盤）；否則 → cutoff 前最後一筆（收盤）。
+
+    2026-08-14 v3（與收割器同步修正）：archive-odds 端點只回「目前值之前的變動」，
+    真正的最後一組賠率在【儲存格 data-odd＋data-created】（開賽後凍結）。
+    只取變動史尾巴＝拿到開賽前好幾小時的價（與使用者手填收盤一致率僅 10%）。
+    完整序列 = 變動史 ＋ 儲存格現值；抽驗 25 場 v3 與使用者手填 20 場完全一致。"""
     rows = []
     for item in (history or []):
         stamp = _hist_dt(item.get("date"), year_hint)
@@ -61,13 +65,25 @@ def _pick(history, cell, offset, year_hint, cutoff_tw=None):
             rows.append((tw, float(item.get("odd"))))
         except (TypeError, ValueError):
             continue
-    if not rows:
-        try:
-            value = float(cell.get("data-odd"))
-        except (TypeError, ValueError):
-            return None, None
-        return value, None
     rows.sort()
+    try:
+        cell_val = float(cell.get("data-odd"))
+    except (TypeError, ValueError):
+        cell_val = None
+    if cell_val is not None:
+        cell_at = None
+        raw = cell.get("data-created")
+        if raw:
+            try:
+                cell_at = (BE.parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW)
+            except ValueError:
+                cell_at = None
+        if cell_at is not None and (not rows or cell_at >= rows[-1][0]):
+            rows.append((cell_at, cell_val))            # 序列最新一筆＝儲存格現值
+    if not rows:
+        if cell_val is None:
+            return None, None
+        return cell_val, None
     if cutoff_tw is None:
         stamp, odd = rows[0]
     else:
