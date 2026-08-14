@@ -315,6 +315,17 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
             # 若新結果反而缺欄位就是淨損失。
             old_game = archive["games"].get(key)
             if old_game and _score(old_game) > _score(game):
+                # 2026-08-14 修：整筆保留舊條目會讓它永遠沒有 closeSem=v2 → 每輪重抓同一批
+                # 無限空轉（實例：42 場迴圈卡死）。改逐市場合併：新 close（v2 語意）必贏，
+                # open 新的沒有才留舊的；合併完補 v2 標記，從此不再重抓。
+                for mk in ("ml", "hd", "ou"):
+                    new_b = (game.get("markets") or {}).get(mk) or {}
+                    old_b = old_game.setdefault("markets", {}).setdefault(mk, {})
+                    if new_b.get("close"):
+                        old_b["close"] = new_b["close"]
+                    if new_b.get("open") and not old_b.get("open"):
+                        old_b["open"] = new_b["open"]
+                old_game["closeSem"] = "v2"
                 old_game["refilled"] = True
                 done_count += 1
                 total_new += 1
