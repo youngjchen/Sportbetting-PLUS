@@ -775,11 +775,9 @@
   }
   #moreMenu .colbtn:hover{color:var(--ink);border-color:#46566a;background:transparent;}
   #moreMenu .colbtn.on{background:var(--lit);border-color:var(--lit);color:#1a1205;}
-  #moreMenu .leaguecolbtn{
     flex:0 0 auto;min-width:34px;padding:6px 9px;border-radius:7px;border:1px solid var(--line);
     background:transparent;color:var(--ink-dim);font-size:12px;font-weight:700;cursor:pointer;
   }
-  #moreMenu .leaguecolbtn:hover{color:var(--ink);border-color:#46566a;}
   #moreMenu .uibtn{
     flex:0 0 auto;min-width:34px;padding:6px 9px;border-radius:7px;border:1px solid var(--line);
     background:transparent;color:var(--ink-dim);font-size:13px;font-weight:700;cursor:pointer;
@@ -980,13 +978,6 @@
           <button class="sortbtn" data-sort="ml">獨贏</button>
           <button class="sortbtn" data-sort="hd">讓分</button>
           <button class="sortbtn" data-sort="tot">大小分</button>
-        </div>
-        <div class="colrow">
-          <span class="collabel">收合聯盟</span>
-          <button class="leaguecolbtn" data-lg="mlb">MLB</button>
-          <button class="leaguecolbtn" data-lg="npb">日職</button>
-          <button class="leaguecolbtn" data-lg="kbo">韓職</button>
-          <button class="leaguecolbtn" data-lg="cpbl">中職</button>
         </div>
         <div class="colrow">
           <span class="collabel">過盤率</span>
@@ -4379,9 +4370,6 @@ function collapseLeague(lg){
   save(); render();
   compactColumns();
 }
-document.querySelectorAll("#moreMenu .leaguecolbtn").forEach(b=>{
-  b.onclick = (e)=>{ e.stopPropagation(); collapseLeague(b.dataset.lg); };
-});
 
 /* ---- repack: after a card changes height, push same-column cards down so none overlap ---- */
 /* ---- relayout preserving collapse state: same row-aligned grid as autoLayout,
@@ -7751,6 +7739,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260726heal8"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260813dv2"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./odds-integration.js?v=20260814heal9"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260813dv2"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

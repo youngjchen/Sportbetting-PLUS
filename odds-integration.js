@@ -706,8 +706,15 @@
     if (menu && !document.getElementById("autoArrangeBtn")) {
       var b1 = document.createElement("button"); b1.id = "autoArrangeBtn"; b1.textContent = "⚡ 用賠率自動排今天的盤";
       b1.onclick = function (e) { e.stopPropagation(); autoArrangeFromFeed(); };
-      var anchor = document.getElementById("collapseAllBtn");   // 放到原「依聯盟排版」的位置(收合/展開全部 之前)
-      if (anchor) menu.insertBefore(b1, anchor); else menu.appendChild(b1);
+      // 2026-08-14 修：原錨 collapseAllBtn 已依使用者拍板移除，舊碼 fallback appendChild
+      // 把 ⚡ 丟到選單最底（使用者抓包）。改錨「過盤率」那一列＝回到原本第三格的位置。
+      var anchor = null;
+      var labels = menu.querySelectorAll(".collabel");
+      for (var li = 0; li < labels.length; li++) {
+        if (labels[li].textContent === "過盤率") { anchor = labels[li].parentElement; break; }
+      }
+      if (anchor) menu.insertBefore(b1, anchor);
+      else menu.insertBefore(b1, menu.children[2] || null);   // 保底：仍插在前段，绝不落底
     }
     var qb = document.getElementById("zoomctlBtns");
     if (qb && !document.getElementById("refreshOddsQuickBtn")) {
