@@ -58,33 +58,41 @@ def _hist_rows(history, year_hint, offset):
 
 
 def _open_close(cell, year_hint, offset, cutoff_tw):
-    """初盤＝變動史最舊一筆；收盤＝cutoff 前最後一筆。
+    """初盤與收盤。
 
-    2026-08-07 修正：查不到變動史時（該列已下架且無 data-oid），我們手上只有
-    「最後一筆賠率＋它的建立時間」。那是【收盤】不是初盤——舊版把它當初盤記錄，
-    等於把收盤數字寫進初盤欄位污染走向分析。改成記成收盤、初盤留空。"""
+    2026-08-14 v3 語意修正（抽驗 934 場對照使用者手填收盤後定案）：
+    BetExplorer 的 archive-odds 端點只回「目前值【之前】的變動」，真正的最後一組
+    賠率在【儲存格自己的 data-odd＋data-created】（開賽時凍結）。v2 取歷史尾巴＝
+    拿到中位數開賽前 18 小時的價，與使用者所見系統性不符（一致率僅 3.6%）。
+    正解：完整序列 = 變動史(舊→新) ＋ 儲存格現值(最新)；
+      初盤 = 序列最舊一筆；收盤 = cutoff 前最後一筆（通常就是儲存格現值）。
+    驗證錨：7/7 兄弟@統一 儲存格 2.80/1.39@18:33(台)＝使用者手填收盤完全一致。"""
     rows = _hist_rows(BE.archive_history(cell), year_hint, offset)
-    if not rows:
+    cell_val = None
+    cell_at = None
+    try:
+        cell_val = float(cell.get("data-odd"))
+    except (TypeError, ValueError):
+        cell_val = None
+    raw = cell.get("data-created")
+    if cell_val is not None and raw:
         try:
-            value = float(cell.get("data-odd"))
-        except (TypeError, ValueError):
+            cell_at = (BE.parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW)
+        except ValueError:
+            cell_at = None
+    seq = list(rows)
+    if cell_val is not None and cell_at is not None:
+        if not seq or cell_at >= seq[-1][0]:
+            seq.append((cell_at, cell_val))
+    if not seq:
+        if cell_val is None:
             return (None, None), (None, None)
-        stamp = None
-        raw = cell.get("data-created")
-        if raw:
-            try:
-                stamp = (BE.parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW)
-            except ValueError:
-                stamp = None
-        if stamp is not None and stamp <= cutoff_tw:
-            return (None, None), (value, stamp.isoformat(timespec="seconds"))
-        return (None, None), (None, None)
-    open_at, open_odd = rows[0]
-    before = [r for r in rows if r[0] <= cutoff_tw]
-    if before:
-        close_at, close_odd = before[-1]
-        return (open_odd, open_at.isoformat(timespec="seconds")), (close_odd, close_at.isoformat(timespec="seconds"))
-    return (open_odd, open_at.isoformat(timespec="seconds")), (None, None)
+        # 沒有任何時戳可依：只能當收盤候選（不知道它是不是初盤）
+        return (None, None), (cell_val, None) if cutoff_tw is None else ((None, None), (cell_val, None))
+    open_at, open_odd = seq[0]
+    before = [r for r in seq if r[0] <= cutoff_tw]
+    close = (before[-1][1], before[-1][0].isoformat(timespec="seconds")) if before else (None, None)
+    return (open_odd, open_at.isoformat(timespec="seconds")), close
 
 
 def _start_tw(row: dict, offset: float) -> datetime:
@@ -188,7 +196,7 @@ def harvest_game(row: dict, offset: float) -> dict:
         markets["ou"] = block
 
     return {
-        "closeSem": "v2",                       # 收盤語意版本：v2＝開賽前最後一組（2026-08-13）
+        "closeSem": "v3",                       # v3＝儲存格現值當收盤（2026-08-14 抽驗定案）
         "eventId": match_id, "league": row["league"], "date": date,
         "startTime": start_tw.strftime("%H:%M"), "startISO": start_tw.isoformat(timespec="seconds"),
         "awayTeam": row["awayZh"], "homeTeam": row["homeZh"],
@@ -268,7 +276,7 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
             """齊全＝三市場都有收盤，且不存在「沒有時戳的初盤」。
             後者是舊版把收盤誤標成初盤留下的殘骸，必須重抓修正。"""
             markets = game.get("markets") or {}
-            if game.get("closeSem") != "v2":
+            if game.get("closeSem") != "v3":
                 return False                    # 舊語意（T−150）條目：強制重抓對齊新定義
             if not all((markets.get(k) or {}).get("close") for k in ("ml", "hd", "ou")):
                 return False
@@ -284,7 +292,7 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
             eid = game.get("eventId")
             if not eid:
                 continue
-            if _complete(game) or (game.get("refilled") and game.get("closeSem") == "v2"):
+            if _complete(game) or (game.get("refilled") and game.get("closeSem") == "v3"):
                 have.add(eid)                       # 齊全、或已在新語意下補過一次就不再重抓
             else:
                 refill.add(eid)
@@ -325,7 +333,7 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
                         old_b["close"] = new_b["close"]
                     if new_b.get("open") and not old_b.get("open"):
                         old_b["open"] = new_b["open"]
-                old_game["closeSem"] = "v2"
+                old_game["closeSem"] = "v3"
                 old_game["refilled"] = True
                 done_count += 1
                 total_new += 1

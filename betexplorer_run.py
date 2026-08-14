@@ -88,6 +88,25 @@ def _active_line(lines):
     return sorted(live, key=lambda x: abs(x["line"]))[0]
 
 
+def _cell_close(cell, offset, start_tw):
+    """收盤＝儲存格現值（BetExplorer 開賽即凍結）。時戳晚於開賽視為異常回 None。
+    2026-08-14 v3：變動史端點只含早期變動，別再從那裡拿收盤。"""
+    try:
+        val = float(cell.get("data-odd"))
+    except (TypeError, ValueError):
+        return None, None
+    at = None
+    raw = cell.get("data-created")
+    if raw:
+        try:
+            at = (BE.parse_data_dt(raw) + timedelta(hours=offset)).replace(tzinfo=TW)
+        except ValueError:
+            at = None
+    if at is not None and at > start_tw + timedelta(minutes=5):
+        return None, None
+    return val, (at.isoformat(timespec="seconds") if at else None)
+
+
 def collect(game, offset, now_tw):
     """回傳 summary 用的一筆 game 物件。"""
     start_tw = (game["siteStart"] + timedelta(hours=offset)).replace(tzinfo=TW)
@@ -108,8 +127,8 @@ def collect(game, offset, now_tw):
         except (TypeError, ValueError):
             pass
         if started:
-            ch, at_h = _pick(BE.archive_history(home_cell), home_cell, offset, year_hint, start_tw)
-            ca, _ = _pick(BE.archive_history(away_cell), away_cell, offset, year_hint, start_tw)
+            ch, at_h = _cell_close(home_cell, offset, start_tw)
+            ca, _ = _cell_close(away_cell, offset, start_tw)
             if ch is not None and ca is not None:
                 block["close"] = {"at": at_h, "home": ch, "away": ca, "final": True}
         markets["ml"] = block
@@ -131,8 +150,8 @@ def collect(game, offset, now_tw):
         except (TypeError, ValueError):
             pass
         if started:
-            ch, cat = _pick(BE.archive_history(first), first, offset, year_hint, start_tw)
-            ca, _ = _pick(BE.archive_history(second), second, offset, year_hint, start_tw)
+            ch, cat = _cell_close(first, offset, start_tw)
+            ca, _ = _cell_close(second, offset, start_tw)
             if ch is not None and ca is not None:
                 block["close"] = {"at": cat, "home": ch, "away": ca, "line": line,
                                   "favorite": favorite, "final": True}
@@ -152,8 +171,8 @@ def collect(game, offset, now_tw):
         except (TypeError, ValueError):
             pass
         if started:
-            co, cat = _pick(BE.archive_history(over_cell), over_cell, offset, year_hint, start_tw)
-            cu, _ = _pick(BE.archive_history(under_cell), under_cell, offset, year_hint, start_tw)
+            co, cat = _cell_close(over_cell, offset, start_tw)
+            cu, _ = _cell_close(under_cell, offset, start_tw)
             if co is not None and cu is not None:
                 block["close"] = {"at": cat, "over": co, "under": cu,
                                   "line": main_ou["line"], "final": True}
