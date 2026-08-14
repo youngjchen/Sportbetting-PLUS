@@ -3050,32 +3050,24 @@ function renderCardB(it){
     // 有這條 bet365+台彩 才能同畫面三方比對）。色點：橙=顛倒/靛=曾反已合/青綠=只換過邊/灰=正常
     { const ist = (typeof intlFor==="function") ? intlFor(it) : null; let epSw=null; try{ const s=(window.__expertPicks&&window.__expertPicks.hdSwapFor)?window.__expertPicks.hdSwapFor(it):null; if(s){ epSw=Object.keys(s).map(t=>esc(t)+"讓"+s[t]+"票").join("／"); } }catch(_){} const epSwShow = epSw && !(ist && ist.lsw); // 指紋警示只在「序列沒抓到換邊」時跳（2026-07-29 使用者拍板：序列有⇄記錄再跳＝脫褲子放屁）
       // 出帶條件：bet365 有方向「或」台彩有側（亞洲盤晚貼時台彩先行）「或」指紋警示（三者任一）
-      // bet365 軸改 BetExplorer 為主（2026-08-15 使用者拍板）：Titan 頁面會凍結
-      // （皇家@天使凍在 8/14 05:00，期間 bet365 實際翻到天使讓又翻回；落磯@巨人
-      //   至今顯示反向）。BE 的上下架列＝現行方向的直接證據；Titan 降為複查
-      //   （它有精確的換邊時間序列，保留在展開明細）。BE 缺列時退回 Titan。
-      let be365=null; try{ const g=(window.__oddsPortalIntegration&&window.__oddsPortalIntegration.gameFor)?window.__oddsPortalIntegration.gameFor(it, doc.activeDate):null; be365=(g&&g.bet365)||null; }catch(_){}
-      const beSide = be365 && be365.side, beLine = be365 && be365.line;
-      if((ist && (ist.is || ist.ls)) || beSide || epSwShow){
-        const has = !!(beSide || (ist && ist.is));
-        const useSide = beSide || (ist && ist.is);
-        const useLine = beSide ? beLine : (ist && ist.il);
-        const src = beSide ? "" : "（Titan）";
-        // 顛倒判定：以「現用的 bet365 方向」對台彩；兩源不一致時以 BE 為準
-        const lsSide = ist && ist.ls;
-        const vNow = (useSide && lsSide) ? (useSide!==lsSide ? "flip" : (ist && ist.v==="was" ? "was" : ist && ist.v)) : (ist && ist.v);
+      // 裁決集中在 intlVerdict（BE 為主、Titan 墊底）。帶上只放兩邊結論——不標來源、
+      // 不放曾換邊字樣（2026-08-15 使用者：帶上減法，提示看標籤列表徽章、細節點明細）。
+      const iv = intlVerdict(it, ist);
+      const be365 = iv.be;
+      if(iv.side || (ist && ist.ls) || epSwShow){
+        const has = !!iv.side;
+        const useSide = iv.side, useLine = iv.line;
         const strip=document.createElement("div"); strip.className="intl-strip no-drag";
-        const dotc = !has ? "#2bbfa0" : (vNow==="flip"?"#e08020":(vNow==="was"?"#6b7bff":(vNow?"#2bbfa0":"#5b6b80")));
-        const beFlipMark = (be365 && be365.flipEver) ? ` <b style="color:#e08020">⇄曾換邊</b>` : "";
-        const titanLag = (beSide && ist && ist.is && ist.is!==beSide) ? ` <b style="color:#ff5d7a">Titan滯後</b>` : "";
+        const dotc = !has ? "#2bbfa0" : (iv.v==="flip"?"#e08020":(iv.v==="was"?"#6b7bff":"#5b6b80"));
         strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
-          `<span>🌐 <b style="color:#3aa0ff">${has?("bet365 "+esc(useSide==="home"?it.home:it.away)+"讓"+useLine+src):"bet365 未開盤"}</b>${beFlipMark}${titanLag}・`+
+          `<span>🌐 <b style="color:#3aa0ff">${has?("bet365 "+esc(useSide==="home"?it.home:it.away)+"讓"+useLine):"bet365 未開盤"}</b>・`+
           `<b style="color:#ffd08a">${(ist&&ist.ls)?("台彩 "+esc(ist.ls==="home"?it.home:it.away)+"讓"+(ist.ll!=null?ist.ll:"")):"台彩無資料"}</b>${epSwShow?` <b style="color:#2bbfa0">⚠曾對調</b>`:""}</span>`;
         const more=document.createElement("div"); more.className="intl-more no-drag";
-        const beDetail = be365 ? (`bet365＝BetExplorer 現行（${be365.at?esc(String(be365.at).slice(5,16).replace("T"," ")):"時刻不明"} 上架）`+
+        const beDetail = be365 ? (`bet365 現行（${be365.at?esc(String(be365.at).slice(5,16).replace("T"," ")):"時刻不明"} 上架）`+
           (be365.struck&&be365.struck.length?`；曾掛過：${be365.struck.map(x=>esc((x.side==="home"?it.home:it.away))+"讓"+Math.abs(x.line)+(x.at?("@"+String(x.at).slice(5,16).replace("T"," ")):"")).join("、")}`:"")+`<br>`) : "";
         more.innerHTML = beDetail + ((ist&&ist.is)?((ist.sw?`⇄${ist.sw}＝Titan 序列今天換邊 ${ist.sw} 次：${esc(ist.tr||"")}`:`Titan 序列今天未換邊`)+
-          ((ist&&ist.dv)?`・<span style="color:#ff5d7a">背離（獨贏熱門 ${esc(ist.mf==="home"?it.home:it.away)}）</span>`:"")):`Titan 序列無資料`)+
+          (iv.lag?`・<span style="color:#ff5d7a">Titan 方向滯後（現行以 bet365 上架列為準）</span>`:"")+
+          (iv.dv?`・<span style="color:#ff5d7a">背離（獨贏熱門 ${esc(ist.mf==="home"?it.home:it.away)}）</span>`:"")):`Titan 序列無資料`)+
           ((ist&&ist.ltr)?`<br>台彩換邊 ⇄${ist.lsw}：${esc(ist.ltr)}`:"")+
           (epSwShow?`<br><span style="color:#2bbfa0">台彩⚠曾對調（明牌指紋）：序列未錄到換邊，但台彩線讓分單兩邊都出現過讓方（${epSw}）＝期間曾對調遭空窗漏錄、確切時間不可考，結算時記得勾「賽前對調」。</span>`:"")+`<br>台彩側＝${(ist&&ist.lsLive)?"玩運彩盤中序列（現況）":"玩運彩開盤快照"}；此帶唯讀（國際軸＋明牌指紋），不會改卡片任何欄位。`;
         strip.onclick=(e)=>{ e.stopPropagation(); strip.classList.toggle("open"); };
@@ -3528,6 +3520,25 @@ function intlFor(it){
   if(!arch) return null;
   return (timed && arch.games[timed]) || arch.games[base] || null;
 }
+// BE 為主的國際軸裁決（2026-08-15 使用者拍板）：讓分「現行方向」以 bet365 上架列
+// （BetExplorer 抓的 game.bet365）為準——Titan 頁面會凍結出假方向（皇家@天使凍在
+// 8/14 05:00 期間實翻兩次；落磯@巨人凍成反向）。v 沿用原值域 null/"was"/"flip"：
+// 兩源同側時，只要 bet365 曾掛過對側（flipEver＝下架死組在對側，或 Titan 序列／
+// 凍結殘值在對側）就判 "was"＝曾反已合。BE 缺列（歷史日期、未開盤）整組退回 Titan 原判。
+// lag=Titan 目前方向與現行不符（只進點開明細）；dv=獨贏熱門背離也改對現行方向算。
+// 消費點：卡片藍帶、標籤列表徽章＋tooltip、異常置頂排序、結算卡自動判——全走這裡，
+// 帶上只放結論、不標來源（使用者 2026-08-15：「來源你自己記在幕後」）。
+function intlVerdict(it, ist){
+  let be=null;
+  try{ const g=(window.__oddsPortalIntegration&&window.__oddsPortalIntegration.gameFor)?window.__oddsPortalIntegration.gameFor(it, doc.activeDate):null; be=(g&&g.bet365)||null; }catch(_){}
+  if(!(be&&be.side)) return { be:null, side:(ist&&ist.is)||null, line:ist&&ist.il, v:(ist&&ist.v)||null, lag:false, dv:!!(ist&&ist.dv) };
+  const lside = ist && ist.ls;
+  let v=null;
+  if(lside) v = (be.side!==lside) ? "flip" : ((be.flipEver || (ist&&ist.v)) ? "was" : null);
+  return { be, side:be.side, line:be.line, v,
+           lag: !!(ist && ist.is && ist.is!==be.side),
+           dv: !!(ist && ist.mf && ist.mf!==be.side) };
+}
 async function loadIntlState(){
   try{
     const r = await fetch("data/intl_state.json?t="+Date.now(), {cache:"no-store"});
@@ -3554,7 +3565,8 @@ function renderMatchNav(){
   const isFlip = it => !!it.platformFlip;
   const isAnom = it => { if(isFlip(it)) return true;
     const g = (typeof intlFor==="function") ? intlFor(it) : null;
-    return !!(g && (g.v || g.lsw)); };   // 異常置頂＝手標異常＋國際軸異常＋台彩自身換邊（bet365 缺席時 v=null 也要亮）
+    const vv = (typeof intlVerdict==="function") ? intlVerdict(it, g) : null;
+    return !!((vv && vv.v) || (g && g.lsw)); };   // 異常置頂＝手標異常＋國際軸異常（BE 為主裁決）＋台彩自身換邊
   const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   el.innerHTML = "";
   const head = document.createElement("div"); head.className="nvhead";
@@ -3607,23 +3619,26 @@ function renderMatchNav(){
     t.addEventListener("dragend", ()=>{ t.classList.remove("dragging"); if(_navDrag!=null){ _navDrag=null; commitNavOrder(); } });
     // 國際軸徽章 🌐⇄N（純圖標；判定用顏色：橙=現在相反/靛=曾反已合/青綠=只換過邊）；點徽章看數字
     { const ist = (typeof intlFor==="function") ? intlFor(it) : null;
-      // 亮徽章的條件：有「國際vs台彩」裁決(v)，或「台彩自己換過邊」(lsw>0)。
+      const iv = (typeof intlVerdict==="function") ? intlVerdict(it, ist) : { be:null, side:ist&&ist.is, line:ist&&ist.il, v:(ist&&ist.v)||null, lag:false, dv:!!(ist&&ist.dv) };
+      // 亮徽章的條件：有「國際vs台彩」裁決(v，2026-08-15 起以 BE 現行列裁決——Titan 凍結
+      // 曾讓 落磯@巨人 掛橙假顛倒、皇家@天使實翻兩次卻無聲)，或「台彩自己換過邊」(lsw>0)。
       // 只認 v 的話，titan 缺 bet365 線時（is=null → v 永遠算不出）台彩對調會整個隱形——
       // 2026-08-02 中信@味全實例：序列 09:25味全→12:29中信 記錄俱在、板上卻無聲。
-      if(ist && (ist.v || ist.lsw)){
+      if((iv && iv.v) || (ist && ist.lsw)){
         const bd=document.createElement("span");
-        bd.className="nv-intl no-drag "+(ist.v==="flip"?"bo":ist.v==="was"?"bi":"bg");
+        bd.className="nv-intl no-drag "+(iv.v==="flip"?"bo":iv.v==="was"?"bi":"bg");
         bd.textContent="🌐";   // 只留圖標；判定用光暈色（橙顛倒/靛收斂/青綠對調），換邊次數移進點擊框
         bd.onclick=(e)=>{ e.stopPropagation();
           const old=t.querySelector(".nvtip"); if(old){ old.remove(); return; }
           const tip=document.createElement("div"); tip.className="nvtip no-drag";
           tip.onclick=(ev)=>ev.stopPropagation();
           tip.innerHTML = `<b style="color:#3aa0ff">國際軸（bet365 vs 台彩${ist.lsLive?"":"開盤"}）</b><br>`+
-            (ist.is?`bet365：<b>${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}</b>${ist.sw?`　⇄${ist.sw}＝今天換邊 ${ist.sw} 次`:""}`:`bet365：無資料`)+
+            (iv.side?`bet365：<b>${esc(iv.side==="home"?it.home:it.away)} 讓${iv.line}</b>${ist&&ist.sw?`　⇄${ist.sw}＝序列今天換邊 ${ist.sw} 次`:""}`:`bet365：無資料`)+
+            ((iv.be&&iv.be.struck&&iv.be.struck.length)?`<br>曾掛過：${iv.be.struck.map(x=>esc(x.side==="home"?it.home:it.away)+"讓"+Math.abs(x.line)+(x.at?("@"+String(x.at).slice(5,16).replace("T"," ")):"")).join("、")}`:"")+
             (ist.ls?`<br>台彩${ist.lsLive?"":"(開盤)"}：<b>${esc(ist.ls==="home"?it.home:it.away)} 讓${ist.ll!=null?ist.ll:""}</b>${ist.lsw?`　⇄${ist.lsw}`:""}`:`<br>台彩：無資料`)+
             (ist.tr&&ist.sw?`<br><span style="color:var(--ink-dim)">b365：${esc(ist.tr)}</span>`:"")+
             (ist.ltr?`<br><span style="color:var(--ink-dim)">台彩：${esc(ist.ltr)}</span>`:"")+
-            (ist.dv?`<br><span style="color:#ff5d7a">背離：bet365 獨贏熱門（${esc(ist.mf==="home"?it.home:it.away)}）≠ 讓分方</span>`:"")+
+            (iv.dv?`<br><span style="color:#ff5d7a">背離：bet365 獨贏熱門（${esc(ist.mf==="home"?it.home:it.away)}）≠ 讓分方</span>`:"")+
             (function(){ try{ const ai=(typeof bAnomInfo==="function")?bAnomInfo(it):null;
               return ai? `<br><span style="color:#ffd88a">${ai.lbl}場歷史：讓分過盤 ${ai.covTxt}（${ai.n} 場）</span>`:""; }catch(_){ return ""; } })();
           t.appendChild(tip);
@@ -6585,15 +6600,17 @@ function openSettleModal(it){
   }
   // 國際軸自動判：一行參考＋點擊展開證據；純顯示，下拉完全由使用者手選（幕後另存獨立欄位）
   { const ist = (typeof intlFor==="function") ? intlFor(it) : null;
-    if(ist && (ist.v || ist.ls)){
-      const vTxt = ist.v==="flip" ? "目前兩邊相反" : ist.v==="was" ? "曾相反，現同向" : ist.v==="swap" ? "bet365 曾換邊，未見相反" : "無異常";
+    const iv = (typeof intlVerdict==="function") ? intlVerdict(it, ist) : { be:null, side:ist&&ist.is, line:ist&&ist.il, v:(ist&&ist.v)||null, lag:false, dv:!!(ist&&ist.dv) };
+    if(ist && (iv.v || ist.ls)){
+      const vTxt = iv.v==="flip" ? "目前兩邊相反" : iv.v==="was" ? "曾相反，現同向" : iv.v==="swap" ? "bet365 曾換邊，未見相反" : "無異常";
       const bar=document.createElement("div");
       bar.style.cssText="margin-top:12px;background:rgba(58,160,255,.08);border:1px solid rgba(58,160,255,.4);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;line-height:1.7;";
       bar.innerHTML = `🌐 自動判（國際軸）：<b>${vTxt}</b><span style="float:right;color:var(--ink-dim)">▸</span>`+
         `<div class="iad" style="display:none;margin-top:6px;color:var(--ink-dim);line-height:1.8">`+
-        `bet365：${esc(ist.is==="home"?it.home:it.away)} 讓${ist.il}${ist.sw?`（⇄${ist.sw}：${esc(ist.tr||"")}）`:""}`+
+        `bet365：${iv.side?esc(iv.side==="home"?it.home:it.away)+" 讓"+iv.line:"無資料"}${ist.sw?`（⇄${ist.sw}：${esc(ist.tr||"")}）`:""}`+
+        ((iv.be&&iv.be.struck&&iv.be.struck.length)?`<br>曾掛過：${iv.be.struck.map(x=>esc(x.side==="home"?it.home:it.away)+"讓"+Math.abs(x.line)+(x.at?("@"+String(x.at).slice(5,16).replace("T"," ")):"")).join("、")}`:"")+
         `<br>台彩${ist.lsLive?"":"(開盤)"}：${ist.ls?esc(ist.ls==="home"?it.home:it.away)+" 讓"+(ist.ll!=null?ist.ll:""):"無資料"}${ist.ltr?`（⇄${ist.lsw}：${esc(ist.ltr)}）`:""}`+
-        (ist.dv?`<br>背離：bet365 獨贏熱門 ≠ 讓分方`:"")+
+        (iv.dv?`<br>背離：bet365 獨贏熱門 ≠ 讓分方`:"")+
         `<br>僅供參考（bet365 vs 台彩${ist.lsLive?"":"開盤"}軸）；已自動存獨立欄位分帳累積，下方顛倒狀態照你親眼所見選。</div>`;
       bar.onclick=()=>{ const d=bar.querySelector(".iad"); d.style.display = d.style.display==="none" ? "block" : "none"; };
       body.appendChild(bar);
