@@ -83,6 +83,8 @@
     const pending = [];
     for (const c of casts) {
       if (res[c.officialId]) continue;
+      const dd = cache[c.officialId];
+      if (dd && dd.as == null && (dd.t || 0) >= 3) continue;   // 墓碑：查滿 3 輪配不到（延賽等）→ 不佔日期窗，窗口保證前進
       const g = gmap[c.officialId];
       if (g && g.status === 'finished' && g.awayScore != null) {
         res[c.officialId] = { finished: true, as: g.awayScore, hs: g.homeScore };
@@ -91,7 +93,12 @@
       else pending.push(c);
     }
     if (pending.length) {
-      const dates = [...new Set(pending.map(c => { const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00'); return new Date(ts).toISOString().slice(0, 10); }))].sort().slice(0, 12);
+      // 2026-08-15 修「中間一大段永遠未結算」：statsapi ?date= 是【美東行事曆日】，
+      // 台灣 08:00 後開打的美西夜戰用 UTC 日會查錯天；同對戰系列連戰時還會配到隔天場、
+      // 被 100 分鐘閘擋下。歷史上靠「鄰日也在 pending、賽程倒同一池」互救，快取填滿後
+      // 互救消失（實測殘缺快取下 8 場兩輪零進展永久卡死、卡住日期一多整個窗被塞住）。
+      // 查詢日改取 ts−4h 的 UTC 日（EDT/EST 皆成立：美國開賽不會早於當地凌晨 4 點）。
+      const dates = [...new Set(pending.map(c => { const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00'); return new Date(ts - 4 * 3600 * 1000).toISOString().slice(0, 10); }))].sort().slice(0, 12);
       const sched = [];
       for (const d of dates) {
         try { const j = await (await fetch('https://statsapi.mlb.com/api/v1/schedule?sportId=1&date=' + d)).json(); (j.dates || []).forEach(dd => (dd.games || []).forEach(g => sched.push(g))); } catch (e) {}
@@ -109,6 +116,17 @@
           res[c.officialId] = { finished: true, as: best.teams.away.score, hs: best.teams.home.score };
           cache[c.officialId] = { as: best.teams.away.score, hs: best.teams.home.score }; dirty = true;
         }
+      }
+      // 這輪有進窗查過仍配不到 → 記一次嘗試（每場一次）；3 次即墓碑化，
+      // 死場（延賽、時刻整段標錯）才不會把最舊優先的日期窗永久塞死
+      const qd = new Set(dates), bumped = new Set();
+      for (const c of pending) {
+        if (res[c.officialId] || bumped.has(c.officialId)) continue;
+        const ts = Date.parse(c.gameTime.replace(' ', 'T') + ':00+08:00');
+        if (!qd.has(new Date(ts - 4 * 3600 * 1000).toISOString().slice(0, 10))) continue;
+        bumped.add(c.officialId);
+        const h = cache[c.officialId];
+        cache[c.officialId] = { t: ((h && h.t) || 0) + 1 }; dirty = true;
       }
     }
     if (dirty) {
