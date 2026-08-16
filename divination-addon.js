@@ -78,6 +78,30 @@
     const cache = loadResCache(); let dirty = false;
     const want = new Set(casts.map(c => c.officialId));
     for (const id of want) { const h = cache[id]; if (h && h.as != null) res[id] = { finished: true, as: h.as, hs: h.hs }; }
+    // ② 板子比賽卡片直讀（2026-08-15 使用者拍板：核對第一優先接卡片結算帳 doc.games，
+    //    本機離線零聯網；statsapi 降為「卡片還沒結算」的備援）。卦的隊名就是起卦當下
+    //    板子卡片的隊名 → 台灣日＋隊名精準對 key。同日同隊雙重賽比分不同＝配不準 → 跳過留給備援。
+    try {
+      const dg = (typeof doc !== 'undefined' && doc && doc.games) || [];
+      if (dg.length) {
+        const idx = {}, ambig = new Set();
+        dg.forEach(x => {
+          if (!x || x.awayScore == null || x.homeScore == null || !x.date) return;
+          const k = x.date + '|' + x.awayTeam + '|' + x.homeTeam;
+          if (idx[k] && (idx[k].awayScore !== x.awayScore || idx[k].homeScore !== x.homeScore)) ambig.add(k);
+          else idx[k] = x;
+        });
+        for (const c of casts) {
+          if (res[c.officialId]) continue;
+          const k = (c.gameTime || '').slice(0, 10) + '|' + c.away + '|' + c.home;
+          const rec = ambig.has(k) ? null : idx[k];
+          if (rec) {
+            res[c.officialId] = { finished: true, as: +rec.awayScore, hs: +rec.homeScore };
+            cache[c.officialId] = { as: +rec.awayScore, hs: +rec.homeScore }; dirty = true;
+          }
+        }
+      }
+    } catch (e) {}
     let gmap = {};
     try { (await (await fetch('data/pregame_data.json?nocache=' + Date.now())).json()).forEach(g => { gmap[g.officialId] = g; }); } catch (e) {}
     const pending = [];
