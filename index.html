@@ -5708,7 +5708,7 @@ function renderC1Tracker(leagueF){
  }
 }
 // 異常組合統計（乾淨前瞻，flipState 場）。主軸互斥三態(顛倒/收斂/皆非)，每組再拆對調×背離組合，
-// 各給三市場命中率。正常場(皆非且無異常)=基準、不列入表。背離用「收盤→下注」後備鏈+0.10緩衝。
+// 各給三市場命中率與 NRFI。正常場(皆非且無異常)=基準、不列入表。背離用「收盤→下注」後備鏈+0.10緩衝。
 function collectCrossTab(leagueFilter){
   const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&g.flipState&&g.awayScore!=null&&g.homeScore!=null);
   const flip = g => g.flipState==="flipped";
@@ -5732,14 +5732,16 @@ function collectCrossTab(leagueFilter){
     if(a===b) return null;
     return a<b?"away":"home";
   };
-  const B = ()=>({n:0,fw:0,fwN:0,cov:0,covN:0,ov:0,ovN:0,games:[]});
+  const B = ()=>({n:0,fw:0,fwN:0,cov:0,covN:0,ov:0,ovN:0,nr:0,nrN:0,games:[]});
   const acc = (o,g)=>{ o.n++;
     const fv=favOf(g);
-    o.games.push({date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g),fv,od:((g.closeOddsAway!=null&&g.closeOddsHome!=null)||(g.flipOddsAway!=null&&g.flipOddsHome!=null)),hdSideSuspect:!!g.hdSideSuspect});
+    const ni=(typeof window!=="undefined"&&typeof window.lookupStakeNrfi==="function")?window.lookupStakeNrfi(g.sid):null;
+    o.games.push({sid:g.sid,date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g),fv,od:((g.closeOddsAway!=null&&g.closeOddsHome!=null)||(g.flipOddsAway!=null&&g.flipOddsHome!=null)),hdSideSuspect:!!g.hdSideSuspect,nrfi:ni?ni.nrfi:null,awayFirst:ni?ni.awayFirst:null,homeFirst:ni?ni.homeFirst:null});
     // 熱門勝（2026-07-20 使用者拍板：主勝欄換掉，不並列——主勝各異常組全貼硬幣、無資訊量）
     if(fv && g.awayScore!==g.homeScore){o.fwN++; const w=g.homeScore>g.awayScore?"home":"away"; if(w===fv)o.fw++;}
     if(g.hdResult==="fav_cover"){o.covN++;o.cov++;} else if(g.hdResult==="fav_nocover")o.covN++; // 讓分方過盤
     if(g.totResult==="over"){o.ovN++;o.ov++;} else if(g.totResult==="under")o.ovN++;            // 開大
+    if(ni&&typeof ni.nrfi==="boolean"){o.nrN++;if(ni.nrfi)o.nr++;}                                 // NRFI
   };
   const mk = ()=>({ solo:B(), swap:B(), div:B(), both:B(), all:B() });
   const grp = { flip:mk(), conv:mk() };
@@ -5785,10 +5787,14 @@ function renderReviewPage(){
   const picks = collectPicks(scope, leagueF, marketF);
 
   if(!picks.length){
-    body.innerHTML = `<div class="rv-empty">目前還沒有可回顧的資料。<br><br>`+
+    let emptyHtml = `<div class="rv-empty">目前還沒有可回顧的資料。<br><br>`+
       `回顧的資料來自「結算後的對戰卡」——只有結算時記錄了燈號的比賽才會進來。`+
       `從現在起每結算一場（且該盤口有點燈）就會累積。<br><br>`+
       `提醒：之前匯入的歷史比賽沒有燈號紀錄，不會出現在這裡。</div>`;
+    if(typeof window.renderBet365TaiwanSection==="function"){
+      emptyHtml += window.renderBet365TaiwanSection(leagueF,{drillBlock,today:RV_TODAY()});
+    }
+    body.innerHTML = emptyHtml;
     try{ doc.anomalySeen = anomSig(); save(); updateReviewAlert(); }catch(e){}   // 開了回顧＝已讀
     return;
   }
@@ -5811,14 +5817,14 @@ function renderReviewPage(){
   }
   html += `</div></div>`;
 
-  // ---- ◆ 異常組合統計（三組 × 組合 × 三市場，無基準）----
+  // ---- ◆ 異常組合統計（三組 × 組合 × Stake 三市場＋NRFI，無基準）----
   {
     const ct = collectCrossTab(leagueF);
     const anomNew = anomUnseen();
     const tdy = RV_TODAY();
-    const info = rvInfo("只統計<b>異常場</b>，正常場（無任何異常）不列、只當背景基準。<br><b>顛倒</b>＝收盤台美讓分方仍相反；<b>收斂</b>＝曾相反、收盤貼回一致；<b>對調</b>＝賽前讓分方換過邊；<b>背離</b>＝STAKE 收盤低賠方≠讓分方（缺收盤賠率時改用下注賠率；賠率差&lt;0.10 無明確熱門則不列入背離）。<br><b>熱門勝</b>＝收盤低賠率方獲勝（缺賠率／同賠場不計入分母；已取代主勝——主勝各組全貼硬幣、無資訊量）。<br>顛倒／收斂各自再拆「單獨／＋對調／＋背離／＋兩者」，每格給三市場命中率（分子/分母）。<b>點任一列</b>看該格逐場明細。<br>任何格 &lt;30 場都是雜訊，僅供觀察。<br>❗＝含今日結算場的格；點開即消未讀。");
+    const info = rvInfo("只統計<b>異常場</b>，正常場（無任何異常）不列、只當背景基準。<br><b>顛倒</b>＝收盤台美讓分方仍相反；<b>收斂</b>＝曾相反、收盤貼回一致；<b>對調</b>＝賽前讓分方換過邊；<b>背離</b>＝STAKE 收盤低賠方≠讓分方（缺收盤賠率時改用下注賠率；賠率差&lt;0.10 無明確熱門則不列入背離）。<br><b>熱門勝</b>＝收盤低賠率方獲勝（缺賠率／同賠場不計入分母；已取代主勝——主勝各組全貼硬幣、無資訊量）。<br><b>NRFI</b>＝兩隊首局皆未得分。顛倒／收斂各自再拆「單獨／＋對調／＋背離／＋兩者」，每格給 Stake 三市場與 NRFI 命中率（分子/分母）。<b>點任一列</b>看逐場比分與首局證據。<br>任何格 &lt;30 場都是雜訊，僅供觀察。<br>❗＝含今日結算場的格；點開即消未讀。");
     const pc = (x,n)=> n?Math.round(100*x/n)+"%":"—";
-    html += `<div class="rv-section"><div class="rv-head">◆ 異常組合統計 ${anomNew?'<span class="rv-alert-mk">❗</span>':''}<span class="rv-sub">顛倒／收斂／其他異常 × 三市場</span>${info.icon}</div>${info.pop}`;
+    html += `<div class="rv-section"><div class="rv-head">◆ 異常組合統計 ${anomNew?'<span class="rv-alert-mk">❗</span>':''}<span class="rv-sub">顛倒／收斂／其他異常 × Stake 三市場＋NRFI</span>${info.icon}</div>${info.pop}`;
     if(!ct.total){
       html += `<div class="rv-empty">尚無 flipState 標記的結算場。每在結算視窗設「顛倒場狀態」就會累積。</div>`;
     } else {
@@ -5828,25 +5834,27 @@ function renderReviewPage(){
         const hdWarn=g.hdSideSuspect?`<span title="收盤讓分方(Bet365)與卡面讓分方不同，結果可能記在錯的一側，建議覆核" style="cursor:help">⚠</span>`:"";
         const hd=hdWarn+(g.hdResult==="fav_cover"?`<span class="dr-hit">過盤</span>`:g.hdResult==="fav_nocover"?`<span class="dr-miss">沒過</span>`:"—");
         const tt=g.totResult==="over"?"大":g.totResult==="under"?"小":"—";
+        const nr=(g.awayFirst!=null&&g.homeFirst!=null)?`${g.nrfi?"NRFI":"YRFI"}（首局 ${g.awayFirst}-${g.homeFirst}）`:"首局—";
         const dv=g.dv===true?"背離":g.dv===false?"":(g.od?"熱門不明":"缺賠率");
-        return `${hw}・讓分${hd}・開${tt}${dv?`・<span style="color:var(--ink-dim)">${dv}</span>`:""}`;
+        return `${hw}・讓分${hd}・開${tt}・${nr}${dv?`・<span style="color:var(--ink-dim)">${dv}</span>`:""}`;
       };
       const ROW=(lbl,o)=>{
-        if(!o.n) return `<tr class="rv-row"><td class="lbl" style="color:var(--ink-dim)">${lbl}</td><td>0</td><td>—</td><td>—</td><td>—</td></tr>`;
+        if(!o.n) return `<tr class="rv-row"><td class="lbl" style="color:var(--ink-dim)">${lbl}</td><td>0</td><td>—</td><td>—</td><td>—</td><td>—</td></tr>`;
         const det=drillBlock(o.games, roleFn);
         const hasToday = o.games.some(g=>g.date===tdy);
         let h=`<tr class="rv-row drill-toggle"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
           `<td class="lbl">${lbl}${hasToday?' <span class="rv-alert-mk">❗</span>':''}</td><td>${o.n}</td>`+
           `<td>${pc(o.fw,o.fwN)} <span class="rv-samp">${o.fw}/${o.fwN}</span></td>`+
           `<td>${pc(o.cov,o.covN)} <span class="rv-samp">${o.cov}/${o.covN}</span></td>`+
-          `<td>${pc(o.ov,o.ovN)} <span class="rv-samp">${o.ov}/${o.ovN}</span></td></tr>`;
-        if(det.id) h+=`<tr class="drill-tr"><td colspan="5" style="padding:0">${det.html}</td></tr>`;
+          `<td>${pc(o.ov,o.ovN)} <span class="rv-samp">${o.ov}/${o.ovN}</span></td>`+
+          `<td>${pc(o.nr,o.nrN)} <span class="rv-samp">${o.nr}/${o.nrN}</span></td></tr>`;
+        if(det.id) h+=`<tr class="drill-tr"><td colspan="6" style="padding:0">${det.html}</td></tr>`;
         return h;
       };
       const groupTbl=(name,G)=>{
         const a=G.all;
-        let h=`<div class="rv-head" style="font-size:14px;margin-top:14px">${name}　<span class="rv-sub">${a.n} 場　熱門勝 ${pc(a.fw,a.fwN)}・讓分過盤 ${pc(a.cov,a.covN)}・開大 ${pc(a.ov,a.ovN)}</span></div>`;
-        h+=`<table class="rv-table"><thead><tr><th class="lbl">組合</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th></tr></thead><tbody>`;
+        let h=`<div class="rv-head" style="font-size:14px;margin-top:14px">${name}　<span class="rv-sub">${a.n} 場　熱門勝 ${pc(a.fw,a.fwN)}・讓分過盤 ${pc(a.cov,a.covN)}・開大 ${pc(a.ov,a.ovN)}・NRFI ${pc(a.nr,a.nrN)}</span></div>`;
+        h+=`<table class="rv-table"><thead><tr><th class="lbl">組合</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th><th>NRFI</th></tr></thead><tbody>`;
         h+=ROW("單獨",G.solo)+ROW("＋對調",G.swap)+ROW("＋背離",G.div)+ROW("＋對調＋背離",G.both);
         return h+`</tbody></table>`;
       };
@@ -5855,12 +5863,19 @@ function renderReviewPage(){
       const o=ct.other;
       if(o.swapOnly.n||o.divOnly.n||o.bothOD.n){
         html += `<div class="rv-head" style="font-size:14px;margin-top:14px">其他異常　<span class="rv-sub">非顛倒非收斂，但有對調或背離</span></div>`;
-        html += `<table class="rv-table"><thead><tr><th class="lbl">組合</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th></tr></thead><tbody>`;
+        html += `<table class="rv-table"><thead><tr><th class="lbl">組合</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th><th>NRFI</th></tr></thead><tbody>`;
         html += ROW("只對調",o.swapOnly)+ROW("只背離",o.divOnly)+ROW("對調＋背離",o.bothOD);
         html += `</tbody></table>`;
       }
     }
     html += `</div>`;
+  }
+
+  // ---- ◆ Bet365 × 台彩七類（歷史靜態快照；自動化下一輪再談）----
+  if(typeof window.renderBet365TaiwanSection==="function"){
+    html += window.renderBet365TaiwanSection(leagueF,{drillBlock,today:RV_TODAY()});
+  } else {
+    html += `<div class="rv-section"><div class="rv-head">◆ Bet365 × 台彩七類</div><div class="rv-empty">歷史資料載入中…</div></div>`;
   }
 
   // ---- ⓪ 賽前換邊 + 神刻奇門 追蹤（合一區）----
@@ -7772,6 +7787,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./odds-integration.js?v=20260814heal9"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260815dv4"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260823nrfi3"></script><script src="./odds-integration.js?v=20260814heal9"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260815dv4"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
