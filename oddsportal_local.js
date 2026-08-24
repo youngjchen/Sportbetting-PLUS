@@ -7,7 +7,7 @@
 //   open  ：各聯盟開盤後抓初盤 —— MLB 前一天 07:00（實證前日凌晨 ~03:00 開盤，
 //           抓「明日」場）；亞洲三聯盟當天 03:00（實證中職最晚 00:21 開盤）。
 //   flip  ：開賽前 2.5 小時巡一次讓分對調（亞洲一簇；MLB 以首場為錨，一簇）。
-//   close ：該群組最晚開賽 +10 分後統一抓收盤（收盤=走勢史中開賽前最後一筆，
+//   close ：相近開賽時間各自成批，該批最晚開賽 +10 分抓收盤（收盤=走勢史中開賽前最後一筆，
 //           由 oddsportal_scraper.py 於已開賽場次自動改用時戳取法）。
 // 每一閘皆為「缺口驅動」：優先抓專案裡初盤/收盤還沒填的比賽（含過去 3.5 天回補），
 // 上限 40 場/閘。錯過 6 小時的閘直接過期不補（缺口回補由之後任何閘順手完成）。
@@ -21,7 +21,8 @@ const ASIA_LEAGUES = Object.freeze(['npb', 'kbo', 'cpbl']);
 const GATE_LOOKBACK_MS = 6 * 3600e3;
 const BACKFILL_HOURS = 120;                // 每閘順手回補過去 5 天的缺口（涵蓋 8/1 搶救批）
 const T_FLIP_MIN = 150;                    // 開賽前 2.5h
-const CLOSE_LAG_MIN = 10;                  // 最晚開賽 +10 分
+const CLOSE_LAG_MIN = 10;                  // 每批最晚開賽 +10 分
+const CLOSE_CLUSTER_GAP_MIN = 15;           // 相鄰開賽相差 <=15 分視為同一批
 const OPEN_ASIA_HHMM = '03:00';
 const OPEN_MLB_HHMM = '07:00';
 // WNBA（2026-08-05 使用者要求納入）：賽事在台灣清晨 01:00~11:00，與 MLB 同型態＝前一天開盤。
@@ -62,9 +63,10 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
     if (!startMs) continue;
     const date = String(game.date).slice(0, 10);
     const key = `${grp}|${date}`;
-    const cur = groups.get(key) || { min: startMs, max: startMs };
+    const cur = groups.get(key) || { min: startMs, max: startMs, starts: [] };
     cur.min = Math.min(cur.min, startMs);
     cur.max = Math.max(cur.max, startMs);
+    cur.starts.push(startMs);
     groups.set(key, cur);
   }
   const gates = [];
@@ -77,10 +79,23 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
         ? Date.parse(`${dayBefore(date)}T${OPEN_WNBA_HHMM}:00+08:00`)
         : Date.parse(`${date}T${OPEN_ASIA_HHMM}:00+08:00`));
     const flipAt = span.min - T_FLIP_MIN * 60e3;
-    const closeAt = span.max + CLOSE_LAG_MIN * 60e3;
     gates.push({ id: `open_${grp}_${date}`, at: openAt, mode: 'open', leagues, fromHours: -BACKFILL_HOURS, toHours: 36, maxGames: 40 });
     gates.push({ id: `flip_${grp}_${date}`, at: flipAt, mode: 'flip', leagues, fromHours: -BACKFILL_HOURS, toHours: Math.max(2, Math.ceil((span.max - flipAt) / 3600e3) + 1), maxGames: 40, refreshUpcoming: true });
-    gates.push({ id: `close_${grp}_${date}`, at: closeAt, mode: 'close', leagues, fromHours: -BACKFILL_HOURS, toHours: 1, maxGames: 40 });
+    const starts = [...new Set(span.starts)].sort((a, b) => a - b);
+    const clusters = [];
+    for (const start of starts) {
+      const current = clusters[clusters.length - 1];
+      if (!current || start - current.max > CLOSE_CLUSTER_GAP_MIN * 60e3) {
+        clusters.push({ min: start, max: start });
+      } else {
+        current.max = start;
+      }
+    }
+    for (const cluster of clusters) {
+      const closeAt = cluster.max + CLOSE_LAG_MIN * 60e3;
+      const closeHhmm = new Date(closeAt + 8 * 3600e3).toISOString().slice(11, 16).replace(':', '');
+      gates.push({ id: `close_${grp}_${date}_${closeHhmm}`, at: closeAt, mode: 'close', leagues, fromHours: -BACKFILL_HOURS, toHours: 1, maxGames: 40 });
+    }
   }
   gates.sort((a, b) => a.at - b.at || String(a.id).localeCompare(String(b.id)));
   return gates;

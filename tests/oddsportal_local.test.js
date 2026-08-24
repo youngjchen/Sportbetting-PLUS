@@ -61,12 +61,41 @@ test('gates: asia same-day and mlb previous-day open plus flip/close anchors', (
   const byId = Object.fromEntries(gates.map((g) => [g.id, g]));
   assert.equal(byId['open_asia_2026-08-04'].at, Date.parse('2026-08-04T03:00:00+08:00'));
   assert.equal(byId['flip_asia_2026-08-04'].at, Date.parse('2026-08-04T14:30:00+08:00')); // 17:00 - 2.5h
-  assert.equal(byId['close_asia_2026-08-04'].at, Date.parse('2026-08-04T18:45:00+08:00')); // 18:35 + 10m
+  assert.equal(byId['close_asia_2026-08-04_1710'].at, Date.parse('2026-08-04T17:10:00+08:00')); // 17:00 + 10m
+  assert.equal(byId['close_asia_2026-08-04_1845'].at, Date.parse('2026-08-04T18:45:00+08:00')); // 18:35 + 10m
   assert.equal(byId['open_mlb_2026-08-05'].at, Date.parse('2026-08-04T07:00:00+08:00'));   // 前一天早上
   assert.equal(byId['flip_mlb_2026-08-05'].at, Date.parse('2026-08-04T23:50:00+08:00'));   // 02:20 - 2.5h
-  assert.equal(byId['close_mlb_2026-08-05'].at, Date.parse('2026-08-05T10:20:00+08:00'));  // 10:10 + 10m
+  assert.equal(byId['close_mlb_2026-08-05_0230'].at, Date.parse('2026-08-05T02:30:00+08:00'));  // 02:20 + 10m
+  assert.equal(byId['close_mlb_2026-08-05_1020'].at, Date.parse('2026-08-05T10:20:00+08:00'));  // 10:10 + 10m
   assert.equal(byId['flip_mlb_2026-08-05'].refreshUpcoming, true);
-  assert.equal(gates.length, 6);
+  assert.equal(gates.length, 8);
+});
+
+test('close gates split a date into nearby-start clusters so early games finalize on time', () => {
+  const { computeOddsPortalGates } = loadModule();
+  const games = [
+    { league: 'mlb', date: '2026-08-24', gameTime: '01:35' },
+    { league: 'mlb', date: '2026-08-24', gameTime: '01:40' },
+    { league: 'mlb', date: '2026-08-24', gameTime: '02:10' },
+    { league: 'mlb', date: '2026-08-24', gameTime: '03:10' },
+    { league: 'mlb', date: '2026-08-24', gameTime: '03:15' },
+    { league: 'mlb', date: '2026-08-24', gameTime: '07:10' },
+  ];
+
+  const closeGates = computeOddsPortalGates(games).filter((gate) => gate.mode === 'close');
+
+  assert.deepEqual(closeGates.map((gate) => gate.id), [
+    'close_mlb_2026-08-24_0150',
+    'close_mlb_2026-08-24_0220',
+    'close_mlb_2026-08-24_0325',
+    'close_mlb_2026-08-24_0720',
+  ]);
+  assert.deepEqual(closeGates.map((gate) => gate.at), [
+    Date.parse('2026-08-24T01:50:00+08:00'),
+    Date.parse('2026-08-24T02:20:00+08:00'),
+    Date.parse('2026-08-24T03:25:00+08:00'),
+    Date.parse('2026-08-24T07:20:00+08:00'),
+  ]);
 });
 
 test('dueOddsPortalGate honors fired-state and the 6h expiry', () => {

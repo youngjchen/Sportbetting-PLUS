@@ -222,6 +222,49 @@ class SeasonDateTests(unittest.TestCase):
         self.assertEqual(rows[0]["date"], "2026-04-30")
 
 
+class HarvestTargetTests(unittest.TestCase):
+    def test_event_filter_targets_only_requested_matches(self):
+        from betexplorer_harvest import _select_rows
+        rows = [
+            {"matchId": "early", "date": "2026-08-23"},
+            {"matchId": "wanted", "date": "2026-08-24"},
+            {"matchId": "late", "date": "2026-08-25"},
+        ]
+        self.assertEqual(_select_rows(rows, {"wanted"}), [rows[1]])
+        self.assertEqual(_select_rows(rows, set()), rows)
+
+    def test_summary_backfill_adds_only_missing_final_closes(self):
+        from betexplorer_harvest import _merge_summary_closes
+        summary = {"games": {
+            "missing": {"eventId": "missing", "markets": {"ml": {"open": {"away": 2.0}}}},
+            "existing": {"eventId": "existing", "markets": {"ml": {
+                "close": {"away": 9.9, "home": 9.8, "final": True},
+            }}},
+        }}
+        archived = [
+            {"eventId": "missing", "markets": {
+                "ml": {"close": {"away": 2.1, "home": 1.8, "final": True}},
+                "hd": {"close": {"line": 1.5, "away": 1.9, "home": 1.9, "final": True}},
+            }},
+            {"eventId": "existing", "markets": {
+                "ml": {"close": {"away": 1.1, "home": 3.8, "final": True}},
+            }},
+        ]
+
+        changed = _merge_summary_closes(summary, archived, {"missing", "existing"})
+
+        self.assertEqual(changed, 2)
+        self.assertEqual(summary["games"]["missing"]["markets"]["ml"]["close"]["away"], 2.1)
+        self.assertEqual(summary["games"]["missing"]["markets"]["hd"]["close"]["line"], 1.5)
+        self.assertEqual(summary["games"]["existing"]["markets"]["ml"]["close"]["away"], 9.9)
+
+    def test_targeted_backfill_never_marks_the_whole_month_complete(self):
+        from betexplorer_harvest import _should_mark_month_complete
+        self.assertFalse(_should_mark_month_complete([], 15, targeted=True))
+        self.assertTrue(_should_mark_month_complete([], 325, targeted=False))
+        self.assertTrue(_should_mark_month_complete([{}] * 10, 10, targeted=False))
+
+
 class OffsetMidnightTests(unittest.TestCase):
     """2026-08-07 深夜實例：站方 23:40 對應台灣隔天 06:40，實際時差 +7h，
     但只比對時分會算成 -17h。必須正規化到 (-12, +12]。"""

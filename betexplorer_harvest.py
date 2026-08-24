@@ -10,6 +10,7 @@
 
 用法：
   python betexplorer_harvest.py --month 2026-07 --league mlb
+  python betexplorer_harvest.py --month 2026-08 --league mlb --event-ids id1,id2
   python betexplorer_harvest.py --max-games 200          # 自動挑未完成的月份接著跑
 """
 
@@ -229,6 +230,40 @@ def _load(path: Path, default):
         return default
 
 
+def _select_rows(rows: list[dict], event_ids: set[str]) -> list[dict]:
+    """指定 eventId 時只回補目標場；空集合維持原本全量收割。"""
+    if not event_ids:
+        return rows
+    return [row for row in rows if row.get("matchId") in event_ids]
+
+
+def _merge_summary_closes(summary: dict, archived_games: list[dict], event_ids: set[str]) -> int:
+    """把歷史完成賽事的定案收盤補進近況檔；既有收盤永不覆蓋。"""
+    archive_by_id = {
+        game.get("eventId"): game for game in archived_games
+        if game.get("eventId") in event_ids
+    }
+    changed = 0
+    for live in (summary.get("games") or {}).values():
+        event_id = live.get("eventId")
+        archived = archive_by_id.get(event_id)
+        if not archived:
+            continue
+        live_markets = live.setdefault("markets", {})
+        for market in ("ml", "hd", "ou"):
+            archived_close = ((archived.get("markets") or {}).get(market) or {}).get("close")
+            live_market = live_markets.setdefault(market, {})
+            if archived_close and archived_close.get("final") and not live_market.get("close"):
+                live_market["close"] = json.loads(json.dumps(archived_close))
+                changed += 1
+    return changed
+
+
+def _should_mark_month_complete(pending: list[dict], done_count: int, targeted: bool) -> bool:
+    """精準回補只代表指定場完成，不能據此關閉整月全量收割。"""
+    return not targeted and (not pending or done_count >= len(pending))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--league", default="")
@@ -239,7 +274,12 @@ def main() -> int:
     parser.add_argument("--archive-dir", default="data/oddsportal_archive")
     parser.add_argument("--state", default="data/betexplorer_harvest_state.json")
     parser.add_argument("--season-start", default="2026-04-01")
+    parser.add_argument("--event-ids", default="",
+                        help="逗號分隔的 BetExplorer eventId；只回補這些場次")
+    parser.add_argument("--summary-path", default="",
+                        help="把指定 eventId 的缺少收盤同步補進近況摘要；既有值不覆蓋")
     args = parser.parse_args()
+    event_ids = {value.strip() for value in args.event_ids.split(",") if value.strip()}
 
     team_zh = _team_zh()
     state_path = Path(args.state)
@@ -255,6 +295,7 @@ def main() -> int:
             rows = BE.discover_month(league, args.month, team_zh, today_tw=today_tw)
         else:
             rows = BE.discover_season(league, team_zh, args.season_start, today_tw=today_tw)
+        rows = _select_rows(rows, event_ids)
         by_month: dict[str, list[dict]] = {}
         for row in rows:
             by_month.setdefault(row["date"][:7], []).append(row)
@@ -263,6 +304,19 @@ def main() -> int:
                 break
             total_new = _harvest_month(league, month, by_month[month], args, state, state_path, total_new)
         state_path.write_text(json.dumps(state, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    if args.summary_path:
+        if not event_ids:
+            parser.error("--summary-path 必須搭配 --event-ids，避免意外全量改寫")
+        summary_path = Path(args.summary_path)
+        summary = _load(summary_path, {"games": {}})
+        archived_games = []
+        for archive_path in Path(args.archive_dir).glob("*.json"):
+            archived_games.extend((_load(archive_path, {"games": {}}).get("games") or {}).values())
+        merged = _merge_summary_closes(summary, archived_games, event_ids)
+        if merged:
+            summary["updatedAt"] = datetime.now(TW).isoformat(timespec="seconds")
+            summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        print(json.dumps({"summaryClosesAdded": merged}, ensure_ascii=False))
     print(json.dumps({"totalHarvested": total_new}, ensure_ascii=False))
     return 0
 
@@ -350,7 +404,7 @@ def _harvest_month(league, month, rows, args, state, state_path, total_new):
         archive_path.parent.mkdir(parents=True, exist_ok=True)
         archive_path.write_text(json.dumps(archive, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
-        if not pending or done_count >= len(pending):
+        if _should_mark_month_complete(pending, done_count, targeted=bool(args.event_ids)):
             slot = state.setdefault(league, {})
             months = set(slot.get("months") or [])
             months.add(month)

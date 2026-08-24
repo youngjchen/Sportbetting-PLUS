@@ -146,6 +146,49 @@ test('autoApplyOdds writes open and final close into blank card fields only', ()
   } finally { dom.window.close(); }
 });
 
+test('autoApplyOdds backfills final close into settled game history without overwriting manual values', () => {
+  const { JSDOM } = require('jsdom');
+  const dom = new JSDOM('<!doctype html><body></body>');
+  let saved = 0;
+  const browser = {
+    document: dom.window.document,
+    doc: {
+      activeDate: '2026-08-24',
+      boards: { '2026-08-24': { items: [] } },
+      games: [
+        { date: '2026-08-24', league: 'MLB', awayTeam: '光芒', homeTeam: '金鶯', gameTime: '01:35' },
+        { date: '2026-08-24', league: 'MLB', awayTeam: '藍鳥', homeTeam: '洋基', gameTime: '01:35',
+          closeOddsAway: 9.9, closeOddsHome: 9.8 },
+      ],
+    },
+    fetch: async () => { throw new Error('not used'); },
+    setInterval: () => 0,
+    save: () => { saved++; },
+  };
+  try {
+    const api = require('../oddsportal-integration.js').install(browser);
+    api._setFeed({ source: 'OddsPortal', bookmaker: 'Stake.com', games: {
+      rays: { eventId: 'rays', league: 'mlb', date: '2026-08-24', startTime: '01:35',
+        awayTeam: '光芒', homeTeam: '金鶯', markets: { ml: {
+          open: { away: 2.05, home: 1.8 }, close: { away: 2.2, home: 1.7, final: true },
+        } } },
+      jays: { eventId: 'jays', league: 'mlb', date: '2026-08-24', startTime: '01:35',
+        awayTeam: '藍鳥', homeTeam: '洋基', markets: { ml: {
+          open: { away: 1.9, home: 1.9 }, close: { away: 1.85, home: 1.95, final: true },
+        } } },
+    } });
+
+    const changed = api.autoApplyOdds();
+    const games = browser.doc.games;
+    assert.equal(games[0].openOddsAway, 2.05);
+    assert.equal(games[0].closeOddsAway, 2.2);
+    assert.equal(games[0].closeOddsHome, 1.7);
+    assert.equal(games[1].closeOddsAway, 9.9);
+    assert.equal(games[1].closeOddsHome, 9.8);
+    assert.ok(changed >= 2 && saved === 1);
+  } finally { dom.window.close(); }
+});
+
 // ── 2026-08-06 回歸：板子的 doc 是 `let doc`（全域語彙變數），不在 window 上。
 // autoApplyOdds 若只讀 global.doc 會永遠拿到 undefined → 一格都不寫 → 標籤不變色。
 test('autoApplyOdds reads the lexical doc when it is not a property of window', () => {

@@ -138,27 +138,41 @@
       const doc = boardDoc();
       if (!doc || !doc.boards) return 0;
       let changed = 0;
+      function fill(target, card, date) {
+        const game = gameFor(card, date, null);
+        if (!game) return;
+        const ml = (game.markets || {}).ml || {};
+        if (target.openOddsAway == null && target.openOddsHome == null &&
+            ml.open && ml.open.away != null && ml.open.home != null) {
+          target.openOddsAway = ml.open.away;
+          target.openOddsHome = ml.open.home;
+          changed++;
+        }
+        const close = (ml.close && ml.close.final) ? ml.close : null;
+        if (close && target.closeOddsAway == null && target.closeOddsHome == null &&
+            close.away != null && close.home != null) {
+          target.closeOddsAway = close.away;
+          target.closeOddsHome = close.home;
+          changed++;
+        }
+      }
       for (const dk of Object.keys(doc.boards)) {
         const board = doc.boards[dk];
         for (const it of (board && board.items) || []) {
           if (!it || it.type !== 'match') continue;
-          const game = gameFor(it, dk, null);
-          if (!game) continue;
-          const ml = (game.markets || {}).ml || {};
-          if (it.openOddsAway == null && it.openOddsHome == null &&
-              ml.open && ml.open.away != null && ml.open.home != null) {
-            it.openOddsAway = ml.open.away;
-            it.openOddsHome = ml.open.home;
-            changed++;
-          }
-          const close = (ml.close && ml.close.final) ? ml.close : null;
-          if (close && it.closeOddsAway == null && it.closeOddsHome == null &&
-              close.away != null && close.home != null) {
-            it.closeOddsAway = close.away;
-            it.closeOddsHome = close.home;
-            changed++;
-          }
+          fill(it, it, dk);
         }
+      }
+      // 已結算的卡片已從 board.items 移到 doc.games；收盤晚到時也必須回填歷史紀錄，
+      // 否則燈號回顧仍會永久缺賠率。只補空白，手填值一樣不覆蓋。
+      for (const settled of doc.games || []) {
+        if (!settled || !settled.date) continue;
+        fill(settled, {
+          league: settled.league,
+          away: settled.awayTeam || settled.away,
+          home: settled.homeTeam || settled.home,
+          gameTime: settled.gameTime || settled.time,
+        }, settled.date);
       }
       if (changed) {
         try { if (typeof global.save === 'function') global.save(); } catch (_) {}
