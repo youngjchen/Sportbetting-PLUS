@@ -6,9 +6,24 @@ const test = require('node:test');
 const {
   lookupStakeNrfi,
   collectBet365Taiwan,
+  classifyBet365TaiwanEvidence,
+  buildBet365TaiwanSnapshot,
+  resolveSettlementOfficialId,
+  settledGameToBet365TaiwanRow,
   renderBet365TaiwanSection,
   install,
 } = require('../anomaly-nrfi-addon.js');
+
+test('結算 officialId 依自動配對、既有結算、卡片本身的順序安全回退', () => {
+  assert.equal(resolveSettlementOfficialId({ dataset: { officialId: 'AUTO_1' } }, {
+    settled: { officialId: 'OLD_1' }, officialId: 'CARD_1',
+  }), 'AUTO_1');
+  assert.equal(resolveSettlementOfficialId(null, {
+    settled: { officialId: 'OLD_1' }, officialId: 'CARD_1',
+  }), 'OLD_1');
+  assert.equal(resolveSettlementOfficialId(null, { officialId: 'CARD_1' }), 'CARD_1');
+  assert.equal(resolveSettlementOfficialId(null, {}), null);
+});
 
 const history = {
   stakeBySid: {
@@ -101,4 +116,91 @@ test('官方取消場在明細清楚標示取消，不顯示成資料缺漏', ()
   assert.match(detailRole(canceled), /官方取消/);
   assert.match(detailRole(canceled), /NRFI 不計/);
   assert.doesNotMatch(detailRole(canceled), /首局—/);
+});
+
+test('警示條證據自動分成七類，正常同向且雙方未對調不列入', () => {
+  assert.deepEqual(
+    classifyBet365TaiwanEvidence({
+      relationCode: 'flip', bet365Swapped: false, taiwanSwapped: false,
+      bet365Side: 'away', taiwanSide: 'home',
+    }),
+    {
+      relation: '顛倒', swapCombo: 'neither', bet365Swapped: false, taiwanSwapped: false,
+      bet365Side: 'away', taiwanSide: 'home',
+    },
+  );
+  assert.equal(classifyBet365TaiwanEvidence({
+    relationCode: 'was', bet365Swapped: false, taiwanSwapped: false,
+    bet365Side: 'home', taiwanSide: 'home',
+  }), null);
+  assert.equal(
+    classifyBet365TaiwanEvidence({
+      relationCode: 'was', bet365Swapped: true, taiwanSwapped: true,
+      bet365Side: 'home', taiwanSide: 'home',
+    }).swapCombo,
+    'both',
+  );
+});
+
+test('七類統計聯集歷史與卡片結算，officialId 相同時只算一次且採最新卡片結果', () => {
+  const historical = {
+    bet365Taiwan: [{
+      officialId: 'MLB_GAME_1', league: 'mlb', date: '2026-08-01', away: 'A', home: 'B',
+      relation: '顛倒', swapCombo: 'neither', mlFavoriteWin: false,
+      handicapResult: 'nocover', totalResult: 'under', nrfi: false,
+    }],
+  };
+  const settled = [{
+    sid: 's-new', officialId: 'MLB_GAME_1', league: 'mlb', date: '2026-08-01',
+    awayTeam: 'A', homeTeam: 'B', awayScore: 4, homeScore: 1,
+    closeOddsAway: 1.70, closeOddsHome: 2.20, hdResult: 'fav_cover', totResult: 'over',
+    nrfiStatus: 'nrfi', awayFirst: 0, homeFirst: 0,
+    bet365Taiwan: { relation: '顛倒', swapCombo: 'neither', bet365Swapped: false, taiwanSwapped: false },
+  }];
+  const row = settledGameToBet365TaiwanRow(settled[0]);
+  assert.equal(row.mlFavoriteWin, true);
+  assert.equal(row.handicapResult, 'cover');
+  assert.equal(row.nrfi, true);
+
+  const all = collectBet365Taiwan(historical, 'all', settled);
+  assert.equal(all.total, 1);
+  assert.deepEqual(
+    { fw: all.groups.inverted.neither.fw, cov: all.groups.inverted.neither.cov, ov: all.groups.inverted.neither.ov, nr: all.groups.inverted.neither.nr },
+    { fw: 1, cov: 1, ov: 1, nr: 1 },
+  );
+});
+
+test('結算時凍結警示條同一來源：BetExplorer 優先、Titan 只作缺列備援', () => {
+  const snapshot = buildBet365TaiwanSnapshot(
+    { sw: 2, lsw: 1, ls: 'home', ll: 1.5, u: '2026-08-24T12:00:00+08:00' },
+    { v: 'was', side: 'home', line: 1.5, be: { flipEver: false, struck: [] } },
+  );
+  assert.deepEqual(
+    {
+      relation: snapshot.relation,
+      swapCombo: snapshot.swapCombo,
+      bet365Swapped: snapshot.bet365Swapped,
+      taiwanSwapped: snapshot.taiwanSwapped,
+      evidenceSource: snapshot.evidenceSource,
+    },
+    {
+      relation: '收斂', swapCombo: 'taiwan_only',
+      bet365Swapped: false, taiwanSwapped: true,
+      evidenceSource: 'betexplorer+playsport',
+    },
+  );
+
+  const fallback = buildBet365TaiwanSnapshot(
+    { sw: 1, lsw: 0, is: 'away', il: 1.5, ls: 'home', ll: 1.5 },
+    { v: 'flip', side: 'away', line: 1.5, be: null },
+  );
+  assert.equal(fallback.swapCombo, 'bet365_only');
+  assert.equal(fallback.evidenceSource, 'titan+playsport');
+});
+
+test('手動 NRFI／YRFI 沒有逐局比分時，明細仍顯示人工判定來源', () => {
+  const { detailRole } = require('../anomaly-nrfi-addon.js');
+  assert.match(detailRole({ nrfiStatus: 'nrfi', nrfi: true, nrfiSource: 'manual' }), /NRFI（手動）/);
+  assert.match(detailRole({ nrfiStatus: 'yrfi', nrfi: false, nrfiSource: 'manual' }), /YRFI（手動）/);
+  assert.match(detailRole({ nrfiStatus: 'pending', nrfi: null }), /待補/);
 });

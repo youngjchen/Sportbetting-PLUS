@@ -17,6 +17,8 @@
   var BRANCH = 'main';
   var FEED_URL = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/data/pregame_data.json';
   var FEED_FALLBACK = './data/pregame_data.json';
+  var NRFI_URL = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/data/nrfi_results.json';
+  var NRFI_FALLBACK = './data/nrfi_results.json';
 
   // ---- 純邏輯（可單元測試）----
   var ALIAS = { '華老鷹': '韓華鷹' };               // 玩運彩→排盤板 唯一不規則隊名
@@ -37,6 +39,42 @@
   function gameHHMM(g) {                                         // 玩運彩場次的開球時間：優先 time(HH:MM)，退回 startISO
     if (g && g.time && /\d{1,2}:\d{2}/.test(g.time)) return g.time.match(/\d{1,2}:\d{2}/)[0];
     return (g && g.startISO) ? String(g.startISO).slice(11, 16) : '';
+  }
+  function firstInningResult(game) {
+    const officialId = game && game.officialId ? game.officialId : null;
+    const lineScore = game && game.lineScore;
+    const parseRun = function (value) {
+      if (value == null || value === '') return null;
+      const match = String(value).match(/^-?\d+/);
+      return match ? Number(match[0]) : null;
+    };
+    const awayFirst = lineScore && Array.isArray(lineScore.away) ? parseRun(lineScore.away[0]) : null;
+    const homeFirst = lineScore && Array.isArray(lineScore.home) ? parseRun(lineScore.home[0]) : null;
+    if (awayFirst == null || homeFirst == null) {
+      return { status: 'pending', nrfi: null, awayFirst: null, homeFirst: null, officialId };
+    }
+    const nrfi = awayFirst === 0 && homeFirst === 0;
+    return { status: nrfi ? 'nrfi' : 'yrfi', nrfi, awayFirst, homeFirst, officialId };
+  }
+  function applyNrfiResultToControls(documentRef, result) {
+    if (!documentRef || !result) return false;
+    const select = documentRef.getElementById('settleNrfiStatus');
+    const evidence = documentRef.getElementById('settleNrfiEvidence');
+    if (!select || select.dataset.source === 'manual') return false;
+    const status = ['nrfi', 'yrfi', 'pending', 'canceled'].includes(result.status) ? result.status : 'pending';
+    select.value = status;
+    select.dataset.source = result.source || (status === 'pending' ? 'pending' : 'playsport');
+    select.dataset.officialId = result.officialId || '';
+    select.dataset.awayFirst = result.awayFirst == null ? '' : String(result.awayFirst);
+    select.dataset.homeFirst = result.homeFirst == null ? '' : String(result.homeFirst);
+    if (evidence) {
+      if (status === 'nrfi' || status === 'yrfi') {
+        const source = select.dataset.source === 'playsport' ? '玩運彩' : select.dataset.source;
+        evidence.textContent = `自動（${source}）・首局 ${result.awayFirst}-${result.homeFirst}`;
+      } else if (status === 'canceled') evidence.textContent = '取消／不計';
+      else evidence.textContent = '首局資料待自動補入，可手動改選';
+    }
+    return true;
   }
   function findGame(data, it, activeDate) {                     // 不限狀態：未開賽場才有 ERA，要能撈到
     if (!Array.isArray(data) || !it) return null;
@@ -84,6 +122,7 @@
   if (typeof window !== 'undefined' && typeof document !== 'undefined') {
     var PS_DATA = [];                // 玩運彩 feed（ERA / 盤口 / 非MLB如NPB場）
     var MLB_DATA = [];              // MLB 官方 API（權威即時比分+終場狀態，CORS 可直抓）
+    var NRFI_DATA = { games: {} };   // 工作流永久累積的首局結果；不受 pregame_data 五天窗限制
     var DATA = [], loaded = false;  // 合併：MLB 分數/狀態 為準，玩運彩補 ERA/盤口，非MLB場留玩運彩
     // 設定
     var AUTO_SETTLE = true;          // 全自動結算；不想要就設 false
@@ -165,6 +204,26 @@
       // 即時資料每輪更新後通知板子重繪，讓卡片/標籤呈現最新比分（板子端自行節流＋避開互動中）
       if (typeof global.__onLiveData === 'function') { try { global.__onLiveData(); } catch (e) {} }
     }
+    function nrfiFor(it, activeDate) {
+      var live = findGame(DATA, it, activeDate);
+      var result = firstInningResult(live);
+      if (result.status !== 'pending') { result.source = 'playsport'; return result; }
+      var archived = findGame(Object.values((NRFI_DATA && NRFI_DATA.games) || {}), it, activeDate);
+      if (!archived) return result;
+      return {
+        status: archived.status || (archived.nrfi === true ? 'nrfi' : archived.nrfi === false ? 'yrfi' : 'pending'),
+        nrfi: typeof archived.nrfi === 'boolean' ? archived.nrfi : null,
+        awayFirst: archived.awayFirst == null ? null : archived.awayFirst,
+        homeFirst: archived.homeFirst == null ? null : archived.homeFirst,
+        officialId: archived.officialId || null,
+        source: archived.source || 'playsport',
+      };
+    }
+    function loadNrfi() {
+      fetchJson(NRFI_URL).catch(function () { return fetchJson(NRFI_FALLBACK); })
+        .then(function (value) { if (value && value.games) NRFI_DATA = value; })
+        .catch(function (e) { console.warn('[結算] NRFI 累積檔載入失敗（近期逐局照常）:', e.message); });
+    }
     function load() {     // 玩運彩 feed（ERA/盤口/非MLB場）
       fetchJson(FEED_URL)
         .catch(function () { return fetchJson(FEED_FALLBACK); })
@@ -172,8 +231,9 @@
           if (AUTO_SETTLE) setTimeout(autoSettleSweep, 1000); })
         .catch(function (e) { console.warn('[結算] 玩運彩載入失敗（MLB 照常結算）:', e.message); });
     }
-    load();  loadMLB();
+    load();  loadMLB(); loadNrfi();
     setInterval(load, SWEEP_MS);
+    setInterval(loadNrfi, SWEEP_MS);
     setInterval(loadMLB, MLB_POLL_MS);                              // ★ MLB 比分快輪詢
     // 手機回前景立即補抓：背景分頁計時器被瀏覽器凍結，回來不補會停留在切出去前的資料
     document.addEventListener('visibilitychange', function () { if (!document.hidden) { load(); loadMLB(); } });
@@ -203,7 +263,9 @@
       try { if (typeof doc !== 'undefined' && doc && doc.activeDate) activeDate = doc.activeDate; } catch (e) {}
       if (!activeDate && global.doc && global.doc.activeDate) activeDate = global.doc.activeDate;
       var g = findGame(DATA, it, activeDate);
-      if (!g) return;                                                       // 沒對應場：完全不動
+      var nrfiResult = nrfiFor(it, activeDate);
+      if (nrfiResult) applyNrfiResultToControls(document, nrfiResult);
+      if (!g) return;                                                       // 沒近期場次：NRFI 累積檔仍可補首局，其餘不動
 
       var isFinal = g.status === 'finished';
       // 比分：只在「真正結束」才填（進行中是即時比分、未開賽沒比分，都不能當終場）
@@ -576,11 +638,11 @@
         return { away: g.awayScore, home: g.homeScore, status: g.status, inning: g.inning || null, final: g.status === 'finished' };
       } catch (e) { return null; }
     }
-    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, _setMLB: function (d) { MLB_DATA = d || []; rebuildDATA(); }, _setPS: function (d) { PS_DATA = d || []; rebuildDATA(); }, getData: function () { return DATA; }, getMLB: function () { return MLB_DATA; }, loadMLB: loadMLB, rebuildDATA: rebuildDATA, findGame: findGame, liveScoreFor: liveScoreFor, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne, renderPanel: renderPanel };
+    global.__psFusion = { inject: inject, _setData: function (d) { DATA = d || []; loaded = true; }, _setMLB: function (d) { MLB_DATA = d || []; rebuildDATA(); }, _setPS: function (d) { PS_DATA = d || []; rebuildDATA(); }, _setNrfi: function (d) { NRFI_DATA = d || { games: {} }; }, getData: function () { return DATA; }, getMLB: function () { return MLB_DATA; }, nrfiFor: nrfiFor, loadMLB: loadMLB, rebuildDATA: rebuildDATA, findGame: findGame, liveScoreFor: liveScoreFor, buildFlipHint: buildFlipHint, autoSettleSweep: autoSettleSweep, autoSettleOne: autoSettleOne, renderPanel: renderPanel };
   }
 
   // ---- 測試匯出 ----
   if (typeof module !== 'undefined' && module.exports) {
-    module.exports = { teamMatch, dateEq, findGame, buildFlipHint, alias, gameHHMM, hhmmToMin };
+    module.exports = { teamMatch, dateEq, findGame, buildFlipHint, firstInningResult, applyNrfiResultToControls, alias, gameHHMM, hhmmToMin };
   }
 })(typeof window !== 'undefined' ? window : globalThis);

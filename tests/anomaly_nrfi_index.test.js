@@ -36,6 +36,22 @@ test('既有 Stake 異常統計以 sid 合併 NRFI，且保留首局比分供明
   );
 });
 
+test('未來卡片已結算 NRFI 時優先使用卡片結果，不被舊 sid 快照覆蓋', () => {
+  const game = {
+    sid: 'stake_new', league: 'mlb', date: '2026-08-24', flipState: 'flipped',
+    awayTeam: 'A', homeTeam: 'B', awayScore: 3, homeScore: 1,
+    closeOddsAway: 1.6, closeOddsHome: 2.3, hdFav: 'away',
+    hdResult: 'fav_cover', totResult: 'under', preGameSwap: false,
+    nrfiStatus: 'yrfi', nrfi: false, awayFirst: 1, homeFirst: 0,
+  };
+  const collect = loadCollectCrossTab({ games: [game] }, () => ({ nrfi: true, awayFirst: 0, homeFirst: 0 }));
+  const bucket = collect('all').grp.flip.solo;
+  assert.deepEqual(
+    { nr: bucket.nr, nrN: bucket.nrN, nrfi: bucket.games[0].nrfi, awayFirst: bucket.games[0].awayFirst },
+    { nr: 0, nrN: 1, nrfi: false, awayFirst: 1 },
+  );
+});
+
 test('正式歷史快照維持 262 個 Stake sid 與 Bet365 × 台彩七類 273 場', () => {
   const history = JSON.parse(fs.readFileSync(path.join(root, 'data', 'anomaly_nrfi_history.json'), 'utf8'));
   assert.equal(Object.keys(history.stakeBySid).length, 262);

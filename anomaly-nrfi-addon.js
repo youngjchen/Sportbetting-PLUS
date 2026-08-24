@@ -49,9 +49,109 @@
     };
   }
 
-  function collectBet365Taiwan(history, leagueFilter) {
+  function classifyBet365TaiwanEvidence(evidence) {
+    const value = evidence || {};
+    const relation = value.relationCode === 'flip' ? '顛倒' : value.relationCode === 'was' ? '收斂' : null;
+    if (!relation) return null;
+    const bet365Swapped = !!value.bet365Swapped;
+    const taiwanSwapped = !!value.taiwanSwapped;
+    if (relation === '收斂' && !bet365Swapped && !taiwanSwapped) return null;
+    const swapCombo = bet365Swapped && taiwanSwapped ? 'both'
+      : bet365Swapped ? 'bet365_only' : taiwanSwapped ? 'taiwan_only' : 'neither';
+    return {
+      relation, swapCombo, bet365Swapped, taiwanSwapped,
+      bet365Side: value.bet365Side || null,
+      taiwanSide: value.taiwanSide || null,
+    };
+  }
+
+  function buildBet365TaiwanSnapshot(intlState, verdict) {
+    const state = intlState || {};
+    const current = verdict || {};
+    const betExplorer = current.be || null;
+    const classified = classifyBet365TaiwanEvidence({
+      relationCode: current.v,
+      bet365Swapped: betExplorer ? !!betExplorer.flipEver : Number(state.sw || 0) > 0,
+      taiwanSwapped: Number(state.lsw || 0) > 0,
+      bet365Side: current.side || state.is || null,
+      taiwanSide: state.ls || null,
+    });
+    if (!classified) return null;
+    return Object.assign(classified, {
+      bet365Line: current.line == null ? (state.il == null ? null : state.il) : current.line,
+      taiwanLine: state.ll == null ? null : state.ll,
+      bet365SwitchCount: betExplorer ? (betExplorer.flipEver ? Math.max(1, (betExplorer.struck || []).length) : 0) : Number(state.sw || 0),
+      taiwanSwitchCount: Number(state.lsw || 0),
+      evidenceSource: betExplorer ? 'betexplorer+playsport' : 'titan+playsport',
+      evidenceAt: state.u || (betExplorer && betExplorer.at) || null,
+    });
+  }
+
+  function resolveSettlementOfficialId(select, card) {
+    const fromMatch = select && select.dataset && select.dataset.officialId;
+    return fromMatch || (card && card.settled && card.settled.officialId) || (card && card.officialId) || null;
+  }
+
+  function settledGameToBet365TaiwanRow(game) {
+    if (!game || !game.bet365Taiwan || !relationKey(game.bet365Taiwan.relation)) return null;
+    const evidence = game.bet365Taiwan;
+    let awayOdd = game.closeOddsAway, homeOdd = game.closeOddsHome;
+    if (!(Number.isFinite(awayOdd) && Number.isFinite(homeOdd))) {
+      awayOdd = game.flipOddsAway; homeOdd = game.flipOddsHome;
+    }
+    const mlFavorite = Number.isFinite(awayOdd) && Number.isFinite(homeOdd) && awayOdd !== homeOdd
+      ? (awayOdd < homeOdd ? 'away' : 'home') : null;
+    const winner = game.awayScore === game.homeScore ? null : (game.awayScore > game.homeScore ? 'away' : 'home');
+    const nrfi = game.nrfiStatus === 'nrfi' ? true : game.nrfiStatus === 'yrfi' ? false : null;
+    return Object.assign({}, evidence, {
+      alertKey: game.officialId || game.sid || null,
+      officialId: game.officialId || null,
+      sid: game.sid || null,
+      league: game.league,
+      date: game.date,
+      gameTime: game.gameTime || null,
+      away: game.awayTeam,
+      home: game.homeTeam,
+      aScore: game.awayScore,
+      hScore: game.homeScore,
+      mlFavorite,
+      mlFavoriteWin: mlFavorite && winner ? mlFavorite === winner : null,
+      stakeAwayOdd: Number.isFinite(awayOdd) ? awayOdd : null,
+      stakeHomeOdd: Number.isFinite(homeOdd) ? homeOdd : null,
+      handicapFavorite: game.hdFav || null,
+      handicapLine: game.hdVal == null ? null : game.hdVal,
+      handicapResult: game.hdResult === 'fav_cover' ? 'cover' : game.hdResult === 'fav_nocover' ? 'nocover' : null,
+      totalLine: game.totVal == null ? null : game.totVal,
+      totalResult: game.totResult === 'over' || game.totResult === 'under' ? game.totResult : null,
+      nrfi,
+      nrfiStatus: game.nrfiStatus || 'pending',
+      nrfiSource: game.nrfiSource || null,
+      awayFirst: game.awayFirst == null ? null : game.awayFirst,
+      homeFirst: game.homeFirst == null ? null : game.homeFirst,
+      eventStatus: game.nrfiStatus === 'canceled' ? 'canceled' : null,
+    });
+  }
+
+  function rowKey(game) {
+    if (game.officialId) return `official:${game.officialId}`;
+    if (game.alertKey) return `alert:${game.alertKey}`;
+    return ['fallback', game.league, game.date, game.away || game.awayTeam, game.home || game.homeTeam, game.gameTime || ''].join('|');
+  }
+
+  function unionRows(history, settledGames) {
+    const merged = new Map();
+    const historical = history && Array.isArray(history.bet365Taiwan) ? history.bet365Taiwan : [];
+    historical.forEach((game) => merged.set(rowKey(game), game));
+    (Array.isArray(settledGames) ? settledGames : []).forEach((game) => {
+      const row = settledGameToBet365TaiwanRow(game);
+      if (row) merged.set(rowKey(row), row);
+    });
+    return [...merged.values()];
+  }
+
+  function collectBet365Taiwan(history, leagueFilter, settledGames) {
     const groups = makeGroups();
-    const rows = history && Array.isArray(history.bet365Taiwan) ? history.bet365Taiwan : [];
+    const rows = unionRows(history, settledGames);
     let total = 0;
     rows.forEach((game) => {
       if (leagueFilter && leagueFilter !== 'all' && game.league !== leagueFilter) return;
@@ -85,6 +185,10 @@
     } else if (game.awayFirst != null && game.homeFirst != null) {
       const official = game.officialSourceLabel ? `・${esc(game.officialSourceLabel)}補` : '';
       first = `${game.nrfi ? 'NRFI' : 'YRFI'}（首局 ${esc(game.awayFirst)}-${esc(game.homeFirst)}）${official}`;
+    } else if (game.nrfiStatus === 'nrfi' || game.nrfiStatus === 'yrfi') {
+      first = `${game.nrfiStatus === 'nrfi' ? 'NRFI' : 'YRFI'}（${game.nrfiSource === 'manual' ? '手動' : '自動'}）`;
+    } else if (game.nrfiStatus === 'pending') {
+      first = '首局待補';
     }
     return `${hot}・讓分${hd}・開${total}・${first}`;
   }
@@ -93,7 +197,7 @@
     const opts = helpers || {};
     const drillBlock = typeof opts.drillBlock === 'function' ? opts.drillBlock : () => ({ id: '', html: '' });
     const today = opts.today || '';
-    const collected = collectBet365Taiwan(history, leagueFilter || 'all');
+    const collected = collectBet365Taiwan(history, leagueFilter || 'all', opts.settledGames);
     const groups = collected.groups;
 
     function row(label, item) {
@@ -140,7 +244,9 @@
     const target = browser || {};
     target.anomalyNrfiHistory = target.anomalyNrfiHistory || EMPTY_HISTORY;
     target.lookupStakeNrfi = (sid) => lookupStakeNrfi(target.anomalyNrfiHistory, sid);
-    target.collectBet365Taiwan = (league) => collectBet365Taiwan(target.anomalyNrfiHistory, league);
+    target.buildBet365TaiwanSnapshot = buildBet365TaiwanSnapshot;
+    target.resolveSettlementOfficialId = resolveSettlementOfficialId;
+    target.collectBet365Taiwan = (league, settledGames) => collectBet365Taiwan(target.anomalyNrfiHistory, league, settledGames);
     target.renderBet365TaiwanSection = (league, helpers) => renderBet365TaiwanSection(league, target.anomalyNrfiHistory, helpers);
 
     if (typeof target.fetch !== 'function') {
@@ -165,5 +271,8 @@
     return target;
   }
 
-  return { lookupStakeNrfi, collectBet365Taiwan, renderBet365TaiwanSection, install, detailRole };
+  return {
+    lookupStakeNrfi, classifyBet365TaiwanEvidence, buildBet365TaiwanSnapshot, resolveSettlementOfficialId, settledGameToBet365TaiwanRow,
+    collectBet365Taiwan, renderBet365TaiwanSection, install, detailRole,
+  };
 });

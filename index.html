@@ -5735,7 +5735,9 @@ function collectCrossTab(leagueFilter){
   const B = ()=>({n:0,fw:0,fwN:0,cov:0,covN:0,ov:0,ovN:0,nr:0,nrN:0,games:[]});
   const acc = (o,g)=>{ o.n++;
     const fv=favOf(g);
-    const ni=(typeof window!=="undefined"&&typeof window.lookupStakeNrfi==="function")?window.lookupStakeNrfi(g.sid):null;
+    const ni=(g.nrfiStatus==="nrfi"||g.nrfiStatus==="yrfi")
+      ? {nrfi:g.nrfiStatus==="nrfi",awayFirst:g.awayFirst,homeFirst:g.homeFirst}
+      : ((typeof window!=="undefined"&&typeof window.lookupStakeNrfi==="function")?window.lookupStakeNrfi(g.sid):null);
     o.games.push({sid:g.sid,date:g.date,away:g.awayTeam,home:g.homeTeam,aScore:g.awayScore,hScore:g.homeScore,hdResult:g.hdResult,totResult:g.totResult,fl:flip(g),cv:conv(g),sw:swap(g),dv:divOf(g),fv,od:((g.closeOddsAway!=null&&g.closeOddsHome!=null)||(g.flipOddsAway!=null&&g.flipOddsHome!=null)),hdSideSuspect:!!g.hdSideSuspect,nrfi:ni?ni.nrfi:null,awayFirst:ni?ni.awayFirst:null,homeFirst:ni?ni.homeFirst:null});
     // 熱門勝（2026-07-20 使用者拍板：主勝欄換掉，不並列——主勝各異常組全貼硬幣、無資訊量）
     if(fv && g.awayScore!==g.homeScore){o.fwN++; const w=g.homeScore>g.awayScore?"home":"away"; if(w===fv)o.fw++;}
@@ -5871,9 +5873,9 @@ function renderReviewPage(){
     html += `</div>`;
   }
 
-  // ---- ◆ Bet365 × 台彩七類（歷史靜態快照；自動化下一輪再談）----
+  // ---- ◆ Bet365 × 台彩七類（歷史快照 ∪ 未來卡片結算；officialId 去重）----
   if(typeof window.renderBet365TaiwanSection==="function"){
-    html += window.renderBet365TaiwanSection(leagueF,{drillBlock,today:RV_TODAY()});
+    html += window.renderBet365TaiwanSection(leagueF,{drillBlock,today:RV_TODAY(),settledGames:(doc.games||[])});
   } else {
     html += `<div class="rv-section"><div class="rv-head">◆ Bet365 × 台彩七類</div><div class="rv-empty">歷史資料載入中…</div></div>`;
   }
@@ -6536,6 +6538,13 @@ function openSettleModal(it){
   const flipWrap = document.createElement("div"); flipWrap.className="settle-q";
   const fs0 = cardFlipState(it);
   const _fopt = (v,l)=>`<option value="${v}"${fs0===v?" selected":""}>${l}</option>`;
+  const _nrfi0 = ["nrfi","yrfi","pending","canceled"].includes(prior.nrfiStatus||it.nrfiStatus) ? (prior.nrfiStatus||it.nrfiStatus) : "pending";
+  const _nrfiSrc0 = prior.nrfiSource || it.nrfiSource || "pending";
+  const _nrfiA0 = prior.awayFirst!=null ? prior.awayFirst : (it.awayFirst!=null?it.awayFirst:"");
+  const _nrfiH0 = prior.homeFirst!=null ? prior.homeFirst : (it.homeFirst!=null?it.homeFirst:"");
+  const _nopt = (v,l)=>`<option value="${v}"${_nrfi0===v?" selected":""}>${l}</option>`;
+  const _nrfiTxt0 = (_nrfiA0!==""&&_nrfiH0!=="") ? `首局 ${_nrfiA0}-${_nrfiH0}（${_nrfiSrc0==="manual"?"手動":"自動"}）`
+    : (_nrfi0==="canceled" ? "取消／不計" : (_nrfi0==="pending" ? "首局資料待自動補入，可手動改選" : `${_nrfi0.toUpperCase()}（手動）`));
   flipWrap.innerHTML = `
     <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px;">
       <span style="color:var(--ink-dim);">顛倒場狀態</span>
@@ -6577,6 +6586,16 @@ function openSettleModal(it){
       <input type="checkbox" id="settlePreSwap" ${it.preGameSwap?"checked":""} style="width:18px;height:18px;cursor:pointer;">
       <span>賽前讓分方曾對調</span>
     </label>
+    <div style="display:flex;align-items:center;gap:9px;margin-top:12px;font-size:13px;flex-wrap:wrap;">
+      <span style="color:var(--ink-dim);">首局結果</span>
+      <select id="settleNrfiStatus" data-source="${esc(_nrfiSrc0)}" data-official-id="${esc(prior.officialId||it.officialId||"")}" data-away-first="${_nrfiA0}" data-home-first="${_nrfiH0}" style="padding:6px 8px;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-size:13px;">
+        ${_nopt("pending","待自動補")}
+        ${_nopt("nrfi","NRFI（首局無得分）")}
+        ${_nopt("yrfi","YRFI（首局有得分）")}
+        ${_nopt("canceled","取消／不計")}
+      </select>
+      <span id="settleNrfiEvidence" style="color:var(--ink-dim);font-size:12px;">${esc(_nrfiTxt0)}</span>
+    </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
       <span style="color:var(--ink-dim);">賽前讓分線變動</span>
       <input id="settleOpenHd" type="number" inputmode="decimal" step="0.5" placeholder="開盤" style="width:62px;padding:5px 6px;text-align:center;background:#1b232e;border:1px solid var(--line);border-radius:6px;color:var(--ink);font-family:'Oswald';" value="${it.openHdLine!=null?it.openHdLine:""}">
@@ -6602,6 +6621,13 @@ function openSettleModal(it){
     </div>
   `;
   body.appendChild(flipWrap);
+  { const nrfiSel=$("settleNrfiStatus"), nrfiEv=$("settleNrfiEvidence");
+    if(nrfiSel) nrfiSel.addEventListener("change",()=>{
+      nrfiSel.dataset.source="manual";
+      nrfiSel.dataset.awayFirst=""; nrfiSel.dataset.homeFirst="";
+      if(nrfiEv) nrfiEv.textContent = nrfiSel.value==="pending" ? "待補（手動）" : nrfiSel.value==="canceled" ? "取消／不計（手動）" : nrfiSel.value.toUpperCase()+"（手動）";
+    });
+  }
   // 讓分成交線欄位：平常收合，選了顛倒/收斂或勾了對調才浮出（結算卡保持乾淨）
   {
     const _showMyHd = ()=>{ const w=$("#myHdWrap"); if(!w) return;
@@ -7059,7 +7085,11 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
   // 顛倒場狀態：讀下拉、反寫卡片(維持卡片按鈕/標籤同步)
   applyFlipState(it, ($("#settleFlipState") && $("#settleFlipState").value) || "none");
   picks.flipState = it.flipState; picks.platformFlip = it.platformFlip;
-  picks.intlState = (typeof intlFor==="function") ? (intlFor(it) || null) : null;   // 國際軸快照（幕後分帳，不影響手標）
+  { const _ist = (typeof intlFor==="function") ? (intlFor(it) || null) : null;
+    const _iv = (_ist && typeof intlVerdict==="function") ? intlVerdict(it,_ist) : null;
+    picks.intlState = _ist;   // 國際軸快照（幕後分帳，不影響手標）
+    picks.bet365Taiwan = (window.buildBet365TaiwanSnapshot && _ist && _iv) ? window.buildBet365TaiwanSnapshot(_ist,_iv) : null;
+  }
   // Stake moneyline odds — now read for ANY game (divergence analysis no longer
   // limited to flip games). Blank = not recorded.
   {
@@ -7084,6 +7114,18 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     picks.flipVanished = it.flipVanished;  // it.flipVanished 已由 applyFlipState 設定
     it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);
     picks.preGameSwap = it.preGameSwap;
+    const _ns = $("#settleNrfiStatus");
+    const _nrfiStatus = _ns ? _ns.value : "pending";
+    const _intOrNull = v=> (v===""||v==null||isNaN(parseInt(v,10))) ? null : parseInt(v,10);
+    picks.nrfiStatus = ["nrfi","yrfi","pending","canceled"].includes(_nrfiStatus) ? _nrfiStatus : "pending";
+    picks.nrfiSource = (_ns && _ns.dataset.source) || (picks.nrfiStatus==="pending"?"pending":"manual");
+    picks.awayFirst = _intOrNull(_ns&&_ns.dataset.awayFirst);
+    picks.homeFirst = _intOrNull(_ns&&_ns.dataset.homeFirst);
+    picks.officialId = window.resolveSettlementOfficialId
+      ? window.resolveSettlementOfficialId(_ns,it)
+      : ((_ns&&_ns.dataset.officialId) || (it.settled&&it.settled.officialId) || it.officialId || null);
+    it.nrfiStatus=picks.nrfiStatus; it.nrfiSource=picks.nrfiSource;
+    it.awayFirst=picks.awayFirst; it.homeFirst=picks.homeFirst; it.officialId=picks.officialId;
     const _op = (window.__oddsPortalIntegration && window.__oddsPortalIntegration.snapshotFor) ? window.__oddsPortalIntegration.snapshotFor(it, doc.activeDate) : null;
     if(_op){ it.oddsPortal = _op; picks.oddsPortal = _op; }
     readSettleHdMove(it);
@@ -7168,6 +7210,8 @@ function applySettlement(it, picks, delta){
     sid: picks._sid,
     date: doc.activeDate,
     league: leagueOf(it),
+    gameTime: it.gameTime || null,
+    officialId: picks.officialId || null,
     awayTeam: it.away, homeTeam: it.home,
     awayScore: picks.awayScore, homeScore: picks.homeScore,
     hdFav: it.hdFav,
@@ -7175,6 +7219,12 @@ function applySettlement(it, picks, delta){
     totVal: (function(){ const v = parseFloat(it.totVal); return isNaN(v) ? null : v; })(),
     myTotLine: (function(){ const v = parseFloat(it.myTotLine); return isNaN(v) ? null : v; })(),   // B：我的大小成交線（市場基準 totVal 不變）
     intlState: (picks.intlState || null),                                                            // 國際軸快照（bet365 vs 台彩開盤；前瞻分帳）
+    bet365Taiwan: (picks.bet365Taiwan || null),                                                       // 七類快照：警示條同源、自動結算後直接進統計
+    nrfiStatus: (picks.nrfiStatus || "pending"),
+    nrfiSource: (picks.nrfiSource || null),
+    nrfi: picks.nrfiStatus==="nrfi" ? true : (picks.nrfiStatus==="yrfi" ? false : null),
+    awayFirst: (picks.awayFirst!=null ? picks.awayFirst : null),
+    homeFirst: (picks.homeFirst!=null ? picks.homeFirst : null),
     myHdAwayLine: (picks.myHdAwayLine!=null ? picks.myHdAwayLine : null),                            // 讓分成交線（對調場；＋受讓／−讓）
     myHdHomeLine: (picks.myHdHomeLine!=null ? picks.myHdHomeLine : null),
     myTotOdds: (picks.myTotOdds!=null ? picks.myTotOdds : null),                                     // 成交賠率（只有實際下注才填;真ROI/CLV 用）
@@ -7787,6 +7837,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260823nrfi3"></script><script src="./odds-integration.js?v=20260814heal9"></script><script src="./pregame-integration.js?v=20260719ppd1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260815dv4"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260824nrfi4"></script><script src="./odds-integration.js?v=20260814heal9"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260813op11"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260815dv4"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

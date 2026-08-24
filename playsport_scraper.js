@@ -18,6 +18,7 @@ const ALL_LEAGUES = [
   { id: 6, name: 'CPBL' }, { id: 9, name: 'KBO' },
 ];
 const OUTPUT_FILE = 'pregame_data.json';
+const NRFI_OUTPUT_FILE = 'nrfi_results.json';
 const BASE = 'https://www.playsport.cc/livescore';
 const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -258,6 +259,62 @@ function mergeStore(existing, fresh, keepDays) {
   return [...byId.values()].filter((g) => { const d = new Date((g.date || '') + 'T00:00:00'); return isNaN(d) || d >= cutoff; });
 }
 
+function nrfiRecord(game, updatedAt) {
+  if (!game || game.status !== 'finished' || !game.officialId) return null;
+  const ls = game.lineScore;
+  const parseRun = (value) => {
+    if (value == null || value === '') return null;
+    const m = String(value).match(/^-?\d+/);
+    return m ? Number(m[0]) : null;
+  };
+  const awayFirst = ls && Array.isArray(ls.away) ? parseRun(ls.away[0]) : null;
+  const homeFirst = ls && Array.isArray(ls.home) ? parseRun(ls.home[0]) : null;
+  if (awayFirst == null || homeFirst == null) return null;
+  const nrfi = awayFirst === 0 && homeFirst === 0;
+  return {
+    officialId: game.officialId, league: game.league, date: game.date, time: game.time || null,
+    awayTeam: game.awayTeam, homeTeam: game.homeTeam,
+    status: nrfi ? 'nrfi' : 'yrfi', nrfi, awayFirst, homeFirst,
+    source: 'playsport', updatedAt,
+  };
+}
+
+function mergeNrfiStore(existing, games, updatedAt) {
+  const previous = existing && existing.games && typeof existing.games === 'object' ? existing.games : {};
+  const next = { updatedAt: existing && existing.updatedAt || null, games: { ...previous } };
+  let changed = false;
+  for (const game of games || []) {
+    const record = nrfiRecord(game, updatedAt);
+    if (!record) continue;
+    const old = next.games[record.officialId];
+    const comparableOld = old ? { ...old, updatedAt: record.updatedAt } : null;
+    if (!comparableOld || JSON.stringify(comparableOld) !== JSON.stringify(record)) {
+      changed = true;
+      next.games[record.officialId] = record;
+    }
+  }
+  if (changed) next.updatedAt = updatedAt;
+  return next;
+}
+
+function persistNrfiResults(games, outputFile, updatedAt, seedFile) {
+  const file = outputFile || 'nrfi_results.json';
+  let existing = { updatedAt: null, games: {} };
+  const sourceFile = fs.existsSync(file) ? file : (seedFile && fs.existsSync(seedFile) ? seedFile : null);
+  if (sourceFile) {
+    const parsed = JSON.parse(fs.readFileSync(sourceFile, 'utf8'));
+    if (!parsed || typeof parsed !== 'object' || !parsed.games || typeof parsed.games !== 'object') {
+      throw new Error('nrfi_results.json 格式不合法');
+    }
+    existing = parsed;
+  }
+  const next = mergeNrfiStore(existing, games, updatedAt || new Date().toISOString());
+  const tmp = file + '.tmp';
+  fs.writeFileSync(tmp, JSON.stringify(next, null, 2), 'utf8');
+  fs.renameSync(tmp, file);
+  return next;
+}
+
 async function run(argv) {
   const { leagues, dates, debug } = parseArgs(argv);
   console.log(`\n🚀 玩運彩賽前數據  聯盟=[${leagues.map((l) => l.name).join(',')}]  日期=[${dates.join(',')}]  運彩盤\n`);
@@ -283,14 +340,16 @@ async function run(argv) {
   }
   const merged = mergeStore(loadStore(), fresh, KEEP_DAYS);
   saveAtomic(merged);
+  const nrfiStore = persistNrfiResults(merged, NRFI_OUTPUT_FILE, new Date().toISOString(), 'data/' + NRFI_OUTPUT_FILE);
   try {                                                          // 序列檔失敗不影響主輸出
     const s = recordSeries(fresh, KEEP_DAYS);
     const withPts = Object.values(s.games).filter((g) => g.pts.length > 1).length;
     console.log(`📈 台彩序列：${Object.keys(s.games).length} 場（有變動 ${withPts} 場）→ ${SERIES_FILE}`);
   } catch (e) { console.log('⚠️ 台彩序列寫入失敗（不影響 pregame_data）：' + e.message); }
   const withEra = merged.filter((g) => (g.awayERA || 0) > 0 || (g.homeERA || 0) > 0).length;
-  console.log(`\n✅ 本次抓 ${fresh.length} 場；累積保存 ${merged.length} 場（含 ERA ${withEra} 場）→ ${OUTPUT_FILE}\n`);
+  console.log(`\n✅ 本次抓 ${fresh.length} 場；累積保存 ${merged.length} 場（含 ERA ${withEra} 場）→ ${OUTPUT_FILE}`);
+  console.log(`⚾ NRFI 永久累積 ${Object.keys(nrfiStore.games).length} 場 → ${NRFI_OUTPUT_FILE}\n`);
   return merged;
 }
 if (require.main === module) run().then(() => closeTransport(), (e) => { console.error('未預期錯誤：', e); closeTransport(); process.exitCode = 1; });
-module.exports = { parseArgs, twDate, extractGames, resolveHandicap, saveAtomic, loadStore, mergeStore, recordSeries, loadSeries, run, ALL_LEAGUES };
+module.exports = { parseArgs, twDate, extractGames, resolveHandicap, saveAtomic, loadStore, mergeStore, nrfiRecord, mergeNrfiStore, persistNrfiResults, recordSeries, loadSeries, run, ALL_LEAGUES, NRFI_OUTPUT_FILE };

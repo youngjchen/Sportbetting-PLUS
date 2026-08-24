@@ -68,6 +68,7 @@ jobs:
               cp -f pregame_data.json data/pregame_data.json
               git add data/pregame_data.json
               [ -f lottery_series.json ] && cp -f lottery_series.json data/lottery_series.json && git add data/lottery_series.json
+              [ -f nrfi_results.json ] && cp -f nrfi_results.json data/nrfi_results.json && git add data/nrfi_results.json
               if ! git diff --cached --quiet; then
                 git commit -m "chore: update pregame_data.json [skip ci]" || true
                 # push 撞到別的 workflow 同分鐘推檔 → rebase 一次再推；
