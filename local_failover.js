@@ -21,6 +21,7 @@ const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
 const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer } = require('./oddsportal_local.js');
+const { mirrorPregameOutputs } = require('./local_failover_workspace.js');
 
 const REPO_DIR = __dirname;
 const STATE_FILE = path.join(os.homedir(), 'bb_failover_state.json');
@@ -117,10 +118,7 @@ function run() {
     try {
       execFileSync('node', ['playsport_scraper.js'], { cwd: REPO_DIR, stdio: ['ignore', 'inherit', 'inherit'], timeout: 240e3 });
       // 鏡射 workflow 的搬檔步驟
-      for (const f of ['pregame_data.json', 'lottery_series.json']) {
-        const src = path.join(REPO_DIR, f), dst = path.join(REPO_DIR, 'data', f);
-        if (fs.existsSync(src)) { fs.copyFileSync(src, dst); staged.push('data/' + f); }
-      }
+      mirrorPregameOutputs(REPO_DIR, staged);
     } catch (e) { log('pregame 本機抓取失敗：' + e.message.split('\n')[0]); }
   }
 

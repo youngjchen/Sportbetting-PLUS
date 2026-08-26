@@ -40,6 +40,17 @@ const FAILOVER_OWNED_RE = [
   /^lottery_series\.json$/,
 ];
 
+function mirrorPregameOutputs(repoDir, staged) {
+  const dataDir = path.join(repoDir, 'data');
+  fs.mkdirSync(dataDir, { recursive: true });
+  for (const name of ['pregame_data.json', 'lottery_series.json', 'nrfi_results.json']) {
+    const src = path.join(repoDir, name);
+    if (!fs.existsSync(src)) continue;
+    fs.copyFileSync(src, path.join(dataDir, name));
+    staged.push('data/' + name);
+  }
+}
+
 function classifyFailoverDirt(lines) {
   const owned = [], foreign = [];
   for (const line of lines) {
@@ -83,7 +94,7 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   git(['config', 'user.email', 'bb-failover@local'], workspaceDir);
   const dirtyLines = git(['status', '--porcelain'], workspaceDir)
     .split(/\r?\n/)
-    .filter(line => line && line !== '?? node_modules/');
+    .filter(line => line && line !== '?? node_modules/' && line !== '?? nrfi_results.json');
   if (dirtyLines.length) {
     // 自癒收殮：殘留若全是「備援自家產出檔」（上輪 commit/push 中途死掉的孤兒），
     // 收殮成一個 commit 繼續跑（隨下一次成功輪一起推上雲）；有任何非自家檔案照舊 fail-closed。
@@ -181,4 +192,11 @@ if (require.main === module) {
   }
 }
 
-module.exports = { ensureFailoverWorkspace, ensureRuntimeDependencies, normalizedRemote, classifyFailoverDirt, FAILOVER_OUTPUT_ROOTS };
+module.exports = {
+  ensureFailoverWorkspace,
+  ensureRuntimeDependencies,
+  normalizedRemote,
+  classifyFailoverDirt,
+  mirrorPregameOutputs,
+  FAILOVER_OUTPUT_ROOTS,
+};

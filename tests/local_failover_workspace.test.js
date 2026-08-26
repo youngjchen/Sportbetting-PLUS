@@ -161,6 +161,60 @@ test('classifyFailoverDirt separates failover-owned outputs from foreign files',
   assert.deepEqual(quoted.foreign, []);
 });
 
+test('local failover mirrors every playsport output including NRFI into data', () => {
+  const { mirrorPregameOutputs } = loadWorkspaceModule();
+  assert.equal(typeof mirrorPregameOutputs, 'function');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failover-pregame-outputs-'));
+  try {
+    fs.mkdirSync(path.join(root, 'data'));
+    fs.writeFileSync(path.join(root, 'pregame_data.json'), '[{"id":"game"}]');
+    fs.writeFileSync(path.join(root, 'lottery_series.json'), '{"games":{}}');
+    fs.writeFileSync(path.join(root, 'nrfi_results.json'), '{"games":{"game":{"nrfi":true}}}');
+    const staged = [];
+
+    mirrorPregameOutputs(root, staged);
+
+    assert.deepEqual(staged, [
+      'data/pregame_data.json',
+      'data/lottery_series.json',
+      'data/nrfi_results.json',
+    ]);
+    assert.equal(
+      fs.readFileSync(path.join(root, 'data', 'nrfi_results.json'), 'utf8'),
+      '{"games":{"game":{"nrfi":true}}}'
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
+test('generated NRFI scratch file does not wedge the isolated failover workspace', () => {
+  const { ensureFailoverWorkspace } = loadWorkspaceModule();
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failover-nrfi-scratch-'));
+  const origin = path.join(root, 'origin.git');
+  const seed = path.join(root, 'seed');
+  const failover = path.join(root, 'failover');
+  try {
+    git(['init', '--bare', origin], root);
+    git(['init', '-b', 'main', seed], root);
+    git(['config', 'user.email', 'test@example.invalid'], seed);
+    git(['config', 'user.name', 'Test'], seed);
+    fs.writeFileSync(path.join(seed, 'tracked.txt'), 'seed\n');
+    git(['add', 'tracked.txt'], seed);
+    git(['commit', '-m', 'seed'], seed);
+    git(['remote', 'add', 'origin', origin], seed);
+    git(['push', '-u', 'origin', 'main'], seed);
+    ensureFailoverWorkspace({ originUrl: origin, workspaceDir: failover });
+    fs.writeFileSync(path.join(failover, 'nrfi_results.json'), '{"games":{}}');
+
+    assert.doesNotThrow(
+      () => ensureFailoverWorkspace({ originUrl: origin, workspaceDir: failover })
+    );
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // 2026-08-07 卡死事故：git() 對 porcelain 輸出做 .trim()，第一行的狀態欄空格被吃掉，
 // 舊版固定 slice(3) 多砍兩字元 → 自家產出檔被誤判成外來檔 → 整輪 fail-closed 12 小時。
 test('classifyFailoverDirt tolerates the leading space trimmed off the first porcelain line', () => {
