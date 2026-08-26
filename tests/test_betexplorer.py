@@ -348,3 +348,9 @@ class Bet365LinesTests(unittest.TestCase):
                       .replace('class="table-main__odds" data-odd="2.40"', 'class="table-main__odds inactive" data-odd="2.40"')
         s = bet365_summary(bet365_lines('x', odds_html=html), 7.0)
         self.assertIsNone(s)
+
+    def test_summary_keeps_its_own_observation_time(self):
+        from betexplorer import bet365_lines, bet365_summary
+        seen = '2026-08-26T10:05:00+08:00'
+        s = bet365_summary(bet365_lines('x', odds_html=self.AH), 7.0, observed_at=seen)
+        self.assertEqual(s['observedAt'], seen)

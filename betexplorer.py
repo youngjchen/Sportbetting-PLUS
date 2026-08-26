@@ -442,7 +442,8 @@ def bet365_lines(match_id: str, odds_html: str | None = None) -> list[dict[str, 
     return out
 
 
-def bet365_summary(lines: list[dict[str, Any]], offset: float) -> dict[str, Any] | None:
+def bet365_summary(lines: list[dict[str, Any]], offset: float,
+                   observed_at: str | None = None) -> dict[str, Any] | None:
     """壓成警示條要的形狀：現行方向＋線＋時戳；下架列全部保留當翻轉證據。
     side：home=主讓、away=客讓（line<0 → 主讓）。"""
     def stamp(raw):
@@ -459,12 +460,15 @@ def bet365_summary(lines: list[dict[str, Any]], offset: float) -> dict[str, Any]
     main = sorted(act, key=lambda x: abs(x["line"]))[0]
     side = "home" if main["line"] < 0 else "away"
     ever = any((("home" if x["line"] < 0 else "away") != side) for x in struck)
-    return {
+    summary = {
         "side": side, "line": abs(main["line"]), "at": stamp(main.get("created")),
         "flipEver": ever,
         "struck": [{"line": x["line"], "side": "home" if x["line"] < 0 else "away",
                     "at": stamp(x.get("created"))} for x in struck],
     }
+    if observed_at:
+        summary["observedAt"] = observed_at
+    return summary
 
 
 def archive_history(cell: dict[str, str]) -> list[dict[str, str]] | None:

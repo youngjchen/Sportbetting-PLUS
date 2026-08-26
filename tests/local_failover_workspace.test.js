@@ -159,6 +159,12 @@ test('classifyFailoverDirt separates failover-owned outputs from foreign files',
   assert.deepEqual(renamed.foreign, []);
   const quoted = classifyFailoverDirt(['?? "data/expert_archive/a b.json"']);
   assert.deepEqual(quoted.foreign, []);
+
+  // playsport_scraper 會先在 repo 根產生 NRFI 暫存檔，再鏡射到 data/。
+  // 上一輪若中斷，這個可重建產物不能讓整條備援永久 fail-closed。
+  const nrfiRoot = classifyFailoverDirt(['?? nrfi_results.json']);
+  assert.deepEqual(nrfiRoot.foreign, []);
+  assert.deepEqual(nrfiRoot.owned, ['nrfi_results.json']);
 });
 
 test('local failover mirrors every playsport output including NRFI into data', () => {
@@ -183,6 +189,7 @@ test('local failover mirrors every playsport output including NRFI into data', (
       fs.readFileSync(path.join(root, 'data', 'nrfi_results.json'), 'utf8'),
       '{"games":{"game":{"nrfi":true}}}'
     );
+    assert.equal(fs.existsSync(path.join(root, 'nrfi_results.json')), false);
   } finally {
     fs.rmSync(root, { recursive: true, force: true });
   }
@@ -239,6 +246,28 @@ test('classifyFailoverDirt tolerates the leading space trimmed off the first por
   // 改名列仍取箭頭後的新路徑
   const renamed = classifyFailoverDirt(['R  data/old.json -> data/oddsportal_summary.json']);
   assert.deepEqual(renamed.owned, ['data/oddsportal_summary.json']);
+});
+
+test('NRFI 根目錄暫存檔會先鏡射到 data 再移除，避免下一輪再次卡死', () => {
+  const { recoverOwnedRootOutputs } = require('../local_failover_workspace.js');
+  assert.equal(typeof recoverOwnedRootOutputs, 'function');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failover-nrfi-recover-'));
+  try {
+    fs.mkdirSync(path.join(root, 'data'));
+    const fresh = { updatedAt: '2026-08-26T10:00:00+08:00', games: { a: { nrfi: true } } };
+    fs.writeFileSync(path.join(root, 'nrfi_results.json'), JSON.stringify(fresh));
+    fs.writeFileSync(path.join(root, 'data', 'nrfi_results.json'), JSON.stringify({ games: {} }));
+
+    recoverOwnedRootOutputs(root, ['nrfi_results.json']);
+
+    assert.deepEqual(
+      JSON.parse(fs.readFileSync(path.join(root, 'data', 'nrfi_results.json'), 'utf8')),
+      fresh
+    );
+    assert.equal(fs.existsSync(path.join(root, 'nrfi_results.json')), false);
+  } finally {
+    fs.rmSync(root, { recursive: true, force: true });
+  }
 });
 
 // 2026-08-09 卡死事故：上一輪 rebase 中途死掉留下 .git/rebase-merge，

@@ -38,6 +38,7 @@ const FAILOVER_OWNED_RE = [
   /^data\/expert_archive\//,
   /^pregame_data\.json$/,
   /^lottery_series\.json$/,
+  /^nrfi_results\.json$/,
 ];
 
 function mirrorPregameOutputs(repoDir, staged) {
@@ -48,7 +49,21 @@ function mirrorPregameOutputs(repoDir, staged) {
     if (!fs.existsSync(src)) continue;
     fs.copyFileSync(src, path.join(dataDir, name));
     staged.push('data/' + name);
+    if (name === 'nrfi_results.json') fs.unlinkSync(src);
   }
+}
+
+// 玩運彩爬蟲先在 repo 根寫暫存檔，workflow 再鏡射進 data/。若程序在兩步之間
+// 中斷，下一輪 launcher 必須收回這份有效產物，不能讓未追蹤檔永久卡死備援。
+function recoverOwnedRootOutputs(workspaceDir, owned) {
+  if (!owned.includes('nrfi_results.json')) return;
+  const src = path.join(workspaceDir, 'nrfi_results.json');
+  if (!fs.existsSync(src)) return;
+  const parsed = JSON.parse(fs.readFileSync(src, 'utf8'));
+  const dataDir = path.join(workspaceDir, 'data');
+  fs.mkdirSync(dataDir, { recursive: true });
+  fs.writeFileSync(path.join(dataDir, 'nrfi_results.json'), JSON.stringify(parsed, null, 2) + '\n');
+  fs.unlinkSync(src);
 }
 
 function classifyFailoverDirt(lines) {
@@ -94,7 +109,7 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   git(['config', 'user.email', 'bb-failover@local'], workspaceDir);
   const dirtyLines = git(['status', '--porcelain'], workspaceDir)
     .split(/\r?\n/)
-    .filter(line => line && line !== '?? node_modules/' && line !== '?? nrfi_results.json');
+    .filter(line => line && line !== '?? node_modules/');
   if (dirtyLines.length) {
     // 自癒收殮：殘留若全是「備援自家產出檔」（上輪 commit/push 中途死掉的孤兒），
     // 收殮成一個 commit 繼續跑（隨下一次成功輪一起推上雲）；有任何非自家檔案照舊 fail-closed。
@@ -112,7 +127,15 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
         }
       }
     }
-    git(['add', '-A', '--', ...FAILOVER_OUTPUT_ROOTS], workspaceDir);
+    recoverOwnedRootOutputs(workspaceDir, dirt.owned);
+    // 舊版／測試用 clone 不一定同時有三個根目錄鏡射檔；只 stage 實際存在
+    // 或已被 Git 追蹤的路徑，避免 pathspec 不存在反而讓自癒流程失敗。
+    const stageRoots = FAILOVER_OUTPUT_ROOTS.filter((rel) => {
+      if (fs.existsSync(path.join(workspaceDir, rel))) return true;
+      try { return !!git(['ls-files', '--', rel], workspaceDir); }
+      catch (_) { return false; }
+    });
+    if (stageRoots.length) git(['add', '-A', '--', ...stageRoots], workspaceDir);
     try { git(['commit', '-q', '-m', 'data: failover 自癒收殮上輪殘留產出（中斷孤兒，防 fail-closed 卡死）'], workspaceDir); }
     catch (_) { /* 全被還原成乾淨版=無事可提交 */ }
     console.log('[failover workspace] 已自癒收殮殘留產出：\n' + dirtyLines.join('\n'));
@@ -198,5 +221,6 @@ module.exports = {
   normalizedRemote,
   classifyFailoverDirt,
   mirrorPregameOutputs,
+  recoverOwnedRootOutputs,
   FAILOVER_OUTPUT_ROOTS,
 };

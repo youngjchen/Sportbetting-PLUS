@@ -3529,9 +3529,16 @@ function intlFor(it){
 // 消費點：卡片藍帶、標籤列表徽章＋tooltip、異常置頂排序、結算卡自動判——全走這裡，
 // 帶上只放結論、不標來源（使用者 2026-08-15：「來源你自己記在幕後」）。
 function intlVerdict(it, ist){
-  let be=null;
-  try{ const g=(window.__oddsPortalIntegration&&window.__oddsPortalIntegration.gameFor)?window.__oddsPortalIntegration.gameFor(it, doc.activeDate):null; be=(g&&g.bet365)||null; }catch(_){}
+  let be=null, observedAt=null;
+  try{ const g=(window.__oddsPortalIntegration&&window.__oddsPortalIntegration.gameFor)?window.__oddsPortalIntegration.gameFor(it, doc.activeDate):null; be=(g&&g.bet365)||null; observedAt=g&&g.observedAt; }catch(_){}
   if(!(be&&be.side)) return { be:null, side:(ist&&ist.is)||null, line:ist&&ist.il, v:(ist&&ist.v)||null, lag:false, dv:!!(ist&&ist.dv) };
+  // BetExplorer 摘要若停止刷新，不得永遠壓住較新的 Titan 現行方向。只在兩邊
+  // 方向衝突且 Titan 的實際觀測時間較新時退回 Titan；同向或 BE 較新仍維持
+  // BetExplorer 主來源。2026-08-26 海盜@教士等三場因此避免被舊摘要錯判顛倒。
+  const beSeen=Date.parse((be&&be.observedAt)||observedAt||""), titanSeen=Date.parse((ist&&ist.u)||"");
+  if(ist&&ist.is&&be.side!==ist.is&&Number.isFinite(beSeen)&&Number.isFinite(titanSeen)&&beSeen<titanSeen){
+    return { be:null, side:ist.is, line:ist.il, v:ist.v||null, lag:false, dv:!!ist.dv };
+  }
   const lside = ist && ist.ls;
   let v=null;
   if(lside) v = (be.side!==lside) ? "flip" : ((be.flipEver || (ist&&ist.v)) ? "was" : null);

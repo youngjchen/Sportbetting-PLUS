@@ -196,7 +196,10 @@ def collect(game, offset, now_tw):
 
     bet365 = None
     try:
-        bet365 = BE.bet365_summary(BE.bet365_lines(game["matchId"]), offset)
+        bet365 = BE.bet365_summary(
+            BE.bet365_lines(game["matchId"]), offset,
+            observed_at=now_tw.isoformat(timespec="seconds"),
+        )
     except Exception:
         bet365 = None                      # bet365 缺列不影響其他市場（Titan 作複查備援）
 
