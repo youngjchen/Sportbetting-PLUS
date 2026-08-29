@@ -192,6 +192,60 @@
     return out;
   }
 
+  // BetExplorer/OddsPortal 摘要是第二排程來源：Titan 偶爾少列同隊雙重賽的第二場，
+  // 但 oddsportal_summary.json 已有該場賠率。先轉成與 Titan 相同的最小排卡格式，
+  // 再由 mergeAutoArrangeGames 只補 Titan 缺少的場次。
+  function oddsPortalAutoGames(summary, dateKey) {
+    var games = summary && summary.games;
+    if (!games || typeof games !== "object") return [];
+    var out = [];
+    Object.keys(games).forEach(function (key) {
+      var g = games[key];
+      if (!g || !g.awayTeam || !g.homeTeam) return;
+      var d = String(g.date || (g.startISO || "").slice(0, 10));
+      if (!d || (dateKey && d !== dateKey)) return;
+      var hhmm = gStartHHMM(g) || String(g.startTime || "").slice(0, 5);
+      if (hhmmToMin(hhmm) == null) return;
+      // 與 Titan feedFavTeam 相同：用獨贏低賠判熱門，避免 BetExplorer 讓分正負號的隊伍視角歧義。
+      var mlMarket = g.markets && g.markets.ml;
+      var ml = mlMarket && (mlMarket.active || mlMarket.open);
+      var awayOdds = ml && Number(ml.away), homeOdds = ml && Number(ml.home);
+      var fav = awayOdds > 1 && homeOdds > 1 && awayOdds !== homeOdds ?
+        (awayOdds < homeOdds ? g.awayTeam : g.homeTeam) : null;
+      if (!fav) {
+        var hdMarket = g.markets && g.markets.hd;
+        var hd = hdMarket && (hdMarket.active || hdMarket.open);
+        fav = hd && hd.favorite === "away" ? g.awayTeam :
+              (hd && hd.favorite === "home" ? g.homeTeam : null);
+      }
+      out.push({
+        id: "be:" + String(g.eventId || key),
+        league: g.league || null,
+        awayTeam: g.awayTeam,
+        homeTeam: g.homeTeam,
+        startISO: g.startISO || (d + "T" + hhmm + ":00+08:00"),
+        _autoFavTeam: fav,
+        _oddsPortal: true
+      });
+    });
+    return out;
+  }
+
+  function mergeAutoArrangeGames(primary, fallback) {
+    function pk(g) { return [g.awayTeam, g.homeTeam].sort().join("|"); }
+    var out = (primary || []).slice();
+    (fallback || []).forEach(function (g) {
+      if (!g || !g.awayTeam || !g.homeTeam) return;
+      var dup = out.some(function (o) {
+        if (!o || pk(o) !== pk(g)) return false;
+        var d = minDiff(gStartHHMM(o), gStartHHMM(g));
+        return d != null && d <= TOL_MIN;
+      });
+      if (!dup) out.push(g);
+    });
+    return out;
+  }
+
   /* ---- 對應這張卡的比賽（唯一鍵：先認 oddsId，再 日期＋兩隊＋開球時間；主客顛倒也認） ----
      oddsId 直配加「時間檢核」：Titan007 會把同一列搬去另一場（2026-07-17 光芒@紅襪雙重賽，
      id=172742 從 01:35 整列搬到 07:10）→ 卡片記的開球時間與 id 對到的場差超過 TOL 時，
@@ -607,39 +661,63 @@
   }
 
   /* ---- 自動排當天盤（讓分盤口/大小基準留空） ---- */
-  function autoArrangeFromFeed() {
+  function autoArrangeFromFeed(portalRefreshDone) {
     if (typeof closeMore === "function") closeMore();
-    if (!feed || !feed.matches || !Object.keys(feed.matches).length) {
-      alert("目前沒有抓到任何即將開打的比賽資料。\n（先確認 scraper 跑過、data/odds_log.json 已產生。）");
+    var portalApi = window.__oddsPortalIntegration;
+    var currentPortalFeed = portalApi && typeof portalApi._getFeed === "function" ? portalApi._getFeed() : null;
+    if (!portalRefreshDone && portalApi && typeof portalApi.refresh === "function" &&
+        (!currentPortalFeed || !currentPortalFeed.games || !Object.keys(currentPortalFeed.games).length)) {
+      portalApi.refresh().then(function () { autoArrangeFromFeed(true); }).catch(function (err) {
+        try { console.warn("[排盤] BetExplorer 摘要即時載入失敗，改用現有來源：", err); } catch (_) {}
+        autoArrangeFromFeed(true);
+      });
       return;
     }
     var byDate = {};
-    for (var id in feed.matches) {
-      var g = feed.matches[id];
+    var matches = (feed && feed.matches) || {};
+    for (var id in matches) {
+      var g = matches[id];
       if (!g.homeTeam || !g.awayTeam) continue;
       var d = (g.startISO || "").slice(0, 10);
       if (d) (byDate[d] = byDate[d] || []).push(g);
     }
+    var portalFeed = portalApi && typeof portalApi._getFeed === "function" ? portalApi._getFeed() : null;
+    var portalByDate = {};
+    oddsPortalAutoGames(portalFeed).forEach(function (g) {
+      var d = (g.startISO || "").slice(0, 10);
+      if (d) (portalByDate[d] = portalByDate[d] || []).push(g);
+    });
+    if (!Object.keys(byDate).length && !Object.keys(portalByDate).length) {
+      alert("目前沒有抓到任何即將開打的比賽資料。\n（先確認賠率爬蟲已產生 Titan 或 BetExplorer 摘要。）");
+      return;
+    }
+    function gamesForDate(dateKey) {
+      var titan = (byDate[dateKey] || []).filter(function (g) { return archiveCorroborated(g, dateKey); });
+      return mergeAutoArrangeGames(titan, portalByDate[dateKey] || []);
+    }
     var target = doc.activeDate;
-    if (!byDate[target] || !byDate[target].length) {
+    if (!gamesForDate(target).length) {
       var best = null;
-      for (var dd in byDate) { if (!best || byDate[dd].length > byDate[best].length) best = dd; }
+      var allDates = {};
+      Object.keys(byDate).forEach(function (dd) { allDates[dd] = true; });
+      Object.keys(portalByDate).forEach(function (dd) { allDates[dd] = true; });
+      Object.keys(allDates).forEach(function (dd) { if (!best || gamesForDate(dd).length > gamesForDate(best).length) best = dd; });
       if (!best) { alert("抓到的資料裡沒有可排的比賽（隊名可能都沒對上）。"); return; }
       if (!confirm("今天（" + fmtDate(target) + "）沒有抓到比賽。\n\n抓到 " + fmtDate(best) + " 的 " +
-                   byDate[best].length + " 場，要切到那天並排盤嗎？")) return;
+                   gamesForDate(best).length + " 場，要切到那天並排盤嗎？")) return;
       switchDate(best);
       target = best;
     }
     if (typeof snapshot === "function") snapshot();
-    // 孤立歸檔時段（官方沒有）先剔除，避免替不存在的場次排卡
-    var candGames = byDate[target].filter(function (g) { return archiveCorroborated(g, target); });
+    // Titan 孤立歸檔時段（官方沒有）先剔除；BetExplorer 則只補 Titan 缺的場次。
+    var candGames = gamesForDate(target);
     var toAdd = gamesToAdd(state.items, candGames);        // 雙重賽會回該對戰缺的每一場(含第二場)
     var added = 0;
     toAdd.forEach(function (g) {
       var lg = g.league || null;
       if (!lg && typeof LEAGUES !== "undefined") for (var k in LEAGUES) { if (LEAGUES[k].teams.indexOf(g.homeTeam) >= 0) { lg = k; break; } }
       var col = (lg && typeof LEAGUES !== "undefined" && LEAGUES[lg]) ? LEAGUES[lg].color : "var(--mlb)";
-      var fav = feedFavTeam(g);
+      var fav = g._autoFavTeam || feedFavTeam(g);
       state.items.push({
         id: uid++, type: "match", x: 0, y: 0,
         away: g.awayTeam, home: g.homeTeam, awayColor: col, homeColor: col,
@@ -750,6 +828,6 @@
   window.__oddsIntegration = { closeHdFor: function (id) { return feedCloseHd[id] || null; } };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, oddsPortalAutoGames: oddsPortalAutoGames, mergeAutoArrangeGames: mergeAutoArrangeGames, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
   }
 })();
