@@ -17,6 +17,7 @@ import json
 import re
 import sys
 from collections import Counter
+from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -307,6 +308,29 @@ def collect(game, offset, now_tw):
     }
 
 
+def collect_games(games, offset, now_tw, workers=4, collect_fn=collect):
+    """並行下載多場盤口；輸出維持賽程順序，單場錯誤不影響其他場。"""
+    def attempt(game):
+        try:
+            entry = collect_fn(game, offset, now_tw)
+            has_odds = any(
+                (entry["markets"].get(key) or {}).get("open")
+                or (entry["markets"].get(key) or {}).get("active")
+                for key in ("ml", "hd", "ou")
+            )
+            return entry if has_odds else None, None
+        except Exception as exc:
+            error = f"{game['awayZh']}@{game['homeZh']}: {str(exc)[:90]}"
+            return None, error
+
+    count = max(1, min(int(workers), len(games) or 1))
+    with ThreadPoolExecutor(max_workers=count) as pool:
+        results = list(pool.map(attempt, games))
+    collected = [entry for entry, _ in results if entry is not None]
+    failed = [error for _, error in results if error is not None]
+    return collected, failed
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--leagues", default="mlb,npb,kbo,cpbl")
@@ -316,6 +340,8 @@ def main() -> int:
                         help="賽程頁只取這個時數內的場次（預設 36 小時＝今天＋明天）")
     parser.add_argument("--event-ids", default="",
                         help="逗號分隔的 BetExplorer eventId；只下載指定場次的盤口歷史")
+    parser.add_argument("--workers", type=int, default=4,
+                        help="同時下載的比賽數（預設 4；單場補抓仍只開 1 個）")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -396,16 +422,7 @@ def main() -> int:
     if args.event_ids:
         print(f"INFO 單場補抓：符合 eventId 的賽事共 {len(games)} 場", file=sys.stderr)
 
-    collected, failed = [], []
-    for game in games:
-        try:
-            entry = collect(game, offset, now_tw)
-            if not any((entry["markets"].get(k) or {}).get("open") or (entry["markets"].get(k) or {}).get("active")
-                       for k in ("ml", "hd", "ou")):
-                continue          # Stake 還沒開盤（常見於後天的場）→ 不寫空殼進資料庫
-            collected.append(entry)
-        except Exception as exc:
-            failed.append(f"{game['awayZh']}@{game['homeZh']}: {str(exc)[:90]}")
+    collected, failed = collect_games(games, offset, now_tw, workers=args.workers)
 
     summary_path = Path(args.summary)
     summary = json.loads(summary_path.read_text(encoding="utf-8"))

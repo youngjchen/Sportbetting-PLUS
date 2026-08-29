@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime, timedelta
+from threading import Barrier
 
 import betexplorer_run as runner
 
@@ -115,6 +116,35 @@ class ScheduleReconciliationTests(unittest.TestCase):
         selected = runner.select_event_ids(games, "8MwEu99s,rwubIuCG")
 
         self.assertEqual([game["matchId"] for game in selected], ["8MwEu99s", "rwubIuCG"])
+
+    def test_parallel_collection_keeps_order_and_isolates_one_failure(self):
+        """若退回逐場下載會卡在 barrier；若單場例外外洩則其他場也拿不到。"""
+        games = [
+            {"matchId": "first", "awayZh": "客一", "homeZh": "主一"},
+            {"matchId": "second", "awayZh": "客二", "homeZh": "主二"},
+            {"matchId": "bad", "awayZh": "壞客", "homeZh": "壞主"},
+        ]
+        rendezvous = Barrier(2)
+
+        def fake_collect(game, _offset, _now):
+            if game["matchId"] in {"first", "second"}:
+                rendezvous.wait(timeout=1)
+            if game["matchId"] == "bad":
+                raise RuntimeError("來源失敗")
+            return {
+                "eventId": game["matchId"],
+                "markets": {"ml": {"open": {"away": 2.0, "home": 1.8}}},
+            }
+
+        if not hasattr(runner, "collect_games"):
+            self.fail("尚未提供並行盤口收集功能")
+        collected, failed = runner.collect_games(
+            games, 7.0, datetime(2026, 8, 29, tzinfo=runner.TW),
+            workers=2, collect_fn=fake_collect,
+        )
+
+        self.assertEqual([entry["eventId"] for entry in collected], ["first", "second"])
+        self.assertEqual(failed, ["壞客@壞主: 來源失敗"])
 
 
 if __name__ == "__main__":
