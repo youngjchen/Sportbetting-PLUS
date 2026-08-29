@@ -111,6 +111,14 @@ def partition_official_times(games, offset, official):
     return accepted, rejected
 
 
+def select_event_ids(games, raw_event_ids):
+    """單場／少數場補抓：空字串維持全量，否則只保留指定 BetExplorer eventId。"""
+    wanted = {value.strip() for value in str(raw_event_ids or "").split(",") if value.strip()}
+    if not wanted:
+        return list(games)
+    return [game for game in games if game.get("matchId") in wanted]
+
+
 def _team_zh():
     import importlib.util
     spec = importlib.util.spec_from_file_location("ops", str(Path(__file__).with_name("oddsportal_scraper.py")))
@@ -306,6 +314,8 @@ def main() -> int:
     parser.add_argument("--schedule", default="data/pregame_data.json")
     parser.add_argument("--horizon-hours", type=float, default=36.0,
                         help="賽程頁只取這個時數內的場次（預設 36 小時＝今天＋明天）")
+    parser.add_argument("--event-ids", default="",
+                        help="逗號分隔的 BetExplorer eventId；只下載指定場次的盤口歷史")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -381,6 +391,10 @@ def main() -> int:
             start = game_start_tw(game, offset)
             print(f"WARN 官方時間無法配對，僅隔離此場：{game['awayZh']}@{game['homeZh']} "
                   f"{start.strftime('%Y-%m-%d %H:%M')} ({game['matchId']})", file=sys.stderr)
+
+    games = select_event_ids(games, args.event_ids)
+    if args.event_ids:
+        print(f"INFO 單場補抓：符合 eventId 的賽事共 {len(games)} 場", file=sys.stderr)
 
     collected, failed = [], []
     for game in games:

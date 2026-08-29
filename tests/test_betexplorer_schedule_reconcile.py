@@ -102,6 +102,20 @@ class ScheduleReconciliationTests(unittest.TestCase):
         self.assertEqual([game["matchId"] for game in accepted], ["valid"])
         self.assertEqual([game["matchId"] for game in rejected], ["bad"])
 
+    def test_event_id_filter_collects_only_the_requested_game(self):
+        """單場補抓不得再下載同日其餘所有比賽的盤口歷史。"""
+        games = [
+            {"matchId": "8MwEu99s"},
+            {"matchId": "rwubIuCG"},
+            {"matchId": "other"},
+        ]
+
+        if not hasattr(runner, "select_event_ids"):
+            self.fail("尚未提供單場 eventId 補抓功能")
+        selected = runner.select_event_ids(games, "8MwEu99s,rwubIuCG")
+
+        self.assertEqual([game["matchId"] for game in selected], ["8MwEu99s", "rwubIuCG"])
+
 
 if __name__ == "__main__":
     unittest.main()
