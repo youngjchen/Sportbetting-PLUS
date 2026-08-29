@@ -16,6 +16,7 @@ import argparse
 import json
 import re
 import sys
+from collections import Counter
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -27,6 +28,77 @@ TW = BE.TW
 # 擴盤造成的多線歧義不靠時間切點解決，改「照卡片上的讓分線取對應賠率」
 # （_active_line 本來就挑絕對值最小＝卡片 ±1.5 主盤）。舊的 T−150 規則作廢。
 HD_CLOSE_LEAD_MIN = 0
+
+
+def game_start_tw(game, offset):
+    """取得比賽台灣時間；若已用排盤賽程校正，優先採用校正值。"""
+    corrected = game.get("_startTw")
+    if isinstance(corrected, datetime):
+        return corrected
+    return (game["siteStart"] + timedelta(hours=offset)).replace(tzinfo=TW)
+
+
+def reconcile_scheduled_starts(games, offset, schedule):
+    """同聯盟、日期、對戰組合數量一致時，按場次順序套用排盤賽程時間。
+
+    這能保留同隊雙重賽：例如來源列 04:05／13:05，排盤列 04:05／10:05，
+    第二場會校正為 10:05；若場數對不上則不猜，交給官方時間逐場隔離。
+    """
+    scheduled: dict[tuple[str, str, str, str], list[datetime]] = {}
+    for row in schedule or []:
+        league = str(row.get("league") or "").lower()
+        date = str(row.get("date") or "")
+        text = str(row.get("time") or row.get("gameTime") or "")
+        hit = re.search(r"(\d{1,2}):(\d{2})", text)
+        away, home = row.get("awayTeam"), row.get("homeTeam")
+        if not league or not away or not home or not re.fullmatch(r"\d{4}-\d{2}-\d{2}", date) or not hit:
+            continue
+        hour, minute = int(hit.group(1)), int(hit.group(2))
+        if not (0 <= hour <= 23 and 0 <= minute <= 59):
+            continue
+        start = datetime.fromisoformat(f"{date}T{hour:02d}:{minute:02d}").replace(tzinfo=TW)
+        scheduled.setdefault((league, date, away, home), []).append(start)
+
+    discovered: dict[tuple[str, str, str, str], list[dict]] = {}
+    for game in games:
+        start = game_start_tw(game, offset)
+        key = (str(game.get("league") or "").lower(), start.date().isoformat(),
+               game.get("awayZh"), game.get("homeZh"))
+        discovered.setdefault(key, []).append(game)
+
+    corrections = []
+    for key, group in discovered.items():
+        targets = scheduled.get(key) or []
+        if len(group) != len(targets):
+            continue
+        ordered_games = sorted(group, key=lambda game: game_start_tw(game, offset))
+        for game, target in zip(ordered_games, sorted(targets)):
+            current = game_start_tw(game, offset)
+            if current == target:
+                continue
+            game["_startTw"] = target
+            corrections.append({
+                "matchId": game.get("matchId"),
+                "from": current.strftime("%H:%M"),
+                "to": target.strftime("%H:%M"),
+            })
+    return corrections
+
+
+def partition_official_times(games, offset, official):
+    """按官方時間的場次數逐一放行；無法配對者單場隔離，不拖垮整批。"""
+    if official is None or not official:
+        return list(games), []
+    remaining = Counter(official)
+    accepted, rejected = [], []
+    for game in games:
+        hhmm = game_start_tw(game, offset).strftime("%H:%M")
+        if remaining[hhmm] > 0:
+            remaining[hhmm] -= 1
+            accepted.append(game)
+        else:
+            rejected.append(game)
+    return accepted, rejected
 
 
 def _team_zh():
@@ -125,7 +197,7 @@ def _cell_close(cell, offset, start_tw):
 
 def collect(game, offset, now_tw):
     """回傳 summary 用的一筆 game 物件。"""
-    start_tw = (game["siteStart"] + timedelta(hours=offset)).replace(tzinfo=TW)
+    start_tw = game_start_tw(game, offset)
     year_hint = start_tw.year
     started = now_tw >= start_tw
     markets: dict[str, dict] = {}
@@ -269,25 +341,36 @@ def main() -> int:
             print(f"WARN {league} 賽程頁讀取失敗（不影響其他聯盟）：{str(exc)[:80]}", file=sys.stderr)
     print(f"INFO 併入賽程頁後共 {len(games)} 場", file=sys.stderr)
 
+    corrections = reconcile_scheduled_starts(games, offset, schedule)
+    for item in corrections:
+        print(f"INFO 排盤時間校正 {item['matchId']}: {item['from']} → {item['to']}", file=sys.stderr)
+
     # 第三重（2026-08-07 使用者要求）：換算成台灣時間後，再跟官方賽事網對照。
-    # 官方說不一致就中止本輪——寧可沒資料，也不要寫錯日期/時間進資料庫。
-    checks = []
+    # 官方不一致的場次只隔離該場；其餘已核對成功的場次照常寫入。
+    rejected_games = []
     for league in sorted({g["league"] for g in games}):
         same_day = [g for g in games if g["league"] == league]
-        by_date: dict[str, list[str]] = {}
+        by_date: dict[str, list[dict]] = {}
         for g in same_day:
-            start = (g["siteStart"] + timedelta(hours=offset)).replace(tzinfo=TW)
-            by_date.setdefault(start.date().isoformat(), []).append(start.strftime("%H:%M"))
-        for date, times in by_date.items():
+            start = game_start_tw(g, offset)
+            by_date.setdefault(start.date().isoformat(), []).append(g)
+        for date, day_games in by_date.items():
+            times = [game_start_tw(g, offset).strftime("%H:%M") for g in day_games]
             result = OT.cross_check(league, date, times)
-            checks.append((league, date, result))
             mark = {True: "三重一致", False: "不一致", None: "僅雙重（無官方來源）"}[result["ok"]]
             print(f"INFO 官方對照 {league} {date}: {mark}"
                   f"｜我們 {sorted(set(result['ours']))}｜官方 {sorted(set(result['official'] or []))[:8]}",
                   file=sys.stderr)
-    mismatched = [f"{lg} {d}" for lg, d, r in checks if r["ok"] is False]
-    if mismatched:
-        raise SystemExit(f"ERROR 官方時間對照不一致（{', '.join(mismatched)}），本輪中止不寫檔")
+            if result["ok"] is False:
+                _, rejected = partition_official_times(day_games, offset, result["official"])
+                rejected_games.extend(rejected)
+    if rejected_games:
+        rejected_ids = {g["matchId"] for g in rejected_games}
+        games = [g for g in games if g["matchId"] not in rejected_ids]
+        for game in rejected_games:
+            start = game_start_tw(game, offset)
+            print(f"WARN 官方時間無法配對，僅隔離此場：{game['awayZh']}@{game['homeZh']} "
+                  f"{start.strftime('%Y-%m-%d %H:%M')} ({game['matchId']})", file=sys.stderr)
 
     collected, failed = [], []
     for game in games:
