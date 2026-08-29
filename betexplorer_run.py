@@ -85,6 +85,16 @@ def reconcile_scheduled_starts(games, offset, schedule):
     return corrections
 
 
+def reconcile_and_filter_window(games, offset, schedule, window_start, window_end):
+    """先以排盤賽程校正來源時間，再依校正後時間套用抓取視窗。"""
+    corrections = reconcile_scheduled_starts(games, offset, schedule)
+    kept = [
+        game for game in games
+        if window_start <= game_start_tw(game, offset) <= window_end
+    ]
+    return kept, corrections
+
+
 def partition_official_times(games, offset, official):
     """按官方時間的場次數逐一放行；無法配對者單場隔離，不拖垮整批。"""
     if official is None or not official:
@@ -332,18 +342,18 @@ def main() -> int:
             for game in BE.discover_fixtures(league, team_zh, site_today):
                 if game["matchId"] in seen:
                     continue
-                start = (game["siteStart"] + timedelta(hours=offset)).replace(tzinfo=TW)
-                if not (now_tw - timedelta(hours=6) <= start <= horizon):
-                    continue                              # 只要近期的，不抓整季賽程
                 seen.add(game["matchId"])
                 games.append(game)
         except Exception as exc:
             print(f"WARN {league} 賽程頁讀取失敗（不影響其他聯盟）：{str(exc)[:80]}", file=sys.stderr)
-    print(f"INFO 併入賽程頁後共 {len(games)} 場", file=sys.stderr)
+    print(f"INFO 併入賽程頁後發現 {len(games)} 場", file=sys.stderr)
 
-    corrections = reconcile_scheduled_starts(games, offset, schedule)
+    games, corrections = reconcile_and_filter_window(
+        games, offset, schedule, now_tw - timedelta(hours=6), horizon
+    )
     for item in corrections:
         print(f"INFO 排盤時間校正 {item['matchId']}: {item['from']} → {item['to']}", file=sys.stderr)
+    print(f"INFO 校正後納入近期視窗共 {len(games)} 場", file=sys.stderr)
 
     # 第三重（2026-08-07 使用者要求）：換算成台灣時間後，再跟官方賽事網對照。
     # 官方不一致的場次只隔離該場；其餘已核對成功的場次照常寫入。
