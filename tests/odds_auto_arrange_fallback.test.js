@@ -61,3 +61,38 @@ test('auto arrange unions BetExplorer fallback without duplicating the Titan dou
   assert.equal(missing[0].id, 'be:rwubIuCG');
   assert.equal(missing[0]._autoFavTeam, '響尾蛇');
 });
+
+test('new fallback card receives BetExplorer opening odds immediately after auto arrange', () => {
+  const summary = {
+    games: {
+      late: {
+        eventId: 'rwubIuCG', league: 'mlb', date: '2026-08-30', startTime: '10:05',
+        awayTeam: '響尾蛇', homeTeam: '巨人',
+        markets: { ml: { open: { away: 1.80, home: 2.00 } } },
+      },
+    },
+  };
+  let appliedAfterAdd = false;
+  window.__oddsPortalIntegration = {
+    _getFeed: () => summary,
+    autoApplyOdds: () => { appliedAfterAdd = global.state.items.some(it => it.gameTime === '10:05'); },
+  };
+  global.doc = { activeDate: '2026-08-30' };
+  global.state = { items: [] };
+  global.uid = 1;
+  global.LEAGUES = { mlb: { teams: ['響尾蛇', '巨人'], color: '#123' } };
+  global.snapshot = () => {};
+  global.autoLayout = () => {};
+  global.closeMore = () => {};
+  global.alert = () => {};
+  odds._setFeed({ matches: {} });
+
+  odds.autoArrangeFromFeed(true);
+
+  assert.equal(global.state.items.length, 1);
+  assert.equal(global.state.items[0].gameTime, '10:05');
+  assert.equal(appliedAfterAdd, true, '新卡建立後應立即呼叫初盤填入');
+
+  delete window.__oddsPortalIntegration;
+  for (const name of ['doc', 'state', 'uid', 'LEAGUES', 'snapshot', 'autoLayout', 'closeMore', 'alert']) delete global[name];
+});

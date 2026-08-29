@@ -730,6 +730,10 @@
       added++;
     });
     if (added === 0) { alert("這天的比賽都已經在盤面上了，沒有新增。"); return; }
+    // refresh() 是在排卡前載入摘要；補卡完成後立刻再套一次，讓新卡當下就有初盤，不必等 15 分鐘輪詢。
+    if (portalApi && typeof portalApi.autoApplyOdds === "function") {
+      try { portalApi.autoApplyOdds(); } catch (e) { try { console.warn("[排盤] 新卡初盤帶入失敗：", e); } catch (_) {} }
+    }
     if (typeof autoLayout === "function") {
       var ws = (typeof suppress !== "undefined");
       if (ws) suppress = true;
@@ -828,6 +832,6 @@
   window.__oddsIntegration = { closeHdFor: function (id) { return feedCloseHd[id] || null; } };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, oddsPortalAutoGames: oddsPortalAutoGames, mergeAutoArrangeGames: mergeAutoArrangeGames, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, oddsPortalAutoGames: oddsPortalAutoGames, mergeAutoArrangeGames: mergeAutoArrangeGames, autoArrangeFromFeed: autoArrangeFromFeed, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
   }
 })();
