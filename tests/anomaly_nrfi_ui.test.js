@@ -198,6 +198,17 @@ test('結算時凍結警示條同一來源：BetExplorer 優先、Titan 只作�
   assert.equal(fallback.evidenceSource, 'titan+playsport');
 });
 
+test('BetExplorer 列暫缺但曾相反事實已鎖定時，結算快照仍歸入 Bet365 對調收斂', () => {
+  const snapshot = buildBet365TaiwanSnapshot(
+    { sw: 0, lsw: 0, eo: true, is: 'home', il: 1.5, ls: 'home', ll: 1.5 },
+    { v: 'was', side: 'home', line: 1.5, be: null },
+  );
+
+  assert.equal(snapshot.relation, '收斂');
+  assert.equal(snapshot.swapCombo, 'bet365_only');
+  assert.equal(snapshot.bet365Swapped, true);
+});
+
 test('手動 NRFI／YRFI 沒有逐局比分時，明細仍顯示人工判定來源', () => {
   const { detailRole } = require('../anomaly-nrfi-addon.js');
   assert.match(detailRole({ nrfiStatus: 'nrfi', nrfi: true, nrfiSource: 'manual' }), /NRFI（手動）/);

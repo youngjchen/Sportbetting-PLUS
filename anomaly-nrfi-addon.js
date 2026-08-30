@@ -69,9 +69,11 @@
     const state = intlState || {};
     const current = verdict || {};
     const betExplorer = current.be || null;
+    const latchedBet365Swap = !betExplorer && current.v === 'was' && !!state.eo
+      && Number(state.lsw || 0) === 0;
     const classified = classifyBet365TaiwanEvidence({
       relationCode: current.v,
-      bet365Swapped: betExplorer ? !!betExplorer.flipEver : Number(state.sw || 0) > 0,
+      bet365Swapped: betExplorer ? !!betExplorer.flipEver : (Number(state.sw || 0) > 0 || latchedBet365Swap),
       taiwanSwapped: Number(state.lsw || 0) > 0,
       bet365Side: current.side || state.is || null,
       taiwanSide: state.ls || null,
@@ -80,7 +82,8 @@
     return Object.assign(classified, {
       bet365Line: current.line == null ? (state.il == null ? null : state.il) : current.line,
       taiwanLine: state.ll == null ? null : state.ll,
-      bet365SwitchCount: betExplorer ? (betExplorer.flipEver ? Math.max(1, (betExplorer.struck || []).length) : 0) : Number(state.sw || 0),
+      bet365SwitchCount: betExplorer ? (betExplorer.flipEver ? Math.max(1, (betExplorer.struck || []).length) : 0)
+        : Math.max(Number(state.sw || 0), latchedBet365Swap ? 1 : 0),
       taiwanSwitchCount: Number(state.lsw || 0),
       evidenceSource: betExplorer ? 'betexplorer+playsport' : 'titan+playsport',
       evidenceAt: state.u || (betExplorer && betExplorer.at) || null,

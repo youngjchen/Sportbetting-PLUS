@@ -3058,13 +3058,14 @@ function renderCardB(it){
         const has = !!iv.side;
         const useSide = iv.side, useLine = iv.line;
         const strip=document.createElement("div"); strip.className="intl-strip no-drag";
-        const dotc = !has ? "#2bbfa0" : (iv.v==="flip"?"#e08020":(iv.v==="was"?"#6b7bff":"#5b6b80"));
+        const dotc = intlVerdictColor(iv.v, has);
         strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
           `<span>🌐 <b style="color:#3aa0ff">${has?("bet365 "+esc(useSide==="home"?it.home:it.away)+"讓"+useLine):"bet365 未開盤"}</b>・`+
           `<b style="color:#ffd08a">${(ist&&ist.ls)?("台彩 "+esc(ist.ls==="home"?it.home:it.away)+"讓"+(ist.ll!=null?ist.ll:"")):"台彩無資料"}</b>${epSwShow?` <b style="color:#2bbfa0">⚠曾對調</b>`:""}</span>`;
         const more=document.createElement("div"); more.className="intl-more no-drag";
+        const beHistory = intlBet365HistoryHTML(it, ist, iv);
         const beDetail = be365 ? (`bet365 現行（${be365.at?esc(String(be365.at).slice(5,16).replace("T"," ")):"時刻不明"} 上架）`+
-          (be365.struck&&be365.struck.length?`；曾掛過：${be365.struck.map(x=>esc((x.side==="home"?it.home:it.away))+"讓"+Math.abs(x.line)+(x.at?("@"+String(x.at).slice(5,16).replace("T"," ")):"")).join("、")}`:"")+`<br>`) : "";
+          (beHistory?`；${beHistory}`:"")+`<br>`) : (beHistory?`${beHistory}<br>`:"");
         more.innerHTML = beDetail + ((ist&&ist.is)?((ist.sw?`⇄${ist.sw}＝Titan 序列今天換邊 ${ist.sw} 次：${esc(ist.tr||"")}`:`Titan 序列今天未換邊`)+
           (iv.lag?`・<span style="color:#ff5d7a">Titan 方向滯後（現行以 bet365 上架列為準）</span>`:"")+
           (iv.dv?`・<span style="color:#ff5d7a">背離（獨贏熱門 ${esc(ist.mf==="home"?it.home:it.away)}）</span>`:"")):`Titan 序列無資料`)+
@@ -3528,6 +3529,20 @@ function intlFor(it){
 // lag=Titan 目前方向與現行不符（只進點開明細）；dv=獨贏熱門背離也改對現行方向算。
 // 消費點：卡片藍帶、標籤列表徽章＋tooltip、異常置頂排序、結算卡自動判——全走這裡，
 // 帶上只放結論、不標來源（使用者 2026-08-15：「來源你自己記在幕後」）。
+function intlVerdictColor(v, has){
+  if(!has || v==="swap") return "#2bbfa0";
+  return v==="flip" ? "#e08020" : (v==="was" ? "#6b7bff" : "#5b6b80");
+}
+function intlBet365HistoryHTML(it, ist, iv){
+  const be = iv && iv.be;
+  if(be&&be.struck&&be.struck.length){
+    return `曾掛過：${be.struck.map(x=>esc((x.side==="home"?it.home:it.away))+"讓"+Math.abs(x.line)+(x.at?("@"+String(x.at).slice(5,16).replace("T"," ")):"")).join("、")}`;
+  }
+  // eo 是「兩平台曾相反」的永久事實鎖。若現在已同向、台彩與現存 Titan 序列
+  // 都沒換邊，則過去移動的只能是 Bet365；逐筆舊列暫缺也不能讓明細失語。
+  const latchedBet365 = !!(iv&&iv.v==="was"&&ist&&ist.eo&&Number(ist.lsw||0)===0&&Number(ist.sw||0)===0);
+  return latchedBet365 ? `<span style="color:#6b7bff">bet365 曾對調（歷史比對證據已保存；目前沒有可列出的逐筆時間）</span>` : "";
+}
 function intlVerdict(it, ist){
   let be=null, observedAt=null;
   try{ const g=(window.__oddsPortalIntegration&&window.__oddsPortalIntegration.gameFor)?window.__oddsPortalIntegration.gameFor(it, doc.activeDate):null; be=(g&&g.bet365)||null; observedAt=g&&g.observedAt; }catch(_){}
@@ -3542,6 +3557,7 @@ function intlVerdict(it, ist){
   const lside = ist && ist.ls;
   let v=null;
   if(lside) v = (be.side!==lside) ? "flip" : ((be.flipEver || (ist&&ist.v)) ? "was" : null);
+  else if(be.flipEver) v = "swap";   // 台彩未開盤仍提示 Bet365 自身曾換邊，不提前判顛倒／收斂
   return { be, side:be.side, line:be.line, v,
            lag: !!(ist && ist.is && ist.is!==be.side),
            dv: !!(ist && ist.mf && ist.mf!==be.side) };
@@ -3641,7 +3657,7 @@ function renderMatchNav(){
           tip.onclick=(ev)=>ev.stopPropagation();
           tip.innerHTML = `<b style="color:#3aa0ff">國際軸（bet365 vs 台彩${ist.lsLive?"":"開盤"}）</b><br>`+
             (iv.side?`bet365：<b>${esc(iv.side==="home"?it.home:it.away)} 讓${iv.line}</b>${ist&&ist.sw?`　⇄${ist.sw}＝序列今天換邊 ${ist.sw} 次`:""}`:`bet365：無資料`)+
-            ((iv.be&&iv.be.struck&&iv.be.struck.length)?`<br>曾掛過：${iv.be.struck.map(x=>esc(x.side==="home"?it.home:it.away)+"讓"+Math.abs(x.line)+(x.at?("@"+String(x.at).slice(5,16).replace("T"," ")):"")).join("、")}`:"")+
+            (function(){ const h=intlBet365HistoryHTML(it,ist,iv); return h?`<br>${h}`:""; })()+
             (ist.ls?`<br>台彩${ist.lsLive?"":"(開盤)"}：<b>${esc(ist.ls==="home"?it.home:it.away)} 讓${ist.ll!=null?ist.ll:""}</b>${ist.lsw?`　⇄${ist.lsw}`:""}`:`<br>台彩：無資料`)+
             (ist.tr&&ist.sw?`<br><span style="color:var(--ink-dim)">b365：${esc(ist.tr)}</span>`:"")+
             (ist.ltr?`<br><span style="color:var(--ink-dim)">台彩：${esc(ist.ltr)}</span>`:"")+
@@ -6656,7 +6672,7 @@ function openSettleModal(it){
       bar.innerHTML = `🌐 自動判（國際軸）：<b>${vTxt}</b><span style="float:right;color:var(--ink-dim)">▸</span>`+
         `<div class="iad" style="display:none;margin-top:6px;color:var(--ink-dim);line-height:1.8">`+
         `bet365：${iv.side?esc(iv.side==="home"?it.home:it.away)+" 讓"+iv.line:"無資料"}${ist.sw?`（⇄${ist.sw}：${esc(ist.tr||"")}）`:""}`+
-        ((iv.be&&iv.be.struck&&iv.be.struck.length)?`<br>曾掛過：${iv.be.struck.map(x=>esc(x.side==="home"?it.home:it.away)+"讓"+Math.abs(x.line)+(x.at?("@"+String(x.at).slice(5,16).replace("T"," ")):"")).join("、")}`:"")+
+        (function(){ const h=intlBet365HistoryHTML(it,ist,iv); return h?`<br>${h}`:""; })()+
         `<br>台彩${ist.lsLive?"":"(開盤)"}：${ist.ls?esc(ist.ls==="home"?it.home:it.away)+" 讓"+(ist.ll!=null?ist.ll:""):"無資料"}${ist.ltr?`（⇄${ist.lsw}：${esc(ist.ltr)}）`:""}`+
         (iv.dv?`<br>背離：bet365 獨贏熱門 ≠ 讓分方`:"")+
         `<br>僅供參考（bet365 vs 台彩${ist.lsLive?"":"開盤"}軸）；已自動存獨立欄位分帳累積，下方顛倒狀態照你親眼所見選。</div>`;
@@ -7844,6 +7860,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260824nrfi4"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260824close1"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260815dv4"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260830intl1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260824close1"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260815dv4"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
