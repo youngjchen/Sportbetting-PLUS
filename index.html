@@ -1524,6 +1524,7 @@
 </style>
 
 <script src="./logo-map.js?v=2"></script>
+<script src="./storage-pressure.js?v=20260902sp1"></script>
 <script>
 const LEAGUES = {
   mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
@@ -2093,16 +2094,10 @@ async function persistFlush(){
     if(typeof CompressionStream === "function"){
       try{ payload = "gz:" + await gzToB64(json); }catch(_){ payload = json; }
     }
-    try{
-      localStorage.setItem(LS_KEY, payload);
-    }catch(qe){
-      // 2026-08-13 儲存爆滿（量表 89%＋儲存失敗提示）：主檔寫不進去時，
-      // 自動備份槽是「同一份 doc 的舊副本」，價值低於當下主檔 → 丟掉騰位再試一次。
-      // （備份槽 5 分鐘後會自動重建；主檔寫失敗才是真的掉資料。）
-      try{ localStorage.removeItem(LS_AUTO_SLOT); }catch(_){}
-      localStorage.setItem(LS_KEY, payload);
-      console.warn("[儲存] 配額不足：已捨棄自動備份槽以保住主檔");
-    }
+    if(window.__storagePressure){
+      const wr = window.__storagePressure.setCritical(localStorage, LS_KEY, payload);
+      if(wr.removed.length) console.warn("[儲存] 配額不足：已移除可重建備份以保住主檔：", wr.removed.join(", "));
+    }else localStorage.setItem(LS_KEY, payload);
     if(_persistJSON === json) _persistJSON = null;   // 期間又改過就留著等下一輪
   }catch(e){ ok = false; }
   updateSaveBadge(ok);
@@ -4588,7 +4583,12 @@ async function autoBackupSnapshot(){
     if(typeof CompressionStream === "function"){
       try{ toStore = "gz:" + await gzToB64(payload); }catch(_){ toStore = payload; }
     }
-    localStorage.setItem(LS_AUTO_SLOT, toStore);
+    if(window.__storagePressure){
+      if(!window.__storagePressure.setBackup(localStorage, LS_AUTO_SLOT, toStore)){
+        console.warn("[儲存] 容量已達警戒線，暫停建立盤面副本；主檔不受影響");
+        return;
+      }
+    }else localStorage.setItem(LS_AUTO_SLOT, toStore);
   }catch(_){}
 }
 async function restoreFromAutoSlot(){
@@ -7843,6 +7843,8 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
 /* ---------------- init ---------------- */
 (async()=>{
   await load();
+  // localStorage 到 85% 時先釋放兩份可重建副本，保住盤面主檔與手動卦。
+  try{ if(window.__storagePressure) window.__storagePressure.cleanup(localStorage, false); }catch(_){}
   // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
   const t = todayStr();
   if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
@@ -7860,6 +7862,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260830intl1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260824close1"></script><script src="./github-sync.js?v=20260813sync6"></script><script src="./divination-addon.js?v=20260815dv4"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260830intl1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260824close1"></script><script src="./github-sync.js?v=20260902sp1"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

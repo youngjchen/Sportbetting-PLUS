@@ -513,12 +513,18 @@
     <div class="stats-body" id="statsBody"></div>
   </div>
 
+<script src="./storage-pressure.js?v=20260902sp1"></script>
 <script>
 "use strict";
 // ===== 文檔（與棒球板完全隔離的命名空間）=====
 const DOC_KEY = "sportbetting_nba_doc_v1";
 function loadDoc(){ try{ return JSON.parse(localStorage.getItem(DOC_KEY)) || null; }catch(e){ return null; } }
-function saveDoc(d){ localStorage.setItem(DOC_KEY, JSON.stringify(d)); }
+function saveDoc(d){
+  const payload=JSON.stringify(d);
+  if(window.__storagePressure) window.__storagePressure.setCritical(localStorage, DOC_KEY, payload);
+  else localStorage.setItem(DOC_KEY, payload);
+}
+try{ if(window.__storagePressure) window.__storagePressure.cleanup(localStorage, false); }catch(_){}
 let doc = loadDoc() || { v:1, activeDate: today(), boards:{} };
 if(!doc.games) doc.games = [];
 if(!doc.activeLeague) doc.activeLeague = "WNBA";
@@ -2240,7 +2246,11 @@ $("#importFile").onchange=(e)=>{
   rd.readAsText(f);
 };
 const AUTO_KEY = DOC_KEY+"_auto";
-try{ localStorage.setItem(AUTO_KEY, JSON.stringify({at:Date.now(), doc:loadDoc()})); }catch(_){}
+try{
+  const autoPayload=JSON.stringify({at:Date.now(), doc:loadDoc()});
+  if(window.__storagePressure) window.__storagePressure.setBackup(localStorage, AUTO_KEY, autoPayload);
+  else localStorage.setItem(AUTO_KEY, autoPayload);
+}catch(_){}
 $("#restoreAutoBtn").onclick=()=>{
   try{ const j=JSON.parse(localStorage.getItem(AUTO_KEY)); if(!j||!j.doc) throw new Error("無自動備份");
     if(!confirm(`還原到本次開板前的快照（${new Date(j.at).toLocaleString()}）？`)) return;
@@ -2374,7 +2384,7 @@ loadSeedGames();
 loadPregame();
 </script>
 <script src="wnba-picks-addon.js?v=20260803wnba1"></script>
-<script src="wnba-divination-addon.js?v=20260804dv1"></script>
+<script src="wnba-divination-addon.js?v=20260902sp1"></script>
 <script src="oddsportal-integration.js?v=20260806op10"></script>
 </body>
 </html>

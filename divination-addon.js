@@ -29,8 +29,16 @@
   function dvSave(list){
     _dvCache = list;
     (async () => {
-      try{ localStorage.setItem(LS_KEY, 'gz:' + await _dvGz(JSON.stringify(list))); }
-      catch(e){ try{ localStorage.setItem(LS_KEY, JSON.stringify(list)); }catch(_){} }   // 壓縮不可用就退回純文字，寧可佔空間不可掉卦
+      let payload;
+      try{ payload='gz:' + await _dvGz(JSON.stringify(list)); }
+      catch(_){ payload=JSON.stringify(list); }
+      try{
+        if(window.__storagePressure) window.__storagePressure.setCritical(localStorage, LS_KEY, payload);
+        else localStorage.setItem(LS_KEY, payload);
+      }catch(e){
+        console.error('[卜卦快取] 儲存失敗：', e);
+        try{ alert('⚠ 手動卦儲存失敗，請不要關閉頁面；先按「☁ 上傳卜卦紀錄」或匯出備份。'); }catch(_){}
+      }
     })();
   }
   (async () => {   // 開機：gz 解壓進記憶體；舊純文字轉存壓縮（內容不動）

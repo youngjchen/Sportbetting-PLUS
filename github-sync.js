@@ -26,6 +26,10 @@
 
   function getPAT() { try { return localStorage.getItem(PAT_KEY) || ''; } catch (e) { return ''; } }
   function setPAT(t) { try { if (t) localStorage.setItem(PAT_KEY, t); else localStorage.removeItem(PAT_KEY); } catch (e) {} }
+  function storeCritical(key, value) {
+    if (window.__storagePressure) return window.__storagePressure.setCritical(localStorage, key, value);
+    localStorage.setItem(key, value); return { ok: true, removed: [] };
+  }
   function ensurePAT() {
     var t = getPAT();
     if (t) return t;
@@ -296,7 +300,7 @@
         toast('已上傳 ✓' + (merged.addedG || merged.addedC ? '（合併回 ' + merged.addedG + ' 場結算、' + merged.addedC + ' 張卡）' : ''));
         // 合併結果也寫回本機，否則這台會一直缺另一台的資料，下次又要重合併一次
         if (merged.addedG || merged.addedC) {
-          try { localStorage.setItem(DOC_KEY, await docToStore(JSON.stringify(merged.doc))); setTimeout(function () { location.reload(); }, 1200); }
+          try { storeCritical(DOC_KEY, await docToStore(JSON.stringify(merged.doc))); setTimeout(function () { location.reload(); }, 1200); }
           catch (e) { alert('雲端已更新，但合併結果寫不回本機（' + e.message + '）。請先清理空間再「☁ 從 GitHub 載入盤面」。'); }
         }
       }
@@ -338,7 +342,7 @@
       try { var lp = await localDocPlain(); if (lp) localDoc = JSON.parse(lp); } catch (e) { localDoc = null; }
       var merged = mergeDocs(localDoc, cloudDoc);
       if (!merged.doc || !merged.doc.boards) { alert('合併結果不合法，已中止，沒有動到這台的資料。'); return; }
-      localStorage.setItem(DOC_KEY, await docToStore(JSON.stringify(merged.doc)));
+      storeCritical(DOC_KEY, await docToStore(JSON.stringify(merged.doc)));
       toast('已載入雲端盤面' + ((merged.addedG || merged.addedC) ? '（保留這台獨有 ' + merged.addedG + ' 場結算、' + merged.addedC + ' 張卡）' : '') + '，重新整理中…');
       setTimeout(function () { location.reload(); }, 1200);
     } catch (err) {
