@@ -68,12 +68,78 @@
     }
   }
 
+  /* pagehide 無法等待 CompressionStream，所以用同步 LZW 只保住最後一次尚未落地的變更。
+     平常存檔仍走 gzip；這個 lz16: 格式只是關頁保命路徑。 */
+  function lzwCompress(text) {
+    var bytes = new TextEncoder().encode(String(text));
+    if (!bytes.length) return '';
+    var dict = new Map(), nextCode = 257, prefix = bytes[0], codes = [];
+    for (var i = 1; i < bytes.length; i++) {
+      var byte = bytes[i], key = prefix * 256 + byte, found = dict.get(key);
+      if (found !== undefined) {
+        prefix = found;
+        continue;
+      }
+      codes.push(prefix);
+      if (nextCode < 65535) dict.set(key, nextCode++);
+      else {
+        codes.push(256);                 // clear code：壓縮與解壓同時重置字典
+        dict = new Map();
+        nextCode = 257;
+      }
+      prefix = byte;
+    }
+    codes.push(prefix);
+    var chunks = [];
+    for (var j = 0; j < codes.length; j += 8192) {
+      chunks.push(String.fromCharCode.apply(null, codes.slice(j, j + 8192)));
+    }
+    return chunks.join('');
+  }
+
+  function lzwDecompress(compressed) {
+    if (!compressed) return '';
+    var dict = [], nextCode = 257, previous = null, chunks = [];
+    for (var i = 0; i < compressed.length; i++) {
+      var code = compressed.charCodeAt(i);
+      if (code === 256) {
+        dict = [];
+        nextCode = 257;
+        previous = null;
+        continue;
+      }
+      var entry;
+      if (code < 256) entry = String.fromCharCode(code);
+      else if (dict[code] !== undefined) entry = dict[code];
+      else if (code === nextCode && previous !== null) entry = previous + previous.charAt(0);
+      else throw new Error('緊急存檔的壓縮字典已損壞');
+      chunks.push(entry);
+      if (previous !== null && nextCode < 65535) dict[nextCode++] = previous + entry.charAt(0);
+      previous = entry;
+    }
+    var binary = chunks.join(''), bytes = new Uint8Array(binary.length);
+    for (var j = 0; j < binary.length; j++) bytes[j] = binary.charCodeAt(j);
+    return new TextDecoder().decode(bytes);
+  }
+
+  function encodeEmergency(text) {
+    return 'lz16:' + lzwCompress(text);
+  }
+
+  function decodeEmergency(payload) {
+    payload = String(payload || '');
+    if (payload.slice(0, 5) !== 'lz16:') throw new Error('不是 lz16 緊急存檔');
+    return lzwDecompress(payload.slice(5));
+  }
+
   return {
     BACKUP_KEYS: BACKUP_KEYS.slice(),
     DEFAULT_LIMIT: DEFAULT_LIMIT,
     usedBytes: usedBytes,
     cleanup: cleanup,
     setCritical: setCritical,
-    setBackup: setBackup
+    setBackup: setBackup,
+    encodeEmergency: encodeEmergency,
+    decodeEmergency: decodeEmergency
   };
 });

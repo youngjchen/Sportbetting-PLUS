@@ -57,6 +57,10 @@
   async function localDocPlain() {
     var raw = '';
     try { raw = localStorage.getItem(DOC_KEY) || ''; } catch (e) { return ''; }
+    if (raw.slice(0, 5) === 'lz16:') {
+      if (!window.__storagePressure || !window.__storagePressure.decodeEmergency) throw new Error('缺少緊急存檔解壓器');
+      return window.__storagePressure.decodeEmergency(raw);
+    }
     if (raw.slice(0, 3) !== 'gz:') return raw;
     var bin = atob(raw.slice(3)); var u = new Uint8Array(bin.length);
     for (var i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);

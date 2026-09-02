@@ -1524,7 +1524,7 @@
 </style>
 
 <script src="./logo-map.js?v=2"></script>
-<script src="./storage-pressure.js?v=20260902sp1"></script>
+<script src="./storage-pressure.js?v=20260903sp2"></script>
 <script>
 const LEAGUES = {
   mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
@@ -2065,8 +2065,8 @@ let _saveTimer = null;
 // 且 games 以每日 ~20 場成長（≈4.8MB/年）→ 幾個月內必定撞爆 5MB 配額＝當天資料靜默遺失。
 // 壓縮後 ~0.28MB（8.8x），成長也同步壓縮 → 8 年以上餘裕。
 // CompressionStream 是非同步，故寫入改「120ms 去抖 + 非同步壓縮」；save() 呼叫端不需 await。
-// 關頁／切背景時若還有未落地的變更 → 同步寫未壓縮版保命（下次載入會自動轉回壓縮）。
-let _persistJSON = null, _persistTimer = null;
+// 關頁前若還有未落地的變更 → 同步壓縮後保命（下次載入兼容 lz16:）。
+let _persistJSON = null, _persistTimer = null, _persistSeq = 0;
 /* 讀取失敗閂鎖：load() 讀不出本機盤面時鎖死所有寫入。
    為什麼必要：load() 失敗會讓 doc 停在空白初始值，接著使用者隨便點一下就觸發 save()，
    空盤面把「其實還躺在 localStorage、還救得回來」的資料整包蓋掉。
@@ -2081,19 +2081,22 @@ function save(){
   doc.uiScale = uiScale;
   doc.venueMode = venueMode;
   _persistJSON = JSON.stringify(doc);
+  _persistSeq++;
   if(window.storage){ try{ window.storage.set("board_doc_v2", _persistJSON, false); }catch(_){} }
   if(_persistTimer) clearTimeout(_persistTimer);
   _persistTimer = setTimeout(persistFlush, 120);
 }
 async function persistFlush(){
   _persistTimer = null;
-  const json = _persistJSON; if(json == null) return;
+  const json = _persistJSON, seq = _persistSeq; if(json == null) return;
   let ok = true;
   try{
     let payload = json;
     if(typeof CompressionStream === "function"){
       try{ payload = "gz:" + await gzToB64(json); }catch(_){ payload = json; }
     }
+    // 壓縮期間又有新變更，或 pagehide 已保住最新版：舊任務不可回頭覆蓋。
+    if(seq !== _persistSeq) return;
     if(window.__storagePressure){
       const wr = window.__storagePressure.setCritical(localStorage, LS_KEY, payload);
       if(wr.removed.length) console.warn("[儲存] 配額不足：已移除可重建備份以保住主檔：", wr.removed.join(", "));
@@ -2102,24 +2105,34 @@ async function persistFlush(){
   }catch(e){ ok = false; }
   updateSaveBadge(ok);
 }
-function persistEmergency(){                          // 同步、不壓縮：關頁前保命
+function persistEmergency(){                          // 同步壓縮：關頁前保命
   if(_loadBlocked || _persistJSON == null) return;
+  const json = _persistJSON;
+  _persistSeq++;                                      // 使尚在跑的舊 gzip 任務失效
   try{
-    try{ localStorage.setItem(LS_KEY, _persistJSON); }
-    catch(qe){ try{ localStorage.removeItem(LS_AUTO_SLOT); }catch(_){}
-      localStorage.setItem(LS_KEY, _persistJSON); }               // 同上：先丟備份槽再保主檔
-    _persistJSON = null; }
+    let payload = json;
+    if(window.__storagePressure && window.__storagePressure.encodeEmergency){
+      payload = window.__storagePressure.encodeEmergency(json);
+      window.__storagePressure.setCritical(localStorage, LS_KEY, payload);
+    }else{
+      try{ localStorage.setItem(LS_KEY, payload); }
+      catch(qe){ try{ localStorage.removeItem(LS_AUTO_SLOT); }catch(_){}
+        localStorage.setItem(LS_KEY, payload); }
+    }
+    if(_persistJSON === json) _persistJSON = null; }
   catch(e){
-    // 以前這裡是 catch(_){} 靜默吞掉。這是關頁／切背景前的【最後一次】寫入機會，
-    // 而且寫的是未壓縮版（比 gz 大 2.2 倍）＝最容易爆配額的那一次，偏偏最沒有人看著。
-    // 手機切到背景 → pagehide → 這裡爆掉 → 無聲 → 系統回收分頁 → 今天的東西就沒了。
-    // ＝使用者回報「手機盤面放久會自己消失」的機制。至少要把記號留到下次開啟。
+    // 連同步壓縮版都寫不進去才是真失敗；留記號讓下次開板仍看得到。
     try{ sessionStorage.setItem("board_emergency_fail", String(Date.now())); }catch(_){}
     updateSaveBadge(false);                           // 只是切分頁的話，回來就會看到常駐紅banner
   }
 }
 window.addEventListener("pagehide", persistEmergency);
-document.addEventListener("visibilitychange", ()=>{ if(document.visibilityState === "hidden") persistEmergency(); });
+document.addEventListener("visibilitychange", ()=>{
+  if(document.visibilityState !== "hidden" || _persistJSON == null) return;
+  // 只是切到別的分頁／App 時頁面還活著：立即走原生 gzip，不卡住畫面。
+  if(_persistTimer){ clearTimeout(_persistTimer); _persistTimer = null; }
+  persistFlush();
+});
 function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTimeout(save, 250); }
 let _loadErr = null;                                  // 讀取失敗的原因（要講給使用者聽，不能吞掉）
 function loadDocFromString(str){
@@ -2147,6 +2160,10 @@ async function load(){
   try{
     let s = localStorage.getItem(LS_KEY);
     hadRaw = !!(s && s.length > 2);                   // 記住「本機原本有東西」→ 讀不出來就不能當成新使用者
+    if(s && s.slice(0,5)==="lz16:"){
+      try{ s = window.__storagePressure.decodeEmergency(s); }
+      catch(err){ _loadErr = "緊急存檔解不開（" + err.message + "）"; s = null; }
+    }
     if(s && s.slice(0,3)==="gz:"){
       try{ s = await b64ToStr(s.slice(3)); }
       catch(err){ _loadErr = "壓縮內容解不開（" + err.message + "）"; s = null; }
@@ -7887,6 +7904,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260902lateintl1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260902dedupe2"></script><script src="./github-sync.js?v=20260902sp1"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260902lateintl1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260902dedupe2"></script><script src="./github-sync.js?v=20260903sp2"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

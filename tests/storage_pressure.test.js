@@ -74,3 +74,30 @@ test('rebuildable backup is skipped when it would push storage above 80 percent'
   assert.equal(storage.getItem('sportbetting_plus_autobackup'), null);
   assert.equal(storage.getItem('sportbetting_plus_doc_v2') !== null, true);
 });
+
+test('emergency payload synchronously round-trips a large Traditional Chinese board', () => {
+  assert.equal(typeof pressure.encodeEmergency, 'function', '尚未提供關頁前可同步完成的壓縮存檔');
+  assert.equal(typeof pressure.decodeEmergency, 'function', '尚未提供緊急存檔解壓');
+
+  const doc = {
+    activeDate: '2026-09-03',
+    boards: {
+      '2026-09-03': {
+        items: Array.from({ length: 1800 }, (_, id) => ({
+          id,
+          type: 'match',
+          away: id % 2 ? '老虎' : '教士',
+          home: id % 2 ? '雙城' : '紅人',
+          hdFav: id % 3 ? 'home' : 'away',
+          note: '台彩讓分方曾對調，保留燈號與結算資料',
+        })),
+      },
+    },
+  };
+  const json = JSON.stringify(doc);
+  const payload = pressure.encodeEmergency(json);
+
+  assert.equal(payload.startsWith('lz16:'), true);
+  assert.equal(pressure.decodeEmergency(payload), json);
+  assert.ok(payload.length * 2 < json.length, '緊急存檔應明顯小於 UTF-16 原文');
+});
