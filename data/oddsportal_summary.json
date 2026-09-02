@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-03T02:25:06+08:00",
+  "updatedAt": "2026-09-03T02:45:20+08:00",
   "health": {
-    "discovered": 31,
-    "succeeded": 21,
+    "discovered": 23,
+    "succeeded": 19,
     "failed": 0,
-    "added": 0,
-    "updated": 21,
+    "added": 5,
+    "updated": 14,
     "errors": []
   },
   "games": {
@@ -78579,7 +78579,7 @@
         "at": "2026-09-02T23:50:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "UoX7XQZA",
       "league": "mlb",
@@ -78589,7 +78589,7 @@
       "awayTeam": "教士",
       "homeTeam": "紅人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/cincinnati-reds-san-diego-padres/UoX7XQZA/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -78599,7 +78599,7 @@
             "away": 1.67
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 2.38,
             "away": 1.61
           },
@@ -78619,7 +78619,7 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 3.0,
             "away": 1.39,
             "line": 1.0,
@@ -78642,7 +78642,7 @@
             "line": 8.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "over": 1.49,
             "under": 2.55,
             "line": 8.0
@@ -78878,7 +78878,7 @@
         "at": "2026-09-02T16:17:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "WYekp4JG",
       "league": "mlb",
@@ -78888,7 +78888,7 @@
       "awayTeam": "運動家",
       "homeTeam": "遊騎兵",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/texas-rangers-athletics/WYekp4JG/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -78898,9 +78898,15 @@
             "away": 2.24
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 1.61,
-            "away": 2.33
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.62,
+            "away": 2.36
+          },
+          "close": {
+            "at": "2026-09-03T01:35:00+08:00",
+            "home": 1.62,
+            "away": 2.36,
+            "final": true
           }
         },
         "hd": {
@@ -78912,11 +78918,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.27,
-            "away": 1.64,
-            "line": 1.5,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.88,
+            "away": 1.93,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-09-03T02:34:00+08:00",
+            "home": 1.88,
+            "away": 1.93,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -78927,10 +78941,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "over": 1.51,
-            "under": 2.6,
-            "line": 6.5
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.39,
+            "under": 2.95,
+            "line": 6.0
+          },
+          "close": {
+            "at": "2026-09-03T02:34:00+08:00",
+            "over": 1.39,
+            "under": 2.95,
+            "line": 6.0,
+            "final": true
           }
         }
       },
@@ -78940,37 +78961,65 @@
           "away",
           "home"
         ],
-        "struckSide": [],
+        "struckSide": [
+          "away",
+          "home"
+        ],
         "lines": [
           {
             "line": -4.5,
-            "active": true,
+            "active": false,
             "created": "02,09,2026,16,32"
           },
           {
             "line": -3.5,
             "active": true,
-            "created": "02,09,2026,18,03"
+            "created": "02,09,2026,19,30"
+          },
+          {
+            "line": -3.0,
+            "active": true,
+            "created": "02,09,2026,19,34"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "02,09,2026,17,37"
+            "created": "02,09,2026,19,34"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "02,09,2026,19,34"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,18,04"
+            "created": "02,09,2026,19,34"
+          },
+          {
+            "line": -1.0,
+            "active": true,
+            "created": "02,09,2026,19,34"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "02,09,2026,19,34"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,37"
+            "created": "02,09,2026,19,09"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "02,09,2026,19,09"
           },
           {
             "line": 2.5,
-            "active": true,
-            "created": "02,09,2026,18,04"
+            "active": false,
+            "created": "02,09,2026,18,14"
           }
         ]
       }
@@ -78982,7 +79031,7 @@
         "at": "2026-09-03T01:57:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "IkKWds3M",
       "league": "mlb",
@@ -78992,7 +79041,7 @@
       "awayTeam": "金鶯",
       "homeTeam": "落磯",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/colorado-rockies-baltimore-orioles/IkKWds3M/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79002,9 +79051,9 @@
             "away": 1.59
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.35,
-            "away": 1.6
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.49,
+            "away": 1.57
           }
         },
         "hd": {
@@ -79016,10 +79065,10 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 3.4,
-            "away": 1.33,
-            "line": 1.5,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 3.15,
+            "away": 1.37,
+            "line": 1.0,
             "favorite": "home"
           }
         },
@@ -79031,10 +79080,10 @@
             "line": 10.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "over": 1.61,
-            "under": 2.34,
-            "line": 10.0
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.51,
+            "under": 2.5,
+            "line": 9.5
           }
         }
       },
@@ -79044,32 +79093,59 @@
           "away",
           "home"
         ],
-        "struckSide": [],
+        "struckSide": [
+          "home"
+        ],
         "lines": [
           {
             "line": -1.5,
+            "active": false,
+            "created": "02,09,2026,19,04"
+          },
+          {
+            "line": -1.0,
             "active": true,
-            "created": "02,09,2026,17,37"
+            "created": "02,09,2026,19,45"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "02,09,2026,19,45"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,56"
+            "created": "02,09,2026,19,45"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "02,09,2026,19,44"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "02,09,2026,17,56"
+            "created": "02,09,2026,19,29"
+          },
+          {
+            "line": 3.0,
+            "active": true,
+            "created": "02,09,2026,19,45"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "02,09,2026,17,26"
+            "created": "02,09,2026,19,45"
+          },
+          {
+            "line": 4.0,
+            "active": true,
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 4.5,
             "active": true,
-            "created": "02,09,2026,17,26"
+            "created": "02,09,2026,19,44"
           }
         ]
       }
@@ -79081,7 +79157,7 @@
         "at": "2026-09-03T01:54:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "j1LGV44N",
       "league": "mlb",
@@ -79091,7 +79167,7 @@
       "awayTeam": "水手",
       "homeTeam": "紅襪",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/boston-red-sox-seattle-mariners/j1LGV44N/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79101,9 +79177,9 @@
             "away": 2.1
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 1.71,
-            "away": 2.15
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.67,
+            "away": 2.22
           }
         },
         "hd": {
@@ -79115,9 +79191,9 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.42,
-            "away": 1.57,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.36,
+            "away": 1.6,
             "line": 1.5,
             "favorite": "home"
           }
@@ -79130,10 +79206,10 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "over": 1.4,
-            "under": 2.9,
-            "line": 6.5
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.71,
+            "under": 2.15,
+            "line": 7.5
           }
         }
       },
@@ -79148,27 +79224,32 @@
           {
             "line": -4.5,
             "active": true,
-            "created": "02,09,2026,18,06"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": -3.5,
             "active": true,
-            "created": "02,09,2026,18,08"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "02,09,2026,18,08"
+            "created": "02,09,2026,18,47"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,18,15"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,18,08"
+            "created": "02,09,2026,19,28"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "02,09,2026,19,28"
           }
         ]
       }
@@ -79180,7 +79261,7 @@
         "at": "2026-09-02T16:20:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "zTwE0TcK",
       "league": "mlb",
@@ -79190,7 +79271,7 @@
       "awayTeam": "藍鳥",
       "homeTeam": "守護者",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/cleveland-guardians-toronto-blue-jays/zTwE0TcK/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79200,7 +79281,7 @@
             "away": 1.8
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 2.08,
             "away": 1.76
           }
@@ -79214,8 +79295,8 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 3.25,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 3.2,
             "away": 1.35,
             "line": 1.5,
             "favorite": "home"
@@ -79229,7 +79310,7 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "over": 1.44,
             "under": 2.75,
             "line": 5.5
@@ -79247,17 +79328,17 @@
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,18,10"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,38"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "02,09,2026,18,10"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": 3.5,
@@ -79279,7 +79360,7 @@
         "at": "2026-09-02T06:59:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "noMoQrSp",
       "league": "mlb",
@@ -79289,7 +79370,7 @@
       "awayTeam": "巨人",
       "homeTeam": "海盜",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/pittsburgh-pirates-san-francisco-giants/noMoQrSp/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79299,7 +79380,7 @@
             "away": 2.23
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 1.64,
             "away": 2.27
           }
@@ -79313,8 +79394,8 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.28,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.27,
             "away": 1.64,
             "line": 1.5,
             "favorite": "home"
@@ -79328,7 +79409,7 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "over": 1.36,
             "under": 3.1,
             "line": 6.5
@@ -79351,7 +79432,7 @@
           {
             "line": -3.5,
             "active": true,
-            "created": "02,09,2026,18,14"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": -2.5,
@@ -79361,7 +79442,7 @@
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,18,14"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 1.5,
@@ -79378,7 +79459,7 @@
         "at": "2026-09-02T15:14:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "pxMOb3Y9",
       "league": "mlb",
@@ -79388,7 +79469,7 @@
       "awayTeam": "釀酒人",
       "homeTeam": "小熊",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/chicago-cubs-milwaukee-brewers/pxMOb3Y9/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79398,7 +79479,7 @@
             "away": 1.59
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 2.32,
             "away": 1.61
           }
@@ -79412,8 +79493,8 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 3.6,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 3.55,
             "away": 1.3,
             "line": 1.5,
             "favorite": "home"
@@ -79427,8 +79508,8 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "over": 1.44,
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.43,
             "under": 2.75,
             "line": 6.5
           }
@@ -79445,27 +79526,27 @@
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 4.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,18,42"
           }
         ]
       }
@@ -79477,7 +79558,7 @@
         "at": "2026-09-02T12:07:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "lASF0P3c",
       "league": "mlb",
@@ -79487,7 +79568,7 @@
       "awayTeam": "馬林魚",
       "homeTeam": "皇家",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/kansas-city-royals-miami-marlins/lASF0P3c/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79497,9 +79578,9 @@
             "away": 1.92
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 1.88,
-            "away": 1.92
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.87,
+            "away": 1.94
           }
         },
         "hd": {
@@ -79511,9 +79592,9 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.75,
-            "away": 1.46,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.7,
+            "away": 1.47,
             "line": 1.5,
             "favorite": "home"
           }
@@ -79526,9 +79607,9 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "over": 1.35,
-            "under": 3.15,
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.34,
+            "under": 3.2,
             "line": 6.5
           }
         }
@@ -79544,7 +79625,7 @@
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": 1.5,
@@ -79554,12 +79635,12 @@
           {
             "line": 2.5,
             "active": true,
-            "created": "02,09,2026,17,59"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "02,09,2026,17,38"
+            "created": "02,09,2026,19,28"
           },
           {
             "line": 4.5,
@@ -79592,7 +79673,7 @@
             "at": "2026-09-02T22:10:00+08:00"
           }
         ],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "xWbcrrlT",
       "league": "mlb",
@@ -79602,7 +79683,7 @@
       "awayTeam": "老虎",
       "homeTeam": "雙城",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/minnesota-twins-detroit-tigers/xWbcrrlT/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79612,7 +79693,7 @@
             "away": 1.92
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 1.87,
             "away": 1.94
           }
@@ -79626,9 +79707,9 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 2.7,
-            "away": 1.47,
+            "away": 1.48,
             "line": 1.5,
             "favorite": "home"
           }
@@ -79641,9 +79722,9 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "over": 1.35,
-            "under": 3.1,
+            "under": 3.15,
             "line": 6.5
           }
         }
@@ -79666,27 +79747,27 @@
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,16,45"
+            "created": "02,09,2026,18,31"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,44"
+            "created": "02,09,2026,19,30"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "02,09,2026,16,48"
+            "created": "02,09,2026,19,31"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "02,09,2026,16,14"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 4.5,
             "active": true,
-            "created": "02,09,2026,16,02"
+            "created": "02,09,2026,19,30"
           }
         ]
       }
@@ -79698,7 +79779,7 @@
         "at": "2026-09-02T06:27:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "lW3jD2m3",
       "league": "mlb",
@@ -79708,7 +79789,7 @@
       "awayTeam": "洋基",
       "homeTeam": "天使",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/los-angeles-angels-new-york-yankees/lW3jD2m3/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79718,9 +79799,9 @@
             "away": 1.6
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.38,
-            "away": 1.59
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.34,
+            "away": 1.6
           }
         },
         "hd": {
@@ -79732,9 +79813,9 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 4.0,
-            "away": 1.25,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 3.85,
+            "away": 1.26,
             "line": 1.5,
             "favorite": "home"
           }
@@ -79747,7 +79828,7 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "over": 1.33,
             "under": 3.25,
             "line": 4.5
@@ -79765,27 +79846,27 @@
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,17,49"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,49"
+            "created": "02,09,2026,19,10"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "02,09,2026,17,42"
+            "created": "02,09,2026,19,10"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "02,09,2026,17,49"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 4.5,
             "active": true,
-            "created": "02,09,2026,16,33"
+            "created": "02,09,2026,19,29"
           }
         ]
       }
@@ -79797,7 +79878,7 @@
         "at": "2026-09-02T23:50:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "2g4YmnKi",
       "league": "mlb",
@@ -79807,7 +79888,7 @@
       "awayTeam": "大都會",
       "homeTeam": "光芒",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/tampa-bay-rays-new-york-mets/2g4YmnKi/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79817,9 +79898,9 @@
             "away": 2.31
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 1.54,
-            "away": 2.49
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.55,
+            "away": 2.48
           }
         },
         "hd": {
@@ -79831,9 +79912,9 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.13,
-            "away": 1.72,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.12,
+            "away": 1.73,
             "line": 1.5,
             "favorite": "home"
           }
@@ -79846,7 +79927,7 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "over": 1.45,
             "under": 2.7,
             "line": 6.5
@@ -79864,27 +79945,27 @@
           {
             "line": -4.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": -3.5,
             "active": true,
-            "created": "02,09,2026,17,33"
+            "created": "02,09,2026,19,32"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "02,09,2026,17,23"
+            "created": "02,09,2026,19,32"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,32"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,33"
+            "created": "02,09,2026,19,32"
           }
         ]
       }
@@ -79896,7 +79977,7 @@
         "at": "2026-09-02T15:11:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "M3zUxMBj",
       "league": "mlb",
@@ -79906,7 +79987,7 @@
       "awayTeam": "白襪",
       "homeTeam": "太空人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/houston-astros-chicago-white-sox/M3zUxMBj/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -79916,7 +79997,7 @@
             "away": 2.08
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 1.71,
             "away": 2.16
           }
@@ -79930,9 +80011,9 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 2.38,
-            "away": 1.59,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.4,
+            "away": 1.58,
             "line": 1.5,
             "favorite": "home"
           }
@@ -79945,8 +80026,8 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "over": 1.36,
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.35,
             "under": 3.1,
             "line": 6.5
           }
@@ -79973,12 +80054,12 @@
           {
             "line": -2.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,29"
           },
           {
             "line": 1.5,
@@ -81297,7 +81378,7 @@
         "at": "2026-09-02T23:37:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "0ANeiLQq",
       "league": "mlb",
@@ -81307,7 +81388,7 @@
       "awayTeam": "紅雀",
       "homeTeam": "道奇",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/los-angeles-dodgers-st-louis-cardinals/0ANeiLQq/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -81317,9 +81398,9 @@
             "away": 2.9
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 1.4,
-            "away": 2.95
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.39,
+            "away": 3.0
           }
         },
         "hd": {
@@ -81331,9 +81412,9 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 1.88,
-            "away": 1.93,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.83,
+            "away": 1.99,
             "line": 1.5,
             "favorite": "home"
           }
@@ -81346,9 +81427,9 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "over": 1.34,
-            "under": 3.2,
+            "under": 3.15,
             "line": 5.5
           }
         }
@@ -81364,27 +81445,27 @@
           {
             "line": -4.5,
             "active": true,
-            "created": "02,09,2026,17,37"
+            "created": "02,09,2026,19,42"
           },
           {
             "line": -3.5,
             "active": true,
-            "created": "02,09,2026,17,37"
+            "created": "02,09,2026,19,42"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,42"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,17,37"
+            "created": "02,09,2026,19,42"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,17,40"
+            "created": "02,09,2026,19,42"
           }
         ]
       }
@@ -81402,7 +81483,7 @@
             "at": "2026-09-02T13:50:00+08:00"
           }
         ],
-        "observedAt": "2026-09-03T02:25:06+08:00"
+        "observedAt": "2026-09-03T02:45:20+08:00"
       },
       "eventId": "8zR3kaed",
       "league": "mlb",
@@ -81412,7 +81493,7 @@
       "awayTeam": "費城人",
       "homeTeam": "響尾蛇",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/arizona-diamondbacks-philadelphia-phillies/8zR3kaed/",
-      "observedAt": "2026-09-03T02:25:06+08:00",
+      "observedAt": "2026-09-03T02:45:20+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -81422,9 +81503,9 @@
             "away": 1.89
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
+            "at": "2026-09-03T02:45:20+08:00",
             "home": 2.1,
-            "away": 1.75
+            "away": 1.77
           }
         },
         "hd": {
@@ -81436,10 +81517,10 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "home": 3.15,
-            "away": 1.37,
-            "line": 1.5,
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.65,
+            "away": 1.48,
+            "line": 1.0,
             "favorite": "home"
           }
         },
@@ -81451,10 +81532,10 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-03T01:15:15+08:00",
-            "over": 1.36,
-            "under": 3.1,
-            "line": 6.5
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.42,
+            "under": 2.8,
+            "line": 7.0
           }
         }
       },
@@ -81464,32 +81545,65 @@
           "away",
           "home"
         ],
-        "struckSide": [],
+        "struckSide": [
+          "away",
+          "home"
+        ],
         "lines": [
+          {
+            "line": -2.5,
+            "active": false,
+            "created": "02,09,2026,19,08"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "02,09,2026,19,41"
+          },
           {
             "line": -1.5,
             "active": true,
-            "created": "02,09,2026,18,05"
+            "created": "02,09,2026,18,46"
+          },
+          {
+            "line": -1.0,
+            "active": true,
+            "created": "02,09,2026,19,41"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "02,09,2026,19,41"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "02,09,2026,18,07"
+            "created": "02,09,2026,19,29"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "02,09,2026,19,41"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "02,09,2026,18,07"
+            "created": "02,09,2026,18,52"
+          },
+          {
+            "line": 3.0,
+            "active": true,
+            "created": "02,09,2026,19,41"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "02,09,2026,18,07"
+            "created": "02,09,2026,19,08"
           },
           {
             "line": 4.5,
-            "active": true,
-            "created": "02,09,2026,18,07"
+            "active": false,
+            "created": "02,09,2026,19,29"
           }
         ]
       }
@@ -81640,6 +81754,418 @@
       "observedAt": "2026-09-03T02:25:06+08:00",
       "source": "BetExplorer",
       "markets": {}
+    },
+    "mlb|2026-09-04|藍鳥|守護者|01:10|6BUqe7Ls": {
+      "bet365": {
+        "side": "away",
+        "line": 1.5,
+        "at": "2026-09-03T02:44:00+08:00",
+        "flipEver": false,
+        "struck": [],
+        "observedAt": "2026-09-03T02:45:20+08:00"
+      },
+      "eventId": "6BUqe7Ls",
+      "league": "mlb",
+      "date": "2026-09-04",
+      "startTime": "01:10",
+      "startISO": "2026-09-04T01:10:00+08:00",
+      "awayTeam": "藍鳥",
+      "homeTeam": "守護者",
+      "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/cleveland-guardians-toronto-blue-jays/6BUqe7Ls/",
+      "observedAt": "2026-09-03T02:45:20+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-09-03T01:26:00+08:00",
+            "home": 1.85,
+            "away": 1.93
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.88,
+            "away": 1.89
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "home": 1.5,
+            "away": 2.55,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.52,
+            "away": 2.49,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "over": 1.5,
+            "under": 2.55,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.49,
+            "under": 2.55,
+            "line": 6.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "away"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "02,09,2026,19,43"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "02,09,2026,18,50"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "02,09,2026,18,50"
+          }
+        ]
+      }
+    },
+    "mlb|2026-09-04|白襪|太空人|02:10|4KVnkj1D": {
+      "bet365": null,
+      "eventId": "4KVnkj1D",
+      "league": "mlb",
+      "date": "2026-09-04",
+      "startTime": "02:10",
+      "startISO": "2026-09-04T02:10:00+08:00",
+      "awayTeam": "白襪",
+      "homeTeam": "太空人",
+      "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/houston-astros-chicago-white-sox/4KVnkj1D/",
+      "observedAt": "2026-09-03T02:45:20+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-09-03T01:26:00+08:00",
+            "home": 1.62,
+            "away": 2.26
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.62,
+            "away": 2.26
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "home": 2.22,
+            "away": 1.64,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.22,
+            "away": 1.64,
+            "line": 1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "over": 1.68,
+            "under": 2.16,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.68,
+            "under": 2.16,
+            "line": 7.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": -3.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          },
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          }
+        ]
+      }
+    },
+    "mlb|2026-09-04|釀酒人|小熊|07:15|Gba57XGs": {
+      "bet365": null,
+      "eventId": "Gba57XGs",
+      "league": "mlb",
+      "date": "2026-09-04",
+      "startTime": "07:15",
+      "startISO": "2026-09-04T07:15:00+08:00",
+      "awayTeam": "釀酒人",
+      "homeTeam": "小熊",
+      "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/chicago-cubs-milwaukee-brewers/Gba57XGs/",
+      "observedAt": "2026-09-03T02:45:20+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-09-03T01:26:00+08:00",
+            "home": 1.93,
+            "away": 1.85
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.93,
+            "away": 1.85
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "home": 1.55,
+            "away": 2.41,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.55,
+            "away": 2.41,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "over": 1.72,
+            "under": 2.09,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.72,
+            "under": 2.09,
+            "line": 7.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "away"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          }
+        ]
+      }
+    },
+    "mlb|2026-09-04|馬林魚|皇家|07:40|WQNYCggK": {
+      "bet365": null,
+      "eventId": "WQNYCggK",
+      "league": "mlb",
+      "date": "2026-09-04",
+      "startTime": "07:40",
+      "startISO": "2026-09-04T07:40:00+08:00",
+      "awayTeam": "馬林魚",
+      "homeTeam": "皇家",
+      "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/kansas-city-royals-miami-marlins/WQNYCggK/",
+      "observedAt": "2026-09-03T02:45:20+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-09-03T01:26:00+08:00",
+            "home": 2.03,
+            "away": 1.76
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 2.03,
+            "away": 1.76
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-09-03T01:26:00+08:00",
+            "home": 1.65,
+            "away": 2.2,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.65,
+            "away": 2.2,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-09-03T01:26:00+08:00",
+            "over": 1.71,
+            "under": 2.11,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.71,
+            "under": 2.11,
+            "line": 8.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "away"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "02,09,2026,18,26"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "02,09,2026,18,26"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "02,09,2026,18,26"
+          }
+        ]
+      }
+    },
+    "mlb|2026-09-04|紅雀|道奇|10:10|bsiM3kG6": {
+      "bet365": null,
+      "eventId": "bsiM3kG6",
+      "league": "mlb",
+      "date": "2026-09-04",
+      "startTime": "10:10",
+      "startISO": "2026-09-04T10:10:00+08:00",
+      "awayTeam": "紅雀",
+      "homeTeam": "道奇",
+      "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/los-angeles-dodgers-st-louis-cardinals/bsiM3kG6/",
+      "observedAt": "2026-09-03T02:45:20+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "home": 1.35,
+            "away": 3.15
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.35,
+            "away": 3.15
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "home": 1.75,
+            "away": 2.05,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "home": 1.75,
+            "away": 2.05,
+            "line": 1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-09-03T01:27:00+08:00",
+            "over": 1.52,
+            "under": 2.49,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-09-03T02:45:20+08:00",
+            "over": 1.52,
+            "under": 2.49,
+            "line": 6.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": -3.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          },
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "02,09,2026,18,27"
+          }
+        ]
+      }
     }
   }
 }
