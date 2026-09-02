@@ -17,6 +17,7 @@ const { execFileSync } = require('node:child_process');
 const path = require('node:path');
 
 const INTERVAL_MS = 15 * 60_000;           // 舊盯哨常數；僅為相容保留，不再驅動排程
+const BET365_PROBE_INTERVAL_MS = 30 * 60_000;
 const ASIA_LEAGUES = Object.freeze(['npb', 'kbo', 'cpbl']);
 const GATE_LOOKBACK_MS = 6 * 3600e3;
 const BACKFILL_HOURS = 120;                // 每閘順手回補過去 5 天的缺口（涵蓋 8/1 搶救批）
@@ -36,6 +37,11 @@ const OUTPUT_PATHS = Object.freeze([
 function isOddsPortalDue(lastAttemptMs, nowMs = Date.now()) {
   const last = Number(lastAttemptMs) || 0;
   return last <= 0 || nowMs - last >= INTERVAL_MS;
+}
+
+function isBet365ProbeDue(lastSuccessMs, nowMs = Date.now()) {
+  const last = Number(lastSuccessMs) || 0;
+  return last <= 0 || nowMs - last >= BET365_PROBE_INTERVAL_MS;
 }
 
 function gameStartMs(game) {
@@ -182,9 +188,15 @@ function runOddsPortalHarvest({ repoDir, python = resolvePython(), timeoutMs = 1
 // 且純 HTTP 免瀏覽器（單場 ~8 秒 vs ~60 秒）。日常閘改由它主跑，失敗才退回 OddsPortal。
 const BETEXPLORER_OUTPUTS = Object.freeze(['data/oddsportal_summary.json']);
 
-function runBetExplorer({ repoDir, python = resolvePython(), leagues = null, timeoutMs = 25 * 60_000 }) {
+function betExplorerArgs(leagues = null, bet365Only = false) {
   const args = ['betexplorer_run.py'];
   if (leagues && leagues.length) args.push('--leagues', leagues.join(','));
+  if (bet365Only) args.push('--bet365-only');
+  return args;
+}
+
+function runBetExplorer({ repoDir, python = resolvePython(), leagues = null, bet365Only = false, timeoutMs = 25 * 60_000 }) {
+  const args = betExplorerArgs(leagues, bet365Only);
   execFileSync(python, args, {
     cwd: repoDir,
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -237,6 +249,8 @@ function runOddsPortal({ repoDir, gate = null, python = resolvePython(), timeout
 
 module.exports = {
   INTERVAL_MS,
+  BET365_PROBE_INTERVAL_MS,
+  isBet365ProbeDue,
   SWAP_HHMM,
   dueSwapGate,
   HARVEST_HHMM,
@@ -256,5 +270,6 @@ module.exports = {
   resolvePython,
   runOddsPortal,
   runBetExplorer,
+  betExplorerArgs,
   BETEXPLORER_OUTPUTS,
 };

@@ -73,7 +73,13 @@
       const minute = hhmmToMin(game.startTime);
       if (minute == null) return;
       const diff = Math.abs(minute - wanted);
-      if (diff < bestDiff) { best = game; bestDiff = diff; }
+      const seen = Date.parse((game.bet365 && game.bet365.observedAt) || game.observedAt || '');
+      const bestSeen = best ? Date.parse((best.bet365 && best.bet365.observedAt) || best.observedAt || '') : NaN;
+      // 同隊、同日、同開球時間可能殘留兩個 BetExplorer eventId；時間打平時必取最新觀測，
+      // 否則會固定吃到前一天的舊列，讓今天已發生的 Bet365 對調在警示與結算快照中消失。
+      if (diff < bestDiff || (diff === bestDiff && Number.isFinite(seen) && (!Number.isFinite(bestSeen) || seen > bestSeen))) {
+        best = game; bestDiff = diff;
+      }
     });
     return best && bestDiff <= TIME_TOLERANCE_MIN ? best : null;
   }
@@ -118,6 +124,7 @@
       catch (_) { value = await fetchFeed(FALLBACK_URL); }
       feed = value;
       try { autoApplyOdds(); } catch (_) {}
+      try { if (typeof global.__backfillBet365TaiwanSnapshots === 'function') global.__backfillBet365TaiwanSnapshots(); } catch (_) {}
       try { if (typeof global.render === 'function') global.render(); } catch (_) {}
       return feed;
     }

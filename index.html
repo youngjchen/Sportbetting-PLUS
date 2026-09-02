@@ -3539,8 +3539,9 @@ function intlBet365HistoryHTML(it, ist, iv){
   return latchedBet365 ? `<span style="color:#6b7bff">bet365 曾對調（歷史比對證據已保存；目前沒有可列出的逐筆時間）</span>` : "";
 }
 function intlVerdict(it, ist){
+  const dateKey=arguments[2];
   let be=null, observedAt=null;
-  try{ const g=(window.__oddsPortalIntegration&&window.__oddsPortalIntegration.gameFor)?window.__oddsPortalIntegration.gameFor(it, doc.activeDate):null; be=(g&&g.bet365)||null; observedAt=g&&g.observedAt; }catch(_){}
+  try{ const g=(window.__oddsPortalIntegration&&window.__oddsPortalIntegration.gameFor)?window.__oddsPortalIntegration.gameFor(it, dateKey||doc.activeDate):null; be=(g&&g.bet365)||null; observedAt=g&&g.observedAt; }catch(_){}
   if(!(be&&be.side)) return { be:null, side:(ist&&ist.is)||null, line:ist&&ist.il, v:(ist&&ist.v)||null, lag:false, dv:!!(ist&&ist.dv) };
   // BetExplorer 摘要若停止刷新，不得永遠壓住較新的 Titan 現行方向。只在兩邊
   // 方向衝突且 Titan 的實際觀測時間較新時退回 Titan；同向或 BE 較新仍維持
@@ -3557,6 +3558,20 @@ function intlVerdict(it, ist){
            lag: !!(ist && ist.is && ist.is!==be.side),
            dv: !!(ist && ist.mf && ist.mf!==be.side) };
 }
+function backfillRecentBet365TaiwanSnapshots(){
+  if(!window.backfillBet365TaiwanSnapshots || !window.__oddsPortalIntegration || !Array.isArray(doc.games)) return 0;
+  const today=Date.parse(new Date(Date.now()+8*3600e3).toISOString().slice(0,10)+"T00:00:00+08:00");
+  const changed=window.backfillBet365TaiwanSnapshots(doc.games,function(game){
+    const day=Date.parse(String(game.date||"").slice(0,10)+"T00:00:00+08:00");
+    if(!Number.isFinite(day)||day<today-2*86400e3||day>today) return null;
+    const card={away:game.awayTeam,home:game.homeTeam,league:game.league,gameTime:game.gameTime};
+    const verdict=intlVerdict(card,game.intlState,game.date);
+    return verdict&&verdict.be ? verdict : null;
+  });
+  if(changed){ save(); try{ if(document.getElementById("reviewpage")?.classList.contains("show")) renderReviewPage(); }catch(_){} }
+  return changed;
+}
+if(typeof window!=="undefined") window.__backfillBet365TaiwanSnapshots=backfillRecentBet365TaiwanSnapshots;
 async function loadIntlState(){
   try{
     const r = await fetch("data/intl_state.json?t="+Date.now(), {cache:"no-store"});
@@ -4657,6 +4672,7 @@ function importData(){
           }catch(_){}
         }
         loadActiveBoard(); save(); render(); buildDateBar(); applyView(); fitView();
+        setTimeout(backfillRecentBet365TaiwanSnapshots,0);
         alert("已匯入備份 ✓" + (casts ? `（含卜卦紀錄 ${casts.length} 筆，已聯集併入）` : ""));
       }else{
         alert("這個檔案讀不出來，請確認是本程式匯出的備份檔。");
@@ -7862,6 +7878,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260830intl1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260824close1"></script><script src="./github-sync.js?v=20260902sp1"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260902backfill1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260902dedupe2"></script><script src="./github-sync.js?v=20260902sp1"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

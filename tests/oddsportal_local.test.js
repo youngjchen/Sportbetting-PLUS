@@ -23,6 +23,23 @@ test('OddsPortal local poll is due at 15 minutes, not before', () => {
   assert.equal(isOddsPortalDue(0, last), true);
 });
 
+test('Bet365 lightweight probe is due every 30 minutes', () => {
+  const { isBet365ProbeDue, BET365_PROBE_INTERVAL_MS } = loadModule();
+  assert.equal(typeof isBet365ProbeDue, 'function');
+  assert.equal(BET365_PROBE_INTERVAL_MS, 30 * 60_000);
+  const last = Date.parse('2026-09-02T16:00:00+08:00');
+  assert.equal(isBet365ProbeDue(last, last + BET365_PROBE_INTERVAL_MS - 1), false);
+  assert.equal(isBet365ProbeDue(last, last + BET365_PROBE_INTERVAL_MS), true);
+  assert.equal(isBet365ProbeDue(0, last), true);
+});
+
+test('BetExplorer lightweight probe requests only Bet365 handicap rows', () => {
+  const { betExplorerArgs } = loadModule();
+  assert.deepEqual(betExplorerArgs(['mlb', 'npb'], true), [
+    'betexplorer_run.py', '--leagues', 'mlb,npb', '--bet365-only',
+  ]);
+});
+
 test('Python selection prefers the explicit runtime then the user-local runtime', () => {
   const { pythonCandidates } = loadModule();
   assert.equal(typeof pythonCandidates, 'function');

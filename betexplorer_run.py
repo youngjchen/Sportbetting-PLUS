@@ -120,6 +120,26 @@ def select_event_ids(games, raw_event_ids):
     return [game for game in games if game.get("matchId") in wanted]
 
 
+def merge_bet365_summary(old, new):
+    """合併輪詢結果；已看見的對調證據只能增加，不能因網站暫時省略舊列而消失。"""
+    if not old:
+        return new
+    if not new:
+        return old
+    merged = dict(new)
+    struck = []
+    seen = set()
+    for row in list(old.get("struck") or []) + list(new.get("struck") or []):
+        key = (row.get("line"), row.get("side"), row.get("at"))
+        if key in seen:
+            continue
+        seen.add(key)
+        struck.append(dict(row))
+    merged["struck"] = struck
+    merged["flipEver"] = bool(old.get("flipEver") or new.get("flipEver"))
+    return merged
+
+
 def _team_zh():
     import importlib.util
     spec = importlib.util.spec_from_file_location("ops", str(Path(__file__).with_name("oddsportal_scraper.py")))
@@ -308,12 +328,30 @@ def collect(game, offset, now_tw):
     }
 
 
-def collect_games(games, offset, now_tw, workers=4, collect_fn=collect):
+def collect_bet365(game, offset, now_tw):
+    """輕量巡檢：每場只讀 Bet365 讓分頁，不下載 Stake 三市場與逐格變價史。"""
+    start_tw = game_start_tw(game, offset)
+    observed_at = now_tw.isoformat(timespec="seconds")
+    bet365 = BE.bet365_summary(
+        BE.bet365_lines(game["matchId"]), offset, observed_at=observed_at,
+    )
+    return {
+        "bet365": bet365,
+        "eventId": game["matchId"], "league": game["league"],
+        "date": start_tw.date().isoformat(), "startTime": start_tw.strftime("%H:%M"),
+        "startISO": start_tw.isoformat(timespec="seconds"),
+        "awayTeam": game["awayZh"], "homeTeam": game["homeZh"],
+        "sourceUrl": game["url"], "observedAt": observed_at,
+        "source": "BetExplorer", "markets": {},
+    }
+
+
+def collect_games(games, offset, now_tw, workers=4, collect_fn=collect, accept_fn=None):
     """並行下載多場盤口；輸出維持賽程順序，單場錯誤不影響其他場。"""
     def attempt(game):
         try:
             entry = collect_fn(game, offset, now_tw)
-            has_odds = any(
+            has_odds = accept_fn(entry) if accept_fn else any(
                 (entry["markets"].get(key) or {}).get("open")
                 or (entry["markets"].get(key) or {}).get("active")
                 for key in ("ml", "hd", "ou")
@@ -342,6 +380,8 @@ def main() -> int:
                         help="逗號分隔的 BetExplorer eventId；只下載指定場次的盤口歷史")
     parser.add_argument("--workers", type=int, default=4,
                         help="同時下載的比賽數（預設 4；單場補抓仍只開 1 個）")
+    parser.add_argument("--bet365-only", action="store_true",
+                        help="輕量巡檢：只抓 Bet365 讓分現況與已下架列")
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args()
 
@@ -422,7 +462,11 @@ def main() -> int:
     if args.event_ids:
         print(f"INFO 單場補抓：符合 eventId 的賽事共 {len(games)} 場", file=sys.stderr)
 
-    collected, failed = collect_games(games, offset, now_tw, workers=args.workers)
+    collected, failed = collect_games(
+        games, offset, now_tw, workers=args.workers,
+        collect_fn=collect_bet365 if args.bet365_only else collect,
+        accept_fn=(lambda entry: bool(entry.get("bet365"))) if args.bet365_only else None,
+    )
 
     summary_path = Path(args.summary)
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
@@ -438,9 +482,10 @@ def main() -> int:
                     if name == "open" and slot.get("open"):      # 初盤只寫一次，永不覆蓋
                         continue
                     slot[name] = value
-            old["stakeSwap"] = entry["stakeSwap"]
+            if entry.get("stakeSwap") is not None:
+                old["stakeSwap"] = entry["stakeSwap"]
             if entry.get("bet365") is not None:
-                old["bet365"] = entry["bet365"]      # 警示條 bet365 軸（2026-08-15 拍板 BE 為主）
+                old["bet365"] = merge_bet365_summary(old.get("bet365"), entry["bet365"])
             old["observedAt"] = entry["observedAt"]
             updated += 1
         else:
@@ -450,12 +495,14 @@ def main() -> int:
 
     health = {"discovered": len(games), "succeeded": len(collected),
               "failed": len(failed), "added": added, "updated": updated, "errors": failed}
+    summary["health"] = health
     if args.dry_run:
         for entry in collected:
             ml = (entry["markets"].get("ml") or {}).get("open") or {}
             hd = (entry["markets"].get("hd") or {}).get("open") or {}
             ou = (entry["markets"].get("ou") or {}).get("open") or {}
-            mark = " ⚠曾對調" if entry["stakeSwap"]["ever"] else ""
+            swap = entry.get("stakeSwap") or {}
+            mark = " ⚠曾對調" if (swap.get("ever") or (entry.get("bet365") or {}).get("flipEver")) else ""
             print(f"  {entry['league']:4s} {entry['date']} {entry['startTime']} "
                   f"{entry['awayTeam']}@{entry['homeTeam']}  "
                   f"ml {ml.get('away')}/{ml.get('home')}  "

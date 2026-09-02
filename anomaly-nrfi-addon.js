@@ -90,6 +90,21 @@
     });
   }
 
+  function backfillBet365TaiwanSnapshots(games, verdictFor) {
+    if (!Array.isArray(games) || typeof verdictFor !== 'function') return 0;
+    let changed = 0;
+    games.forEach(function (game) {
+      if (!game || game.bet365Taiwan || !game.intlState) return;
+      const verdict = verdictFor(game);
+      if (!verdict) return;
+      const snapshot = buildBet365TaiwanSnapshot(game.intlState, verdict);
+      if (!snapshot) return;
+      game.bet365Taiwan = snapshot;
+      changed += 1;
+    });
+    return changed;
+  }
+
   function resolveSettlementOfficialId(select, card) {
     const fromMatch = select && select.dataset && select.dataset.officialId;
     return fromMatch || (card && card.settled && card.settled.officialId) || (card && card.officialId) || null;
@@ -248,6 +263,7 @@
     target.anomalyNrfiHistory = target.anomalyNrfiHistory || EMPTY_HISTORY;
     target.lookupStakeNrfi = (sid) => lookupStakeNrfi(target.anomalyNrfiHistory, sid);
     target.buildBet365TaiwanSnapshot = buildBet365TaiwanSnapshot;
+    target.backfillBet365TaiwanSnapshots = backfillBet365TaiwanSnapshots;
     target.resolveSettlementOfficialId = resolveSettlementOfficialId;
     target.collectBet365Taiwan = (league, settledGames) => collectBet365Taiwan(target.anomalyNrfiHistory, league, settledGames);
     target.renderBet365TaiwanSection = (league, helpers) => renderBet365TaiwanSection(league, target.anomalyNrfiHistory, helpers);
@@ -275,7 +291,7 @@
   }
 
   return {
-    lookupStakeNrfi, classifyBet365TaiwanEvidence, buildBet365TaiwanSnapshot, resolveSettlementOfficialId, settledGameToBet365TaiwanRow,
+    lookupStakeNrfi, classifyBet365TaiwanEvidence, buildBet365TaiwanSnapshot, backfillBet365TaiwanSnapshots, resolveSettlementOfficialId, settledGameToBet365TaiwanRow,
     collectBet365Taiwan, renderBet365TaiwanSection, install, detailRole,
   };
 });

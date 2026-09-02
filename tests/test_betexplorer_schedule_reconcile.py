@@ -6,6 +6,23 @@ import betexplorer_run as runner
 
 
 class ScheduleReconciliationTests(unittest.TestCase):
+    def test_merge_bet365_summary_never_forgets_a_seen_flip(self):
+        old = {
+            "side": "away", "line": 1.5, "flipEver": True,
+            "struck": [{"line": -1.5, "side": "home", "at": "2026-09-02T14:51:00+08:00"}],
+            "observedAt": "2026-09-02T16:42:00+08:00",
+        }
+        new = {
+            "side": "away", "line": 1.5, "flipEver": False, "struck": [],
+            "observedAt": "2026-09-02T17:12:00+08:00",
+        }
+
+        merged = runner.merge_bet365_summary(old, new)
+
+        self.assertTrue(merged["flipEver"])
+        self.assertEqual(merged["struck"], old["struck"])
+        self.assertEqual(merged["observedAt"], new["observedAt"])
+
     def test_doubleheader_is_aligned_to_the_two_scheduled_start_times(self):
         """若拿掉同隊雙重賽按順序對時，第二場會退回錯誤的 13:05。"""
         games = [

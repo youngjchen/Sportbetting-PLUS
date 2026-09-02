@@ -37,6 +37,28 @@ test('doubleheader matching uses start time and never picks the wrong game', () 
   assert.equal(game.eventId, 'second');
 });
 
+test('duplicate same-time BetExplorer rows select the newest observation instead of stale swap evidence', () => {
+  const duplicateFeed = { games: {
+    stale: {
+      eventId: 'stale', league: 'mlb', date: '2026-09-02', startTime: '06:40',
+      awayTeam: '大都會', homeTeam: '光芒', observedAt: '2026-09-01T07:00:13+08:00',
+      bet365: { side: 'home', flipEver: false, observedAt: '2026-09-01T07:00:13+08:00' },
+    },
+    fresh: {
+      eventId: 'fresh', league: 'mlb', date: '2026-09-02', startTime: '06:40',
+      awayTeam: '大都會', homeTeam: '光芒', observedAt: '2026-09-02T06:55:08+08:00',
+      bet365: { side: 'home', flipEver: true, observedAt: '2026-09-02T06:55:08+08:00' },
+    },
+  } };
+
+  const game = findOddsPortalGame(duplicateFeed, {
+    type: 'match', away: '大都會', home: '光芒', gameTime: '06:40', league: 'MLB',
+  }, '2026-09-02');
+
+  assert.equal(game.eventId, 'fresh');
+  assert.equal(game.bet365.flipEver, true);
+});
+
 test('settlement defaults never touch preGameSwap and copy all three market summaries without changing hdFav', () => {
   const card = { hdFav: 'away', preGameSwap: false };
   const game = feed.games['mlb|2026-08-01|金鶯|費城人|07:05|first'];

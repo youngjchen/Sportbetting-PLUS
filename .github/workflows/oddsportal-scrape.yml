@@ -7,10 +7,14 @@ on:
     paths:
       - '.github/workflows/oddsportal-scrape.yml'
       - 'oddsportal_scraper.py'
+      - 'betexplorer.py'
+      - 'betexplorer_run.py'
       - 'oddsportal-integration.js'
       - 'oddsportal_local.js'
       - 'local_failover.js'
       - 'tests/test_oddsportal_scraper.py'
+      - 'tests/test_betexplorer.py'
+      - 'tests/test_betexplorer_schedule_reconcile.py'
       - 'tests/oddsportal_integration.test.js'
       - 'tests/oddsportal_local.test.js'
 
@@ -42,7 +46,7 @@ jobs:
           scrapling install --force >/dev/null
       - name: Contract tests
         run: |
-          python -m unittest tests.test_oddsportal_scraper
+          python -m unittest tests.test_oddsportal_scraper tests.test_betexplorer tests.test_betexplorer_schedule_reconcile
           node --test tests/oddsportal_integration.test.js tests/oddsportal_local.test.js
       - name: Poll OddsPortal once
         # Hosted runners receive the event shell but no bookmaker rows. Production

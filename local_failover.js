@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue } = require('./oddsportal_local.js');
 const { mirrorPregameOutputs } = require('./local_failover_workspace.js');
 
 const REPO_DIR = __dirname;
@@ -156,6 +156,7 @@ function run() {
       }
       staged.push(...outputs);
       state.oddsportal_last_success = Date.now();
+      state.bet365_probe_last_success = Date.now();
       saveState(state);
       log('OddsPortal 本閘完成');
     } else {
@@ -174,6 +175,21 @@ function run() {
     }
   } catch (e) {
     log('OddsPortal 閘處理失敗：' + e.message.split('\n')[0]);
+  }
+
+  // 2d) Bet365 對調可能發生在原本每天一次的 T-2.5h 閘之前。每 30 分鐘只讀
+  // 讓分頁（每場 1 個請求，不抓 Stake 三市場／逐格歷史），讓警示與明細不再等數小時。
+  if (isBet365ProbeDue(state.bet365_probe_last_success, Date.now())) {
+    try {
+      state.bet365_probe_last_attempt = Date.now();
+      saveState(state);
+      staged.push(...runBetExplorer({ repoDir: REPO_DIR, leagues: LEAGUES, bet365Only: true }));
+      state.bet365_probe_last_success = Date.now();
+      saveState(state);
+      log('Bet365 30 分鐘輕量對調巡檢完成');
+    } catch (e) {
+      log('Bet365 輕量對調巡檢失敗：' + e.message.split('\n')[0]);
+    }
   }
 
   // 3) 明牌各聯盟：被擋指紋 qualified===0 且 updated 新鮮

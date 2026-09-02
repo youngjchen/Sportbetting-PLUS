@@ -11,6 +11,7 @@ const {
   resolveSettlementOfficialId,
   settledGameToBet365TaiwanRow,
   renderBet365TaiwanSection,
+  backfillBet365TaiwanSnapshots,
   install,
 } = require('../anomaly-nrfi-addon.js');
 
@@ -207,6 +208,26 @@ test('BetExplorer 列暫缺但曾相反事實已鎖定時，結算快照仍歸�
   assert.equal(snapshot.relation, '收斂');
   assert.equal(snapshot.swapCombo, 'bet365_only');
   assert.equal(snapshot.bet365Swapped, true);
+});
+
+test('補回已結算但因舊重複賽事列而漏掉的 Bet365 × 台彩快照', () => {
+  const games = [{
+    date: '2026-09-02', awayTeam: '大都會', homeTeam: '光芒',
+    intlState: { eo: true, sw: 2, lsw: 0, ls: 'home', ll: 1.5 },
+    bet365Taiwan: null,
+  }, {
+    date: '2026-09-01', awayTeam: '已完成', homeTeam: '不可覆蓋',
+    intlState: { eo: true },
+    bet365Taiwan: { relation: '顛倒', swapCombo: 'neither' },
+  }];
+  const changed = backfillBet365TaiwanSnapshots(games, (game) => ({
+    v: 'was', side: 'home', line: 1.5,
+    be: { flipEver: true, struck: [{ side: 'away', line: 1.5 }] },
+  }));
+  assert.equal(changed, 1);
+  assert.equal(games[0].bet365Taiwan.relation, '收斂');
+  assert.equal(games[0].bet365Taiwan.swapCombo, 'bet365_only');
+  assert.deepEqual(games[1].bet365Taiwan, { relation: '顛倒', swapCombo: 'neither' });
 });
 
 test('手動 NRFI／YRFI 沒有逐局比分時，明細仍顯示人工判定來源', () => {
