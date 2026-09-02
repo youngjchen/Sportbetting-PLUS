@@ -230,6 +230,35 @@ test('補回已結算但因舊重複賽事列而漏掉的 Bet365 × 台彩快照
   assert.deepEqual(games[1].bet365Taiwan, { relation: '顛倒', swapCombo: 'neither' });
 });
 
+test('結算當下國際軸尚未載入，資料晚到後仍會補回七類快照', () => {
+  const lateIntlState = {
+    is: 'home', il: 1.5, sw: 0,
+    ls: 'away', ll: 1.5, lsw: 4,
+    eo: true, v: 'flip',
+    u: '2026-09-02T17:59:08+08:00',
+  };
+  const games = [{
+    date: '2026-09-02', league: 'kbo', gameTime: '17:30',
+    awayTeam: '韓華鷹', homeTeam: 'KT巫師',
+    intlState: null, bet365Taiwan: null,
+  }];
+
+  const changed = backfillBet365TaiwanSnapshots(
+    games,
+    (_game, state) => ({
+      v: 'flip', side: 'home', line: 1.5,
+      be: { flipEver: false, struck: [] },
+    }),
+    () => lateIntlState,
+  );
+
+  assert.equal(changed, 1);
+  assert.deepEqual(games[0].intlState, lateIntlState);
+  assert.equal(games[0].bet365Taiwan.relation, '顛倒');
+  assert.equal(games[0].bet365Taiwan.swapCombo, 'taiwan_only');
+  assert.equal(games[0].bet365Taiwan.taiwanSwitchCount, 4);
+});
+
 test('手動 NRFI／YRFI 沒有逐局比分時，明細仍顯示人工判定來源', () => {
   const { detailRole } = require('../anomaly-nrfi-addon.js');
   assert.match(detailRole({ nrfiStatus: 'nrfi', nrfi: true, nrfiSource: 'manual' }), /NRFI（手動）/);

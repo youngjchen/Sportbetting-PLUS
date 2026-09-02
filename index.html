@@ -3502,15 +3502,16 @@ function intlArchFor(month){
   })();
   return null;
 }
-function intlFor(it){
+function intlFor(it,dateKey){
   if(!__intl || !__intl.games || !it || it.type!=="match") return null;
   const lg = (typeof leagueOf==="function") ? leagueOf(it) : (it.league||"mlb");
-  const base = lg+"|"+doc.activeDate+"|"+it.away+"|"+it.home;
+  const activeDate = dateKey || doc.activeDate;
+  const base = lg+"|"+activeDate+"|"+it.away+"|"+it.home;
   const tm = String(it.gameTime||"").match(/\d{1,2}:\d{2}/);
   const timed = tm ? base+"|"+tm[0].padStart(5,"0") : null;
   const live = (timed && __intl.games[timed]) || __intl.games[base] || null;
   if(live) return live;
-  const month = String(doc.activeDate||"").slice(0,7);
+  const month = String(activeDate||"").slice(0,7);
   if(!/^\d{4}-\d{2}$/.test(month)) return null;
   const arch = intlArchFor(month);
   if(!arch) return null;
@@ -3561,12 +3562,19 @@ function intlVerdict(it, ist){
 function backfillRecentBet365TaiwanSnapshots(){
   if(!window.backfillBet365TaiwanSnapshots || !window.__oddsPortalIntegration || !Array.isArray(doc.games)) return 0;
   const today=Date.parse(new Date(Date.now()+8*3600e3).toISOString().slice(0,10)+"T00:00:00+08:00");
-  const changed=window.backfillBet365TaiwanSnapshots(doc.games,function(game){
-    const day=Date.parse(String(game.date||"").slice(0,10)+"T00:00:00+08:00");
-    if(!Number.isFinite(day)||day<today-2*86400e3||day>today) return null;
+  const isRecent=function(game){
+    const day=Date.parse(String(game&&game.date||"").slice(0,10)+"T00:00:00+08:00");
+    return Number.isFinite(day)&&day>=today-2*86400e3&&day<=today;
+  };
+  const changed=window.backfillBet365TaiwanSnapshots(doc.games,function(game,state){
+    if(!isRecent(game)) return null;
     const card={away:game.awayTeam,home:game.homeTeam,league:game.league,gameTime:game.gameTime};
-    const verdict=intlVerdict(card,game.intlState,game.date);
+    const verdict=intlVerdict(card,state,game.date);
     return verdict&&verdict.be ? verdict : null;
+  },function(game){
+    if(!isRecent(game)) return null;
+    const card={type:"match",away:game.awayTeam,home:game.homeTeam,league:game.league,gameTime:game.gameTime};
+    return intlFor(card,game.date);
   });
   if(changed){ save(); try{ if(document.getElementById("reviewpage")?.classList.contains("show")) renderReviewPage(); }catch(_){} }
   return changed;
@@ -3579,6 +3587,7 @@ async function loadIntlState(){
     const txt = await r.text();
     if(txt===__intlRaw) return;                       // 沒變不重繪
     __intlRaw = txt; __intl = JSON.parse(txt);
+    try{ backfillRecentBet365TaiwanSnapshots(); }catch(_){} // 結算時來源尚未載入：資料晚到後補回七類快照
     if(typeof render==="function") try{ render(); }catch(_){}
   }catch(_){}
 }
@@ -7878,6 +7887,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260902backfill1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260902dedupe2"></script><script src="./github-sync.js?v=20260902sp1"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260902lateintl1"></script><script src="./odds-integration.js?v=20260830opfallback2"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260902dedupe2"></script><script src="./github-sync.js?v=20260902sp1"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

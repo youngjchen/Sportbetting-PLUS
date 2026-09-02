@@ -90,15 +90,19 @@
     });
   }
 
-  function backfillBet365TaiwanSnapshots(games, verdictFor) {
+  function backfillBet365TaiwanSnapshots(games, verdictFor, intlStateFor) {
     if (!Array.isArray(games) || typeof verdictFor !== 'function') return 0;
     let changed = 0;
     games.forEach(function (game) {
-      if (!game || game.bet365Taiwan || !game.intlState) return;
-      const verdict = verdictFor(game);
+      if (!game || game.bet365Taiwan) return;
+      const resolvedState = typeof intlStateFor === 'function' ? intlStateFor(game) : null;
+      const state = resolvedState || game.intlState;
+      if (!state) return;
+      const verdict = verdictFor(game, state);
       if (!verdict) return;
-      const snapshot = buildBet365TaiwanSnapshot(game.intlState, verdict);
+      const snapshot = buildBet365TaiwanSnapshot(state, verdict);
       if (!snapshot) return;
+      if (!game.intlState) game.intlState = state;
       game.bet365Taiwan = snapshot;
       changed += 1;
     });

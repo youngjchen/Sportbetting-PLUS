@@ -52,6 +52,16 @@ test('未來卡片已結算 NRFI 時優先使用卡片結果，不被舊 sid 快
   );
 });
 
+test('國際軸晚於結算載入時，會按結算日期重新配對並觸發七類回補', () => {
+  assert.match(indexSource, /function intlFor\(it,dateKey\)/);
+  assert.match(indexSource, /const activeDate = dateKey \|\| doc\.activeDate/);
+  assert.match(indexSource, /return intlFor\(card,game\.date\)/);
+  assert.match(
+    indexSource,
+    /__intlRaw = txt; __intl = JSON\.parse\(txt\);\s*try\{ backfillRecentBet365TaiwanSnapshots\(\); \}catch\(_\)\{\}/,
+  );
+});
+
 test('正式歷史快照維持 262 個 Stake sid 與 Bet365 × 台彩七類 273 場', () => {
   const history = JSON.parse(fs.readFileSync(path.join(root, 'data', 'anomaly_nrfi_history.json'), 'utf8'));
   assert.equal(Object.keys(history.stakeBySid).length, 262);
