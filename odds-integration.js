@@ -87,6 +87,7 @@
   // 而來源的時間微調（如 Titan007 給 07:07、官方 07:15）都在 1 小時內 → 120 分是安全分界，
   // 與 pregame-integration.js findGame 的 TOL 同值。
   var TOL_MIN = 120;
+  var SCHEDULE_TOL_MIN = 20;   // 官方賽程對照只容許分鐘級誤差；30 分鐘以上視為另一場／錯場
   function hhmmToMin(s) { var m = /(\d{1,2}):(\d{2})/.exec(s == null ? "" : String(s)); return m ? (+m[1]) * 60 + (+m[2]) : null; }
   function gStartHHMM(g) { return g && g.startISO ? String(g.startISO).slice(11, 16) : (g && g.time ? (String(g.time).match(/\d{1,2}:\d{2}/) || [""])[0] : ""); }
   function minDiff(a, b) { var x = hhmmToMin(a), y = hhmmToMin(b); return (x == null || y == null) ? null : Math.abs(x - y); }
@@ -119,6 +120,49 @@
     }
     return (best && bd <= TOL_MIN) ? best : titanT;
   }
+  function gameLeague(g) {
+    var value = String((g && g.league) || "").toLowerCase();
+    if (value) return value;
+    if (g && (g._mlb || /^mlb/i.test(String(g.officialId || "")))) return "mlb";
+    try { return (typeof leagueOf === "function" && g) ? leagueOf(g) : null; } catch (e) { return null; }
+  }
+  function authoritativeScheduleRows(schedule, dateKey) {
+    var rows = (schedule || []).filter(function (g) {
+      return !dateKey || String(g.date || "").slice(0, 10) === dateKey;
+    });
+    // MLB 官方 API 成功時，只採 _mlb 列；玩運彩殘留的錯場不可混回官方白名單。
+    // 官方 API 尚未回來時仍允許玩運彩賽程暫代，避免載入瞬間整個 MLB 變空。
+    var hasOfficialMlb = rows.some(function (g) { return !!g._mlb && gameLeague(g) === "mlb"; });
+    return hasOfficialMlb ? rows.filter(function (g) { return gameLeague(g) !== "mlb" || !!g._mlb; }) : rows;
+  }
+  function scheduleGamesForDate(dateKey) {
+    try {
+      var api = window.__psFusion;
+      var rows = api && typeof api.getData === "function" ? api.getData() : [];
+      return authoritativeScheduleRows(rows, dateKey);
+    } catch (e) { return []; }
+  }
+  // 賠率來源只負責提供盤，不再兼任賽程權威。官方/玩運彩已有該聯盟當日賽程時，
+  // 候選必須同聯盟、同對戰且時間在 20 分鐘內；官方資料尚未載入的聯盟則維持既有行為。
+  function filterAutoArrangeGames(candidates, schedule, dateKey) {
+    var clean = dedupeFeedGames(candidates || []);
+    var official = authoritativeScheduleRows(schedule, dateKey);
+    if (!official.length) return clean;
+    var byLeague = {};
+    official.forEach(function (g) {
+      var lg = gameLeague(g); if (!lg) return;
+      (byLeague[lg] = byLeague[lg] || []).push(g);
+    });
+    return clean.filter(function (g) {
+      var lg = gameLeague(g), slate = lg && byLeague[lg];
+      if (!slate || !slate.length) return true;
+      return slate.some(function (s) {
+        if (!(tmMatch(g.awayTeam, s.awayTeam) && tmMatch(g.homeTeam, s.homeTeam))) return false;
+        var d = minDiff(gStartHHMM(g), gStartHHMM(s));
+        return d != null && d <= SCHEDULE_TOL_MIN;
+      });
+    });
+  }
   // 歸檔場(id 帶 @)是否可信：官方/玩運彩同對戰有 ±TOL 內的場次才算真場次
   //（2026-07-18 Titan 錯標 04:10 歸檔＝官方沒有的時段 → 排盤/認領都不該把它當一場）；
   // 官方完全沒該對戰資料時放行（寧可信 Titan，別因 ps 斷線丟掉真歸檔場）。
@@ -148,17 +192,33 @@
   // 同對戰 feed 場次先自我去重：歸檔場(id 帶 @) 與活列時間 ±TOL 內＝同一場（2026-07-19
   // 海盜@守護者 172743(01:10)+歸檔172759@0110(01:10) 被當兩場 → 每次自動排盤多生一張空白卡）。
   function dedupeFeedGames(games) {
-    var live = games.filter(function (g) { return String(g.id).indexOf("@") < 0; });
-    var out = live.slice();
-    games.forEach(function (g) {
-      if (String(g.id).indexOf("@") < 0) return;
-      var t = hhmmToMin(gStartHHMM(g));
+    // 來源優先序：Titan 正式列 > 歸檔列 > BetExplorer > Bet365 暫時補列。
+    // Bet365 往往比 Titan 早幾分鐘上架；Titan 後來出現時，兩列仍是同一場，不能排兩張卡。
+    function rank(g) {
+      var id = String((g && g.id) || "");
+      if (/^b365:/.test(id)) return 0;
+      if (/^be:/.test(id)) return 1;
+      if (id.indexOf("@") >= 0) return 2;
+      return 3;
+    }
+    var ordered = (games || []).map(function (g, index) { return { g: g, index: index }; });
+    ordered.sort(function (a, b) { return rank(b.g) - rank(a.g) || a.index - b.index; });
+    var out = [];
+    ordered.forEach(function (item) {
+      var g = item.g;
+      if (!g || !g.awayTeam || !g.homeTeam) return;
       var dup = out.some(function (o) {
-        var d = (t == null) ? null : minDiff(gStartHHMM(o), gStartHHMM(g));
-        return d != null && d <= TOL_MIN;
+        if (!((o.awayTeam === g.awayTeam && o.homeTeam === g.homeTeam) ||
+              (o.awayTeam === g.homeTeam && o.homeTeam === g.awayTeam))) return false;
+        var d = minDiff(gStartHHMM(o), gStartHHMM(g));
+        // 一般來源只合併 20 分鐘內的同場列，避免吃掉間隔較短的真雙重賽；
+        // Titan 歸檔列沿用舊有 120 分鐘容差，處理曾發生過的搬列怪時間。
+        var archiveLike = String(g.id || "").indexOf("@") >= 0 || String(o.id || "").indexOf("@") >= 0;
+        return d != null && d <= (archiveLike ? TOL_MIN : SCHEDULE_TOL_MIN);
       });
       if (!dup) out.push(g);
     });
+    out.sort(function (a, b) { return (hhmmToMin(gStartHHMM(a)) || 0) - (hhmmToMin(gStartHHMM(b)) || 0); });
     return out;
   }
   function gamesToAdd(existingItems, feedGames) {
@@ -171,7 +231,7 @@
     });
     var out = [];
     Object.keys(byPair).forEach(function (key) {
-      var games = dedupeFeedGames(byPair[key]).sort(function (a, b) { return (hhmmToMin(gStartHHMM(a)) || 0) - (hhmmToMin(gStartHHMM(b)) || 0); });
+      var games = dedupeFeedGames(byPair[key]);
       var cardTimes = [], noTime = 0;
       (existingItems || []).forEach(function (it) {
         if (!it || it.type !== "match" || pk(it.away, it.home) !== key) return;
@@ -588,6 +648,22 @@
     Object.keys(byPair).forEach(function (key) {
       var cards = byPair[key];
       var away = cards[0].away, home = cards[0].home;
+      var schedule = scheduleGamesForDate(dateKey);
+      var cardLeague = gameLeague(cards[0]);
+      var leagueSlate = schedule.filter(function (g) { return gameLeague(g) === cardLeague; });
+      var pairIsOfficial = leagueSlate.some(function (g) {
+        return tmMatch(away, g.awayTeam) && tmMatch(home, g.homeTeam);
+      });
+      if (leagueSlate.length && !pairIsOfficial) {
+        cards.forEach(function (card) {
+          if (cardHasData(card)) return;                 // 使用者已下注／點燈的卡絕不自動刪
+          state.items = state.items.filter(function (x) { return x.id !== card.id; });
+          changed = true;
+          try { console.log("[賠率] 移除不在官方賽程的空白卡：", away, "@", home, card.gameTime); } catch (e) {}
+        });
+        cards = cards.filter(cardHasData);
+        if (!cards.length) return;
+      }
       // 這天該對戰的完整場次時間：odds feed（含歸檔場）∪ 官方/玩運彩
       var times = {};
       for (var id in (feed.matches || {})) {
@@ -693,7 +769,8 @@
     }
     function gamesForDate(dateKey) {
       var titan = (byDate[dateKey] || []).filter(function (g) { return archiveCorroborated(g, dateKey); });
-      return mergeAutoArrangeGames(titan, portalByDate[dateKey] || []);
+      var merged = mergeAutoArrangeGames(titan, portalByDate[dateKey] || []);
+      return filterAutoArrangeGames(merged, scheduleGamesForDate(dateKey), dateKey);
     }
     var target = doc.activeDate;
     if (!gamesForDate(target).length) {
@@ -818,6 +895,14 @@
 
   /* ---- 啟動 ---- */
   function boot() {
+    if (!window.__oddsScheduleHealHooked) {
+      var previousLiveData = window.__onLiveData;
+      window.__onLiveData = function () {
+        try { if (healDupCards() && typeof save === "function") save(); } catch (e) {}
+        if (typeof previousLiveData === "function") return previousLiveData.apply(this, arguments);
+      };
+      window.__oddsScheduleHealHooked = true;
+    }
     injectButtons(); fetchFeed(false).catch(function () {});
     setInterval(function () { fetchFeed(false).catch(function () {}); }, REFRESH_MS);
     // 手機回前景立即補抓（背景分頁計時器被凍結，回來不補會停在舊賠率）
@@ -832,6 +917,6 @@
   window.__oddsIntegration = { closeHdFor: function (id) { return feedCloseHd[id] || null; } };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, oddsPortalAutoGames: oddsPortalAutoGames, mergeAutoArrangeGames: mergeAutoArrangeGames, autoArrangeFromFeed: autoArrangeFromFeed, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, oddsPortalAutoGames: oddsPortalAutoGames, mergeAutoArrangeGames: mergeAutoArrangeGames, filterAutoArrangeGames: filterAutoArrangeGames, autoArrangeFromFeed: autoArrangeFromFeed, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
   }
 })();
