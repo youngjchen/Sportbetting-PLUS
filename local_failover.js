@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues } = require('./oddsportal_local.js');
 const { mirrorPregameOutputs } = require('./local_failover_workspace.js');
 
 const REPO_DIR = __dirname;
@@ -177,18 +177,26 @@ function run() {
     log('OddsPortal 閘處理失敗：' + e.message.split('\n')[0]);
   }
 
-  // 2d) Bet365 對調可能發生在原本每天一次的 T-2.5h 閘之前。每 30 分鐘只讀
-  // 讓分頁（每場 1 個請求，不抓 Stake 三市場／逐格歷史），讓警示與明細不再等數小時。
+  // 2d) 每 30 分鐘巡檢：若今天亞洲賽事仍缺 Stake 初盤，升級成完整抓取；補齊後才回到
+  // Bet365 輕量讓分頁（每場 1 個請求），避免 03:00 初盤閘早於實際上架後整天不再補抓。
   if (isBet365ProbeDue(state.bet365_probe_last_success, Date.now())) {
     try {
       state.bet365_probe_last_attempt = Date.now();
       saveState(state);
-      staged.push(...runBetExplorer({ repoDir: REPO_DIR, leagues: LEAGUES, bet365Only: true }));
+      const pregameGames = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'pregame_data.json'), 'utf8'));
+      const oddsSummary = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'oddsportal_summary.json'), 'utf8'));
+      const missingAsia = missingStakeOpenLeagues(pregameGames, oddsSummary, Date.now());
+      if (missingAsia.length) {
+        log(`亞洲 Stake 初盤仍缺 ${missingAsia.join('+')} → 30 分鐘巡檢升級為完整抓取`);
+        staged.push(...runBetExplorer({ repoDir: REPO_DIR, leagues: missingAsia }));
+      } else {
+        staged.push(...runBetExplorer({ repoDir: REPO_DIR, leagues: LEAGUES, bet365Only: true }));
+      }
       state.bet365_probe_last_success = Date.now();
       saveState(state);
-      log('Bet365 30 分鐘輕量對調巡檢完成');
+      log(missingAsia.length ? '亞洲 Stake 缺盤補抓完成' : 'Bet365 30 分鐘輕量對調巡檢完成');
     } catch (e) {
-      log('Bet365 輕量對調巡檢失敗：' + e.message.split('\n')[0]);
+      log('30 分鐘賠率巡檢失敗：' + e.message.split('\n')[0]);
     }
   }
 

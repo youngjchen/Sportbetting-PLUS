@@ -53,6 +53,61 @@ function gameStartMs(game) {
   return Number.isFinite(ms) ? ms : null;
 }
 
+function taiwanDate(nowMs) {
+  return new Date(nowMs + 8 * 3600e3).toISOString().slice(0, 10);
+}
+
+function normalizedTeam(value) {
+  return String(value || '').replace(/[\s\u3000]/g, '').toLowerCase();
+}
+
+function sameTeam(left, right) {
+  const a = normalizedTeam(left);
+  const b = normalizedTeam(right);
+  return Boolean(a && b && (a === b || a.includes(b) || b.includes(a)));
+}
+
+function summaryStartMs(game) {
+  return gameStartMs({ ...game, time: game && (game.startTime || game.time) });
+}
+
+function hasStakeMlOpen(game) {
+  const open = game && game.markets && game.markets.ml && game.markets.ml.open;
+  if (!open || open.away == null || open.home == null || open.away === '' || open.home === '') return false;
+  return Number.isFinite(Number(open.away)) && Number.isFinite(Number(open.home));
+}
+
+// 03:00 初盤閘可能早於 Stake 實際上架。30 分鐘巡檢用此缺口清單決定是否升級為完整抓取；
+// 只看台灣今天、已過初盤閘且尚未開賽的亞洲場，避免明日賽程或已結束賽事造成無限重抓。
+function missingStakeOpenLeagues(games, summary, nowMs = Date.now()) {
+  const today = taiwanDate(nowMs);
+  const openAt = Date.parse(`${today}T${OPEN_ASIA_HHMM}:00+08:00`);
+  if (nowMs < openAt) return [];
+
+  const summaryGames = Array.isArray(summary && summary.games)
+    ? summary.games
+    : Object.values((summary && summary.games) || {});
+  const missing = new Set();
+
+  for (const game of games || []) {
+    const league = String((game && game.league) || '').toLowerCase();
+    if (!ASIA_LEAGUES.includes(league) || String(game.date).slice(0, 10) !== today) continue;
+    const startMs = gameStartMs(game);
+    if (!startMs || startMs <= nowMs) continue;
+
+    const found = summaryGames.find(candidate => {
+      if (String((candidate && candidate.league) || '').toLowerCase() !== league) return false;
+      if (String(candidate.date).slice(0, 10) !== today) return false;
+      const candidateStartMs = summaryStartMs(candidate);
+      if (!candidateStartMs || Math.abs(candidateStartMs - startMs) > 120 * 60e3) return false;
+      return sameTeam(candidate.awayTeam, game.awayTeam) && sameTeam(candidate.homeTeam, game.homeTeam);
+    });
+    if (!hasStakeMlOpen(found)) missing.add(league);
+  }
+
+  return ASIA_LEAGUES.filter(league => missing.has(league));
+}
+
 function dayBefore(date) {
   const ms = Date.parse(`${date}T00:00:00+08:00`) - 86400e3;
   return new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
@@ -251,6 +306,7 @@ module.exports = {
   INTERVAL_MS,
   BET365_PROBE_INTERVAL_MS,
   isBet365ProbeDue,
+  missingStakeOpenLeagues,
   SWAP_HHMM,
   dueSwapGate,
   HARVEST_HHMM,

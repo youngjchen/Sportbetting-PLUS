@@ -40,6 +40,32 @@ test('BetExplorer lightweight probe requests only Bet365 handicap rows', () => {
   ]);
 });
 
+test('30-minute probe upgrades to a full Stake scrape while same-day Asia openings are missing', () => {
+  const { missingStakeOpenLeagues } = loadModule();
+  assert.equal(typeof missingStakeOpenLeagues, 'function');
+  const games = [
+    { league: 'NPB', date: '2026-09-04', time: '17:00', awayTeam: '中日', homeTeam: '養樂多' },
+    { league: 'KBO', date: '2026-09-04', time: '17:30', awayTeam: '三星獅', homeTeam: '雙子' },
+    { league: 'CPBL', date: '2026-09-04', time: '18:35', awayTeam: '台鋼', homeTeam: '統一' },
+  ];
+  const summary = { games: {
+    npb: { league: 'npb', date: '2026-09-04', startTime: '17:00', awayTeam: '中日', homeTeam: '養樂多',
+      markets: { ml: { open: { away: null, home: null } } } },
+    kbo: { league: 'kbo', date: '2026-09-04', startTime: '17:30', awayTeam: '三星獅', homeTeam: '雙子',
+      markets: { ml: { open: { away: 1.86, home: 1.88 } } } },
+  } };
+
+  assert.deepEqual(
+    missingStakeOpenLeagues(games, summary, Date.parse('2026-09-04T07:50:00+08:00')),
+    ['npb', 'cpbl'],
+  );
+  assert.deepEqual(
+    missingStakeOpenLeagues(games, summary, Date.parse('2026-09-04T02:59:59+08:00')),
+    [],
+    '亞洲初盤閘 03:00 前不可提前連續重抓',
+  );
+});
+
 test('Python selection prefers the explicit runtime then the user-local runtime', () => {
   const { pythonCandidates } = loadModule();
   assert.equal(typeof pythonCandidates, 'function');
