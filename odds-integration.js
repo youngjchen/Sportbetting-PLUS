@@ -94,7 +94,10 @@
   // 官方/玩運彩的開球時間（__psFusion 融合資料：MLB=官方 API、其他=玩運彩）。
   // Titan007 的時間偶有錯（2026-07-17 白襪@藍鳥給 07:07、官方 07:15）→ 卡片顯示時間以這裡為權威。
   function tmMatch(b, s) { b = String(b == null ? "" : b).trim(); s = String(s == null ? "" : s).trim(); return !!b && !!s && (b === s || b.indexOf(s) >= 0 || s.indexOf(b) >= 0); }
-  function pregameTimesFor(away, home, dateKey) {
+  function teamMatchForLeague(league, a, b) {
+    return tmMatch(canonicalAutoTeam(league, a), canonicalAutoTeam(league, b));
+  }
+  function pregameTimesFor(away, home, dateKey, league) {
     try {
       var ps = (window.__psFusion && window.__psFusion.getData) ? window.__psFusion.getData() : null;
       if (!ps || !ps.length) return [];
@@ -102,7 +105,8 @@
       for (var i = 0; i < ps.length; i++) {
         var p = ps[i];
         if (String(p.date || "").slice(0, 10) !== dateKey) continue;
-        if (!(tmMatch(away, p.awayTeam) && tmMatch(home, p.homeTeam))) continue;
+        var lg = league || gameLeague(p);
+        if (!(teamMatchForLeague(lg, away, p.awayTeam) && teamMatchForLeague(lg, home, p.homeTeam))) continue;
         var m = String(p.gameTime || p.time || "").match(/\d{1,2}:\d{2}/);
         if (m) out.push(m[0].length === 4 ? "0" + m[0] : m[0]);
       }
@@ -112,7 +116,7 @@
   // 這場 feed 比賽的「權威顯示時間」：官方/玩運彩裡挑離 Titan 時間 ≤TOL 的最近場次；沒有→用 Titan 的
   function authTimeFor(g, dateKey) {
     var titanT = gStartHHMM(g) || "";
-    var cands = pregameTimesFor(g.awayTeam, g.homeTeam, dateKey);
+    var cands = pregameTimesFor(g.awayTeam, g.homeTeam, dateKey, gameLeague(g));
     var best = null, bd = Infinity;
     for (var i = 0; i < cands.length; i++) {
       var d = minDiff(cands[i], titanT);
@@ -124,7 +128,46 @@
     var value = String((g && g.league) || "").toLowerCase();
     if (value) return value;
     if (g && (g._mlb || /^mlb/i.test(String(g.officialId || "")))) return "mlb";
-    try { return (typeof leagueOf === "function" && g) ? leagueOf(g) : null; } catch (e) { return null; }
+    var oddsId = String((g && g.oddsId) || "");
+    if (/^be:/.test(oddsId)) {
+      try {
+        var api = window.__oddsPortalIntegration;
+        var portal = api && typeof api._getFeed === "function" ? api._getFeed() : null;
+        var games = portal && portal.games;
+        var wanted = oddsId.slice(3);
+        for (var key in (games || {})) {
+          var row = games[key];
+          if (String((row && row.eventId) || key) === wanted) return String(row.league || "").toLowerCase() || null;
+        }
+      } catch (e) {}
+    }
+    try {
+      var detected = (typeof leagueOf === "function" && g) ? leagueOf(g) : null;
+      return detected && detected !== "zz" ? detected : null;
+    } catch (e) { return null; }
+  }
+  function canonicalAutoTeam(league, name) {
+    var value = String(name == null ? "" : name).trim();
+    if (!value) return value;
+    try {
+      return (typeof canonicalTeamName === "function" && league) ? canonicalTeamName(league, value) : value;
+    } catch (e) { return value; }
+  }
+  function normalizeAutoGame(g) {
+    if (!g) return g;
+    var league = gameLeague(g);
+    if (!league) return g;
+    var away = canonicalAutoTeam(league, g.awayTeam);
+    var home = canonicalAutoTeam(league, g.homeTeam);
+    var favorite = g._autoFavTeam ? canonicalAutoTeam(league, g._autoFavTeam) : g._autoFavTeam;
+    if (away === g.awayTeam && home === g.homeTeam && favorite === g._autoFavTeam && league === g.league) return g;
+    var copy = {};
+    for (var key in g) copy[key] = g[key];
+    copy.league = league;
+    copy.awayTeam = away;
+    copy.homeTeam = home;
+    if (g._autoFavTeam) copy._autoFavTeam = favorite;
+    return copy;
   }
   function authoritativeScheduleRows(schedule, dateKey) {
     var rows = (schedule || []).filter(function (g) {
@@ -146,7 +189,7 @@
   // 候選必須同聯盟、同對戰且時間在 20 分鐘內；官方資料尚未載入的聯盟則維持既有行為。
   function filterAutoArrangeGames(candidates, schedule, dateKey) {
     var clean = dedupeFeedGames(candidates || []);
-    var official = authoritativeScheduleRows(schedule, dateKey);
+    var official = authoritativeScheduleRows(schedule, dateKey).map(normalizeAutoGame);
     if (!official.length) return clean;
     var byLeague = {};
     official.forEach(function (g) {
@@ -168,7 +211,7 @@
   // 官方完全沒該對戰資料時放行（寧可信 Titan，別因 ps 斷線丟掉真歸檔場）。
   function archiveCorroborated(g, dateKey) {
     if (String(g.id).indexOf("@") < 0) return true;
-    var ts = pregameTimesFor(g.awayTeam, g.homeTeam, dateKey);
+    var ts = pregameTimesFor(g.awayTeam, g.homeTeam, dateKey, gameLeague(g));
     if (!ts.length) return true;
     var t = gStartHHMM(g);
     return ts.some(function (x) { var d = minDiff(x, t); return d != null && d <= TOL_MIN; });
@@ -201,7 +244,7 @@
       if (id.indexOf("@") >= 0) return 2;
       return 3;
     }
-    var ordered = (games || []).map(function (g, index) { return { g: g, index: index }; });
+    var ordered = (games || []).map(function (g, index) { return { g: normalizeAutoGame(g), index: index }; });
     ordered.sort(function (a, b) { return rank(b.g) - rank(a.g) || a.index - b.index; });
     var out = [];
     ordered.forEach(function (item) {
@@ -222,11 +265,11 @@
     return out;
   }
   function gamesToAdd(existingItems, feedGames) {
-    function pk(a, b) { return [a, b].sort().join("|"); }
+    function pk(a, b, league) { return [canonicalAutoTeam(league, a), canonicalAutoTeam(league, b)].sort().join("|"); }
     var byPair = {};
-    (feedGames || []).forEach(function (g) {
+    dedupeFeedGames(feedGames || []).forEach(function (g) {
       if (!g || !g.homeTeam || !g.awayTeam) return;
-      var k = pk(g.awayTeam, g.homeTeam);
+      var k = pk(g.awayTeam, g.homeTeam, gameLeague(g));
       (byPair[k] = byPair[k] || []).push(g);
     });
     var out = [];
@@ -234,7 +277,7 @@
       var games = dedupeFeedGames(byPair[key]);
       var cardTimes = [], noTime = 0;
       (existingItems || []).forEach(function (it) {
-        if (!it || it.type !== "match" || pk(it.away, it.home) !== key) return;
+        if (!it || it.type !== "match" || pk(it.away, it.home, gameLeague(it)) !== key) return;
         var t = hhmmToMin(it.gameTime);
         if (t != null) cardTimes.push({ t: t, used: false }); else noTime++;
       });
@@ -293,8 +336,9 @@
 
   function mergeAutoArrangeGames(primary, fallback) {
     function pk(g) { return [g.awayTeam, g.homeTeam].sort().join("|"); }
-    var out = (primary || []).slice();
+    var out = (primary || []).map(normalizeAutoGame);
     (fallback || []).forEach(function (g) {
+      g = normalizeAutoGame(g);
       if (!g || !g.awayTeam || !g.homeTeam) return;
       var dup = out.some(function (o) {
         if (!o || pk(o) !== pk(g)) return false;
@@ -638,21 +682,39 @@
   function healDupCards() {
     if (typeof state === "undefined" || !state.items || typeof doc === "undefined" || !doc.activeDate) return false;
     var dateKey = doc.activeDate, changed = false;
+    var schedule = scheduleGamesForDate(dateKey);
     function pk(a, b) { return [a, b].sort().join("|"); }
+    function scheduleRowForCard(card, knownLeague) {
+      for (var i = 0; i < schedule.length; i++) {
+        var row = schedule[i], league = gameLeague(row);
+        if (!league || (knownLeague && knownLeague !== league)) continue;
+        if (teamMatchForLeague(league, card.away, row.awayTeam) &&
+            teamMatchForLeague(league, card.home, row.homeTeam)) return row;
+      }
+      return null;
+    }
     var byPair = {};
     state.items.forEach(function (it) {
       if (!it || it.type !== "match" || !it.gameTime) return;
-      var k = pk(it.away, it.home);
+      var cardLeague = gameLeague(it);
+      var scheduleRow = scheduleRowForCard(it, cardLeague);
+      if (!cardLeague && scheduleRow) cardLeague = gameLeague(scheduleRow);
+      if (cardLeague) {
+        var away = canonicalAutoTeam(cardLeague, it.away);
+        var home = canonicalAutoTeam(cardLeague, it.home);
+        if (it.away !== away) { it.away = away; changed = true; }
+        if (it.home !== home) { it.home = home; changed = true; }
+      }
+      var k = (cardLeague || "") + "|" + pk(it.away, it.home);
       (byPair[k] = byPair[k] || []).push(it);
     });
     Object.keys(byPair).forEach(function (key) {
       var cards = byPair[key];
       var away = cards[0].away, home = cards[0].home;
-      var schedule = scheduleGamesForDate(dateKey);
       var cardLeague = gameLeague(cards[0]);
       var leagueSlate = schedule.filter(function (g) { return gameLeague(g) === cardLeague; });
       var pairIsOfficial = leagueSlate.some(function (g) {
-        return tmMatch(away, g.awayTeam) && tmMatch(home, g.homeTeam);
+        return teamMatchForLeague(cardLeague, away, g.awayTeam) && teamMatchForLeague(cardLeague, home, g.homeTeam);
       });
       if (leagueSlate.length && !pairIsOfficial) {
         cards.forEach(function (card) {
@@ -670,12 +732,13 @@
         var g = feed.matches[id];
         if (!g || !g.homeTeam || !g.awayTeam) continue;
         if ((g.startISO || "").slice(0, 10) !== dateKey) continue;
-        var ok = (g.homeTeam === home && g.awayTeam === away) || (g.homeTeam === away && g.awayTeam === home);
+        var ok = (teamMatchForLeague(cardLeague, g.homeTeam, home) && teamMatchForLeague(cardLeague, g.awayTeam, away)) ||
+                 (teamMatchForLeague(cardLeague, g.homeTeam, away) && teamMatchForLeague(cardLeague, g.awayTeam, home));
         if (!ok) continue;
         if (!archiveCorroborated(g, dateKey)) continue;   // 官方沒有的孤立歸檔時段不算場次
         var t = gStartHHMM(g); if (t) times[t] = g;
       }
-      pregameTimesFor(away, home, dateKey).forEach(function (t) { if (!(t in times)) times[t] = null; });
+      pregameTimesFor(away, home, dateKey, cardLeague).forEach(function (t) { if (!(t in times)) times[t] = null; });
       var known = Object.keys(times).sort();
       if (!known.length) return;
       // 認領順序：有使用者資料的卡最優先（空白卡不得搶走真卡的時段——2026-07-19 大都會@費城人
@@ -796,7 +859,7 @@
       var col = (lg && typeof LEAGUES !== "undefined" && LEAGUES[lg]) ? LEAGUES[lg].color : "var(--mlb)";
       var fav = g._autoFavTeam || feedFavTeam(g);
       state.items.push({
-        id: uid++, type: "match", x: 0, y: 0,
+        id: uid++, type: "match", league: lg, x: 0, y: 0,
         away: g.awayTeam, home: g.homeTeam, awayColor: col, homeColor: col,
         gameTime: authTimeFor(g, target) || "", oddsId: g.id, // 唯一鍵：開球時間(官方為權威) + Titan007 id
         mlAway: { lights: 0 }, mlHome: { lights: 0 },

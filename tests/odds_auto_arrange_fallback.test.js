@@ -94,6 +94,98 @@ test('feed dedupe does not collapse two real same-pair games that start within t
   assert.deepEqual(odds.dedupeFeedGames(games).map(game => game.id), [1, 2]);
 });
 
+test('KBO auto arrange canonicalizes source aliases before whitelist and dedupe', () => {
+  const aliases = {
+    '雙子': 'LG雙子', '巫師': 'KT巫師', '登陸者': 'SSG登陸者',
+    '恐龍': 'NC恐龍', '樂天': '樂天巨人', '華老鷹': '韓華鷹', '培證': '培證英雄',
+  };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  const titan = [
+    { id: 175993, league: 'kbo', awayTeam: '斗山熊', homeTeam: 'SSG登陸者', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 175994, league: 'kbo', awayTeam: '韓華鷹', homeTeam: '樂天巨人', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 175995, league: 'kbo', awayTeam: '三星獅', homeTeam: 'LG雙子', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 175996, league: 'kbo', awayTeam: 'NC恐龍', homeTeam: '培證英雄', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 175997, league: 'kbo', awayTeam: 'KT巫師', homeTeam: '起亞虎', startISO: '2026-09-05T16:00:00+08:00' },
+  ];
+  const portal = [
+    { id: 'be:2XvdaKWi', league: 'kbo', awayTeam: '斗山熊', homeTeam: '登陸者', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 'be:zow4cb14', league: 'kbo', awayTeam: '華老鷹', homeTeam: '樂天', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 'be:lhc9yHvo', league: 'kbo', awayTeam: '三星獅', homeTeam: '雙子', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 'be:vwzLgG0T', league: 'kbo', awayTeam: '恐龍', homeTeam: '培證', startISO: '2026-09-05T16:00:00+08:00' },
+    { id: 'be:WCWCexWG', league: 'kbo', awayTeam: '巫師', homeTeam: '起亞虎', startISO: '2026-09-05T16:00:00+08:00' },
+  ];
+  const schedule = [
+    { league: 'KBO', date: '2026-09-05', time: '16:00', awayTeam: '斗山熊', homeTeam: '登陸者' },
+    { league: 'KBO', date: '2026-09-05', time: '16:00', awayTeam: '華老鷹', homeTeam: '樂天' },
+    { league: 'KBO', date: '2026-09-05', time: '16:00', awayTeam: '三星獅', homeTeam: '雙子' },
+    { league: 'KBO', date: '2026-09-05', time: '16:00', awayTeam: '恐龍', homeTeam: '培證' },
+    { league: 'KBO', date: '2026-09-05', time: '16:00', awayTeam: '巫師', homeTeam: '起亞虎' },
+  ];
+
+  try {
+    const merged = odds.mergeAutoArrangeGames(titan, portal);
+    const kept = odds.filterAutoArrangeGames(merged, schedule, '2026-09-05');
+    assert.deepEqual(kept.map(game => game.id), [175993, 175994, 175995, 175996, 175997]);
+    assert.deepEqual(kept.map(game => `${game.awayTeam}@${game.homeTeam}`), [
+      '斗山熊@SSG登陸者', '韓華鷹@樂天巨人', '三星獅@LG雙子',
+      'NC恐龍@培證英雄', 'KT巫師@起亞虎',
+    ]);
+  } finally {
+    delete global.canonicalTeamName;
+  }
+});
+
+test('KBO fallback favorite follows the canonicalized team name', () => {
+  const aliases = { '華老鷹': '韓華鷹', '樂天': '樂天巨人' };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  try {
+    const kept = odds.filterAutoArrangeGames([{
+      id: 'be:zow4cb14', league: 'kbo', awayTeam: '華老鷹', homeTeam: '樂天',
+      startISO: '2026-09-05T16:00:00+08:00', _autoFavTeam: '華老鷹',
+    }], [{
+      league: 'KBO', date: '2026-09-05', time: '16:00', awayTeam: '華老鷹', homeTeam: '樂天',
+    }], '2026-09-05');
+    assert.equal(kept[0]._autoFavTeam, '韓華鷹');
+  } finally {
+    delete global.canonicalTeamName;
+  }
+});
+
+test('schedule healing folds an existing short-name KBO duplicate into one canonical card', () => {
+  const aliases = { '華老鷹': '韓華鷹', '樂天': '樂天巨人' };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  global.leagueOf = card => card.away === '韓華鷹' || card.home === '樂天巨人' ? 'kbo' : 'zz';
+  window.__psFusion = { getData: () => [{
+    league: 'KBO', date: '2026-09-05', time: '16:00', awayTeam: '華老鷹', homeTeam: '樂天',
+  }] };
+  window.__oddsPortalIntegration = { _getFeed: () => ({ games: { kbo: {
+    eventId: 'zow4cb14', league: 'kbo', date: '2026-09-05', startTime: '16:00',
+    awayTeam: '華老鷹', homeTeam: '樂天',
+  } } }) };
+  global.doc = { activeDate: '2026-09-05' };
+  global.state = { items: [
+    { id: 1, type: 'match', away: '韓華鷹', home: '樂天巨人', gameTime: '16:00', oddsId: 175994,
+      mlAway: { lights: 0 }, mlHome: { lights: 0 }, hdGive: { lights: 0 }, hdRecv: { lights: 0 }, over: { lights: 0 }, under: { lights: 0 } },
+    { id: 2, type: 'match', away: '華老鷹', home: '樂天', gameTime: '16:00', oddsId: 'be:zow4cb14',
+      mlAway: { lights: 0 }, mlHome: { lights: 0 }, hdGive: { lights: 0 }, hdRecv: { lights: 0 }, over: { lights: 0 }, under: { lights: 0 } },
+  ] };
+  odds._setFeed({ matches: { 175994: {
+    id: 175994, league: 'kbo', awayTeam: '韓華鷹', homeTeam: '樂天巨人',
+    startISO: '2026-09-05T16:00:00+08:00',
+  } } });
+
+  try {
+    assert.equal(odds.healDupCards(), true);
+    assert.equal(global.state.items.length, 1);
+    assert.equal(global.state.items[0].away, '韓華鷹');
+    assert.equal(global.state.items[0].home, '樂天巨人');
+  } finally {
+    delete window.__psFusion;
+    delete window.__oddsPortalIntegration;
+    for (const name of ['canonicalTeamName', 'leagueOf', 'doc', 'state']) delete global[name];
+  }
+});
+
 test('schedule-backed healing removes an empty ghost card that is absent from the official MLB slate', () => {
   window.__psFusion = {
     getData: () => [{
