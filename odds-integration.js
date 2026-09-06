@@ -108,7 +108,10 @@
         var lg = league || gameLeague(p);
         if (!(teamMatchForLeague(lg, away, p.awayTeam) && teamMatchForLeague(lg, home, p.homeTeam))) continue;
         var m = String(p.gameTime || p.time || "").match(/\d{1,2}:\d{2}/);
-        if (m) out.push(m[0].length === 4 ? "0" + m[0] : m[0]);
+        if (m) {
+          var t = m[0].length === 4 ? "0" + m[0] : m[0];
+          if (out.indexOf(t) < 0) out.push(t);
+        }
       }
       return out;
     } catch (e) { return []; }
@@ -117,6 +120,7 @@
   function authTimeFor(g, dateKey) {
     var titanT = gStartHHMM(g) || "";
     var cands = pregameTimesFor(g.awayTeam, g.homeTeam, dateKey, gameLeague(g));
+    if (cands.length === 1) return cands[0]; // 單場改期不受來源誤差限制；官方時刻就是唯一答案
     var best = null, bd = Infinity;
     for (var i = 0; i < cands.length; i++) {
       var d = minDiff(cands[i], titanT);
@@ -187,6 +191,13 @@
   }
   // 賠率來源只負責提供盤，不再兼任賽程權威。官方/玩運彩已有該聯盟當日賽程時，
   // 候選必須同聯盟、同對戰且時間在 20 分鐘內；官方資料尚未載入的聯盟則維持既有行為。
+  function autoSourceRank(g) {
+    var id = String((g && g.id) || "");
+    if (/^b365:/.test(id)) return 0;
+    if (/^be:/.test(id)) return 1;
+    if (id.indexOf("@") >= 0) return 2;
+    return 3;
+  }
   function filterAutoArrangeGames(candidates, schedule, dateKey) {
     var clean = dedupeFeedGames(candidates || []);
     var official = authoritativeScheduleRows(schedule, dateKey).map(normalizeAutoGame);
@@ -199,8 +210,26 @@
     return clean.filter(function (g) {
       var lg = gameLeague(g), slate = lg && byLeague[lg];
       if (!slate || !slate.length) return true;
-      return slate.some(function (s) {
-        if (!(tmMatch(g.awayTeam, s.awayTeam) && tmMatch(g.homeTeam, s.homeTeam))) return false;
+      var pairRows = slate.filter(function (s) {
+        return tmMatch(g.awayTeam, s.awayTeam) && tmMatch(g.homeTeam, s.homeTeam);
+      });
+      if (pairRows.length === 1) {
+        var officialTime = gStartHHMM(pairRows[0]);
+        var pairSources = clean.filter(function (other) {
+          if (gameLeague(other) !== lg) return false;
+          return tmMatch(other.awayTeam, pairRows[0].awayTeam) && tmMatch(other.homeTeam, pairRows[0].homeTeam);
+        });
+        var hasOnTimeSource = pairSources.some(function (other) {
+          var otherDiff = minDiff(gStartHHMM(other), officialTime);
+          return otherDiff != null && otherDiff <= SCHEDULE_TOL_MIN;
+        });
+        var thisDiff = minDiff(gStartHHMM(g), officialTime);
+        if (hasOnTimeSource) return thisDiff != null && thisDiff <= SCHEDULE_TOL_MIN;
+        // 所有來源都報錯時只保留最高優先來源的一列，顯示時間交給官方校正。
+        pairSources.sort(function (a, b) { return autoSourceRank(b) - autoSourceRank(a); });
+        return pairSources[0] === g;
+      }
+      return pairRows.some(function (s) {
         var d = minDiff(gStartHHMM(g), gStartHHMM(s));
         return d != null && d <= SCHEDULE_TOL_MIN;
       });
@@ -237,15 +266,8 @@
   function dedupeFeedGames(games) {
     // 來源優先序：Titan 正式列 > 歸檔列 > BetExplorer > Bet365 暫時補列。
     // Bet365 往往比 Titan 早幾分鐘上架；Titan 後來出現時，兩列仍是同一場，不能排兩張卡。
-    function rank(g) {
-      var id = String((g && g.id) || "");
-      if (/^b365:/.test(id)) return 0;
-      if (/^be:/.test(id)) return 1;
-      if (id.indexOf("@") >= 0) return 2;
-      return 3;
-    }
     var ordered = (games || []).map(function (g, index) { return { g: normalizeAutoGame(g), index: index }; });
-    ordered.sort(function (a, b) { return rank(b.g) - rank(a.g) || a.index - b.index; });
+    ordered.sort(function (a, b) { return autoSourceRank(b.g) - autoSourceRank(a.g) || a.index - b.index; });
     var out = [];
     ordered.forEach(function (item) {
       var g = item.g;
@@ -282,7 +304,8 @@
         if (t != null) cardTimes.push({ t: t, used: false }); else noTime++;
       });
       games.forEach(function (g) {
-        var gm = hhmmToMin(gStartHHMM(g));
+        var dateKey = String(g.startISO || "").slice(0, 10);
+        var gm = hhmmToMin(authTimeFor(g, dateKey) || gStartHHMM(g));
         if (gm != null) {
           var best = null, bd = Infinity;
           cardTimes.forEach(function (c) { if (!c.used) { var d = Math.abs(c.t - gm); if (d < bd) { bd = d; best = c; } } });
@@ -736,7 +759,7 @@
                  (teamMatchForLeague(cardLeague, g.homeTeam, away) && teamMatchForLeague(cardLeague, g.awayTeam, home));
         if (!ok) continue;
         if (!archiveCorroborated(g, dateKey)) continue;   // 官方沒有的孤立歸檔時段不算場次
-        var t = gStartHHMM(g); if (t) times[t] = g;
+        var t = authTimeFor(g, dateKey) || gStartHHMM(g); if (t) times[t] = g;
       }
       pregameTimesFor(away, home, dateKey, cardLeague).forEach(function (t) { if (!(t in times)) times[t] = null; });
       var known = Object.keys(times).sort();

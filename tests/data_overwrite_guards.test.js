@@ -57,6 +57,41 @@ test('playsport refuses to replace malformed tracked lottery history', () => {
   });
 });
 
+test('playsport replaces a successfully refreshed league-date slate instead of retaining stale schedule rows', () => {
+  const scraper = require('../playsport_scraper.js');
+  const date = '2099-09-06';
+  const existing = [
+    { league: 'KBO', date, officialId: 'KBO_20990906_NC@NEXEN_1800', time: '18:00', awayTeam: '恐龍', homeTeam: '培證' },
+    { league: 'KBO', date, officialId: 'KBO_20990906_DOOSAN@HANWHA_1730', time: '17:30', awayTeam: '斗山熊', homeTeam: '華老鷹' },
+    { league: 'MLB', date, officialId: 'MLB_20990906_CHC@MIL_0800', time: '08:00', awayTeam: '小熊', homeTeam: '釀酒人' },
+  ];
+  const fresh = [
+    { league: 'KBO', date, officialId: 'KBO_20990906_NC@NEXEN_1300', time: '13:00', awayTeam: '恐龍', homeTeam: '培證' },
+    { league: 'KBO', date, officialId: 'KBO_20990906_SAMSUNG@LG_1600', time: '16:00', awayTeam: '三星獅', homeTeam: '雙子' },
+  ];
+
+  const merged = scraper.mergeStore(existing, fresh, 5, new Set([`KBO|${date}`]));
+
+  assert.deepEqual(merged.map(game => game.officialId).sort(), [
+    'KBO_20990906_NC@NEXEN_1300',
+    'KBO_20990906_SAMSUNG@LG_1600',
+    'MLB_20990906_CHC@MIL_0800',
+  ]);
+});
+
+test('playsport never grants an empty scrape permission to erase a league-date slate', () => {
+  const scraper = require('../playsport_scraper.js');
+  const date = '2099-09-06';
+  const existing = [{
+    league: 'KBO', date, officialId: 'KBO_20990906_NC@NEXEN_1300',
+    time: '13:00', awayTeam: '恐龍', homeTeam: '培證',
+  }];
+
+  const merged = scraper.mergeStore(existing, [], 5, new Set([`KBO|${date}`]));
+
+  assert.deepEqual(merged, existing);
+});
+
 test('expert scraper refuses to replace malformed prior picks', () => {
   const oldLeague = process.env.EP_LEAGUE;
   process.env.EP_LEAGUE = 'mlb';

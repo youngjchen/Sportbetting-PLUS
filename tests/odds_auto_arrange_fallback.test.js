@@ -151,6 +151,113 @@ test('KBO fallback favorite follows the canonicalized team name', () => {
   }
 });
 
+test('sole official matchup time overrides a five-hour KBO odds-source error', () => {
+  const aliases = { '恐龍': 'NC恐龍', '培證': '培證英雄' };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  window.__psFusion = { getData: () => [{
+    league: 'KBO', date: '2026-09-06', time: '13:00', awayTeam: '恐龍', homeTeam: '培證',
+  }] };
+  try {
+    const sourceGame = {
+      id: 176001, league: 'kbo', awayTeam: 'NC恐龍', homeTeam: '培證英雄',
+      startISO: '2026-09-06T18:00:00+08:00',
+    };
+    assert.equal(odds.authTimeFor(sourceGame, '2026-09-06'), '13:00');
+  } finally {
+    delete window.__psFusion;
+    delete global.canonicalTeamName;
+  }
+});
+
+test('auto arrange keeps a sole official KBO matchup despite a five-hour odds-source error', () => {
+  const aliases = { '恐龍': 'NC恐龍', '培證': '培證英雄' };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  try {
+    const kept = odds.filterAutoArrangeGames([{
+      id: 176001, league: 'kbo', awayTeam: 'NC恐龍', homeTeam: '培證英雄',
+      startISO: '2026-09-06T18:00:00+08:00',
+    }], [{
+      league: 'KBO', date: '2026-09-06', time: '13:00', awayTeam: '恐龍', homeTeam: '培證',
+    }], '2026-09-06');
+
+    assert.deepEqual(kept.map(game => game.id), [176001]);
+  } finally {
+    delete global.canonicalTeamName;
+  }
+});
+
+test('sole official matchup collapses disagreeing wrong-time odds sources to one card candidate', () => {
+  const aliases = { '恐龍': 'NC恐龍', '培證': '培證英雄' };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  try {
+    const kept = odds.filterAutoArrangeGames([
+      {
+        id: 176001, league: 'kbo', awayTeam: 'NC恐龍', homeTeam: '培證英雄',
+        startISO: '2026-09-06T18:00:00+08:00',
+      },
+      {
+        id: 'be:wrong-time', league: 'kbo', awayTeam: '恐龍', homeTeam: '培證',
+        startISO: '2026-09-06T17:30:00+08:00',
+      },
+    ], [{
+      league: 'KBO', date: '2026-09-06', time: '13:00', awayTeam: '恐龍', homeTeam: '培證',
+    }], '2026-09-06');
+
+    assert.deepEqual(kept.map(game => game.id), [176001]);
+  } finally {
+    delete global.canonicalTeamName;
+  }
+});
+
+test('schedule healing moves an existing KBO card from a wrong source time to the sole official time', () => {
+  const aliases = { '恐龍': 'NC恐龍', '培證': '培證英雄' };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  window.__psFusion = { getData: () => [{
+    league: 'KBO', date: '2026-09-06', time: '13:00', awayTeam: '恐龍', homeTeam: '培證',
+  }] };
+  global.doc = { activeDate: '2026-09-06' };
+  global.state = { items: [{
+    id: 1, type: 'match', league: 'kbo', away: 'NC恐龍', home: '培證英雄',
+    gameTime: '18:00', oddsId: 176001,
+    mlAway: { lights: 0 }, mlHome: { lights: 0 }, hdGive: { lights: 0 },
+    hdRecv: { lights: 0 }, over: { lights: 0 }, under: { lights: 0 },
+  }] };
+  odds._setFeed({ matches: { 176001: {
+    id: 176001, league: 'kbo', awayTeam: 'NC恐龍', homeTeam: '培證英雄',
+    startISO: '2026-09-06T18:00:00+08:00',
+  } } });
+
+  try {
+    assert.equal(odds.healDupCards(), true);
+    assert.equal(global.state.items[0].gameTime, '13:00');
+    assert.equal(global.state.items[0].oddsId, 176001);
+  } finally {
+    delete window.__psFusion;
+    for (const name of ['canonicalTeamName', 'doc', 'state']) delete global[name];
+  }
+});
+
+test('auto arrange recognizes an existing corrected-time card when the sole odds source still has the wrong time', () => {
+  const aliases = { '恐龍': 'NC恐龍', '培證': '培證英雄' };
+  global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;
+  window.__psFusion = { getData: () => [{
+    league: 'KBO', date: '2026-09-06', time: '13:00', awayTeam: '恐龍', homeTeam: '培證',
+  }] };
+  try {
+    const missing = odds.gamesToAdd([{
+      id: 1, type: 'match', league: 'kbo', away: 'NC恐龍', home: '培證英雄', gameTime: '13:00',
+    }], [{
+      id: 176001, league: 'kbo', awayTeam: 'NC恐龍', homeTeam: '培證英雄',
+      startISO: '2026-09-06T18:00:00+08:00',
+    }]);
+
+    assert.deepEqual(missing, []);
+  } finally {
+    delete window.__psFusion;
+    delete global.canonicalTeamName;
+  }
+});
+
 test('schedule healing folds an existing short-name KBO duplicate into one canonical card', () => {
   const aliases = { '華老鷹': '韓華鷹', '樂天': '樂天巨人' };
   global.canonicalTeamName = (league, name) => league === 'kbo' ? (aliases[name] || name) : name;

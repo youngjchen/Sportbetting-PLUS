@@ -235,12 +235,27 @@ function loadStore() {
   );
 }
 
-// 合併：賽前數據（ERA/投手/打擊）一旦抓到就保留；狀態/比分/讓分方取最新；清掉過舊場
-function mergeStore(existing, fresh, keepDays) {
-  const byId = new Map(existing.map((g) => [g.officialId, g]));
+function scheduleScope(g) {
+  const league = clean(g && g.league);
+  const date = clean(g && g.date);
+  return league && date ? `${league.toUpperCase()}|${date.slice(0, 10)}` : null;
+}
+
+// 合併：成功重抓的「聯盟＋日期」是完整賽程快照，先淘汰同範圍舊列（官方改期時 officialId 會跟著改）；
+// 其他未成功重抓的範圍維持聯集。賽前數據一旦抓到仍保留，狀態/比分/讓分方取最新。
+function mergeStore(existing, fresh, keepDays, refreshedScopes) {
+  const previousById = new Map(existing.map((g) => [g.officialId, g]));
+  const canReplace = refreshedScopes && typeof refreshedScopes.has === 'function';
+  const freshScopes = new Set(fresh.map(scheduleScope).filter(Boolean));
+  const byId = new Map(existing
+    .filter((g) => {
+      const scope = scheduleScope(g);
+      return !canReplace || !freshScopes.has(scope) || !refreshedScopes.has(scope);
+    })
+    .map((g) => [g.officialId, g]));
   const keepPre = (nv, ov) => (nv != null && nv !== 0) ? nv : ((ov != null && ov !== 0) ? ov : nv);
   for (const g of fresh) {
-    const prev = byId.get(g.officialId);
+    const prev = previousById.get(g.officialId);
     if (!prev) { byId.set(g.officialId, g); continue; }
     const merged = { ...prev, ...g };
     for (const k of ['awayERA', 'homeERA', 'awayBAA', 'homeBAA', 'awayAVG', 'awayOBP', 'awayRuns', 'homeAVG', 'homeOBP', 'homeRuns', 'lotteryTotal', 'lineScore'])
@@ -326,6 +341,7 @@ async function run(argv) {
     return;
   }
   const fresh = [];
+  const refreshedScopes = new Set();
   for (let di = 0; di < dates.length; di++) {
     for (let i = 0; i < leagues.length; i++) {
       try {
@@ -333,12 +349,14 @@ async function run(argv) {
         const up = games.filter((g) => g.status === 'upcoming').length;
         const fin = games.filter((g) => g.status === 'finished').length;
         console.log(`  ${dates[di]} [${leagues[i].name}] ${games.length} 場(未開賽 ${up}／結束 ${fin})`);
+        const scope = games.length ? scheduleScope(games[0]) : null;
+        if (scope) refreshedScopes.add(scope); // 空頁不具刪除權，避免解析異常擦掉舊資料
         fresh.push(...games);
       } catch (e) { console.log(`  ${dates[di]} [${leagues[i].name}] ⚠️ ${e.response ? 'HTTP ' + e.response.status : e.code || e.message}`); }
       if (!(di === dates.length - 1 && i === leagues.length - 1)) await sleep(jitter(LEAGUE_GAP_MIN, LEAGUE_GAP_MAX));
     }
   }
-  const merged = mergeStore(loadStore(), fresh, KEEP_DAYS);
+  const merged = mergeStore(loadStore(), fresh, KEEP_DAYS, refreshedScopes);
   saveAtomic(merged);
   const nrfiStore = persistNrfiResults(merged, NRFI_OUTPUT_FILE, new Date().toISOString(), 'data/' + NRFI_OUTPUT_FILE);
   try {                                                          // 序列檔失敗不影響主輸出
