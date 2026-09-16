@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-17T05:35:15+08:00",
+  "updatedAt": "2026-09-17T06:10:13+08:00",
   "health": {
     "discovered": 3,
     "succeeded": 1,
     "failed": 0,
-    "added": 1,
-    "updated": 0,
+    "added": 0,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -130474,7 +130474,7 @@
       "awayTeam": "樂天",
       "homeTeam": "富邦",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/fubon-guardians-rakuten-monkeys/nNxnvCEc/",
-      "observedAt": "2026-09-17T05:35:15+08:00",
+      "observedAt": "2026-09-17T06:10:13+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -130484,17 +130484,55 @@
             "away": 1.76
           },
           "active": {
-            "at": "2026-09-17T05:35:15+08:00",
-            "home": 1.96,
-            "away": 1.76
+            "at": "2026-09-17T06:10:13+08:00",
+            "home": 2.13,
+            "away": 1.64
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-09-17T06:07:00+08:00",
+            "home": 1.61,
+            "away": 2.18,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-09-17T06:10:13+08:00",
+            "home": 1.61,
+            "away": 2.18,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-09-17T06:07:00+08:00",
+            "over": 1.78,
+            "under": 1.93,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-09-17T06:10:13+08:00",
+            "over": 1.78,
+            "under": 1.93,
+            "line": 6.5
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [],
+        "activeSide": [
+          "away"
+        ],
         "struckSide": [],
-        "lines": []
+        "lines": [
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "16,09,2026,23,07"
+          }
+        ]
       }
     }
   }
