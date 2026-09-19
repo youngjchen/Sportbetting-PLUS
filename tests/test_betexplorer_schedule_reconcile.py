@@ -1,11 +1,48 @@
 import unittest
+import json
+import sys
+import tempfile
 from datetime import datetime, timedelta
+from pathlib import Path
 from threading import Barrier
+from unittest.mock import patch
 
 import betexplorer_run as runner
 
 
 class ScheduleReconciliationTests(unittest.TestCase):
+    def test_known_targeted_close_bypasses_unreliable_listing_discovery(self):
+        """指定 eventId 已在摘要時，不得先連首頁；首頁逾時會讓補抓永遠進不了單場端點。"""
+        summary = {"version": 1, "games": {"npb-game": {
+            "eventId": "pGfdAO4S", "league": "npb",
+            "startISO": "2026-09-19T17:00:00+08:00",
+            "awayTeam": "養樂多", "homeTeam": "橫濱",
+            "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/yokohama-yakult/pGfdAO4S/",
+            "markets": {"ml": {"open": {"away": 2.19, "home": 1.63}}},
+        }}}
+        collected = [{
+            "eventId": "pGfdAO4S", "league": "npb", "date": "2026-09-19",
+            "startTime": "17:00", "awayTeam": "養樂多", "homeTeam": "橫濱",
+            "sourceUrl": summary["games"]["npb-game"]["sourceUrl"],
+            "markets": {"ml": {
+                "open": {"away": 2.19, "home": 1.63},
+                "close": {"away": 2.30, "home": 1.63, "final": True},
+            }},
+        }]
+        with tempfile.TemporaryDirectory() as tmp:
+            summary_path = Path(tmp) / "summary.json"
+            schedule_path = Path(tmp) / "schedule.json"
+            summary_path.write_text(json.dumps(summary, ensure_ascii=False), encoding="utf-8")
+            schedule_path.write_text("[]", encoding="utf-8")
+            argv = [
+                "betexplorer_run.py", "--leagues", "npb", "--event-ids", "pGfdAO4S",
+                "--summary", str(summary_path), "--schedule", str(schedule_path), "--dry-run",
+            ]
+            with patch.object(sys, "argv", argv), \
+                 patch.object(runner.BE, "discover_upcoming", side_effect=AssertionError("首頁不應被讀取")), \
+                 patch.object(runner, "collect_games", return_value=(collected, [])):
+                self.assertEqual(runner.main(), 0)
+
     def test_targeted_close_uses_summary_event_after_upcoming_listing_drops_it(self):
         """完賽場不在 upcoming/官方未來賽程時，已驗證的摘要 eventId 仍可直接補收盤。"""
         summary = {"games": {"npb-game": {

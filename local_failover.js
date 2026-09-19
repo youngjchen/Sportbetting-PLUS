@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues, missingCloseEventIds } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, markOddsPortalGateAttempt, markOddsPortalGateSuccess, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues, missingCloseEventIds } = require('./oddsportal_local.js');
 const { mirrorPregameOutputs } = require('./local_failover_workspace.js');
 
 const REPO_DIR = __dirname;
@@ -139,7 +139,7 @@ function run() {
     const gate = dueOddsPortalGate(computeOddsPortalGates(games, Date.now()), state, Date.now())
       || dueSwapGate(state, Date.now());
     if (gate) {
-      state['opg_' + gate.id] = Date.now();      // 先記「試過」：失敗也不重跑，等下一閘順手回補
+      markOddsPortalGateAttempt(state, gate, Date.now());
       pruneOddsPortalGateState(state, Date.now());
       state.oddsportal_last_attempt = Date.now();
       saveState(state);
@@ -151,7 +151,9 @@ function run() {
         let eventIds = null;
         if (gate.mode === 'close') {
           const summary = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'oddsportal_summary.json'), 'utf8'));
-          eventIds = missingCloseEventIds(summary, gate.leagues, Date.now());
+          eventIds = missingCloseEventIds(
+            summary, gate.leagues, Date.now(), gate.startMin, gate.startMax,
+          );
           if (eventIds.length) log(`收盤閘直接補抓 ${eventIds.length} 個既有 eventId（不再依賽後 upcoming 列表）`);
         }
         outputs = runBetExplorer({ repoDir: REPO_DIR, leagues: gate.leagues, eventIds });
@@ -161,6 +163,7 @@ function run() {
         outputs = runOddsPortal({ repoDir: REPO_DIR, gate });
       }
       staged.push(...outputs);
+      markOddsPortalGateSuccess(state, gate, Date.now());
       state.oddsportal_last_success = Date.now();
       state.bet365_probe_last_success = Date.now();
       saveState(state);

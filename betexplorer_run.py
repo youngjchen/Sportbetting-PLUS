@@ -29,6 +29,7 @@ TW = BE.TW
 # 擴盤造成的多線歧義不靠時間切點解決，改「照卡片上的讓分線取對應賠率」
 # （_active_line 本來就挑絕對值最小＝卡片 ±1.5 主盤）。舊的 T−150 規則作廢。
 HD_CLOSE_LEAD_MIN = 0
+DEFAULT_SITE_OFFSET_HOURS = 7.0
 
 
 def game_start_tw(game, offset):
@@ -427,6 +428,62 @@ def collect_games(games, offset, now_tw, workers=4, collect_fn=collect, accept_f
     return collected, failed
 
 
+def collect_merge_and_write(games, offset, now_tw, summary, summary_path, args,
+                            requested_event_ids, required_closes):
+    """執行盤口收集、合併與輸出；指定補抓和一般探索共用同一條寫入路徑。"""
+    collected, failed = collect_games(
+        games, offset, now_tw, workers=args.workers,
+        collect_fn=collect_bet365 if args.bet365_only else collect,
+        accept_fn=(lambda entry: bool(entry.get("bet365"))) if args.bet365_only else None,
+    )
+
+    added = updated = 0
+    for entry in collected:
+        key = "|".join([entry["league"], entry["date"], entry["awayTeam"],
+                        entry["homeTeam"], entry["startTime"], entry["eventId"]])
+        if key in summary["games"]:
+            old = summary["games"][key]
+            for market, block in entry["markets"].items():
+                slot = old.setdefault("markets", {}).setdefault(market, {})
+                for name, value in block.items():
+                    if name == "open" and slot.get("open"):      # 初盤只寫一次，永不覆蓋
+                        continue
+                    slot[name] = value
+            if entry.get("stakeSwap") is not None:
+                old["stakeSwap"] = entry["stakeSwap"]
+            if entry.get("bet365") is not None:
+                old["bet365"] = merge_bet365_summary(old.get("bet365"), entry["bet365"])
+            old["observedAt"] = entry["observedAt"]
+            updated += 1
+        else:
+            summary["games"][key] = entry
+            added += 1
+    summary["updatedAt"] = now_tw.isoformat(timespec="seconds")
+    summary["siteOffsetHours"] = offset
+
+    missing_ids = missing_requested_event_ids(requested_event_ids, collected, required_closes)
+    failed.extend(f"eventId {event_id}: 指定收盤未抓到" for event_id in sorted(missing_ids))
+    health = {"discovered": len(games), "succeeded": len(collected),
+              "failed": len(failed), "added": added, "updated": updated, "errors": failed}
+    summary["health"] = health
+    if args.dry_run:
+        for entry in collected:
+            ml = (entry["markets"].get("ml") or {}).get("open") or {}
+            hd = (entry["markets"].get("hd") or {}).get("open") or {}
+            ou = (entry["markets"].get("ou") or {}).get("open") or {}
+            swap = entry.get("stakeSwap") or {}
+            mark = " ⚠曾對調" if (swap.get("ever") or (entry.get("bet365") or {}).get("flipEver")) else ""
+            print(f"  {entry['league']:4s} {entry['date']} {entry['startTime']} "
+                  f"{entry['awayTeam']}@{entry['homeTeam']}  "
+                  f"ml {ml.get('away')}/{ml.get('home')}  "
+                  f"hd {hd.get('line')}{hd.get('favorite','')} {hd.get('away')}/{hd.get('home')}  "
+                  f"ou {ou.get('line')} {ou.get('over')}/{ou.get('under')}{mark}")
+    else:
+        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    print(json.dumps(health, ensure_ascii=False))
+    return 0 if collected and not missing_ids else 1
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--leagues", default="mlb,npb,kbo,cpbl")
@@ -450,6 +507,24 @@ def main() -> int:
     required_closes = requested_close_markets(summary, requested_event_ids)
     team_zh = _team_zh()
     now_tw = datetime.now(TW)
+
+    # 收盤閘傳入的 eventId 全都來自既有摘要；直接走單場端點，絕不能先依賴容易逾時、
+    # 且賽後會移除場次的首頁／fixtures 探索。BetExplorer 固定站方時差沿用最近成功值，
+    # 舊摘要尚未保存時則使用歷史收割器同一個 +7h 預設。
+    if requested_event_ids:
+        try:
+            target_offset = float(summary.get("siteOffsetHours", DEFAULT_SITE_OFFSET_HOURS))
+        except (TypeError, ValueError):
+            target_offset = DEFAULT_SITE_OFFSET_HOURS
+        known_games = target_games_from_summary(summary, requested_event_ids, target_offset)
+        known_ids = {game["matchId"] for game in known_games}
+        if known_ids == requested_event_ids:
+            print(f"INFO 單場補抓：摘要直接命中 {len(known_games)}/{len(requested_event_ids)} 個 eventId；略過首頁探索",
+                  file=sys.stderr)
+            return collect_merge_and_write(
+                known_games, target_offset, now_tw, summary, summary_path, args,
+                requested_event_ids, required_closes,
+            )
 
     # 時差是「全站屬性」，用所有聯盟一起推（只挑一個聯盟時常常湊不到 3 場可比對）
     all_games = BE.discover_upcoming(team_zh)
@@ -527,56 +602,10 @@ def main() -> int:
             games = known_games
         print(f"INFO 單場補抓：摘要直接命中 {len(games)}/{len(requested_event_ids)} 個 eventId", file=sys.stderr)
 
-    collected, failed = collect_games(
-        games, offset, now_tw, workers=args.workers,
-        collect_fn=collect_bet365 if args.bet365_only else collect,
-        accept_fn=(lambda entry: bool(entry.get("bet365"))) if args.bet365_only else None,
+    return collect_merge_and_write(
+        games, offset, now_tw, summary, summary_path, args,
+        requested_event_ids, required_closes,
     )
-
-    added = updated = 0
-    for entry in collected:
-        key = "|".join([entry["league"], entry["date"], entry["awayTeam"],
-                        entry["homeTeam"], entry["startTime"], entry["eventId"]])
-        if key in summary["games"]:
-            old = summary["games"][key]
-            for market, block in entry["markets"].items():
-                slot = old.setdefault("markets", {}).setdefault(market, {})
-                for name, value in block.items():
-                    if name == "open" and slot.get("open"):      # 初盤只寫一次，永不覆蓋
-                        continue
-                    slot[name] = value
-            if entry.get("stakeSwap") is not None:
-                old["stakeSwap"] = entry["stakeSwap"]
-            if entry.get("bet365") is not None:
-                old["bet365"] = merge_bet365_summary(old.get("bet365"), entry["bet365"])
-            old["observedAt"] = entry["observedAt"]
-            updated += 1
-        else:
-            summary["games"][key] = entry
-            added += 1
-    summary["updatedAt"] = now_tw.isoformat(timespec="seconds")
-
-    missing_ids = missing_requested_event_ids(requested_event_ids, collected, required_closes)
-    failed.extend(f"eventId {event_id}: 指定收盤未抓到" for event_id in sorted(missing_ids))
-    health = {"discovered": len(games), "succeeded": len(collected),
-              "failed": len(failed), "added": added, "updated": updated, "errors": failed}
-    summary["health"] = health
-    if args.dry_run:
-        for entry in collected:
-            ml = (entry["markets"].get("ml") or {}).get("open") or {}
-            hd = (entry["markets"].get("hd") or {}).get("open") or {}
-            ou = (entry["markets"].get("ou") or {}).get("open") or {}
-            swap = entry.get("stakeSwap") or {}
-            mark = " ⚠曾對調" if (swap.get("ever") or (entry.get("bet365") or {}).get("flipEver")) else ""
-            print(f"  {entry['league']:4s} {entry['date']} {entry['startTime']} "
-                  f"{entry['awayTeam']}@{entry['homeTeam']}  "
-                  f"ml {ml.get('away')}/{ml.get('home')}  "
-                  f"hd {hd.get('line')}{hd.get('favorite','')} {hd.get('away')}/{hd.get('home')}  "
-                  f"ou {ou.get('line')} {ou.get('over')}/{ou.get('under')}{mark}")
-    else:
-        summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    print(json.dumps(health, ensure_ascii=False))
-    return 0 if collected and not missing_ids else 1
 
 
 if __name__ == "__main__":

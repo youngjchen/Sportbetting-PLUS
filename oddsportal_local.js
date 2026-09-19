@@ -20,6 +20,7 @@ const INTERVAL_MS = 15 * 60_000;           // 舊盯哨常數；僅為相容保�
 const BET365_PROBE_INTERVAL_MS = 30 * 60_000;
 const ASIA_LEAGUES = Object.freeze(['npb', 'kbo', 'cpbl']);
 const GATE_LOOKBACK_MS = 6 * 3600e3;
+const GATE_RETRY_MS = 15 * 60_000;
 const BACKFILL_HOURS = 120;                // 每閘順手回補過去 5 天的缺口（涵蓋 8/1 搶救批）
 const T_FLIP_MIN = 150;                    // 開賽前 2.5h
 const CLOSE_LAG_MIN = 10;                  // 每批最晚開賽 +10 分
@@ -108,7 +109,7 @@ function missingStakeOpenLeagues(games, summary, nowMs = Date.now()) {
   return ASIA_LEAGUES.filter(league => missing.has(league));
 }
 
-function missingCloseEventIds(summary, leagues, nowMs = Date.now()) {
+function missingCloseEventIds(summary, leagues, nowMs = Date.now(), startMinMs = null, startMaxMs = null) {
   const allowed = new Set((leagues || []).map(league => String(league).toLowerCase()));
   const games = Array.isArray(summary && summary.games)
     ? summary.games
@@ -125,6 +126,8 @@ function missingCloseEventIds(summary, leagues, nowMs = Date.now()) {
       return game && game.eventId && allowed.has(league)
         && Number.isFinite(startMs) && startMs <= nowMs
         && nowMs - startMs <= BACKFILL_HOURS * 3600e3
+        && (!Number.isFinite(startMinMs) || startMs >= startMinMs)
+        && (!Number.isFinite(startMaxMs) || startMs <= startMaxMs)
         && missingOfferedClose;
     })
     .sort((left, right) => Date.parse(left.startISO) - Date.parse(right.startISO)
@@ -179,7 +182,17 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
     for (const cluster of clusters) {
       const closeAt = cluster.max + CLOSE_LAG_MIN * 60e3;
       const closeHhmm = new Date(closeAt + 8 * 3600e3).toISOString().slice(11, 16).replace(':', '');
-      gates.push({ id: `close_${grp}_${date}_${closeHhmm}`, at: closeAt, mode: 'close', leagues, fromHours: -BACKFILL_HOURS, toHours: 1, maxGames: 40 });
+      gates.push({
+        id: `close_${grp}_${date}_${closeHhmm}`,
+        at: closeAt,
+        mode: 'close',
+        leagues,
+        startMin: cluster.min,
+        startMax: cluster.max,
+        fromHours: -BACKFILL_HOURS,
+        toHours: 1,
+        maxGames: 40,
+      });
     }
   }
   gates.sort((a, b) => a.at - b.at || String(a.id).localeCompare(String(b.id)));
@@ -188,15 +201,27 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
 
 // 一次醒來只放行一個到點且未跑過的閘；過期（>6h）的閘永遠不補跑。
 function dueOddsPortalGate(gates, state, nowMs = Date.now()) {
-  for (const gate of gates || []) {
-    if (gate.at <= nowMs && nowMs - gate.at <= GATE_LOOKBACK_MS && !state[`opg_${gate.id}`]) return gate;
-  }
-  return null;
+  const due = (gates || []).filter((gate) => gate.at <= nowMs
+    && nowMs - gate.at <= GATE_LOOKBACK_MS
+    && !state[`opg_${gate.id}`]);
+  const fresh = due.find(gate => !state[`opga_${gate.id}`]);
+  if (fresh) return fresh;
+  return due.find(gate => nowMs - Number(state[`opga_${gate.id}`] || 0) >= GATE_RETRY_MS) || null;
+}
+
+function markOddsPortalGateAttempt(state, gate, nowMs = Date.now()) {
+  state[`opga_${gate.id}`] = nowMs;
+}
+
+function markOddsPortalGateSuccess(state, gate, nowMs = Date.now()) {
+  state[`opg_${gate.id}`] = nowMs;
+  delete state[`opga_${gate.id}`];
 }
 
 function pruneOddsPortalGateState(state, nowMs = Date.now()) {
   for (const key of Object.keys(state || {})) {
-    if (key.startsWith('opg_') && nowMs - (Number(state[key]) || 0) > 7 * 86400e3) delete state[key];
+    if ((key.startsWith('opg_') || key.startsWith('opga_'))
+        && nowMs - (Number(state[key]) || 0) > 7 * 86400e3) delete state[key];
   }
 }
 
@@ -294,7 +319,9 @@ function dueSwapGate(state, nowMs = Date.now()) {
   const day = new Date(nowMs + 8 * 3600e3).toISOString().slice(0, 10);
   const at = Date.parse(`${day}T${SWAP_HHMM}:00+08:00`);
   const id = `swap_${day}`;
-  if (at <= nowMs && nowMs - at <= GATE_LOOKBACK_MS && !state[`opg_${id}`]) {
+  const lastAttempt = Number(state[`opga_${id}`] || 0);
+  if (at <= nowMs && nowMs - at <= GATE_LOOKBACK_MS && !state[`opg_${id}`]
+      && (!lastAttempt || nowMs - lastAttempt >= GATE_RETRY_MS)) {
     return {
       id, at, mode: 'swap', leagues: ['mlb', 'npb', 'kbo', 'cpbl', 'wnba'],
       // fromHours -120：順手回補過去缺口（2026-08-05 美職 09:50 收盤閘被黑窗殺掉後
@@ -342,10 +369,13 @@ module.exports = {
   OUTPUT_PATHS,
   ASIA_LEAGUES,
   GATE_LOOKBACK_MS,
+  GATE_RETRY_MS,
   isOddsPortalDue,
   gameStartMs,
   computeOddsPortalGates,
   dueOddsPortalGate,
+  markOddsPortalGateAttempt,
+  markOddsPortalGateSuccess,
   pruneOddsPortalGateState,
   oddsPortalArgs,
   pythonCandidates,

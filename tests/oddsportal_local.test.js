@@ -77,6 +77,34 @@ test('close retry targets known started events even after they disappear from th
   ]);
 });
 
+test('close retry targets only the current start-time cluster instead of the five-day backlog', () => {
+  const { missingCloseEventIds } = loadModule();
+  const summary = { games: {
+    early: {
+      eventId: 'early13', league: 'npb', startISO: '2026-09-19T13:00:00+08:00',
+      markets: { ml: { open: { away: 2.0, home: 1.8 } } },
+    },
+    npbLate: {
+      eventId: 'npb1700', league: 'npb', startISO: '2026-09-19T17:00:00+08:00',
+      markets: { ml: { open: { away: 2.0, home: 1.8 } } },
+    },
+    cpblLate: {
+      eventId: 'cpbl1705', league: 'cpbl', startISO: '2026-09-19T17:05:00+08:00',
+      markets: { hd: { open: { line: 1.5, favorite: 'home' } } },
+    },
+  } };
+
+  const ids = missingCloseEventIds(
+    summary,
+    ['npb', 'kbo', 'cpbl'],
+    Date.parse('2026-09-19T17:15:00+08:00'),
+    Date.parse('2026-09-19T17:00:00+08:00'),
+    Date.parse('2026-09-19T17:05:00+08:00'),
+  );
+
+  assert.deepEqual(ids, ['npb1700', 'cpbl1705']);
+});
+
 test('30-minute probe upgrades to a full Stake scrape while same-day Asia openings are missing', () => {
   const { missingStakeOpenLeagues } = loadModule();
   assert.equal(typeof missingStakeOpenLeagues, 'function');
@@ -176,6 +204,61 @@ test('close gates split a date into nearby-start clusters so early games finaliz
     Date.parse('2026-08-24T03:25:00+08:00'),
     Date.parse('2026-08-24T07:20:00+08:00'),
   ]);
+  assert.deepEqual(closeGates.map((gate) => [gate.startMin, gate.startMax]), [
+    [Date.parse('2026-08-24T01:35:00+08:00'), Date.parse('2026-08-24T01:40:00+08:00')],
+    [Date.parse('2026-08-24T02:10:00+08:00'), Date.parse('2026-08-24T02:10:00+08:00')],
+    [Date.parse('2026-08-24T03:10:00+08:00'), Date.parse('2026-08-24T03:15:00+08:00')],
+    [Date.parse('2026-08-24T07:10:00+08:00'), Date.parse('2026-08-24T07:10:00+08:00')],
+  ]);
+});
+
+test('a failed close gate waits before retrying and never blocks a fresh later gate', () => {
+  const {
+    computeOddsPortalGates,
+    dueOddsPortalGate,
+    markOddsPortalGateAttempt,
+    markOddsPortalGateSuccess,
+    GATE_RETRY_MS,
+  } = loadModule();
+  assert.equal(typeof markOddsPortalGateAttempt, 'function');
+  assert.equal(typeof markOddsPortalGateSuccess, 'function');
+  const gates = computeOddsPortalGates([
+    { league: 'npb', date: '2026-09-19', gameTime: '13:00' },
+    { league: 'npb', date: '2026-09-19', gameTime: '17:00' },
+  ]).filter((gate) => gate.mode === 'close');
+  const state = {};
+  const first = gates[0];
+  const second = gates[1];
+  markOddsPortalGateAttempt(state, first, first.at);
+
+  assert.equal(
+    dueOddsPortalGate(gates, state, second.at + 60_000).id,
+    second.id,
+    '尚未跑過的新收盤閘要優先於舊失敗閘',
+  );
+  markOddsPortalGateAttempt(state, second, second.at + 60_000);
+  assert.equal(dueOddsPortalGate(gates, state, second.at + 2 * 60_000).id, first.id);
+  markOddsPortalGateAttempt(state, first, second.at + 2 * 60_000);
+  assert.equal(dueOddsPortalGate(gates, state, second.at + 3 * 60_000), null);
+
+  markOddsPortalGateSuccess(state, second, second.at + 2 * 60_000);
+  assert.equal(state[`opg_${second.id}`], second.at + 2 * 60_000);
+  assert.equal(state[`opga_${second.id}`], undefined);
+  assert.equal(
+    dueOddsPortalGate(gates, state, second.at + 2 * 60_000 + GATE_RETRY_MS).id,
+    first.id,
+  );
+});
+
+test('the daily swap gate uses the same retry cooldown after a failed attempt', () => {
+  const { dueSwapGate, markOddsPortalGateAttempt, GATE_RETRY_MS } = loadModule();
+  const at = Date.parse('2026-09-19T10:00:00+08:00');
+  const state = {};
+  const gate = dueSwapGate(state, at + 60_000);
+  markOddsPortalGateAttempt(state, gate, at + 60_000);
+
+  assert.equal(dueSwapGate(state, at + 2 * 60_000), null);
+  assert.equal(dueSwapGate(state, at + 60_000 + GATE_RETRY_MS).id, gate.id);
 });
 
 test('dueOddsPortalGate honors fired-state and the 6h expiry', () => {
