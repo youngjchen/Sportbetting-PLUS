@@ -120,6 +120,37 @@ def select_event_ids(games, raw_event_ids):
     return [game for game in games if game.get("matchId") in wanted]
 
 
+def target_games_from_summary(summary, event_ids, offset):
+    """以已驗證過的摘要 eventId 直接建構補抓目標，不依賴賽後會消失的 upcoming 列表。"""
+    wanted = set(event_ids or set())
+    games = []
+    for entry in (summary.get("games") or {}).values():
+        event_id = str(entry.get("eventId") or "")
+        if event_id not in wanted:
+            continue
+        try:
+            start_tw = datetime.fromisoformat(str(entry["startISO"]))
+            start_tw = start_tw.replace(tzinfo=TW) if start_tw.tzinfo is None else start_tw.astimezone(TW)
+        except (KeyError, TypeError, ValueError):
+            continue
+        games.append({
+            "league": str(entry.get("league") or "").lower(),
+            "matchId": event_id,
+            "awayZh": entry.get("awayTeam"),
+            "homeZh": entry.get("homeTeam"),
+            "siteStart": (start_tw - timedelta(hours=offset)).replace(tzinfo=None),
+            "_startTw": start_tw,
+            "url": entry.get("sourceUrl") or f"{BE.BASE}/match/{event_id}/",
+        })
+    games.sort(key=lambda game: (game_start_tw(game, offset), game["matchId"]))
+    return games
+
+
+def missing_requested_event_ids(requested, collected):
+    collected_ids = {str(entry.get("eventId") or "") for entry in (collected or [])}
+    return set(requested or set()) - collected_ids
+
+
 def merge_bet365_summary(old, new):
     """合併輪詢結果；已看見的對調證據只能增加，不能因網站暫時省略舊列而消失。"""
     if not old:
@@ -386,6 +417,9 @@ def main() -> int:
     args = parser.parse_args()
 
     leagues = [x.strip() for x in args.leagues.split(",") if x.strip()]
+    requested_event_ids = {x.strip() for x in args.event_ids.split(",") if x.strip()}
+    summary_path = Path(args.summary)
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
     team_zh = _team_zh()
     now_tw = datetime.now(TW)
 
@@ -459,8 +493,11 @@ def main() -> int:
                   f"{start.strftime('%Y-%m-%d %H:%M')} ({game['matchId']})", file=sys.stderr)
 
     games = select_event_ids(games, args.event_ids)
-    if args.event_ids:
-        print(f"INFO 單場補抓：符合 eventId 的賽事共 {len(games)} 場", file=sys.stderr)
+    if requested_event_ids:
+        known_games = target_games_from_summary(summary, requested_event_ids, offset)
+        if known_games:
+            games = known_games
+        print(f"INFO 單場補抓：摘要直接命中 {len(games)}/{len(requested_event_ids)} 個 eventId", file=sys.stderr)
 
     collected, failed = collect_games(
         games, offset, now_tw, workers=args.workers,
@@ -468,8 +505,6 @@ def main() -> int:
         accept_fn=(lambda entry: bool(entry.get("bet365"))) if args.bet365_only else None,
     )
 
-    summary_path = Path(args.summary)
-    summary = json.loads(summary_path.read_text(encoding="utf-8"))
     added = updated = 0
     for entry in collected:
         key = "|".join([entry["league"], entry["date"], entry["awayTeam"],
@@ -493,6 +528,8 @@ def main() -> int:
             added += 1
     summary["updatedAt"] = now_tw.isoformat(timespec="seconds")
 
+    missing_ids = missing_requested_event_ids(requested_event_ids, collected)
+    failed.extend(f"eventId {event_id}: 指定收盤未抓到" for event_id in sorted(missing_ids))
     health = {"discovered": len(games), "succeeded": len(collected),
               "failed": len(failed), "added": added, "updated": updated, "errors": failed}
     summary["health"] = health
@@ -511,7 +548,7 @@ def main() -> int:
     else:
         summary_path.write_text(json.dumps(summary, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(json.dumps(health, ensure_ascii=False))
-    return 0 if collected else 1
+    return 0 if collected and not missing_ids else 1
 
 
 if __name__ == "__main__":

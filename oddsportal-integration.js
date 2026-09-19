@@ -99,6 +99,26 @@
     return card;
   }
 
+  function applyClosingLines(card, game) {
+    if (!card || !game || card.settled || card.awayScore != null || card.homeScore != null) return false;
+    const options = [card.mlAway, card.mlHome, card.hdGive, card.hdRecv, card.over, card.under];
+    if (options.some(function (option) { return option && (((option.lights | 0) > 0) || option.bet); })) return false;
+    const markets = game.markets || {};
+    const hd = markets.hd && markets.hd.close && markets.hd.close.final ? markets.hd.close : null;
+    const ou = markets.ou && markets.ou.close && markets.ou.close.final ? markets.ou.close : null;
+    let changed = false;
+    if ((card.hdVal == null || card.hdVal === '') && hd && hd.line != null) {
+      card.hdVal = hd.line;
+      if (hd.favorite === 'away' || hd.favorite === 'home') card.hdFav = hd.favorite;
+      changed = true;
+    }
+    if ((card.totVal == null || card.totVal === '') && ou && ou.line != null) {
+      card.totVal = ou.line;
+      changed = true;
+    }
+    return changed;
+  }
+
   function install(global) {
     if (global.__oddsPortalIntegration) return global.__oddsPortalIntegration;
     let feed = { games: {}, updatedAt: null };
@@ -162,6 +182,7 @@
           target.closeOddsHome = close.home;
           changed++;
         }
+        if (applyClosingLines(target, game)) changed++;
       }
       for (const dk of Object.keys(doc.boards)) {
         const board = doc.boards[dk];
@@ -183,6 +204,11 @@
       }
       if (changed) {
         try { if (typeof global.save === 'function') global.save(); } catch (_) {}
+        try {
+          if (global.__psFusion && typeof global.__psFusion.autoSettleSweep === 'function') {
+            global.__psFusion.autoSettleSweep();
+          }
+        } catch (_) {}
       }
       return changed;
     }
@@ -353,6 +379,7 @@
     install,
     findOddsPortalGame,
     applySettlementDefaults,
+    applyClosingLines,
     hhmmToMin,
     normalizeLeague,
     TIME_TOLERANCE_MIN,

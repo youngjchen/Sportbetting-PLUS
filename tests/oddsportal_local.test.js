@@ -40,6 +40,43 @@ test('BetExplorer lightweight probe requests only Bet365 handicap rows', () => {
   ]);
 });
 
+test('close retry targets known started events even after they disappear from the upcoming list', () => {
+  const { missingCloseEventIds, betExplorerArgs } = loadModule();
+  assert.equal(typeof missingCloseEventIds, 'function');
+  const summary = { games: {
+    giants: {
+      eventId: 'xjilCpzG', league: 'npb', startISO: '2026-09-19T13:00:00+08:00',
+      markets: { ml: { open: { away: 2.04, home: 1.72 } } },
+    },
+    fighters: {
+      eventId: 'xEZz3tc2', league: 'npb', startISO: '2026-09-19T13:00:00+08:00',
+      markets: {
+        ml: { open: { away: 2.23, home: 1.61 }, close: { away: 2.2, home: 1.6, final: true } },
+        hd: { open: { line: 1.5, favorite: 'home' } },
+      },
+    },
+    future: {
+      eventId: 'future17', league: 'npb', startISO: '2026-09-19T17:00:00+08:00',
+      markets: { ml: { open: { away: 2.1, home: 1.7 } } },
+    },
+    otherLeague: {
+      eventId: 'kboStarted', league: 'kbo', startISO: '2026-09-19T12:00:00+08:00',
+      markets: { ml: { open: { away: 2.0, home: 1.8 } } },
+    },
+  } };
+
+  const ids = missingCloseEventIds(
+    summary,
+    ['npb'],
+    Date.parse('2026-09-19T13:10:00+08:00'),
+  );
+
+  assert.deepEqual(ids, ['xEZz3tc2', 'xjilCpzG']);
+  assert.deepEqual(betExplorerArgs(['npb'], false, ids), [
+    'betexplorer_run.py', '--leagues', 'npb', '--event-ids', 'xEZz3tc2,xjilCpzG',
+  ]);
+});
+
 test('30-minute probe upgrades to a full Stake scrape while same-day Asia openings are missing', () => {
   const { missingStakeOpenLeagues } = loadModule();
   assert.equal(typeof missingStakeOpenLeagues, 'function');

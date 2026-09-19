@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues, missingCloseEventIds } = require('./oddsportal_local.js');
 const { mirrorPregameOutputs } = require('./local_failover_workspace.js');
 
 const REPO_DIR = __dirname;
@@ -148,7 +148,13 @@ function run() {
       // 兩道防線：BetExplorer 先跑，丟例外才退回 OddsPortal，避免單一來源故障就整輪空手。
       let outputs;
       try {
-        outputs = runBetExplorer({ repoDir: REPO_DIR, leagues: gate.leagues });
+        let eventIds = null;
+        if (gate.mode === 'close') {
+          const summary = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'oddsportal_summary.json'), 'utf8'));
+          eventIds = missingCloseEventIds(summary, gate.leagues, Date.now());
+          if (eventIds.length) log(`收盤閘直接補抓 ${eventIds.length} 個既有 eventId（不再依賽後 upcoming 列表）`);
+        }
+        outputs = runBetExplorer({ repoDir: REPO_DIR, leagues: gate.leagues, eventIds });
         log('BetExplorer 主來源完成');
       } catch (error) {
         log(`BetExplorer 失敗（${String(error.message).split(/\r?\n/)[0]}）→ 退回 OddsPortal`);

@@ -6,6 +6,30 @@ import betexplorer_run as runner
 
 
 class ScheduleReconciliationTests(unittest.TestCase):
+    def test_targeted_close_uses_summary_event_after_upcoming_listing_drops_it(self):
+        """完賽場不在 upcoming/官方未來賽程時，已驗證的摘要 eventId 仍可直接補收盤。"""
+        summary = {"games": {"npb-game": {
+            "eventId": "xjilCpzG", "league": "npb",
+            "startISO": "2026-09-19T13:00:00+08:00",
+            "awayTeam": "中日", "homeTeam": "巨人",
+            "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/yomiuri-giants-chunichi-dragons/xjilCpzG/",
+        }}}
+
+        games = runner.target_games_from_summary(summary, {"xjilCpzG"}, 7.0)
+
+        self.assertEqual([game["matchId"] for game in games], ["xjilCpzG"])
+        self.assertEqual(runner.game_start_tw(games[0], 7.0).isoformat(), "2026-09-19T13:00:00+08:00")
+        self.assertEqual((games[0]["awayZh"], games[0]["homeZh"]), ("中日", "巨人"))
+
+    def test_partial_targeted_collection_is_reported_as_missing(self):
+        """同批其他場成功不得再掩蓋一場漏抓。"""
+        missing = runner.missing_requested_event_ids(
+            {"xjilCpzG", "IPQDAhG8"},
+            [{"eventId": "IPQDAhG8", "markets": {"ml": {"close": {"final": True}}}}],
+        )
+
+        self.assertEqual(missing, {"xjilCpzG"})
+
     def test_merge_bet365_summary_never_forgets_a_seen_flip(self):
         old = {
             "side": "away", "line": 1.5, "flipEver": True,

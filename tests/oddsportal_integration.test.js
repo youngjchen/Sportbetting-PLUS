@@ -7,6 +7,7 @@ const { JSDOM } = require('jsdom');
 const {
   findOddsPortalGame,
   applySettlementDefaults,
+  applyClosingLines,
 } = require('../oddsportal-integration.js');
 
 const feed = {
@@ -138,6 +139,7 @@ test('autoApplyOdds writes open and final close into blank card fields only', ()
   const { JSDOM } = require('jsdom');
   const dom = new JSDOM('<!doctype html><body></body>');
   let saved = 0;
+  let autoSettles = 0;
   const browser = {
     document: dom.window.document,
     doc: { activeDate: '2026-08-05', boards: { '2026-08-05': { items: [
@@ -147,6 +149,7 @@ test('autoApplyOdds writes open and final close into blank card fields only', ()
     fetch: async () => { throw new Error('not used'); },
     setInterval: () => 0,
     save: () => { saved++; },
+    __psFusion: { autoSettleSweep: () => { autoSettles++; } },
   };
   try {
     const api = require('../oddsportal-integration.js').install(browser);
@@ -165,7 +168,37 @@ test('autoApplyOdds writes open and final close into blank card fields only', ()
     assert.equal(its[0].flipOddsAway, undefined); // 下注賠率永不代填
     assert.equal(its[1].openOddsAway, 9.9);       // 手填值不覆蓋
     assert.ok(changed >= 2 && saved === 1);
+    assert.equal(autoSettles, 1, '收盤補入後應立即重跑自動結算，不必再等下一輪比分輪詢');
   } finally { dom.window.close(); }
+});
+
+test('final close fills untouched card lines and favorite without overwriting user work', () => {
+  assert.equal(typeof applyClosingLines, 'function');
+  const game = {
+    markets: {
+      hd: { close: { line: 1.5, favorite: 'away', final: true } },
+      ou: { close: { line: 6.5, final: true } },
+    },
+  };
+  const untouched = {
+    hdFav: 'home', hdVal: '', totVal: '',
+    mlAway: { lights: 0 }, mlHome: { lights: 0 },
+    hdGive: { lights: 0 }, hdRecv: { lights: 0 }, over: { lights: 0 }, under: { lights: 0 },
+  };
+  const manual = JSON.parse(JSON.stringify(untouched));
+  manual.hdVal = 2.5;
+  manual.totVal = 7.5;
+  manual.hdFav = 'home';
+  manual.hdGive.lights = 1;
+
+  assert.equal(applyClosingLines(untouched, game), true);
+  assert.equal(untouched.hdFav, 'away');
+  assert.equal(untouched.hdVal, 1.5);
+  assert.equal(untouched.totVal, 6.5);
+  assert.equal(applyClosingLines(manual, game), false);
+  assert.equal(manual.hdFav, 'home');
+  assert.equal(manual.hdVal, 2.5);
+  assert.equal(manual.totVal, 7.5);
 });
 
 test('autoApplyOdds backfills final close into settled game history without overwriting manual values', () => {

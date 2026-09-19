@@ -108,6 +108,30 @@ function missingStakeOpenLeagues(games, summary, nowMs = Date.now()) {
   return ASIA_LEAGUES.filter(league => missing.has(league));
 }
 
+function missingCloseEventIds(summary, leagues, nowMs = Date.now()) {
+  const allowed = new Set((leagues || []).map(league => String(league).toLowerCase()));
+  const games = Array.isArray(summary && summary.games)
+    ? summary.games
+    : Object.values((summary && summary.games) || {});
+  return games
+    .filter((game) => {
+      const league = String((game && game.league) || '').toLowerCase();
+      const startMs = Date.parse((game && game.startISO) || '');
+      const markets = (game && game.markets) || {};
+      const missingOfferedClose = ['ml', 'hd', 'ou'].some((key) => {
+        const market = markets[key];
+        return market && market.open && !(market.close && market.close.final);
+      });
+      return game && game.eventId && allowed.has(league)
+        && Number.isFinite(startMs) && startMs <= nowMs
+        && nowMs - startMs <= BACKFILL_HOURS * 3600e3
+        && missingOfferedClose;
+    })
+    .sort((left, right) => Date.parse(left.startISO) - Date.parse(right.startISO)
+      || String(left.eventId).localeCompare(String(right.eventId)))
+    .map(game => String(game.eventId));
+}
+
 function dayBefore(date) {
   const ms = Date.parse(`${date}T00:00:00+08:00`) - 86400e3;
   return new Date(ms + 8 * 3600e3).toISOString().slice(0, 10);
@@ -243,15 +267,16 @@ function runOddsPortalHarvest({ repoDir, python = resolvePython(), timeoutMs = 1
 // 且純 HTTP 免瀏覽器（單場 ~8 秒 vs ~60 秒）。日常閘改由它主跑，失敗才退回 OddsPortal。
 const BETEXPLORER_OUTPUTS = Object.freeze(['data/oddsportal_summary.json']);
 
-function betExplorerArgs(leagues = null, bet365Only = false) {
+function betExplorerArgs(leagues = null, bet365Only = false, eventIds = null) {
   const args = ['betexplorer_run.py'];
   if (leagues && leagues.length) args.push('--leagues', leagues.join(','));
   if (bet365Only) args.push('--bet365-only');
+  if (eventIds && eventIds.length) args.push('--event-ids', eventIds.join(','));
   return args;
 }
 
-function runBetExplorer({ repoDir, python = resolvePython(), leagues = null, bet365Only = false, timeoutMs = 25 * 60_000 }) {
-  const args = betExplorerArgs(leagues, bet365Only);
+function runBetExplorer({ repoDir, python = resolvePython(), leagues = null, bet365Only = false, eventIds = null, timeoutMs = 25 * 60_000 }) {
+  const args = betExplorerArgs(leagues, bet365Only, eventIds);
   execFileSync(python, args, {
     cwd: repoDir,
     stdio: ['ignore', 'inherit', 'inherit'],
@@ -307,6 +332,7 @@ module.exports = {
   BET365_PROBE_INTERVAL_MS,
   isBet365ProbeDue,
   missingStakeOpenLeagues,
+  missingCloseEventIds,
   SWAP_HHMM,
   dueSwapGate,
   HARVEST_HHMM,
