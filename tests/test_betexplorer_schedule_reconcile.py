@@ -13,6 +13,10 @@ class ScheduleReconciliationTests(unittest.TestCase):
             "startISO": "2026-09-19T13:00:00+08:00",
             "awayTeam": "中日", "homeTeam": "巨人",
             "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/yomiuri-giants-chunichi-dragons/xjilCpzG/",
+            "markets": {
+                "ml": {"open": {"away": 2.04}, "close": {"final": True}},
+                "hd": {"open": {"line": 1.5}},
+            },
         }}}
 
         games = runner.target_games_from_summary(summary, {"xjilCpzG"}, 7.0)
@@ -20,15 +24,20 @@ class ScheduleReconciliationTests(unittest.TestCase):
         self.assertEqual([game["matchId"] for game in games], ["xjilCpzG"])
         self.assertEqual(runner.game_start_tw(games[0], 7.0).isoformat(), "2026-09-19T13:00:00+08:00")
         self.assertEqual((games[0]["awayZh"], games[0]["homeZh"]), ("中日", "巨人"))
+        self.assertEqual(runner.requested_close_markets(summary, {"xjilCpzG"}), {"xjilCpzG": {"hd"}})
 
     def test_partial_targeted_collection_is_reported_as_missing(self):
-        """同批其他場成功不得再掩蓋一場漏抓。"""
+        """同批其他場成功，或只有初盤沒有收盤，都不得掩蓋漏抓。"""
         missing = runner.missing_requested_event_ids(
             {"xjilCpzG", "IPQDAhG8"},
-            [{"eventId": "IPQDAhG8", "markets": {"ml": {"close": {"final": True}}}}],
+            [
+                {"eventId": "xjilCpzG", "markets": {"ml": {"close": {"final": True}}}},
+                {"eventId": "IPQDAhG8", "markets": {"hd": {"open": {"line": 1.5}}}},
+            ],
+            {"xjilCpzG": {"ml"}, "IPQDAhG8": {"hd"}},
         )
 
-        self.assertEqual(missing, {"xjilCpzG"})
+        self.assertEqual(missing, {"IPQDAhG8"})
 
     def test_merge_bet365_summary_never_forgets_a_seen_flip(self):
         old = {

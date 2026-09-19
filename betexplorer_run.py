@@ -146,9 +146,36 @@ def target_games_from_summary(summary, event_ids, offset):
     return games
 
 
-def missing_requested_event_ids(requested, collected):
-    collected_ids = {str(entry.get("eventId") or "") for entry in (collected or [])}
-    return set(requested or set()) - collected_ids
+def requested_close_markets(summary, event_ids):
+    """記住指定補抓前各 eventId 真正缺少哪些已開盤市場的收盤。"""
+    wanted = set(event_ids or set())
+    required = {}
+    for entry in (summary.get("games") or {}).values():
+        event_id = str(entry.get("eventId") or "")
+        if event_id not in wanted:
+            continue
+        missing = set()
+        markets = entry.get("markets") or {}
+        for key in ("ml", "hd", "ou"):
+            market = markets.get(key) or {}
+            if market.get("open") and not (market.get("close") or {}).get("final"):
+                missing.add(key)
+        if missing:
+            required[event_id] = missing
+    return required
+
+
+def missing_requested_event_ids(requested, collected, required_closes=None):
+    collected_by_id = {
+        str(entry.get("eventId") or ""): entry for entry in (collected or [])
+    }
+    missing = set(requested or set()) - set(collected_by_id)
+    for event_id, markets in (required_closes or {}).items():
+        entry = collected_by_id.get(event_id) or {}
+        observed = entry.get("markets") or {}
+        if any(not ((observed.get(key) or {}).get("close") or {}).get("final") for key in markets):
+            missing.add(event_id)
+    return missing
 
 
 def merge_bet365_summary(old, new):
@@ -420,6 +447,7 @@ def main() -> int:
     requested_event_ids = {x.strip() for x in args.event_ids.split(",") if x.strip()}
     summary_path = Path(args.summary)
     summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    required_closes = requested_close_markets(summary, requested_event_ids)
     team_zh = _team_zh()
     now_tw = datetime.now(TW)
 
@@ -528,7 +556,7 @@ def main() -> int:
             added += 1
     summary["updatedAt"] = now_tw.isoformat(timespec="seconds")
 
-    missing_ids = missing_requested_event_ids(requested_event_ids, collected)
+    missing_ids = missing_requested_event_ids(requested_event_ids, collected, required_closes)
     failed.extend(f"eventId {event_id}: 指定收盤未抓到" for event_id in sorted(missing_ids))
     health = {"discovered": len(games), "succeeded": len(collected),
               "failed": len(failed), "added": added, "updated": updated, "errors": failed}
