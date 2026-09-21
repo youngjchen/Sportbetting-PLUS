@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-21T16:35:07+08:00",
+  "updatedAt": "2026-09-21T21:00:19+08:00",
   "health": {
-    "discovered": 18,
-    "succeeded": 4,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 4,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -144807,7 +144807,7 @@
       "awayTeam": "西武",
       "homeTeam": "羅德",
       "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/chiba-lotte-marines-seibu-lions/8fZIFvb5/",
-      "observedAt": "2026-09-21T08:35:30+08:00",
+      "observedAt": "2026-09-21T21:00:19+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -144817,9 +144817,15 @@
             "away": 1.73
           },
           "active": {
-            "at": "2026-09-21T03:00:08+08:00",
+            "at": "2026-09-21T21:00:19+08:00",
             "home": 2.03,
             "away": 1.73
+          },
+          "close": {
+            "at": "2026-09-20T23:25:00+08:00",
+            "home": 2.03,
+            "away": 1.73,
+            "final": true
           }
         },
         "hd": {
@@ -144831,11 +144837,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-21T03:00:08+08:00",
-            "home": 1.53,
-            "away": 2.28,
+            "at": "2026-09-21T21:00:19+08:00",
+            "home": 1.54,
+            "away": 2.26,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-09-21T08:05:00+08:00",
+            "home": 1.54,
+            "away": 2.26,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -144846,24 +144860,31 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-21T03:00:08+08:00",
+            "at": "2026-09-21T21:00:19+08:00",
             "over": 1.74,
             "under": 1.94,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-09-20T23:26:00+08:00",
+            "over": 1.74,
+            "under": 1.94,
+            "line": 6.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
+        "activeSide": [],
+        "struckSide": [
           "away"
         ],
-        "struckSide": [],
         "lines": [
           {
             "line": 1.5,
-            "active": true,
-            "created": "20,09,2026,19,17"
+            "active": false,
+            "created": "21,09,2026,01,05"
           }
         ]
       }
