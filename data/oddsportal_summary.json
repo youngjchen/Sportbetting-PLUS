@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-22T09:50:07+08:00",
+  "updatedAt": "2026-09-22T09:55:08+08:00",
   "health": {
-    "discovered": 0,
-    "succeeded": 0,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 0,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -145049,7 +145049,7 @@
         "at": "2026-09-22T05:52:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-22T07:00:06+08:00"
+        "observedAt": "2026-09-22T09:55:08+08:00"
       },
       "eventId": "C4PMMsjd",
       "league": "mlb",
@@ -145059,7 +145059,7 @@
       "awayTeam": "雙城",
       "homeTeam": "巨人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/san-francisco-giants-minnesota-twins/C4PMMsjd/",
-      "observedAt": "2026-09-22T07:00:06+08:00",
+      "observedAt": "2026-09-22T09:55:08+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -145069,9 +145069,15 @@
             "away": 1.83
           },
           "active": {
-            "at": "2026-09-22T07:00:06+08:00",
-            "home": 2.01,
-            "away": 1.78
+            "at": "2026-09-22T09:55:08+08:00",
+            "home": 2.08,
+            "away": 1.76
+          },
+          "close": {
+            "at": "2026-09-22T09:34:00+08:00",
+            "home": 2.08,
+            "away": 1.76,
+            "final": true
           }
         },
         "hd": {
@@ -145083,11 +145089,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-22T07:00:06+08:00",
-            "home": 1.61,
+            "at": "2026-09-22T09:55:08+08:00",
+            "home": 1.63,
             "away": 2.29,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-09-22T09:34:00+08:00",
+            "home": 1.63,
+            "away": 2.29,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -145098,10 +145112,17 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-22T07:00:06+08:00",
-            "over": 1.72,
-            "under": 2.09,
+            "at": "2026-09-22T09:55:08+08:00",
+            "over": 1.77,
+            "under": 2.06,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-09-22T09:41:00+08:00",
+            "over": 1.77,
+            "under": 2.06,
+            "line": 7.5,
+            "final": true
           }
         }
       },
@@ -145110,24 +145131,22 @@
         "activeSide": [
           "away"
         ],
-        "struckSide": [
-          "away"
-        ],
+        "struckSide": [],
         "lines": [
           {
             "line": 1.5,
             "active": true,
-            "created": "21,09,2026,23,41"
+            "created": "22,09,2026,02,34"
           },
           {
             "line": 2.5,
-            "active": false,
-            "created": "21,09,2026,02,00"
+            "active": true,
+            "created": "22,09,2026,02,34"
           },
           {
             "line": 3.5,
-            "active": false,
-            "created": "21,09,2026,01,58"
+            "active": true,
+            "created": "22,09,2026,02,34"
           }
         ]
       }
