@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-22T20:30:09+08:00",
+  "updatedAt": "2026-09-22T20:35:06+08:00",
   "health": {
-    "discovered": 5,
-    "succeeded": 5,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 5,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -145661,7 +145661,7 @@
       "awayTeam": "味全",
       "homeTeam": "統一",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/uni-lions-wei-chuan-dragons/lh8dHZlf/",
-      "observedAt": "2026-09-22T13:25:41+08:00",
+      "observedAt": "2026-09-22T20:35:06+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -145671,9 +145671,15 @@
             "away": 1.67
           },
           "active": {
-            "at": "2026-09-22T13:25:41+08:00",
-            "home": 2.07,
-            "away": 1.67
+            "at": "2026-09-22T20:35:06+08:00",
+            "home": 1.75,
+            "away": 1.95
+          },
+          "close": {
+            "at": "2026-09-22T18:29:00+08:00",
+            "home": 1.75,
+            "away": 1.95,
+            "final": true
           }
         },
         "hd": {
@@ -145685,11 +145691,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-22T13:25:41+08:00",
-            "home": 1.62,
-            "away": 2.16,
+            "at": "2026-09-22T20:35:06+08:00",
+            "home": 2.6,
+            "away": 1.4,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-09-22T18:29:00+08:00",
+            "home": 2.6,
+            "away": 1.4,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -145700,20 +145714,34 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-22T13:25:41+08:00",
-            "over": 1.74,
-            "under": 1.97,
-            "line": 7.5
+            "at": "2026-09-22T20:35:06+08:00",
+            "over": 1.75,
+            "under": 1.9,
+            "line": 6.5
+          },
+          "close": {
+            "at": "2026-09-22T18:29:00+08:00",
+            "over": 1.75,
+            "under": 1.9,
+            "line": 6.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
-        "ever": false,
-        "activeSide": [],
+        "ever": true,
+        "activeSide": [
+          "home"
+        ],
         "struckSide": [
           "away"
         ],
         "lines": [
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "22,09,2026,11,29"
+          },
           {
             "line": 1.5,
             "active": false,
