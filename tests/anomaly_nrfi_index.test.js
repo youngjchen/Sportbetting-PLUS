@@ -52,6 +52,27 @@ test('未來卡片已結算 NRFI 時優先使用卡片結果，不被舊 sid 快
   );
 });
 
+test('沒有人工異常分類時，以 Bet365 × 台彩結算快照補入異常組合統計', () => {
+  const game = {
+    sid: 'auto-anomaly', league: 'mlb', date: '2026-09-24', flipState: 'none',
+    awayTeam: '藍鳥', homeTeam: '金鶯', awayScore: 2, homeScore: 4,
+    closeOddsAway: 2.1, closeOddsHome: 1.7, hdFav: 'home',
+    hdResult: 'fav_cover', totResult: 'under', preGameSwap: false,
+    bet365Taiwan: { relation: '收斂', swapCombo: 'bet365_only' },
+  };
+  const collect = loadCollectCrossTab({ games: [game] }, () => null);
+  const bucket = collect('all').grp.conv.solo;
+  assert.equal(bucket.n, 1);
+  assert.equal(bucket.games[0].home, '金鶯');
+});
+
+test('盤面用時間或官方賽事 ID 區分雙重賽，載入時修復遺漏的已結算卡片', () => {
+  assert.match(indexSource, /__gameRecordUtils\.sameGame\(x, g\)/);
+  assert.match(indexSource, /function recoverMissingSettledGames\(\)/);
+  assert.match(indexSource, /missingSettledCards\(doc\)/);
+  assert.match(indexSource, /applySettlement\(row\.item, row\.picks, \+1, row\.date\)/);
+});
+
 test('國際軸晚於結算載入時，會按結算日期重新配對並觸發七類回補', () => {
   assert.match(indexSource, /function intlFor\(it,dateKey\)/);
   assert.match(indexSource, /const activeDate = dateKey \|\| doc\.activeDate/);

@@ -88,11 +88,16 @@
         （使用者實際回報「所有燈號跟賠率都沒辦法覆蓋」）。
 
      鍵：
-      · games → sid 優先、date+teams 後備（＝板上自己的 upsert 規則 index.html:1853-1858；
-        實測 2545 筆零撞鍵，雙重賽也沒撞）。同一場在兩台各自結算會拿到不同 sid，故一定要有後備鍵。
+      · games → sid 優先、officialId 或 date+teams+time 後備。同一場在兩台各自結算會拿到不同 sid，
+        故一定要有後備鍵；時間不可省略，否則同日雙重賽會互相覆蓋。
       · 卡片 → away|home|gameTime。★ 不能用 id：卡片 id 是每台裝置各自從 1 起算的計數器
         （index.html: let uid = 1），跨裝置必撞 → 搬過來的卡一定要重新配號。 */
-  function gkeyOf(g) { return g.date + '|' + g.awayTeam + '|' + g.homeTeam; }
+  function gkeyOf(g) {
+    if (window.__gameRecordUtils) return window.__gameRecordUtils.gameIdentityKey(g);
+    if (g.officialId) return 'official:' + g.officialId;
+    return g.date + '|' + g.awayTeam + '|' + g.homeTeam + '|' + (g.gameTime || '');
+  }
+  function gfallbackOf(g) { return g.date + '|' + g.awayTeam + '|' + g.homeTeam + '|' + (g.gameTime || ''); }
   function ikeyOf(i) { return (i.away || '') + '|' + (i.home || '') + '|' + (i.gameTime || ''); }
   // mergeDocs(giver, keeper)：以 keeper 為底（衝突 keeper 贏、純量設定跟 keeper），giver 獨有的補進來。
   function mergeDocs(giver, keeper) {
@@ -101,10 +106,10 @@
     var M = JSON.parse(JSON.stringify(keeper));
     M.games = (keeper.games || []).slice();
     var sids = {}, keys = {}, addedG = 0, addedC = 0;
-    M.games.forEach(function (g) { sids[g.sid] = 1; keys[gkeyOf(g)] = 1; });
+    M.games.forEach(function (g) { sids[g.sid] = 1; keys[gkeyOf(g)] = 1; keys[gfallbackOf(g)] = 1; });
     (giver.games || []).forEach(function (g) {
-      if (sids[g.sid] || keys[gkeyOf(g)]) return;         // 同一場：keeper 版本優先
-      M.games.push(g); sids[g.sid] = 1; keys[gkeyOf(g)] = 1; addedG++;
+      if (sids[g.sid] || keys[gkeyOf(g)] || keys[gfallbackOf(g)]) return; // 同一場：keeper 版本優先
+      M.games.push(g); sids[g.sid] = 1; keys[gkeyOf(g)] = 1; keys[gfallbackOf(g)] = 1; addedG++;
     });
     M.games.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
     // 已結算的卡片【要】合併：結算後卡片會留在板上（使用者就是靠它回顧），上面有手點的燈號，
@@ -159,6 +164,7 @@
   // 2026-08-13 卜卦快取改存 gz:（divination-addon dv2）：這裡讀不懂 gz 會把卦當空陣列
   // → 上傳空卦=雲端卦全滅。讀取相容 gz/純文字兩態；寫回也存 gz（省配額）。
   async function readLocalCasts() {
+    if (window.__largeStorage) return await window.__largeStorage.readJSON('baseball-casts', CASTS_KEY);
     try {
       var raw = localStorage.getItem(CASTS_KEY) || '[]';
       if (raw.slice(0, 3) === 'gz:') {
@@ -171,6 +177,7 @@
     } catch (e) { return []; }
   }
   async function writeLocalCasts(list) {
+    if (window.__largeStorage) return await window.__largeStorage.writeJSON('baseball-casts', list, CASTS_KEY);
     try {
       var buf = new Uint8Array(await new Response(new Blob([JSON.stringify(list)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
       var bin = ''; for (var i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
@@ -231,7 +238,7 @@
       var local = await readLocalCasts();
       var merged = mergeCasts(cloud, local);
       var gained = merged.length - local.length;
-      if (gained > 0) { try { localStorage.setItem(CASTS_KEY, JSON.stringify(merged)); } catch (e) { if (!silent) alert('卜卦紀錄寫回本機失敗（空間不足？）：' + e.message); return { ok: false }; } }
+      if (gained > 0) { try { await writeLocalCasts(merged); } catch (e) { if (!silent) alert('卜卦紀錄寫回本機失敗（空間不足？）：' + e.message); return { ok: false }; } }
       if (!silent) toast(gained > 0 ? ('卜卦紀錄已還原 +' + gained + ' 筆（共 ' + merged.length + '）') : '卜卦紀錄已是最新');
       return { ok: true, gained: gained, total: merged.length };
     } catch (err) {
@@ -246,7 +253,8 @@
     clearTimeout(_dvTimer);
     _dvTimer = setTimeout(function () { pushCasts(true); }, 90000);
   }
-  window.__dvSync = { push: pushCasts, pull: pullCasts, schedule: scheduleCastBackup, merge: mergeCasts, key: castKey };
+  window.__dvSync = { push: pushCasts, pull: pullCasts, schedule: scheduleCastBackup, merge: mergeCasts, key: castKey,
+    read: readLocalCasts, write: writeLocalCasts };
   // 開板即拉一次雲端（把另一台/上次備份的卦補回來），失敗安靜略過
   setTimeout(function () { try { pullCasts(true); } catch (e) {} }, 4000);
 

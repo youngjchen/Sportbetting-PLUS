@@ -1011,7 +1011,10 @@ function buildIntlState(log, stamp) {
     if (before !== e.lsw + '|' + e.v + '|' + e.ls) e.u = stamp;
   }
   // 修剪：只留最近 3 天（板上只看今天；留兩天緩衝跨日結算）
-  const cutoff = new Date(Date.now() - 3 * 86400000).toISOString().slice(0, 10);
+  // 以本輪資料時間為基準。重播、補抓或測試若用歷史 stamp，不能拿機器今天的時鐘
+  // 立即把剛建好的場次歸檔，否則雙重賽時間鍵與台彩 stub 都會看似憑空消失。
+  const stampMs = Date.parse(stamp);
+  const cutoff = new Date((Number.isFinite(stampMs) ? stampMs : Date.now()) - 3 * 86400000).toISOString().slice(0, 10);
   // 2026-08-05 使用者拍板：滾動窗剪掉前先歸檔月檔（data/intl_archive/YYYY-MM.json）——
   // 歷史卡片的 bet365/台彩警示條不再隨窗滾動消失；剪下的=該場最終狀態，同鍵直接覆蓋。
   const pruned = {};

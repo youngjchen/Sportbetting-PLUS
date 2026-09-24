@@ -513,7 +513,7 @@
     <div class="stats-body" id="statsBody"></div>
   </div>
 
-<script src="./storage-pressure.js?v=20260903sp2"></script>
+<script src="./storage-pressure.js?v=20260924idb1"></script>
 <script>
 "use strict";
 // ===== 文檔（與棒球板完全隔離的命名空間）=====
@@ -2227,20 +2227,35 @@ function updateStorageGauge(){
     const f=document.querySelector("#stgauge .sgfill"), p=document.querySelector("#stgauge .sgpct");
     if(f) f.style.width=pct+"%"; if(p) p.textContent=pct+"%";
     if(f) f.style.background = pct>85 ? "#ff6b6b" : (pct>60 ? "#ffb02e" : "#28c76f");
+    const gauge=document.querySelector("#stgauge");
+    if(gauge){
+      gauge.title=`localStorage 小型區：${(used/1048576).toFixed(2)} MB / 5.00 MB（${pct}%）`;
+      if(window.__largeStorage) window.__largeStorage.stats().then(s=>{ gauge.title+=`\n大型資料（IndexedDB）：${((s.bytes||0)/1048576).toFixed(2)} MB（不占 5 MB 小型區）`; });
+    }
   }catch(_){}
 }
-$("#exportDataBtn").onclick=()=>{
-  const blob=new Blob([JSON.stringify(doc)],{type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download=`籃球排盤備份_${twOffset(0)}.json`; a.click(); URL.revokeObjectURL(a.href); closeMore();
+$("#exportDataBtn").onclick=async()=>{
+  try{
+    const wnbaCasts=window.__largeStorage ? await window.__largeStorage.readJSON('wnba-casts','dvManualCastsWnba') : [];
+    const payload={__envelope:'sbplus-nba-backup-v2',nbaDoc:doc,dvManualCastsWnba:wnbaCasts};
+    const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
+    a.download=`籃球排盤備份_${twOffset(0)}.json`; a.click(); URL.revokeObjectURL(a.href); closeMore();
+  }catch(e){ alert("備份失敗：無法讀取完整資料。原始資料沒有被刪除。\n\n"+(e&&e.message||e)); }
 };
 $("#importDataBtn").onclick=()=>{ $("#importFile").click(); };
 $("#importFile").onchange=(e)=>{
   const f=e.target.files[0]; if(!f) return;
   const rd=new FileReader();
-  rd.onload=()=>{ try{ const j=JSON.parse(rd.result);
-      if(!j||typeof j!=="object"||!j.boards) throw new Error("格式不符");
-      snapshot(); doc=j; if(!doc.games) doc.games=[]; bumpGamesVersion(); saveDoc(doc); render();
+  rd.onload=async()=>{ try{ const j=JSON.parse(rd.result); const importedDoc=j.nbaDoc || j;
+      if(!importedDoc||typeof importedDoc!=="object"||!importedDoc.boards) throw new Error("格式不符");
+      if(Array.isArray(j.dvManualCastsWnba)&&window.__largeStorage){
+        const current=await window.__largeStorage.readJSON('wnba-casts','dvManualCastsWnba');
+        const byKey=new Map(); current.concat(j.dvManualCastsWnba).forEach(x=>{ if(x&&x.ts) byKey.set((x.ts||'')+'|'+(x.officialId||'')+'|'+(x.market||'')+'|'+(x.method||''),x); });
+        await window.__largeStorage.writeJSON('wnba-casts',Array.from(byKey.values()),'dvManualCastsWnba');
+        try{ window.dispatchEvent(new CustomEvent('sbplus-casts-updated',{detail:{storeKey:'wnba-casts'}})); }catch(_){}
+      }
+      snapshot(); doc=importedDoc; if(!doc.games) doc.games=[]; bumpGamesVersion(); saveDoc(doc); render();
       alert("匯入完成"); }catch(err){ alert("匯入失敗："+err.message); }
     e.target.value=""; };
   rd.readAsText(f);
@@ -2384,7 +2399,7 @@ loadSeedGames();
 loadPregame();
 </script>
 <script src="wnba-picks-addon.js?v=20260803wnba1"></script>
-<script src="wnba-divination-addon.js?v=20260902sp1"></script>
+<script src="wnba-divination-addon.js?v=20260924idb1"></script>
 <script src="oddsportal-integration.js?v=20260902dedupe2"></script>
 </body>
 </html>

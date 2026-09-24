@@ -10,11 +10,13 @@
   'use strict';
   const V = '20260713a';
   const LS_KEY = 'dvManualCastsWnba';   // 與棒球分池（整份複製版,2026-08-04）
+  const STORE_KEY = 'wnba-casts';
 
   /* ── 快取壓縮層（2026-08-13 使用者拍板：dvManualCasts 吃掉儲存空間的主嫌，壓縮但不破壞內容）──
      存檔＝gz:+base64（同盤面主檔格式）；讀取相容三態：gz、舊版純 JSON、空。
      所有讀寫走 dvLoad()/dvSave()（常駐記憶體，跨呼叫共用同一份），開機時舊純文字自動轉存壓縮。 */
   let _dvCache = null;
+  let _dvReady = Promise.resolve();
   async function _dvGz(str){ const buf = new Uint8Array(await new Response(new Blob([str]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()); let bin=''; for(let i=0;i<buf.length;i+=0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i,i+0x8000)); return btoa(bin); }
   async function _dvUnGz(b64){ const bin = atob(b64); const u = new Uint8Array(bin.length); for(let i=0;i<bin.length;i++) u[i]=bin.charCodeAt(i); return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
   function dvLoad(){
@@ -28,7 +30,11 @@
   }
   function dvSave(list){
     _dvCache = list;
-    (async () => {
+    _dvReady.then(async () => {
+      if(window.__largeStorage){
+        await window.__largeStorage.writeJSON(STORE_KEY,list,LS_KEY);
+        return;
+      }
       let payload;
       try{ payload='gz:' + await _dvGz(JSON.stringify(list)); }
       catch(_){ payload=JSON.stringify(list); }
@@ -39,15 +45,27 @@
         console.error('[WNBA 卜卦快取] 儲存失敗：', e);
         try{ alert('⚠ WNBA 手動卦儲存失敗，請不要關閉頁面；先備份卜卦紀錄。'); }catch(_){}
       }
-    })();
+    }).catch(e=>{
+      console.error('[WNBA 卜卦快取] 儲存失敗：', e);
+      try{ alert('⚠ WNBA 手動卦儲存失敗，請不要關閉頁面；先備份卜卦紀錄。'); }catch(_){}
+    });
   }
-  (async () => {   // 開機：gz 解壓進記憶體；舊純文字轉存壓縮（內容不動）
+  _dvReady=(async () => {   // 開機：先驗證搬入 IndexedDB；成功才由共用層移除舊 localStorage
     try{
+      if(window.__largeStorage){
+        await window.__largeStorage.migrate(STORE_KEY,LS_KEY);
+        _dvCache=await window.__largeStorage.readJSON(STORE_KEY,LS_KEY);
+        return;
+      }
       const raw = localStorage.getItem(LS_KEY) || '';
       if(raw.slice(0,3) === 'gz:'){ _dvCache = JSON.parse(await _dvUnGz(raw.slice(3))) || []; }
       else if(raw){ _dvCache = JSON.parse(raw) || []; dvSave(_dvCache); }
     }catch(e){ console.warn('[卜卦快取] 解壓失敗，保留原樣不動：', e); }
   })();
+  window.addEventListener('sbplus-casts-updated',async e=>{
+    if(e.detail?.storeKey!==STORE_KEY||!window.__largeStorage) return;
+    _dvCache=await window.__largeStorage.readJSON(STORE_KEY,LS_KEY); renderHist();
+  });
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
   async function loadEngine(src) { const t = await (await fetch(src + '?v=' + V)).text(); (0, eval)(t); }
@@ -609,7 +627,7 @@
       box.querySelectorAll('.dv-htab').forEach(x => x.classList.toggle('on', x === t));
       box.querySelectorAll('.dv-hsec').forEach(s => s.style.display = (s.dataset.m === t.dataset.m) ? '' : 'none');
     });
-    const c = document.getElementById('dv-clear'); if (c) c.onclick = () => { if (confirm('清空所有手動卦紀錄？')) { localStorage.removeItem(LS_KEY); renderHist(); } };
+    const c = document.getElementById('dv-clear'); if (c) c.onclick = () => { if (confirm('清空所有手動卦紀錄？')) { _dvCache=[]; if(window.__largeStorage) window.__largeStorage.clearJSON(STORE_KEY,LS_KEY); else localStorage.removeItem(LS_KEY); renderHist(); } };
     box.querySelectorAll('.dv-grow').forEach(tr => tr.onclick = () => {
       const det = tr.nextElementSibling;
       if (!det || !det.classList.contains('dv-detail')) return;

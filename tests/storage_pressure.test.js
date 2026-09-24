@@ -101,3 +101,75 @@ test('emergency payload synchronously round-trips a large Traditional Chinese bo
   assert.equal(pressure.decodeEmergency(payload), json);
   assert.ok(payload.length * 2 < json.length, '緊急存檔應明顯小於 UTF-16 原文');
 });
+
+function memoryAdapter(options = {}) {
+  const values = new Map();
+  return {
+    async get(key) { return values.get(key) || null; },
+    async put(key, value) {
+      values.set(key, options.corruptWrite ? { ...value, checksum: 'corrupt' } : structuredClone(value));
+    },
+    async delete(key) { values.delete(key); },
+    async list() { return Array.from(values.values()); },
+  };
+}
+
+test('large JSON migration removes legacy localStorage only after verified IndexedDB round-trip', async () => {
+  assert.equal(typeof pressure.createLargeJsonStore, 'function', '尚未提供 IndexedDB 大型資料層');
+  const storage = fakeStorage(5 * MB, { dvManualCasts: JSON.stringify([{ ts: '2026-09-24T01:00:00Z' }]) });
+  const store = pressure.createLargeJsonStore({ storage, adapter: memoryAdapter() });
+
+  const migrated = await store.migrate('baseball-casts', 'dvManualCasts');
+
+  assert.equal(migrated.backend, 'indexeddb');
+  assert.equal(storage.getItem('dvManualCasts'), null);
+  assert.deepEqual(await store.readJSON('baseball-casts', 'dvManualCasts'), [{ ts: '2026-09-24T01:00:00Z' }]);
+});
+
+test('failed IndexedDB verification keeps the original legacy payload intact', async () => {
+  assert.equal(typeof pressure.createLargeJsonStore, 'function', '尚未提供 IndexedDB 大型資料層');
+  const raw = JSON.stringify([{ ts: 'keep-me' }]);
+  const storage = fakeStorage(5 * MB, { dvManualCasts: raw });
+  const store = pressure.createLargeJsonStore({ storage, adapter: memoryAdapter({ corruptWrite: true }) });
+
+  const migrated = await store.migrate('baseball-casts', 'dvManualCasts');
+
+  assert.equal(migrated.backend, 'localstorage');
+  assert.equal(storage.getItem('dvManualCasts'), raw);
+});
+
+test('large JSON write falls back to legacy localStorage when IndexedDB is unavailable', async () => {
+  assert.equal(typeof pressure.createLargeJsonStore, 'function', '尚未提供 IndexedDB 大型資料層');
+  const storage = fakeStorage(5 * MB);
+  const store = pressure.createLargeJsonStore({ storage, adapter: null });
+
+  const result = await store.writeJSON('wnba-casts', [{ ts: 'fallback' }], 'dvManualCastsWnba');
+
+  assert.equal(result.backend, 'localstorage');
+  assert.deepEqual(await pressure.decodeLegacyPayload(storage.getItem('dvManualCastsWnba')), [{ ts: 'fallback' }]);
+});
+
+test('late legacy writer is unioned into an existing IndexedDB cast ledger instead of overwriting it', async () => {
+  const storage = fakeStorage(5 * MB);
+  const adapter = memoryAdapter();
+  const store = pressure.createLargeJsonStore({ storage, adapter });
+  await store.writeJSON('baseball-casts', [{ ts: '2026-09-24T02:00:00Z', officialId: 'new' }]);
+  storage.setItem('dvManualCasts', JSON.stringify([{ ts: '2026-09-24T01:00:00Z', officialId: 'old-tab' }]));
+
+  const result = await store.migrate('baseball-casts', 'dvManualCasts');
+  const saved = await store.readJSON('baseball-casts', 'dvManualCasts');
+
+  assert.equal(result.backend, 'indexeddb');
+  assert.deepEqual(saved.map((row) => row.officialId), ['new', 'old-tab']);
+  assert.equal(storage.getItem('dvManualCasts'), null);
+});
+
+test('corrupt IndexedDB data without a legacy copy fails loudly so backup cannot look complete', async () => {
+  const adapter = memoryAdapter();
+  await adapter.put('baseball-casts', {
+    version: 1, data: [{ ts: 'must-not-disappear' }], count: 1, jsonLength: 3, checksum: 'corrupt',
+  });
+  const store = pressure.createLargeJsonStore({ storage: fakeStorage(5 * MB), adapter });
+
+  await assert.rejects(() => store.readJSON('baseball-casts', 'dvManualCasts'), /驗證失敗/);
+});

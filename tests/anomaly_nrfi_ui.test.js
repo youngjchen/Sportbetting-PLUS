@@ -171,7 +171,7 @@ test('七類統計聯集歷史與卡片結算，officialId 相同時只算一次
   );
 });
 
-test('結算時凍結警示條同一來源：BetExplorer 優先、Titan 只作缺列備援', () => {
+test('結算時凍結警示條聯集 BetExplorer 與 Titan 的永久證據', () => {
   const snapshot = buildBet365TaiwanSnapshot(
     { sw: 2, lsw: 1, ls: 'home', ll: 1.5, u: '2026-08-24T12:00:00+08:00' },
     { v: 'was', side: 'home', line: 1.5, be: { flipEver: false, struck: [] } },
@@ -185,9 +185,9 @@ test('結算時凍結警示條同一來源：BetExplorer 優先、Titan 只作�
       evidenceSource: snapshot.evidenceSource,
     },
     {
-      relation: '收斂', swapCombo: 'taiwan_only',
-      bet365Swapped: false, taiwanSwapped: true,
-      evidenceSource: 'betexplorer+playsport',
+      relation: '收斂', swapCombo: 'both',
+      bet365Swapped: true, taiwanSwapped: true,
+      evidenceSource: 'betexplorer+titan+playsport',
     },
   );
 
@@ -197,6 +197,19 @@ test('結算時凍結警示條同一來源：BetExplorer 優先、Titan 只作�
   );
   assert.equal(fallback.swapCombo, 'bet365_only');
   assert.equal(fallback.evidenceSource, 'titan+playsport');
+});
+
+test('BetExplorer 未偵測到對調時仍保留 Titan 已鎖定的曾對調證據', () => {
+  const snapshot = buildBet365TaiwanSnapshot(
+    { sw: 6, lsw: 0, eo: true, is: 'home', il: 1.5, ls: 'home', ll: 1.5 },
+    { v: 'was', side: 'home', line: 1.5, be: { flipEver: false, struck: [] } },
+  );
+
+  assert.ok(snapshot, '收斂場不能因 BetExplorer 漏掉歷史列而整場消失');
+  assert.equal(snapshot.relation, '收斂');
+  assert.equal(snapshot.swapCombo, 'bet365_only');
+  assert.equal(snapshot.bet365Swapped, true);
+  assert.match(snapshot.evidenceSource, /titan/);
 });
 
 test('BetExplorer 列暫缺但曾相反事實已鎖定時，結算快照仍歸入 Bet365 對調收斂', () => {

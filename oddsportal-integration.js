@@ -69,16 +69,35 @@
     if (wanted == null) return null;
     let best = null;
     let bestDiff = Infinity;
+    let bestActivity = -1;
+    function activityScore(game) {
+      const wantedDate = String(activeDate || '').slice(0, 10);
+      const market = game.markets || {};
+      const timestamps = [
+        [game.bet365 && game.bet365.at, 4],
+        [market.ml && market.ml.close && market.ml.close.at, 3],
+        [market.hd && market.hd.close && market.hd.close.at, 3],
+        [market.ou && market.ou.close && market.ou.close.at, 3],
+        [market.ml && market.ml.open && market.ml.open.at, 1],
+        [market.hd && market.hd.open && market.hd.open.at, 1],
+        [market.ou && market.ou.open && market.ou.open.at, 1],
+      ];
+      return timestamps.reduce(function (score, entry) {
+        return score + (String(entry[0] || '').slice(0, 10) === wantedDate ? entry[1] : 0);
+      }, 0);
+    }
     candidates.forEach(function (game) {
       const minute = hhmmToMin(game.startTime);
       if (minute == null) return;
       const diff = Math.abs(minute - wanted);
       const seen = Date.parse((game.bet365 && game.bet365.observedAt) || game.observedAt || '');
       const bestSeen = best ? Date.parse((best.bet365 && best.bet365.observedAt) || best.observedAt || '') : NaN;
+      const activity = activityScore(game);
       // 同隊、同日、同開球時間可能殘留兩個 BetExplorer eventId；時間打平時必取最新觀測，
       // 否則會固定吃到前一天的舊列，讓今天已發生的 Bet365 對調在警示與結算快照中消失。
-      if (diff < bestDiff || (diff === bestDiff && Number.isFinite(seen) && (!Number.isFinite(bestSeen) || seen > bestSeen))) {
-        best = game; bestDiff = diff;
+      if (diff < bestDiff || (diff === bestDiff && (activity > bestActivity ||
+          (activity === bestActivity && Number.isFinite(seen) && (!Number.isFinite(bestSeen) || seen > bestSeen))))) {
+        best = game; bestDiff = diff; bestActivity = activity;
       }
     });
     return best && bestDiff <= TIME_TOLERANCE_MIN ? best : null;

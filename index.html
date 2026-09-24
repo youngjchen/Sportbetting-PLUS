@@ -1524,7 +1524,8 @@
 </style>
 
 <script src="./logo-map.js?v=2"></script>
-<script src="./storage-pressure.js?v=20260903sp2"></script>
+<script src="./storage-pressure.js?v=20260924idb1"></script>
+<script src="./game-record-utils.js?v=20260924dh1"></script>
 <script>
 const LEAGUES = {
   mlb:  { name:"MLB", color:"var(--mlb)", teams:["金鶯","紅襪","洋基","光芒","藍鳥","白襪","守護者","老虎","皇家","雙城","太空人","天使","運動家","水手","遊騎兵","勇士","馬林魚","大都會","費城人","國民","小熊","紅人","釀酒人","海盜","紅雀","響尾蛇","落磯","道奇","教士","巨人"] },
@@ -1887,14 +1888,17 @@ function recentRead(team, market, venue, n){
 
 /* Add/update/remove a game in doc.games. Each call invalidates the stats cache. */
 function gameUpsert(g){
-  // Replace by sid if exists, else by (date + away + home), else append.
+  // Replace by sid if exists, else by officialId/date+teams+time. Time is mandatory here:
+  // same-day doubleheaders must remain two independent settled records.
   if(!doc.games) doc.games = [];
   let idx = -1;
   if(g.sid){
     idx = doc.games.findIndex(x => x.sid === g.sid);
   }
   if(idx<0){
-    idx = doc.games.findIndex(x => x.date===g.date && x.awayTeam===g.awayTeam && x.homeTeam===g.homeTeam);
+    idx = doc.games.findIndex(x => window.__gameRecordUtils
+      ? window.__gameRecordUtils.sameGame(x, g)
+      : (x.date===g.date && x.awayTeam===g.awayTeam && x.homeTeam===g.homeTeam && (x.gameTime||"")===(g.gameTime||"")));
   }
   if(idx<0){ doc.games.push(g); }
   else { doc.games[idx] = g; }
@@ -3587,7 +3591,8 @@ function backfillRecentBet365TaiwanSnapshots(){
     if(!isRecent(game)) return null;
     const card={away:game.awayTeam,home:game.homeTeam,league:game.league,gameTime:game.gameTime};
     const verdict=intlVerdict(card,state,game.date);
-    return verdict&&verdict.be ? verdict : null;
+    // Titan 的 sw/eo 是永久歷史證據；BetExplorer 缺列或漏掉早期變盤時仍可回補。
+    return verdict&&verdict.v ? verdict : null;
   },function(game){
     if(!isRecent(game)) return null;
     const card={type:"match",away:game.awayTeam,home:game.homeTeam,league:game.league,gameTime:game.gameTime};
@@ -4574,23 +4579,48 @@ function wrapForeign(node, W, H){
 }
 
 /* ---------------- data backup (export / import a file) ---------------- */
-function exportData(){
+async function readBackupLedger(storeKey, legacyKey){
+  if(window.__largeStorage) return await window.__largeStorage.readJSON(storeKey, legacyKey);
+  try{
+    const raw=localStorage.getItem(legacyKey)||"[]";
+    if(window.__storagePressure?.decodeLegacyPayload) return await window.__storagePressure.decodeLegacyPayload(raw);
+    return JSON.parse(raw)||[];
+  }catch(_){ return []; }
+}
+function mergeBackupLedger(incoming,current){
+  if(window.__dvSync?.merge) return window.__dvSync.merge(incoming,current);
+  const m={}, key=e=>(e.ts||"")+"|"+(e.officialId||"")+"|"+(e.market||"")+"|"+(e.method||"");
+  (current||[]).concat(incoming||[]).forEach(e=>{ if(e&&e.ts) m[key(e)]=e; });
+  return Object.keys(m).map(k=>m[k]).sort((a,b)=>a.ts<b.ts?1:(a.ts>b.ts?-1:0));
+}
+async function importBackupLedger(storeKey,legacyKey,incoming){
+  if(!Array.isArray(incoming)) return 0;
+  const current=await readBackupLedger(storeKey,legacyKey);
+  const merged=mergeBackupLedger(incoming,current);
+  if(window.__largeStorage) await window.__largeStorage.writeJSON(storeKey,merged,legacyKey);
+  else localStorage.setItem(legacyKey,JSON.stringify(merged));
+  try{ window.dispatchEvent(new CustomEvent("sbplus-casts-updated",{detail:{storeKey}})); }catch(_){}
+  return merged.length;
+}
+async function exportData(){
   closeMore();
   syncStateToDoc();
+  try{
   // 匯出＝完整快照：盤面主檔＋手動卜卦紀錄（2026-07-27 修）。
   // 舊版只存 doc，卜卦紀錄不在裡面 → 使用者以為「有備份」，實際上卦全裸奔（實際損失過）。
   // 包成信封格式並保留舊格式相容：載入端看到 __envelope 就拆，看不到就當成純 doc（舊備份照樣讀得回）。
-  let payload = doc;
-  try{
-    const casts = JSON.parse(localStorage.getItem("dvManualCasts") || "[]");
-    if(Array.isArray(casts) && casts.length) payload = { __envelope:"sbplus-backup-v1", doc: doc, dvManualCasts: casts };
-  }catch(_){}
+  const casts = await readBackupLedger("baseball-casts","dvManualCasts");
+  const wnbaCasts = await readBackupLedger("wnba-casts","dvManualCastsWnba");
+  const payload = { __envelope:"sbplus-backup-v2", doc, dvManualCasts:casts, dvManualCastsWnba:wnbaCasts };
   const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
   a.download=`排盤備份_${todayStr()}.json`; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   // remember when the user last took a real (file) backup
   try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); }catch(_){}
+  }catch(e){
+    alert("備份失敗：無法讀取完整資料。原始資料沒有被刪除，請先不要清除瀏覽器資料。\n\n"+(e&&e.message||e));
+  }
 }
 
 /* ---- backup safety net ----
@@ -4675,31 +4705,27 @@ function importData(){
   inp.onchange=()=>{
     const f=inp.files&&inp.files[0]; if(!f) return;
     const rd=new FileReader();
-    rd.onload=()=>{
+    rd.onload=async()=>{
       snapshot();
-      // 信封格式（v1）＝{__envelope, doc, dvManualCasts}；舊備份是純 doc，兩者都吃。
-      let raw = String(rd.result), casts = null;
+      // v2 含棒球＋WNBA 卦；v1 與舊純 doc 仍相容。
+      let raw = String(rd.result), casts = null, wnbaCasts = null;
       try{
         const outer = JSON.parse(raw);
-        if(outer && outer.__envelope === "sbplus-backup-v1"){
+        if(outer && (outer.__envelope === "sbplus-backup-v1" || outer.__envelope === "sbplus-backup-v2")){
           raw = JSON.stringify(outer.doc);
           if(Array.isArray(outer.dvManualCasts)) casts = outer.dvManualCasts;
+          if(Array.isArray(outer.dvManualCastsWnba)) wnbaCasts = outer.dvManualCastsWnba;
         }
       }catch(_){}
       if(loadDocFromString(raw)){
-        if(casts){   // 卜卦紀錄用聯集併回（不覆蓋這台已有的卦）
-          try{
-            const cur = JSON.parse(localStorage.getItem("dvManualCasts") || "[]");
-            const merged = (window.__dvSync && window.__dvSync.merge) ? window.__dvSync.merge(casts, cur)
-              : (function(){ const m={}, k=e=>(e.ts||"")+"|"+(e.officialId||"")+"|"+(e.market||"")+"|"+(e.method||"");
-                  cur.concat(casts).forEach(e=>{ if(e&&e.ts) m[k(e)]=e; });
-                  return Object.keys(m).map(x=>m[x]).sort((a,b)=>a.ts<b.ts?1:(a.ts>b.ts?-1:0)); })();
-            localStorage.setItem("dvManualCasts", JSON.stringify(merged));
-          }catch(_){}
-        }
+        let baseballTotal=0,wnbaTotal=0,castImportErrors=[];
+        try{ baseballTotal=await importBackupLedger("baseball-casts","dvManualCasts",casts); }catch(e){ castImportErrors.push("棒球卦："+(e&&e.message||e)); }
+        try{ wnbaTotal=await importBackupLedger("wnba-casts","dvManualCastsWnba",wnbaCasts); }catch(e){ castImportErrors.push("WNBA 卦："+(e&&e.message||e)); }
         loadActiveBoard(); save(); render(); buildDateBar(); applyView(); fitView();
+        recoverMissingSettledGames();
         setTimeout(backfillRecentBet365TaiwanSnapshots,0);
-        alert("已匯入備份 ✓" + (casts ? `（含卜卦紀錄 ${casts.length} 筆，已聯集併入）` : ""));
+        alert("已匯入盤面備份 ✓" + ((casts||wnbaCasts) ? `（棒球卦 ${baseballTotal} 筆、WNBA 卦 ${wnbaTotal} 筆）` : "") +
+          (castImportErrors.length ? "\n\n⚠ 部分占卜紀錄匯入失敗：\n"+castImportErrors.join("\n") : ""));
       }else{
         alert("這個檔案讀不出來，請確認是本程式匯出的備份檔。");
       }
@@ -4980,8 +5006,12 @@ function updateStorageGauge(){
     console.warn("[儲存分解] " + breakdown.slice(0,10).map(([k,v])=>k+"="+mb(v)).join("　"));
   }catch(_){}
   const lines = breakdown.slice(0,8).map(([k,v])=>"　"+k+"："+mb(v)).join("\n");
-  el.title = "本機儲存空間："+mb(used)+" / "+mb(LS_QUOTA_BYTES)+"（"+Math.round(r*100)+"%）\n"+lines+"\n" +
+  el.title = "localStorage 小型區："+mb(used)+" / "+mb(LS_QUOTA_BYTES)+"（"+Math.round(r*100)+"%）\n"+lines+"\n" +
              (r >= 0.85 ? "⚠ 快滿了：滿了會存不進去＝資料不會被保存。" : "滿了會導致存檔失敗，這裡隨時看得到餘裕。");
+  if(window.__largeStorage) window.__largeStorage.stats().then(s=>{
+    el.title += "\n大型資料（IndexedDB）："+mb(s.bytes||0)+"（不占 5 MB 小型區）";
+    if(doc._storageStats) doc._storageStats.large={backend:s.backend,mb:+((s.bytes||0)/1048576).toFixed(2),entries:s.entries||0};
+  }).catch(()=>{});
 }
 $("#moreBtn").onclick = (e)=>{
   e.stopPropagation();
@@ -5775,9 +5805,14 @@ function renderC1Tracker(leagueF){
 // 異常組合統計（乾淨前瞻，flipState 場）。主軸互斥三態(顛倒/收斂/皆非)，每組再拆對調×背離組合，
 // 各給三市場命中率與 NRFI。正常場(皆非且無異常)=基準、不列入表。背離用「收盤→下注」後備鏈+0.10緩衝。
 function collectCrossTab(leagueFilter){
-  const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&g.flipState&&g.awayScore!=null&&g.homeScore!=null);
-  const flip = g => g.flipState==="flipped";
-  const conv = g => /^converged/.test(g.flipState);
+  const effectiveFlipState = g => {
+    if(g.flipState && g.flipState!=="none") return g.flipState;
+    const relation = g.bet365Taiwan && g.bet365Taiwan.relation;
+    return relation==="顛倒" ? "flipped" : (relation==="收斂" ? "converged_auto" : (g.flipState||"none"));
+  };
+  const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&effectiveFlipState(g)!=="none"&&g.awayScore!=null&&g.homeScore!=null);
+  const flip = g => effectiveFlipState(g)==="flipped";
+  const conv = g => /^converged/.test(effectiveFlipState(g));
   const swap = g => !!g.preGameSwap;
   const divOf = g => {                                                            // 是/否/null(不可判)
     let a,b;
@@ -7236,7 +7271,7 @@ $("#settleRemove") && ($("#settleRemove").onclick = ()=>{
 });
 
 // Build a game record from the settle modal picks and persist it.
-function applySettlement(it, picks, delta){
+function applySettlement(it, picks, delta, settlementDate){
   if(delta<0){
     if(picks && picks._sid) gameRemoveBySid(picks._sid);
     return;
@@ -7273,7 +7308,7 @@ function applySettlement(it, picks, delta){
   try{ lowCoverWarnTot = isLitSideLow(it, "tot"); }catch(_){}
   const game = {
     sid: picks._sid,
-    date: doc.activeDate,
+    date: settlementDate || doc.activeDate,
     league: leagueOf(it),
     gameTime: it.gameTime || null,
     officialId: picks.officialId || null,
@@ -7327,6 +7362,15 @@ function applySettlement(it, picks, delta){
     mlResult: (picks.ml || null)
   };
   gameUpsert(game);
+}
+
+// 舊版用 date+teams 覆蓋雙重賽。結算卡仍保有完整 settled 快照，開板時把缺少的那場補回。
+function recoverMissingSettledGames(){
+  if(!window.__gameRecordUtils || !Array.isArray(doc.games)) return 0;
+  const missing=window.__gameRecordUtils.missingSettledCards(doc);
+  missing.forEach(row=>applySettlement(row.item, row.picks, +1, row.date));
+  if(missing.length) save();
+  return missing.length;
 }
 
 /* close settle modal on outside click */
@@ -7833,11 +7877,13 @@ $("#importParseBtn") && ($("#importParseBtn").onclick = ()=>{
   const { matches, incomplete, errors } = parseGamesText(txt, year, league);
 
   // de-dup against existing doc.games + within this paste
-  const existing = new Set((doc.games||[]).map(g => `${g.date}|${g.awayTeam}|${g.homeTeam}`));
+  const gameKey = g => window.__gameRecordUtils ? window.__gameRecordUtils.gameIdentityKey(g)
+    : `${g.date}|${g.awayTeam}|${g.homeTeam}|${g.gameTime||""}`;
+  const existing = new Set((doc.games||[]).map(gameKey));
   const seen = new Set();
   const fresh = [], dup = [];
   function classify(m){
-    const k = `${m.date}|${m.awayTeam}|${m.homeTeam}`;
+    const k = gameKey(m);
     if(existing.has(k) || seen.has(k)){ dup.push(m); return false; }
     seen.add(k); return true;
   }
@@ -7887,6 +7933,7 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   await load();
   // localStorage 到 85% 時先釋放兩份可重建副本，保住盤面主檔與手動卦。
   try{ if(window.__storagePressure) window.__storagePressure.cleanup(localStorage, false); }catch(_){}
+  recoverMissingSettledGames();
   // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
   const t = todayStr();
   if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
@@ -7904,6 +7951,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260902lateintl1"></script><script src="./odds-integration.js?v=20260906time1"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260919close1"></script><script src="./github-sync.js?v=20260903sp2"></script><script src="./divination-addon.js?v=20260902sp1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260924evidence1"></script><script src="./odds-integration.js?v=20260906time1"></script><script src="./pregame-integration.js?v=20260824nrfi1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

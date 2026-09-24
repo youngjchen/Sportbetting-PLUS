@@ -69,11 +69,15 @@
     const state = intlState || {};
     const current = verdict || {};
     const betExplorer = current.be || null;
-    const latchedBet365Swap = !betExplorer && current.v === 'was' && !!state.eo
+    const latchedBet365Swap = current.v === 'was' && !!state.eo
       && Number(state.lsw || 0) === 0;
+    const titanBet365Swap = Number(state.sw || 0) > 0 || latchedBet365Swap;
+    const betExplorerSwap = !!(betExplorer && betExplorer.flipEver);
     const classified = classifyBet365TaiwanEvidence({
       relationCode: current.v,
-      bet365Swapped: betExplorer ? !!betExplorer.flipEver : (Number(state.sw || 0) > 0 || latchedBet365Swap),
+      // BetExplorer 的單一事件列可能缺少早先的變盤歷史；Titan 的 sw/eo 是永久鎖存證據。
+      // 兩者是證據聯集，不能因 BetExplorer 有列但 flipEver=false 就把 Titan 歷史抹掉。
+      bet365Swapped: betExplorerSwap || titanBet365Swap,
       taiwanSwapped: Number(state.lsw || 0) > 0,
       bet365Side: current.side || state.is || null,
       taiwanSide: state.ls || null,
@@ -82,10 +86,15 @@
     return Object.assign(classified, {
       bet365Line: current.line == null ? (state.il == null ? null : state.il) : current.line,
       taiwanLine: state.ll == null ? null : state.ll,
-      bet365SwitchCount: betExplorer ? (betExplorer.flipEver ? Math.max(1, (betExplorer.struck || []).length) : 0)
-        : Math.max(Number(state.sw || 0), latchedBet365Swap ? 1 : 0),
+      bet365SwitchCount: Math.max(
+        betExplorerSwap ? Math.max(1, (betExplorer.struck || []).length) : 0,
+        Number(state.sw || 0),
+        latchedBet365Swap ? 1 : 0,
+      ),
       taiwanSwitchCount: Number(state.lsw || 0),
-      evidenceSource: betExplorer ? 'betexplorer+playsport' : 'titan+playsport',
+      evidenceSource: betExplorer
+        ? (titanBet365Swap ? 'betexplorer+titan+playsport' : 'betexplorer+playsport')
+        : 'titan+playsport',
       evidenceAt: state.u || (betExplorer && betExplorer.at) || null,
     });
   }

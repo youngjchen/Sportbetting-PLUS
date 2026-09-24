@@ -60,6 +60,30 @@ test('duplicate same-time BetExplorer rows select the newest observation instead
   assert.equal(game.bet365.flipEver, true);
 });
 
+test('same observation time prefers the event whose closing market activity is on the target date', () => {
+  const duplicateFeed = { games: {
+    stale: {
+      eventId: 'stale', league: 'mlb', date: '2026-09-24', startTime: '06:40',
+      awayTeam: '紅雀', homeTeam: '海盜', observedAt: '2026-09-24T06:50:13+08:00',
+      bet365: { side: 'home', flipEver: false, at: '2026-09-23T06:19:00+08:00', observedAt: '2026-09-24T06:50:13+08:00' },
+      markets: { hd: { close: { at: '2026-09-23T06:32:00+08:00', final: true } } },
+    },
+    current: {
+      eventId: 'current', league: 'mlb', date: '2026-09-24', startTime: '06:40',
+      awayTeam: '紅雀', homeTeam: '海盜', observedAt: '2026-09-24T06:50:13+08:00',
+      bet365: { side: 'home', flipEver: true, at: '2026-09-24T06:36:00+08:00', observedAt: '2026-09-24T06:50:13+08:00' },
+      markets: { hd: { close: { at: '2026-09-24T06:39:00+08:00', final: true } } },
+    },
+  } };
+
+  const game = findOddsPortalGame(duplicateFeed, {
+    type: 'match', away: '紅雀', home: '海盜', gameTime: '06:40', league: 'MLB',
+  }, '2026-09-24');
+
+  assert.equal(game.eventId, 'current');
+  assert.equal(game.bet365.flipEver, true);
+});
+
 test('settlement defaults never touch preGameSwap and copy all three market summaries without changing hdFav', () => {
   const card = { hdFav: 'away', preGameSwap: false };
   const game = feed.games['mlb|2026-08-01|金鶯|費城人|07:05|first'];
