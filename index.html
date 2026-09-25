@@ -2780,9 +2780,11 @@ let __ctMemo=null, __ctMemoAt=0;
 function crossTabCached(){ const n=Date.now(); if(!__ctMemo || n-__ctMemoAt>800){ try{ __ctMemo=collectCrossTab("all"); }catch(_){ __ctMemo=null; } __ctMemoAt=n; } return __ctMemo; }
 function bAnomInfo(it){
   const ist = (typeof intlFor==="function") ? intlFor(it) : null;
-  // 手標優先（結算視窗『顛倒場狀態』設定），沒手標才用國際軸即時判定
+  // 第一套晶片只比較 Stake（卡片 hdFav）× 台彩（intl ls）。
+  // ist.v / ist.is 是 Bet365 × 台彩第二套系統，絕不可回填到這裡。
+  const stakeTaiwanFlip = !!(ist && ist.ls && it.hdFav && it.hdFav!==ist.ls);
   const kind = it.platformFlip ? "flip" : it.flipVanished ? "was"
-             : (ist && ist.v==="flip") ? "flip" : (ist && ist.v==="was") ? "was" : (ist && ist.v) ? "swap" : null;
+             : stakeTaiwanFlip ? "flip" : it.preGameSwap ? "swap" : null;
   if(!kind) return null;
   const ct = crossTabCached(); if(!ct || !ct.total) return null;
   // 本場的組合成分（與統計同口徑）：對調=preGameSwap；背離=收盤(缺→下注)賠率低賠方≠讓分方
@@ -5805,14 +5807,11 @@ function renderC1Tracker(leagueF){
 // 異常組合統計（乾淨前瞻，flipState 場）。主軸互斥三態(顛倒/收斂/皆非)，每組再拆對調×背離組合，
 // 各給三市場命中率與 NRFI。正常場(皆非且無異常)=基準、不列入表。背離用「收盤→下注」後備鏈+0.10緩衝。
 function collectCrossTab(leagueFilter){
-  const effectiveFlipState = g => {
-    if(g.flipState && g.flipState!=="none") return g.flipState;
-    const relation = g.bet365Taiwan && g.bet365Taiwan.relation;
-    return relation==="顛倒" ? "flipped" : (relation==="收斂" ? "converged_auto" : (g.flipState||"none"));
-  };
-  const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&effectiveFlipState(g)!=="none"&&g.awayScore!=null&&g.homeScore!=null);
-  const flip = g => effectiveFlipState(g)==="flipped";
-  const conv = g => /^converged/.test(effectiveFlipState(g));
+  // 第一套統計只讀 Stake × 台彩 flipState。Bet365 × 台彩只屬於第二套七類統計。
+  // 保留 flipState="none"，讓只對調／只背離仍能進入「其他異常」。
+  const gs = ((typeof doc!=="undefined"&&doc.games)?doc.games:[]).filter(g=>(leagueFilter==="all"||g.league===leagueFilter)&&g.flipState&&g.awayScore!=null&&g.homeScore!=null);
+  const flip = g => g.flipState==="flipped";
+  const conv = g => /^converged/.test(g.flipState);
   const swap = g => !!g.preGameSwap;
   const divOf = g => {                                                            // 是/否/null(不可判)
     let a,b;

@@ -18,6 +18,28 @@ function loadCollectCrossTab(doc, lookupStakeNrfi) {
   return sandbox.collectCrossTab;
 }
 
+function loadBAnomInfo(intlState, crossTab) {
+  const start = indexSource.indexOf('function bAnomInfo(it){');
+  const end = indexSource.indexOf('// 獨贏 ⓘ：STAKE 賠率評語', start);
+  assert.ok(start >= 0 && end > start, '找不到 bAnomInfo 原始函式');
+  const sandbox = {
+    intlFor: () => intlState,
+    crossTabCached: () => crossTab,
+  };
+  vm.runInNewContext(`${indexSource.slice(start, end)}\nthis.bAnomInfo = bAnomInfo;`, sandbox);
+  return sandbox.bAnomInfo;
+}
+
+function crossTabFixture() {
+  const bucket = (n = 0) => ({ n, fw: 0, fwN: n, cov: 0, covN: n, ov: 0, ovN: n, nr: 0, nrN: n });
+  const group = () => ({ solo: bucket(1), swap: bucket(1), div: bucket(1), both: bucket(1), all: bucket(1) });
+  return {
+    total: 1,
+    grp: { flip: group(), conv: group() },
+    other: { swapOnly: bucket(1), divOnly: bucket(1), bothOD: bucket(1) },
+  };
+}
+
 test('既有 Stake 異常統計以 sid 合併 NRFI，且保留首局比分供明細核對', () => {
   const game = {
     sid: 'stake_1', league: 'mlb', date: '2026-08-01', flipState: 'flipped',
@@ -52,7 +74,7 @@ test('未來卡片已結算 NRFI 時優先使用卡片結果，不被舊 sid 快
   );
 });
 
-test('沒有人工異常分類時，以 Bet365 × 台彩結算快照補入異常組合統計', () => {
+test('第一套 Stake × 台彩統計不得用 Bet365 × 台彩快照自動補分類', () => {
   const game = {
     sid: 'auto-anomaly', league: 'mlb', date: '2026-09-24', flipState: 'none',
     awayTeam: '藍鳥', homeTeam: '金鶯', awayScore: 2, homeScore: 4,
@@ -61,9 +83,54 @@ test('沒有人工異常分類時，以 Bet365 × 台彩結算快照補入異常
     bet365Taiwan: { relation: '收斂', swapCombo: 'bet365_only' },
   };
   const collect = loadCollectCrossTab({ games: [game] }, () => null);
-  const bucket = collect('all').grp.conv.solo;
-  assert.equal(bucket.n, 1);
-  assert.equal(bucket.games[0].home, '金鶯');
+  const result = collect('all');
+  assert.equal(result.grp.conv.solo.n, 0);
+  assert.equal(result.grp.flip.solo.n, 0);
+  assert.equal(result.other.swapOnly.n, 0);
+  assert.equal(result.other.divOnly.n, 0);
+});
+
+test('第一套統計仍保留 flipState=none 的 Stake 只對調與只背離', () => {
+  const base = {
+    league: 'kbo', date: '2026-09-25', flipState: 'none',
+    awayTeam: '韓華鷹', homeTeam: 'NC恐龍', awayScore: 7, homeScore: 8,
+    hdResult: 'fav_nocover', totResult: 'over',
+  };
+  const games = [{
+    ...base, sid: 'swap-only', hdFav: 'away', preGameSwap: true,
+    closeOddsAway: 1.9, closeOddsHome: 1.9,
+  }, {
+    ...base, sid: 'div-only', hdFav: 'home', preGameSwap: false,
+    closeOddsAway: 1.6, closeOddsHome: 2.2,
+  }];
+
+  const result = loadCollectCrossTab({ games }, () => null)('all');
+  assert.equal(result.other.swapOnly.n, 1);
+  assert.equal(result.other.divOnly.n, 1);
+});
+
+test('晶片無視 Bet365 × 台彩顛倒，Stake 與台彩同邊時不顯示', () => {
+  const info = loadBAnomInfo(
+    { is: 'home', ls: 'away', v: 'flip', sw: 1, lsw: 0 },
+    crossTabFixture(),
+  )({
+    hdFav: 'away', platformFlip: false, flipVanished: false, preGameSwap: false,
+    closeOddsAway: 1.9, closeOddsHome: 1.9,
+  });
+
+  assert.equal(info, null);
+});
+
+test('晶片仍會顯示 Stake 與台彩當下方向相反的顛倒', () => {
+  const info = loadBAnomInfo(
+    { is: 'home', ls: 'away', v: null, sw: 0, lsw: 0 },
+    crossTabFixture(),
+  )({
+    hdFav: 'home', platformFlip: false, flipVanished: false, preGameSwap: false,
+    closeOddsAway: 1.9, closeOddsHome: 1.9,
+  });
+
+  assert.equal(info.lbl, '顛倒');
 });
 
 test('盤面用時間或官方賽事 ID 區分雙重賽，載入時修復遺漏的已結算卡片', () => {
