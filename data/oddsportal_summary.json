@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-26T00:55:12+08:00",
+  "updatedAt": "2026-09-26T01:15:15+08:00",
   "health": {
-    "discovered": 40,
-    "succeeded": 23,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 23,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -156341,7 +156341,7 @@
         "at": "2026-09-26T00:33:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-26T00:55:12+08:00"
+        "observedAt": "2026-09-26T01:15:15+08:00"
       },
       "eventId": "6ahz8Ehe",
       "league": "mlb",
@@ -156351,7 +156351,7 @@
       "awayTeam": "小熊",
       "homeTeam": "紅襪",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/boston-red-sox-chicago-cubs/6ahz8Ehe/",
-      "observedAt": "2026-09-26T00:55:12+08:00",
+      "observedAt": "2026-09-26T01:15:15+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -156361,9 +156361,15 @@
             "away": 1.79
           },
           "active": {
-            "at": "2026-09-25T22:35:17+08:00",
-            "home": 2.02,
-            "away": 1.77
+            "at": "2026-09-26T01:15:15+08:00",
+            "home": 2.03,
+            "away": 1.8
+          },
+          "close": {
+            "at": "2026-09-26T01:03:00+08:00",
+            "home": 2.03,
+            "away": 1.8,
+            "final": true
           }
         },
         "hd": {
@@ -156375,11 +156381,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-25T22:35:17+08:00",
-            "home": 1.55,
-            "away": 2.41,
+            "at": "2026-09-26T01:15:15+08:00",
+            "home": 1.57,
+            "away": 2.42,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-09-26T01:03:00+08:00",
+            "home": 1.57,
+            "away": 2.42,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -156390,10 +156404,17 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-09-25T22:35:17+08:00",
-            "over": 1.63,
-            "under": 2.24,
+            "at": "2026-09-26T01:15:15+08:00",
+            "over": 1.62,
+            "under": 2.31,
             "line": 5.5
+          },
+          "close": {
+            "at": "2026-09-26T01:04:00+08:00",
+            "over": 1.62,
+            "under": 2.31,
+            "line": 5.5,
+            "final": true
           }
         }
       },
@@ -156407,7 +156428,17 @@
           {
             "line": 1.5,
             "active": true,
-            "created": "25,09,2026,15,09"
+            "created": "25,09,2026,18,03"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "25,09,2026,18,04"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "25,09,2026,17,10"
           }
         ]
       }
