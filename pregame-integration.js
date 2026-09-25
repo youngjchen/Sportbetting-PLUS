@@ -161,6 +161,7 @@
             var st = /Postponed|Suspended|Cancelled/i.test(det) ? 'postponed'
                    : ab === 'Final' ? 'finished' : (ab === 'Live' ? 'inprogress' : 'scheduled');
             byPk[g.gamePk] = { officialId: 'mlb' + g.gamePk, _mlb: true,
+              gameNumber: g.gameNumber || null,
               date: twDateOf(g.gameDate), gameTime: twHHMMof(g.gameDate), time: twHHMMof(g.gameDate),
               awayTeam: aCN, homeTeam: hCN,
               awayScore: (a.score != null ? a.score : null), homeScore: (h.score != null ? h.score : null),
@@ -172,9 +173,10 @@
         if (AUTO_SETTLE) setTimeout(autoSettleSweep, 300);   // MLB 一更新就立刻掃一次
       }).catch(function (e) { console.warn('[結算] MLB 比分抓取失敗（玩運彩照常）:', e && e.message); });
     }
-    function findPS(m) {   // 在玩運彩 feed 找對應 MLB 場（補 ERA/盤口）；同日同對戰多場以開球時間就近配對（防跨場錯掛盤口）
+    function findPS(m, usedRows) {   // 在玩運彩 feed 找對應 MLB 場（補 ERA/盤口）；同日同對戰多場以開球時間就近配對（防跨場錯掛盤口）
       var cands = [];
       for (var i = 0; i < PS_DATA.length; i++) { var p = PS_DATA[i];
+        if (usedRows && usedRows.indexOf(p) !== -1) continue;
         if (dateEq(m.date, p.date) && teamMatch(m.awayTeam, p.awayTeam) && teamMatch(m.homeTeam, p.homeTeam)) cands.push(p); }
       if (cands.length <= 1) return cands[0] || null;
       var want = hhmmToMin(m.gameTime);
@@ -184,14 +186,37 @@
         var d = Math.abs(t - want); if (d < bd) { bd = d; best = cands[j]; } }
       return best;
     }
+    // MLB Stats API 遇到雙重賽改時，會暫時把兩場都排在幾分鐘內。
+    // 只有在這種「官方時間擠在一起」且玩運彩配對時間明顯不同時，才保留後者，避免平常的小幅改時誤判。
+    function fusedGameTime(m, ps) {
+      var official = hhmmToMin(m && m.gameTime), source = hhmmToMin(gameHHMM(ps));
+      if (official == null || source == null || Math.abs(official - source) <= 20) return (m && m.gameTime) || gameHHMM(ps);
+      var collapsedSibling = MLB_DATA.some(function (other) {
+        if (!other || other === m || !dateEq(m.date, other.date)) return false;
+        if (!teamMatch(m.awayTeam, other.awayTeam) || !teamMatch(m.homeTeam, other.homeTeam)) return false;
+        var sibling = hhmmToMin(other.gameTime);
+        return sibling != null && Math.abs(official - sibling) <= 20;
+      });
+      return collapsedSibling ? gameHHMM(ps) : ((m && m.gameTime) || gameHHMM(ps));
+    }
     function rebuildDATA() {
-      var used = {};
-      var merged = MLB_DATA.map(function (m) {              // MLB 場：分數/狀態用 MLB，ERA/盤口補玩運彩
-        var ps = findPS(m);
-        if (ps) { used[ps.officialId] = 1;
+      var used = {}, usedRows = [];
+      // gamePk 是數字型物件鍵，Object.keys 會重排成數字順序，不保證雙重賽第一場先出現。
+      // 先用 MLB gameNumber 排序再做一對一配對，否則兩場最終分數會有對調風險。
+      var orderedMLB = MLB_DATA.slice().sort(function (a, b) {
+        var ak = [a && a.date, alias(a && a.awayTeam), alias(a && a.homeTeam)].join('|');
+        var bk = [b && b.date, alias(b && b.awayTeam), alias(b && b.homeTeam)].join('|');
+        if (ak !== bk) return ak < bk ? -1 : 1;
+        var an = parseInt(a && a.gameNumber, 10), bn = parseInt(b && b.gameNumber, 10);
+        if (!isNaN(an) && !isNaN(bn) && an !== bn) return an - bn;
+        return (hhmmToMin(a && a.gameTime) || 0) - (hhmmToMin(b && b.gameTime) || 0);
+      });
+      var merged = orderedMLB.map(function (m) {              // MLB 場：分數/狀態用 MLB，ERA/盤口補玩運彩
+        var ps = findPS(m, usedRows);
+        if (ps) { usedRows.push(ps); used[ps.officialId] = 1;
           var o = {}; for (var key in ps) o[key] = ps[key];
           o.awayScore = m.awayScore; o.homeScore = m.homeScore; o.status = m.status;
-          o.officialId = m.officialId; o.date = m.date; o.gameTime = m.gameTime || ps.gameTime; o._mlb = true;
+          o.officialId = m.officialId; o.date = m.date; o.gameTime = fusedGameTime(m, ps); o._mlb = true;
           return o;
         }
         return m;

@@ -62,6 +62,64 @@ test('auto arrange unions BetExplorer fallback without duplicating the Titan dou
   assert.equal(missing[0]._autoFavTeam, '響尾蛇');
 });
 
+test('MLB 暫定雙重賽時間不得吃掉有賠率來源的 07:05 第二場', () => {
+  const pregamePath = require.resolve('../pregame-integration.js');
+  delete require.cache[pregamePath];
+  const rejectingFetch = global.fetch;
+  global.fetch = () => new Promise(() => {});
+  try { require(pregamePath); }
+  finally { global.fetch = rejectingFetch; }
+
+  const psGames = [{
+    league: 'MLB', officialId: 'MLB_20260926_BAL@NYY_0410',
+    date: '2026-09-26', time: '04:10', awayTeam: '金鶯', homeTeam: '洋基',
+  }, {
+    league: 'MLB', officialId: 'MLB_20260926_BAL@NYY_0705',
+    date: '2026-09-26', time: '07:05', awayTeam: '金鶯', homeTeam: '洋基',
+  }];
+  // Stats API 在物件鍵重排後可能先交付 game 2；不可靠陣列順序判斷雙重賽場次。
+  const mlbGames = [{
+    officialId: 'mlb823489', _mlb: true,
+    gameNumber: 2,
+    date: '2026-09-26', gameTime: '04:10', awayTeam: '金鶯', homeTeam: '洋基',
+    awayScore: null, homeScore: null, status: 'scheduled',
+  }, {
+    officialId: 'mlb823491', _mlb: true,
+    gameNumber: 1,
+    date: '2026-09-26', gameTime: '04:05', awayTeam: '金鶯', homeTeam: '洋基',
+    awayScore: null, homeScore: null, status: 'scheduled',
+  }];
+
+  try {
+    window.__psFusion._setPS(psGames);
+    window.__psFusion._setMLB(mlbGames);
+    const fused = window.__psFusion.getData().filter(game =>
+      game.date === '2026-09-26' && game.awayTeam === '金鶯' && game.homeTeam === '洋基');
+
+    assert.deepEqual(fused.map(game => game.gameTime).sort(), ['04:05', '07:05']);
+    assert.equal(fused.find(game => game.officialId === 'mlb823491').gameTime, '04:05');
+    assert.equal(fused.find(game => game.officialId === 'mlb823489').gameTime, '07:05');
+
+    const candidates = [{
+      id: 173674, league: 'mlb', awayTeam: '金鶯', homeTeam: '洋基',
+      startISO: '2026-09-26T04:05:00+08:00',
+    }, {
+      id: '173674@0705', league: 'mlb', awayTeam: '金鶯', homeTeam: '洋基',
+      startISO: '2026-09-26T07:05:00+08:00',
+    }];
+    const kept = odds.filterAutoArrangeGames(candidates, fused, '2026-09-26');
+    const missing = odds.gamesToAdd([{
+      type: 'match', league: 'mlb', away: '金鶯', home: '洋基', gameTime: '04:10',
+    }], kept);
+
+    assert.deepEqual(missing.map(game => game.id), ['173674@0705']);
+    assert.equal(odds.authTimeFor(missing[0], '2026-09-26'), '07:05');
+  } finally {
+    delete window.__psFusion;
+    delete require.cache[pregamePath];
+  }
+});
+
 test('auto arrange uses the official schedule as whitelist and collapses temporary Bet365 duplicates', () => {
   assert.equal(typeof odds.filterAutoArrangeGames, 'function', '尚未把官方賽程設為自動排盤白名單');
   const candidates = [
