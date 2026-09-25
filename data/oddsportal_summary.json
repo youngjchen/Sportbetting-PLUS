@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-25T16:00:59+08:00",
+  "updatedAt": "2026-09-25T16:15:07+08:00",
   "health": {
     "discovered": 6,
-    "succeeded": 2,
+    "succeeded": 6,
     "failed": 0,
     "added": 0,
-    "updated": 2,
+    "updated": 6,
     "errors": []
   },
   "games": {
@@ -45553,11 +45553,18 @@
     },
     "kbo|2026-08-22|樂天|斗山熊|18:00|8KICHMzo": {
       "bet365": {
-        "side": "home",
+        "side": "away",
         "line": 1.5,
-        "at": "2026-08-21T22:41:00+08:00",
-        "flipEver": false,
-        "struck": []
+        "at": "2026-09-25T15:25:00+08:00",
+        "flipEver": true,
+        "struck": [
+          {
+            "line": -1.5,
+            "side": "home",
+            "at": "2026-08-22T14:37:00+08:00"
+          }
+        ],
+        "observedAt": "2026-09-25T16:15:07+08:00"
       },
       "eventId": "8KICHMzo",
       "league": "kbo",
@@ -45567,7 +45574,7 @@
       "awayTeam": "樂天",
       "homeTeam": "斗山熊",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/doosan-bears-lotte-giants/8KICHMzo/",
-      "observedAt": "2026-08-22T10:00:06+08:00",
+      "observedAt": "2026-09-25T16:15:07+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -45577,9 +45584,9 @@
             "away": 2.31
           },
           "active": {
-            "at": "2026-08-22T10:00:06+08:00",
-            "home": 1.57,
-            "away": 2.32
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 1.9,
+            "away": 1.91
           }
         },
         "hd": {
@@ -45591,11 +45598,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-08-22T10:00:06+08:00",
-            "home": 2.21,
-            "away": 1.57,
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 2.17,
+            "away": 1.64,
             "line": 1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-22T16:04:00+08:00",
+            "home": 2.17,
+            "away": 1.64,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -45606,24 +45621,57 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-08-22T10:00:06+08:00",
-            "over": 1.76,
-            "under": 1.92,
+            "at": "2026-09-25T16:15:07+08:00",
+            "over": 1.59,
+            "under": 2.27,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-08-22T16:04:00+08:00",
+            "over": 1.59,
+            "under": 2.27,
+            "line": 6.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
+        "activeSide": [],
+        "struckSide": [
+          "away",
           "home"
         ],
-        "struckSide": [],
         "lines": [
           {
+            "line": -3.5,
+            "active": false,
+            "created": "22,08,2026,09,04"
+          },
+          {
+            "line": -2.5,
+            "active": false,
+            "created": "22,08,2026,09,04"
+          },
+          {
             "line": -1.5,
-            "active": true,
-            "created": "21,08,2026,19,34"
+            "active": false,
+            "created": "22,08,2026,09,04"
+          },
+          {
+            "line": 1.5,
+            "active": false,
+            "created": "25,09,2026,07,01"
+          },
+          {
+            "line": 2.5,
+            "active": false,
+            "created": "25,09,2026,07,01"
+          },
+          {
+            "line": 3.5,
+            "active": false,
+            "created": "25,09,2026,07,01"
           }
         ]
       }
@@ -154562,7 +154610,7 @@
       "bet365": {
         "side": "away",
         "line": 1.5,
-        "at": "2026-09-25T11:18:00+08:00",
+        "at": "2026-09-25T15:25:00+08:00",
         "flipEver": true,
         "struck": [
           {
@@ -154571,7 +154619,7 @@
             "at": "2026-08-22T14:37:00+08:00"
           }
         ],
-        "observedAt": "2026-09-25T13:30:06+08:00"
+        "observedAt": "2026-09-25T16:15:07+08:00"
       },
       "eventId": "8KICHMzo",
       "league": "kbo",
@@ -154581,7 +154629,7 @@
       "awayTeam": "樂天",
       "homeTeam": "斗山熊",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/doosan-bears-lotte-giants/8KICHMzo/",
-      "observedAt": "2026-09-25T13:30:06+08:00",
+      "observedAt": "2026-09-25T16:15:07+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -154591,9 +154639,15 @@
             "away": 2.4
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "home": 1.87,
-            "away": 1.87
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 1.9,
+            "away": 1.91
+          },
+          "close": {
+            "at": "2026-09-25T14:01:00+08:00",
+            "home": 1.9,
+            "away": 1.91,
+            "final": true
           }
         },
         "hd": {
@@ -154605,11 +154659,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "home": 1.48,
-            "away": 2.41,
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 2.17,
+            "away": 1.64,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-08-22T16:04:00+08:00",
+            "home": 2.17,
+            "away": 1.64,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -154620,19 +154682,25 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "over": 1.94,
-            "under": 1.74,
-            "line": 8.5
+            "at": "2026-09-25T16:15:07+08:00",
+            "over": 1.59,
+            "under": 2.27,
+            "line": 6.5
+          },
+          "close": {
+            "at": "2026-08-22T16:04:00+08:00",
+            "over": 1.59,
+            "under": 2.27,
+            "line": 6.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
-        "ever": true,
-        "activeSide": [
-          "away"
-        ],
+        "ever": false,
+        "activeSide": [],
         "struckSide": [
+          "away",
           "home"
         ],
         "lines": [
@@ -154653,26 +154721,41 @@
           },
           {
             "line": 1.5,
-            "active": true,
-            "created": "25,09,2026,04,19"
+            "active": false,
+            "created": "25,09,2026,07,01"
+          },
+          {
+            "line": 2.5,
+            "active": false,
+            "created": "25,09,2026,07,01"
+          },
+          {
+            "line": 3.5,
+            "active": false,
+            "created": "25,09,2026,07,01"
           }
         ]
       }
     },
     "kbo|2026-09-25|華老鷹|恐龍|16:00|pY9LgHwf": {
       "bet365": {
-        "side": "away",
+        "side": "home",
         "line": 1.5,
-        "at": "2026-09-25T12:32:00+08:00",
+        "at": "2026-09-25T11:15:00+08:00",
         "flipEver": true,
         "struck": [
           {
             "line": -1.5,
             "side": "home",
             "at": "2026-09-25T11:15:00+08:00"
+          },
+          {
+            "line": 1.5,
+            "side": "away",
+            "at": "2026-09-25T12:32:00+08:00"
           }
         ],
-        "observedAt": "2026-09-25T13:30:06+08:00"
+        "observedAt": "2026-09-25T16:15:07+08:00"
       },
       "eventId": "pY9LgHwf",
       "league": "kbo",
@@ -154682,7 +154765,7 @@
       "awayTeam": "華老鷹",
       "homeTeam": "恐龍",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/nc-dinos-hanwha-eagles/pY9LgHwf/",
-      "observedAt": "2026-09-25T13:30:06+08:00",
+      "observedAt": "2026-09-25T16:15:07+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -154692,9 +154775,15 @@
             "away": 1.84
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "home": 1.85,
-            "away": 1.89
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 1.97,
+            "away": 1.85
+          },
+          "close": {
+            "at": "2026-09-25T15:39:00+08:00",
+            "home": 1.97,
+            "away": 1.85,
+            "final": true
           }
         },
         "hd": {
@@ -154706,11 +154795,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "home": 1.49,
-            "away": 2.39,
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 1.56,
+            "away": 2.34,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-09-25T15:46:00+08:00",
+            "home": 1.56,
+            "away": 2.34,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -154721,10 +154818,17 @@
             "line": 8.5
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "over": 1.7,
-            "under": 2.0,
-            "line": 8.5
+            "at": "2026-09-25T16:15:07+08:00",
+            "over": 1.55,
+            "under": 2.36,
+            "line": 7.5
+          },
+          "close": {
+            "at": "2026-09-25T15:50:00+08:00",
+            "over": 1.55,
+            "under": 2.36,
+            "line": 7.5,
+            "final": true
           }
         }
       },
@@ -154738,7 +154842,22 @@
           {
             "line": 1.5,
             "active": true,
-            "created": "25,09,2026,06,20"
+            "created": "25,09,2026,08,46"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "25,09,2026,08,40"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "25,09,2026,08,41"
+          },
+          {
+            "line": 4.5,
+            "active": true,
+            "created": "25,09,2026,08,26"
           }
         ]
       }
@@ -155012,10 +155131,10 @@
       "bet365": {
         "side": "away",
         "line": 1.5,
-        "at": "2026-09-25T11:18:00+08:00",
+        "at": "2026-09-25T15:26:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-25T13:30:06+08:00"
+        "observedAt": "2026-09-25T16:15:07+08:00"
       },
       "eventId": "8x1jGw4s",
       "league": "kbo",
@@ -155025,7 +155144,7 @@
       "awayTeam": "三星獅",
       "homeTeam": "登陸者",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/ssg-landers-samsung-lions/8x1jGw4s/",
-      "observedAt": "2026-09-25T13:30:06+08:00",
+      "observedAt": "2026-09-25T16:15:07+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -155035,9 +155154,15 @@
             "away": 1.58
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "home": 2.32,
-            "away": 1.56
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 2.38,
+            "away": 1.59
+          },
+          "close": {
+            "at": "2026-09-25T14:00:00+08:00",
+            "home": 2.38,
+            "away": 1.59,
+            "final": true
           }
         },
         "hd": {
@@ -155049,11 +155174,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "home": 1.82,
-            "away": 1.85,
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 1.85,
+            "away": 1.88,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-09-25T14:00:00+08:00",
+            "home": 1.85,
+            "away": 1.88,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -155064,24 +155197,41 @@
             "line": 10.5
           },
           "active": {
-            "at": "2026-09-25T13:30:06+08:00",
-            "over": 1.73,
-            "under": 1.96,
-            "line": 10.5
+            "at": "2026-09-25T16:15:07+08:00",
+            "over": 1.56,
+            "under": 2.34,
+            "line": 9.5
+          },
+          "close": {
+            "at": "2026-09-25T14:00:00+08:00",
+            "over": 1.56,
+            "under": 2.34,
+            "line": 9.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
+        "activeSide": [],
+        "struckSide": [
           "away"
         ],
-        "struckSide": [],
         "lines": [
           {
             "line": 1.5,
-            "active": true,
-            "created": "25,09,2026,05,48"
+            "active": false,
+            "created": "25,09,2026,07,00"
+          },
+          {
+            "line": 2.5,
+            "active": false,
+            "created": "25,09,2026,07,00"
+          },
+          {
+            "line": 3.5,
+            "active": false,
+            "created": "25,09,2026,07,00"
           }
         ]
       }
@@ -155167,7 +155317,7 @@
       "awayTeam": "富邦",
       "homeTeam": "台鋼",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/tsg-hawks-fubon-guardians/jy90h2Z7/",
-      "observedAt": "2026-09-25T16:00:59+08:00",
+      "observedAt": "2026-09-25T16:15:07+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -155177,9 +155327,15 @@
             "away": 1.76
           },
           "active": {
-            "at": "2026-09-25T16:00:59+08:00",
-            "home": 2.14,
-            "away": 1.63
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 2.08,
+            "away": 1.67
+          },
+          "close": {
+            "at": "2026-09-25T16:04:00+08:00",
+            "home": 2.08,
+            "away": 1.67,
+            "final": true
           }
         },
         "hd": {
@@ -155191,11 +155347,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-25T16:00:59+08:00",
-            "home": 1.66,
-            "away": 2.1,
+            "at": "2026-09-25T16:15:07+08:00",
+            "home": 1.63,
+            "away": 2.15,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-09-25T16:04:00+08:00",
+            "home": 1.63,
+            "away": 2.15,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -155206,10 +155370,17 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-25T16:00:59+08:00",
+            "at": "2026-09-25T16:15:07+08:00",
             "over": 1.73,
             "under": 1.99,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-09-25T15:36:00+08:00",
+            "over": 1.73,
+            "under": 1.99,
+            "line": 7.5,
+            "final": true
           }
         }
       },
@@ -155223,7 +155394,7 @@
           {
             "line": 1.5,
             "active": true,
-            "created": "25,09,2026,08,52"
+            "created": "25,09,2026,09,04"
           }
         ]
       }
@@ -155238,7 +155409,7 @@
       "awayTeam": "味全",
       "homeTeam": "統一",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/uni-lions-wei-chuan-dragons/lrwJccBm/",
-      "observedAt": "2026-09-25T16:00:59+08:00",
+      "observedAt": "2026-09-25T16:15:07+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -155248,9 +155419,15 @@
             "away": 1.76
           },
           "active": {
-            "at": "2026-09-25T16:00:59+08:00",
+            "at": "2026-09-25T16:15:07+08:00",
             "home": 1.95,
             "away": 1.76
+          },
+          "close": {
+            "at": "2026-09-25T09:54:00+08:00",
+            "home": 1.95,
+            "away": 1.76,
+            "final": true
           }
         },
         "hd": {
@@ -155262,11 +155439,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-25T16:00:59+08:00",
+            "at": "2026-09-25T16:15:07+08:00",
             "home": 1.51,
             "away": 2.39,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-09-25T09:52:00+08:00",
+            "home": 1.51,
+            "away": 2.39,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -155277,10 +155462,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-25T16:00:59+08:00",
+            "at": "2026-09-25T16:15:07+08:00",
             "over": 1.82,
             "under": 1.88,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-09-25T09:54:00+08:00",
+            "over": 1.82,
+            "under": 1.88,
+            "line": 6.5,
+            "final": true
           }
         }
       },
