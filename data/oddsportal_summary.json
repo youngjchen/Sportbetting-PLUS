@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-27T03:00:06+08:00",
+  "updatedAt": "2026-09-27T03:25:06+08:00",
   "health": {
-    "discovered": 12,
-    "succeeded": 8,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
-    "added": 3,
-    "updated": 5,
+    "added": 0,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -159731,10 +159731,10 @@
       "bet365": {
         "side": "home",
         "line": 1.5,
-        "at": "2026-09-26T23:57:00+08:00",
+        "at": "2026-09-27T02:56:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-27T02:30:12+08:00"
+        "observedAt": "2026-09-27T03:25:06+08:00"
       },
       "eventId": "jRjYokhc",
       "league": "mlb",
@@ -159744,7 +159744,7 @@
       "awayTeam": "紅人",
       "homeTeam": "藍鳥",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/toronto-blue-jays-cincinnati-reds/jRjYokhc/",
-      "observedAt": "2026-09-27T02:30:12+08:00",
+      "observedAt": "2026-09-27T03:25:06+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -159754,9 +159754,15 @@
             "away": 2.29
           },
           "active": {
-            "at": "2026-09-27T01:00:18+08:00",
+            "at": "2026-09-27T03:25:06+08:00",
             "home": 1.59,
-            "away": 2.32
+            "away": 2.36
+          },
+          "close": {
+            "at": "2026-09-27T02:57:00+08:00",
+            "home": 1.59,
+            "away": 2.36,
+            "final": true
           }
         },
         "hd": {
@@ -159768,11 +159774,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-27T01:00:18+08:00",
-            "home": 2.19,
-            "away": 1.66,
+            "at": "2026-09-27T03:25:06+08:00",
+            "home": 2.16,
+            "away": 1.7,
             "line": 1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-09-27T03:06:00+08:00",
+            "home": 2.16,
+            "away": 1.7,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -159783,10 +159797,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-27T01:00:18+08:00",
-            "over": 1.71,
-            "under": 2.1,
+            "at": "2026-09-27T03:25:06+08:00",
+            "over": 1.72,
+            "under": 2.13,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-09-27T02:57:00+08:00",
+            "over": 1.72,
+            "under": 2.13,
+            "line": 7.5,
+            "final": true
           }
         }
       },
@@ -159798,9 +159819,19 @@
         "struckSide": [],
         "lines": [
           {
+            "line": -3.5,
+            "active": true,
+            "created": "26,09,2026,20,06"
+          },
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "26,09,2026,20,06"
+          },
+          {
             "line": -1.5,
             "active": true,
-            "created": "26,09,2026,17,42"
+            "created": "26,09,2026,20,06"
           }
         ]
       }
