@@ -2,14 +2,16 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-27T00:30:15+08:00",
+  "updatedAt": "2026-09-27T00:45:12+08:00",
   "health": {
-    "discovered": 40,
-    "succeeded": 17,
-    "failed": 0,
+    "discovered": 2,
+    "succeeded": 2,
+    "failed": 1,
     "added": 0,
-    "updated": 17,
-    "errors": []
+    "updated": 2,
+    "errors": [
+      "eventId xnPT4ltn: 指定收盤未抓到"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -159234,10 +159236,10 @@
       "bet365": {
         "side": "away",
         "line": 1.5,
-        "at": "2026-09-26T05:37:00+08:00",
+        "at": "2026-09-26T23:08:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-26T09:30:07+08:00"
+        "observedAt": "2026-09-27T00:45:12+08:00"
       },
       "eventId": "xnPT4ltn",
       "league": "mlb",
@@ -159247,7 +159249,7 @@
       "awayTeam": "大都會",
       "homeTeam": "國民",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/washington-nationals-new-york-mets/xnPT4ltn/",
-      "observedAt": "2026-09-26T09:30:07+08:00",
+      "observedAt": "2026-09-27T00:45:12+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -159257,9 +159259,9 @@
             "away": 1.71
           },
           "active": {
-            "at": "2026-09-26T07:00:11+08:00",
-            "home": 2.09,
-            "away": 1.72
+            "at": "2026-09-27T00:45:12+08:00",
+            "home": 1.85,
+            "away": 1.85
           }
         },
         "hd": {
@@ -159271,11 +159273,11 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-26T07:00:11+08:00",
-            "home": 1.64,
-            "away": 2.22,
+            "at": "2026-09-27T00:45:12+08:00",
+            "home": 2.65,
+            "away": 1.4,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
           }
         },
         "ou": {
@@ -159286,9 +159288,9 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-26T07:00:11+08:00",
-            "over": 1.69,
-            "under": 2.14,
+            "at": "2026-09-27T00:45:12+08:00",
+            "over": 1.65,
+            "under": 2.26,
             "line": 7.5
           }
         }
@@ -159296,14 +159298,30 @@
       "stakeSwap": {
         "ever": false,
         "activeSide": [
-          "away"
+          "away",
+          "home"
         ],
         "struckSide": [],
         "lines": [
           {
+            "line": -1.5,
+            "active": true,
+            "created": "26,09,2026,17,37"
+          },
+          {
             "line": 1.5,
             "active": true,
-            "created": "25,09,2026,22,41"
+            "created": "26,09,2026,17,37"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "26,09,2026,17,14"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "26,09,2026,16,59"
           }
         ]
       }
@@ -159796,7 +159814,7 @@
         "at": "2026-09-26T23:08:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-27T00:30:15+08:00"
+        "observedAt": "2026-09-27T00:45:12+08:00"
       },
       "eventId": "xnPT4ltn",
       "league": "mlb",
@@ -159806,7 +159824,7 @@
       "awayTeam": "大都會",
       "homeTeam": "國民",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/washington-nationals-new-york-mets/xnPT4ltn/",
-      "observedAt": "2026-09-27T00:30:15+08:00",
+      "observedAt": "2026-09-27T00:45:12+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -159816,9 +159834,15 @@
             "away": 1.71
           },
           "active": {
-            "at": "2026-09-26T22:05:08+08:00",
-            "home": 1.96,
-            "away": 1.82
+            "at": "2026-09-27T00:45:12+08:00",
+            "home": 1.85,
+            "away": 1.85
+          },
+          "close": {
+            "at": "2026-09-27T00:37:00+08:00",
+            "home": 1.85,
+            "away": 1.85,
+            "final": true
           }
         },
         "hd": {
@@ -159830,11 +159854,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-09-26T22:05:08+08:00",
-            "home": 1.57,
-            "away": 2.35,
+            "at": "2026-09-27T00:45:12+08:00",
+            "home": 2.65,
+            "away": 1.4,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-09-27T00:37:00+08:00",
+            "home": 2.65,
+            "away": 1.4,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -159845,24 +159877,47 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-09-26T22:05:08+08:00",
-            "over": 1.67,
-            "under": 2.18,
+            "at": "2026-09-27T00:45:12+08:00",
+            "over": 1.65,
+            "under": 2.26,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-09-27T00:14:00+08:00",
+            "over": 1.65,
+            "under": 2.26,
+            "line": 7.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
         "ever": false,
         "activeSide": [
-          "away"
+          "away",
+          "home"
         ],
         "struckSide": [],
         "lines": [
           {
+            "line": -1.5,
+            "active": true,
+            "created": "26,09,2026,17,37"
+          },
+          {
             "line": 1.5,
             "active": true,
-            "created": "26,09,2026,14,51"
+            "created": "26,09,2026,17,37"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "26,09,2026,17,14"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "26,09,2026,16,59"
           }
         ]
       }
