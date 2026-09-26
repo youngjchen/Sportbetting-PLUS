@@ -235,6 +235,48 @@
       });
     });
   }
+  // 雙重賽的賠率來源偶爾只先出一場；官方賽程已有兩場時，先補一張空白盤口卡。
+  function addScheduleDoubleheaderFallback(candidates, schedule, dateKey) {
+    var out = dedupeFeedGames(candidates || []);
+    var official = authoritativeScheduleRows(schedule, dateKey).map(normalizeAutoGame);
+    var groups = {};
+    official.forEach(function (g) {
+      var lg = gameLeague(g);
+      if (!lg || !g.awayTeam || !g.homeTeam) return;
+      var key = [lg, g.awayTeam, g.homeTeam].join('|');
+      (groups[key] = groups[key] || []).push(g);
+    });
+    Object.keys(groups).forEach(function (key) {
+      var rows = groups[key];
+      if (rows.length < 2) return;
+      var sample = rows[0], lg = gameLeague(sample);
+      var hasAnyOddsCandidate = out.some(function (g) {
+        return gameLeague(g) === lg && tmMatch(g.awayTeam, sample.awayTeam) && tmMatch(g.homeTeam, sample.homeTeam);
+      });
+      if (!hasAnyOddsCandidate) return;
+      rows.forEach(function (s) {
+        var hhmm = gStartHHMM(s);
+        if (hhmmToMin(hhmm) == null) return;
+        var alreadyPresent = out.some(function (g) {
+          if (gameLeague(g) !== lg || !tmMatch(g.awayTeam, s.awayTeam) || !tmMatch(g.homeTeam, s.homeTeam)) return false;
+          var diff = minDiff(gStartHHMM(g), hhmm);
+          return diff != null && diff <= SCHEDULE_TOL_MIN;
+        });
+        if (alreadyPresent) return;
+        var officialId = s.officialId || [lg, dateKey, s.awayTeam, s.homeTeam, hhmm].join('|');
+        out.push({
+          id: 'schedule:' + officialId,
+          officialId: officialId,
+          league: lg,
+          awayTeam: s.awayTeam,
+          homeTeam: s.homeTeam,
+          startISO: String(s.date || dateKey).slice(0, 10) + 'T' + hhmm + ':00+08:00',
+          _scheduleOnly: true
+        });
+      });
+    });
+    return dedupeFeedGames(out);
+  }
   // 歸檔場(id 帶 @)是否可信：官方/玩運彩同對戰有 ±TOL 內的場次才算真場次
   //（2026-07-18 Titan 錯標 04:10 歸檔＝官方沒有的時段 → 排盤/認領都不該把它當一場）；
   // 官方完全沒該對戰資料時放行（寧可信 Titan，別因 ps 斷線丟掉真歸檔場）。
@@ -856,7 +898,9 @@
     function gamesForDate(dateKey) {
       var titan = (byDate[dateKey] || []).filter(function (g) { return archiveCorroborated(g, dateKey); });
       var merged = mergeAutoArrangeGames(titan, portalByDate[dateKey] || []);
-      return filterAutoArrangeGames(merged, scheduleGamesForDate(dateKey), dateKey);
+      var schedule = scheduleGamesForDate(dateKey);
+      var filtered = filterAutoArrangeGames(merged, schedule, dateKey);
+      return addScheduleDoubleheaderFallback(filtered, schedule, dateKey);
     }
     var target = doc.activeDate;
     if (!gamesForDate(target).length) {
@@ -1003,6 +1047,6 @@
   window.__oddsIntegration = { closeHdFor: function (id) { return feedCloseHd[id] || null; } };
 
   if (typeof module !== "undefined" && module.exports) {
-    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, oddsPortalAutoGames: oddsPortalAutoGames, mergeAutoArrangeGames: mergeAutoArrangeGames, filterAutoArrangeGames: filterAutoArrangeGames, autoArrangeFromFeed: autoArrangeFromFeed, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
+    module.exports = { mlSentiment: mlSentiment, hdSentiment: hdSentiment, ouSentiment: ouSentiment, feedFavTeam: feedFavTeam, devig: devig, tierOf: tierOf, T1: T1, T2: T2, T3: T3, pickByTime: pickByTime, gStartHHMM: gStartHHMM, hhmmToMin: hhmmToMin, gamesToAdd: gamesToAdd, oddsPortalAutoGames: oddsPortalAutoGames, mergeAutoArrangeGames: mergeAutoArrangeGames, filterAutoArrangeGames: filterAutoArrangeGames, addScheduleDoubleheaderFallback: addScheduleDoubleheaderFallback, autoArrangeFromFeed: autoArrangeFromFeed, TOL_MIN: TOL_MIN, minDiff: minDiff, authTimeFor: authTimeFor, pregameTimesFor: pregameTimesFor, feedGameFor: feedGameFor, healDupCards: healDupCards, dedupeFeedGames: dedupeFeedGames, archiveCorroborated: archiveCorroborated, cardHasData: cardHasData, deriveCloseHd: deriveCloseHd, _setFeed: function (f) { feed = f; } };
   }
 })();

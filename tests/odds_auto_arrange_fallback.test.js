@@ -120,6 +120,34 @@ test('MLB 暫定雙重賽時間不得吃掉有賠率來源的 07:05 第二場', 
   }
 });
 
+test('官方已確認雙重賽時，賠率只有第一場也必須補出 07:05 第二場卡片', () => {
+  assert.equal(typeof odds.addScheduleDoubleheaderFallback, 'function', '尚未加入官方雙重賽保底候選');
+
+  const oddsCandidates = [{
+    id: 173674, league: 'mlb', awayTeam: '金鶯', homeTeam: '洋基',
+    startISO: '2026-09-26T04:05:00+08:00',
+  }];
+  const officialSchedule = [{
+    officialId: 'mlb823491', _mlb: true, gameNumber: 1, league: 'MLB',
+    date: '2026-09-26', gameTime: '04:05', time: '04:05', awayTeam: '金鶯', homeTeam: '洋基',
+  }, {
+    officialId: 'mlb823489', _mlb: true, gameNumber: 2, league: 'MLB',
+    date: '2026-09-26', gameTime: '07:05', time: '07:05', awayTeam: '金鶯', homeTeam: '洋基',
+  }];
+
+  const candidates = odds.addScheduleDoubleheaderFallback(
+    oddsCandidates, officialSchedule, '2026-09-26');
+  assert.deepEqual(candidates.map(odds.gStartHHMM), ['04:05', '07:05']);
+  assert.equal(candidates[1].id, 'schedule:mlb823489');
+  assert.equal(candidates[1]._scheduleOnly, true);
+  assert.equal(candidates[1]._autoFavTeam, undefined);
+
+  const missing = odds.gamesToAdd([{
+    type: 'match', league: 'mlb', away: '金鶯', home: '洋基', gameTime: '04:10',
+  }], candidates);
+  assert.deepEqual(missing.map(odds.gStartHHMM), ['07:05']);
+});
+
 test('auto arrange uses the official schedule as whitelist and collapses temporary Bet365 duplicates', () => {
   assert.equal(typeof odds.filterAutoArrangeGames, 'function', '尚未把官方賽程設為自動排盤白名單');
   const candidates = [
