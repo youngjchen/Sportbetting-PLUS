@@ -199,6 +199,84 @@ test('intl_state matches doubleheader lottery times within five minutes without 
   }
 });
 
+test('intl_state shares one lottery result across near-identical aliases of the same doubleheader game', () => {
+  const original = process.cwd();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'intl-doubleheader-alias-'));
+  fs.mkdirSync(path.join(dir, 'data'));
+  try {
+    process.chdir(dir);
+    fs.writeFileSync(path.join('data', 'pregame_data.json'), JSON.stringify([
+      {
+        league: 'MLB',
+        date: '2026-09-26',
+        time: '04:10',
+        awayTeam: '金鶯',
+        homeTeam: '洋基',
+        lotteryHandicap: { favSide: 'home', line: 1.5, src: '運彩' },
+      },
+      {
+        league: 'MLB',
+        date: '2026-09-26',
+        time: '07:05',
+        awayTeam: '金鶯',
+        homeTeam: '洋基',
+        lotteryHandicap: { favSide: 'home', line: 1.5, src: '運彩' },
+      },
+    ]));
+    fs.writeFileSync(path.join('data', 'lottery_series.json'), JSON.stringify({
+      games: {
+        'MLB_20260926_BAL@NYY_0410': {
+          league: 'MLB',
+          date: '2026-09-26',
+          time: '04:10',
+          awayTeam: '金鶯',
+          homeTeam: '洋基',
+          pts: [{ side: 'home', line: 1.5, t: '2026-09-25T08:00:00Z' }],
+        },
+        'MLB_20260926_BAL@NYY_0705': {
+          league: 'MLB',
+          date: '2026-09-26',
+          time: '07:05',
+          awayTeam: '金鶯',
+          homeTeam: '洋基',
+          pts: [{ side: 'home', line: 1.5, t: '2026-09-25T08:00:00Z' }],
+        },
+      },
+    }));
+    fs.writeFileSync(path.join('data', 'intl_state.json'), '{"updated":null,"games":{}}');
+
+    const first = { league: 'mlb', awayTeam: '金鶯', homeTeam: '洋基', ml: {} };
+    buildIntlState({
+      matches: {
+        officialTime: {
+          ...first,
+          startISO: '2026-09-26T04:10:00+08:00',
+          _hdTs: [{ line: -1.5, live: false, hhmm: '02:00', md: '9-26' }],
+        },
+        displayedTime: {
+          ...first,
+          startISO: '2026-09-26T04:05:00+08:00',
+          _hdTs: [{ line: 1.5, live: false, hhmm: '02:00', md: '9-26' }],
+        },
+        secondGame: {
+          ...first,
+          startISO: '2026-09-26T07:05:00+08:00',
+          _hdTs: [{ line: -1.5, live: false, hhmm: '02:00', md: '9-26' }],
+        },
+      },
+    }, '2026-09-26T03:00:00+08:00');
+
+    const state = JSON.parse(fs.readFileSync(path.join('data', 'intl_state.json'), 'utf8'));
+    const base = 'mlb|2026-09-26|金鶯|洋基';
+    assert.equal(state.games[`${base}|04:05`].ls, 'home', 'the displayed first-game alias must inherit Yankees as Taiwan Lottery favorite');
+    assert.equal(state.games[`${base}|04:10`].ls, 'home');
+    assert.equal(state.games[`${base}|07:05`].ls, 'home', 'the second game must keep its own Taiwan Lottery result');
+  } finally {
+    process.chdir(original);
+    fs.rmSync(dir, { recursive: true, force: true });
+  }
+});
+
 test('intl_state removes a Taiwan-only stub only after two valid source snapshots omit the game', () => {
   const original = process.cwd();
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'intl-stale-stub-'));

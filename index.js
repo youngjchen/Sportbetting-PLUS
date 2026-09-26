@@ -843,6 +843,16 @@ function alignTimedSources(map, base, starts, toleranceMin = LOT_TIME_TOL_MIN) {
     usedTargets.add(pair.target);
     usedSources.add(pair.source.key);
   }
+  // Titan 改時／ID 重用時可能把同一場同時留下兩個近時刻（例：04:05 與官方 04:10）。
+  // 台彩只有官方時間一筆；在 Titan 時刻比台彩場次多時，讓尚未配到的近時刻別名
+  // 共用已確認的台彩場次。真正的雙重賽相隔數小時，不會落入 15 分鐘容差。
+  if (targets.length > sources.length) {
+    for (const pair of pairs) {
+      if (usedTargets.has(pair.target) || !usedSources.has(pair.source.key)) continue;
+      map[`${base}|${pair.target}`] = map[pair.source.key];
+      usedTargets.add(pair.target);
+    }
+  }
 }
 
 function buildIntlState(log, stamp) {
