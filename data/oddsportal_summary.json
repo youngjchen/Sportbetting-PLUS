@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-29T06:30:12+08:00",
+  "updatedAt": "2026-09-29T07:00:06+08:00",
   "health": {
-    "discovered": 17,
-    "succeeded": 10,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 10,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -164932,7 +164932,7 @@
         "at": "2026-09-29T04:46:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-29T06:30:12+08:00"
+        "observedAt": "2026-09-29T07:00:06+08:00"
       },
       "eventId": "8K1rnJEt",
       "league": "mlb",
@@ -164942,9 +164942,76 @@
       "awayTeam": "費城人",
       "homeTeam": "勇士",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/atlanta-braves-philadelphia-phillies/8K1rnJEt/",
-      "observedAt": "2026-09-29T06:30:12+08:00",
+      "observedAt": "2026-09-29T07:00:06+08:00",
       "source": "BetExplorer",
-      "markets": {}
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-09-28T14:06:00+08:00",
+            "home": 1.5,
+            "away": 2.55
+          },
+          "active": {
+            "at": "2026-09-29T07:00:06+08:00",
+            "home": 1.48,
+            "away": 2.6
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-09-28T14:06:00+08:00",
+            "home": 2.1,
+            "away": 1.71,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-09-29T07:00:06+08:00",
+            "home": 2.09,
+            "away": 1.72,
+            "line": 1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-09-28T14:06:00+08:00",
+            "over": 1.54,
+            "under": 2.45,
+            "line": 5.5
+          },
+          "active": {
+            "at": "2026-09-29T07:00:06+08:00",
+            "over": 1.55,
+            "under": 2.4,
+            "line": 5.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": false,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [],
+        "lines": [
+          {
+            "line": -3.5,
+            "active": true,
+            "created": "28,09,2026,22,03"
+          },
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "28,09,2026,22,03"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "28,09,2026,22,03"
+          }
+        ]
+      }
     }
   },
   "siteOffsetHours": 7.0
