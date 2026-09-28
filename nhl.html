@@ -515,6 +515,8 @@
 "use strict";
 // ===== 文檔（與棒球板完全隔離的命名空間）=====
 const DOC_KEY = "sportbetting_nhl_doc_v1";
+const DEFAULT_NHL_HD_FAV = "home";
+const DEFAULT_NHL_TOTAL_LINE = 6.5;
 function loadDoc(){ try{ return JSON.parse(localStorage.getItem(DOC_KEY)) || null; }catch(e){ return null; } }
 function saveDoc(d){
   const payload=JSON.stringify(d);
@@ -766,16 +768,16 @@ function autoSettleFromPregame(){
   let changed = false;
   for(const g of pregameCache.games||[]){
     if(g.status!=="finished" || g.awayScore==null || g.homeScore==null) continue;
+    const it = ensureItem(g.date, g.officialId);
     const useHd = g.hdSrc==="運彩" && g.hdFav && g.hdVal!=null;
     const rec = { sid:g.officialId, date:g.date, league:"NHL", awayTeam:g.away, homeTeam:g.home,
       awayScore:g.awayScore, homeScore:g.homeScore,
       hdFav:useHd?g.hdFav:null, hdVal:useHd?g.hdVal:null,
-      totBasis:g.totLine!=null?g.totLine:null, mlOffered:g.mlOffered!==false,
+      totBasis:totalLineFor(it, g), mlOffered:g.mlOffered!==false,
       decidedBy:g.decidedBy||null };
     const old = gameFind(rec.sid, rec.date, "NHL", rec.awayTeam, rec.homeTeam);
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
     // it.settled 同步（手動結算優先;卡片 pills／戰績／導覽全讀這份=棒球資料流）
-    const it = ensureItem(g.date, g.officialId);
     // 異常快照落印（2026-08-04）：分類依據=STAKE vs 台彩;odds 快取 5 天滾動,結算當下不落印=歷史永久失考
     if(!it.anomSnap){
       const _i = intlFor(g), _l = lswFor(g);
@@ -787,7 +789,7 @@ function autoSettleFromPregame(){
       };
     }
     if(!it.settled || !it.settled.manual){
-      const auto = computeAutoSettled(g);
+      const auto = computeAutoSettled({ ...g, _item:it });
       if(auto && JSON.stringify(it.settled||null)!==JSON.stringify(auto)){ it.settled = auto; changed = true; }
     }
     if(old && JSON.stringify(old)===JSON.stringify(rec)) continue;
@@ -959,8 +961,9 @@ function computeAutoSettled(model){
     const favM = model.hdFav==="home" ? (h-a) : (a-h);
     s.hd = favM - model.hdVal > 0 ? "cover" : (favM - model.hdVal === 0 ? "push" : "nocover");
   }
-  if(model.totLine!=null){
-    const t=a+h; s.tot = t>model.totLine ? "over" : (t===model.totLine ? "push" : "under");
+  const totalLine = totalLineFor(model._item, model);
+  if(totalLine!=null){
+    const t=a+h; s.tot = t>totalLine ? "over" : (t===totalLine ? "push" : "under");
   }
   return s;
 }
@@ -1136,7 +1139,7 @@ function openSettleModal(model){
     { label:"大", value:"over" },
     { label:"小", value:"under" },
     { label:"走盤（不列入）", value:"push", tie:true }
-  ], { id:"settleTotVal", lbl:"基準", step:"1", value:(it.totVal!=null&&it.totVal!=="")?it.totVal:(model.totLine!=null?model.totLine:"") });
+  ], { id:"settleTotVal", lbl:"基準", step:"1", value:totalLineFor(it, model) });
 
   $("#settleModal").classList.add("show");
 }
@@ -1189,7 +1192,7 @@ $("#settleConfirm").onclick = ()=>{
   const fav = m.hdFav||null;
   gameUpsert({ sid:m.officialId, date:m.date, league:m.league, awayTeam:m.away, homeTeam:m.home,
     awayScore:a, homeScore:h, hdFav:(s.hd&&s.hd!=="push")?fav:fav, hdVal:!isNaN(hdLine)?Math.abs(hdLine):(m.hdVal!=null?m.hdVal:null),
-    totBasis:(it.totVal!=null&&it.totVal!=="")?parseFloat(it.totVal):(m.totLine!=null?m.totLine:null),
+    totBasis:totalLineFor(it, m),
     mlOffered:m.mlOffered!==false, manual:true });
   bumpGamesVersion(); saveDoc(doc);
   $("#settleModal").classList.remove("show"); render();
@@ -1936,7 +1939,7 @@ function renderCardW(model){
     // 讓分（⇄=手動換讓分方,燈跟隊;棒球同款）
     const hdWrap=wrapDiv();
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方（燈跟隊走）";
-    swap.onclick=()=>{ snapshot(); it.hdSwap=!it.hdSwap; const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
+    swap.onclick=()=>{ snapshot(); it.hdFavOverride=favSide==="away"?"home":"away"; delete it.hdSwap; const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
     // 使用者在結算視窗填的盤口優先；沒填才用賽程管線的台彩盤口
     const hv = (it.hdVal!=null && it.hdVal!=="" && !isNaN(parseFloat(it.hdVal)))
              ? String(Math.abs(parseFloat(it.hdVal)))
@@ -1969,7 +1972,7 @@ function renderCardW(model){
     // 大小（基準=可編輯,預設帶台彩線;棒球同款）
     const totWrap=wrapDiv();
     const basis=document.createElement("span"); basis.className="basis";
-    const tv = (it.totVal!=null && it.totVal!=="") ? it.totVal : (model.totLine!=null?String(model.totLine):"");
+    const tv = String(totalLineFor(it, model));
     basis.innerHTML="基準 ";
     const tinp=document.createElement("input"); tinp.type="number"; tinp.step="1"; tinp.min="0.5"; tinp.inputMode="decimal"; tinp.value=tv;
     tinp.onclick=(e)=>e.stopPropagation();
@@ -2021,13 +2024,25 @@ function renderCardW(model){
   }
   return el;
 }
-function tvOf(it,model){ const v=(it.totVal!=null&&it.totVal!=="")?it.totVal:(model.totLine!=null?model.totLine:""); return v!==""?" "+v:""; }
+function totalLineFor(it, model){
+  const manual = it && it.totVal!=null && it.totVal!=="" ? parseFloat(it.totVal) : null;
+  if(Number.isFinite(manual)) return manual;
+  const feed = model && model.totLine!=null ? parseFloat(model.totLine) : null;
+  return Number.isFinite(feed) ? feed : DEFAULT_NHL_TOTAL_LINE;
+}
+function tvOf(it,model){ return " "+totalLineFor(it,model); }
+
+function hdFavFor(g, it){
+  if(it.hdFavOverride==="away" || it.hdFavOverride==="home") return it.hdFavOverride;
+  let fav = (g.hdFav==="away" || g.hdFav==="home") ? g.hdFav : DEFAULT_NHL_HD_FAV;
+  if(it.hdSwap) fav = fav==="away"?"home":"away"; // 相容上線前已儲存的舊狀態
+  return fav;
+}
 
 // 管線場次 → 卡片 model（含使用者 ⇄ 覆蓋讓分方）
 function modelFromPregame(g){
   const it = ensureItem(g.date, g.officialId);
-  let hdFav = g.hdFav;
-  if(it.hdSwap && hdFav) hdFav = hdFav==="away"?"home":"away";
+  const hdFav = hdFavFor(g, it);
   // id/type/gameTime＝棒球 item 介面（nhl-picks-addon 沿用棒球比對邏輯,需要這三個欄位）
   return { ...g, id: g.officialId, type: 'match', gameTime: g.time, hdFav,
     inning:g.period||g.inning||"", qAway:g.periodsAway||g.qAway||[], qHome:g.periodsHome||g.qHome||[], _item: it,
