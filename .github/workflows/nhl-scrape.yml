@@ -1,0 +1,64 @@
+# NHL 賽程／比分／台彩盤。長迴圈＋PAT 自我接棒；cron 只當斷鏈備援。
+name: nhl-scrape
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17,47 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: nhl-scrape
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      NHL_SEASON_START: '2026-09-30'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: 安裝玩運彩反封鎖傳輸層
+        run: |
+          pip -q install -r requirements-scraping.txt
+          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零，curl 可用時不影響"
+      - name: 5h10m NHL 迴圈
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          END=$(( SECONDS + 18600 ))
+          while [ "$SECONDS" -lt "$END" ]; do
+            T0=$SECONDS
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            if timeout 300 node nhl_scraper.js; then
+              git add data/nhl_pregame.json data/nhl_lottery_series.json data/nhl_games.json 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                git commit -m "nhl scrape $(date -u +%FT%TZ) [skip ci]" || true
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
+              fi
+            else
+              echo "WARN NHL scraper rc=$?，下一輪重試"
+            fi
+            EL=$(( SECONDS - T0 ))
+            [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))
+          done
+      - name: 自我接棒
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
+          gh workflow run nhl-scrape.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"

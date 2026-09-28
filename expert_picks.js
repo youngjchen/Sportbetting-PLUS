@@ -21,6 +21,7 @@ const fs = require('fs');
 const path = require('path');
 const { readJsonRequired } = require('./safe_json.js');
 const { feedCanon } = require('./index.js');   // 隊名正規化沿用主爬蟲（分聯盟別名表）
+const { recommendationPolicy } = require('./nhl_core.js');
 
 const EP_LEAGUE = (process.env.EP_LEAGUE || '').toLowerCase();      // ''=四聯盟(舊行為)；mlb|npb|cpbl|kbo=只抓該聯盟
 const EP_MODE   = (process.env.EP_MODE   || '').toLowerCase();      // ''=decideMode 自決(舊行為)；full|final=外部指定
@@ -38,12 +39,13 @@ const MAX_PAGES = 4;           // 勝率榜最多翻 4 頁（120 名）
 const ALLIANCES = [
   { id: 1, lg: 'mlb' }, { id: 2, lg: 'npb' }, { id: 6, lg: 'cpbl' }, { id: 9, lg: 'kbo' },
   { id: 7, lg: 'wnba' },   // 籃球（2026-08-03 加入;deep 排 04:40、鬧鐘賽程檔=data/wnba_pregame.json）
+  { id: 91, lg: 'nhl' },   // 冰球：獨立工作流；首週停抓，第二週起 >60%，15/30 注分級
 ];
 // 守門：EP_LEAGUE/EP_MODE 打錯字就直接擋（模組載入即擋），否則會靜默漏單（例：EP_LEAGUE='mbl' 篩出空清單卻照跑）
 if (EP_LEAGUE && !ALLIANCES.some(a => a.lg === EP_LEAGUE)) { console.error(`未知 EP_LEAGUE=${EP_LEAGUE}`); process.exit(1); }
 if (EP_MODE && EP_MODE !== 'full' && EP_MODE !== 'final') { console.error(`未知 EP_MODE=${EP_MODE}`); process.exit(1); }
-// 無 EP_LEAGUE=舊行為（緊急備援=四棒球聯盟,零變);wnba 只在明確指定時跑（獨立工作流,D12）
-const ACTIVE_ALLIANCES = EP_LEAGUE ? ALLIANCES.filter(a => a.lg === EP_LEAGUE) : ALLIANCES.filter(a => a.lg !== 'wnba');
+// 無 EP_LEAGUE=舊行為（緊急備援=四棒球聯盟,零變）；wnba/nhl 只在獨立工作流明確指定時跑。
+const ACTIVE_ALLIANCES = EP_LEAGUE ? ALLIANCES.filter(a => a.lg === EP_LEAGUE) : ALLIANCES.filter(a => a.lg !== 'wnba' && a.lg !== 'nhl');
 // 合格市場：billboard gametype → 市場。mode2=國際盤、mode1=運彩盤(北富盤)。gt0(全部)不用。
 const QUAL_GT = {
   2: { 11: '國際盤讓分', 12: '國際盤大小' },
@@ -53,9 +55,39 @@ const QUAL_GT = {
 //   mode2 hd→ml(獨贏)、ou→ou；mode1 hd→hd、ou→ou、ml→ml
 function boardMarket(mode, kind, lg) {
   if (kind === 'ou') return 'ou';
-  // 棒球特規:國際盤讓分(-1(-185)型)歸獨贏;籃球兩盤讓分皆真分差 → 歸讓分（WNBA_PLAN D11,2026-08-03 使用者核准）
-  if (kind === 'hd') return (mode === 2 && lg !== 'wnba') ? 'ml' : 'hd';
+  // 棒球特規:國際盤讓分(-1(-185)型)歸獨贏；籃球/冰球兩盤讓分皆是真分差 → 歸讓分。
+  if (kind === 'hd') return (mode === 2 && lg !== 'wnba' && lg !== 'nhl') ? 'ml' : 'hd';
   return 'ml';
+}
+
+function configuredNhlSeasonStart() {
+  const env = String(process.env.NHL_SEASON_START || '').slice(0, 10);
+  if (/^\d{4}-\d{2}-\d{2}$/.test(env)) return env;
+  try {
+    const feed = JSON.parse(fs.readFileSync(path.join('data', 'nhl_pregame.json'), 'utf8'));
+    if (/^\d{4}-\d{2}-\d{2}$/.test(String(feed.seasonStart || ''))) return String(feed.seasonStart).slice(0, 10);
+  } catch (_) {}
+  return '2026-09-30'; // 2026-27 例行賽開幕夜換算台灣日期；往後球季由 workflow 環境值覆蓋
+}
+
+function nhlRecommendationState(nowValue) {
+  const seasonStart = configuredNhlSeasonStart();
+  const policy = recommendationPolicy({ seasonStart, now: nowValue == null ? new Date().toISOString() : nowValue, winPercentage: 61, totalBets: 30 });
+  return { week: policy.week, fetch: policy.fetch, seasonStart };
+}
+
+function qualificationForLeague(lg, winPercentage, totalBets, nowValue) {
+  const wp = Number(winPercentage), total = Number(totalBets);
+  if (!Number.isFinite(wp) || !Number.isFinite(total)) return null;
+  if (lg === 'nhl') {
+    const policy = recommendationPolicy({ seasonStart: configuredNhlSeasonStart(), now: nowValue == null ? new Date().toISOString() : nowValue, winPercentage: wp, totalBets: total });
+    return policy.eligible ? { wp, total, tier: policy.tier } : null;
+  }
+  return wp >= THRESH_WP && total >= MIN_BETS ? { wp, total, tier: 'formal' } : null;
+}
+
+function keepsScanningLeaderboard(lg, row) {
+  return !!row && (lg === 'nhl' ? Number(row.winpercentage) > 60 : Number(row.winpercentage) >= THRESH_WP);
 }
 // 推薦種類 → 對應 billboard gametype（判斷合格用）
 function gtOf(mode, kind) {
@@ -161,6 +193,15 @@ function loadScheduleTimes() {
       if (!lg || !g.date || !t) continue;
       const ms = Date.parse(`${g.date}T${t}:00+08:00`);
       if (!isNaN(ms)) out.push({ lg: lg, startMs: ms });
+    }
+  } catch (_) {}
+  try {
+    const feed = JSON.parse(fs.readFileSync(path.join('data', 'nhl_pregame.json'), 'utf8'));
+    for (const g of (Array.isArray(feed) ? feed : (Array.isArray(feed.games) ? feed.games : []))) {
+      const t = (String(g.time || '').match(/\d{1,2}:\d{2}/) || [])[0];
+      if (!g.date || !t) continue;
+      const ms = Date.parse(`${g.date}T${t}:00+08:00`);
+      if (!isNaN(ms)) out.push({ lg: 'nhl', startMs: ms });
     }
   } catch (_) {}
   return out;
@@ -404,6 +445,24 @@ function shouldReplaceScope(state) {
 async function run() {
   const stamp = new Date(Date.now() + 8 * 3600e3).toISOString().replace('Z', '+08:00');
   const prev = loadPrev();
+  if (EP_LEAGUE === 'nhl') {
+    const rollout = nhlRecommendationState(new Date().toISOString());
+    if (!rollout.fetch) {
+      const cold = {
+        ...prev,
+        updated: stamp,
+        mode: 'cold-start',
+        during: DURING,
+        thresholds: { wpExclusive: 60, observeMinBets: 0, candidateMinBets: 15, formalMinBets: 30 },
+        rollout,
+        picks: (prev.picks || []).filter(p => p && p.date >= twDate(-1))
+      };
+      fs.mkdirSync(path.dirname(OUT), { recursive: true });
+      fs.writeFileSync(OUT, JSON.stringify(cold, null, 1));
+      console.log(`NHL 球季第 ${rollout.week || 1} 週冷啟動：不請求玩運彩推薦，${rollout.seasonStart} 起滿 7 天後才開始觀察`);
+      return;
+    }
+  }
   const decision = EP_MODE ? { mode: EP_MODE, leagues: ACTIVE_ALLIANCES.map(a => a.lg) } : decideMode(Date.now(), loadScheduleTimes(), (prev && prev.lastFinal) || {}, process.env.GITHUB_EVENT_NAME || '', prev && prev.lastFullAt);
   console.log(`==================== expert_picks ${stamp} mode=${decision.mode}${decision.leagues ? '(' + decision.leagues.join(',') + ')' : ''} ====================`);
   if (decision.mode === 'skip') {
@@ -466,14 +525,15 @@ async function run() {
           const label = (QUAL_GT[mode] || {})[gt];
           if (!label) continue;
           for (const r of rows || []) {
-            if (r.winpercentage >= THRESH_WP && r.total_game >= MIN_BETS) {
-              qual[`${r.userid}|${aid}|${mode}|${gt}`] = { wp: r.winpercentage, w: r.wingame, l: r.losegame, total: r.total_game, label: label };
+            const gate = qualificationForLeague(lg, r.winpercentage, r.total_game);
+            if (gate) {
+              qual[`${r.userid}|${aid}|${mode}|${gt}`] = { wp: r.winpercentage, w: r.wingame, l: r.losegame, total: r.total_game, tier: gate.tier, label: label };
               nick[r.userid] = r.nickname;
               const b = perAlliance[aid].get(r.userid) || 0;
               if (r.winpercentage > b) perAlliance[aid].set(r.userid, r.winpercentage);
             }
           }
-          if ((rows || []).length === 30 && rows[29].winpercentage >= THRESH_WP) more = true;
+          if ((rows || []).length === 30 && keepsScanningLeaderboard(lg, rows[29])) more = true;
         }
         await sleep(jitter());
         if (!more) break;
@@ -490,14 +550,15 @@ async function run() {
       for (const [mode, rows] of Object.entries((j && j.rankers) || {})) {
         for (const r of rows || []) {
           if (pageFirst == null) pageFirst = r.userid;
-          if (r.winpercentage >= THRESH_WP && r.total_game >= MIN_BETS) {
-            mainQual[`${r.userid}|${aid}|${mode}`] = { wp: r.winpercentage, total: r.total_game };
+          const gate = qualificationForLeague(lg, r.winpercentage, r.total_game);
+          if (gate) {
+            mainQual[`${r.userid}|${aid}|${mode}`] = { wp: r.winpercentage, total: r.total_game, tier: gate.tier };
             nick[r.userid] = r.nickname;
             const b = perAlliance[aid].get(r.userid) || 0;
             if (r.winpercentage > b) perAlliance[aid].set(r.userid, r.winpercentage);
           }
         }
-        if ((rows || []).length === 30 && rows[29].winpercentage >= THRESH_WP) more = true;
+        if ((rows || []).length === 30 && keepsScanningLeaderboard(lg, rows[29])) more = true;
       }
       await sleep(jitter());
       if (page === 0) firstUid = pageFirst;
@@ -518,15 +579,16 @@ async function run() {
         catch (e) { discoveryComplete[lg] = false; console.log(`  ⚠️ 戰績頁 ${uid} a${aid}: ${e.message}`); await sleep(jitter()); continue; }
         let best = 0;
         for (const s of rec.stats) {
-          if (s.wp < THRESH_WP || s.total < MIN_BETS) continue;
+          const gate = qualificationForLeague(lg, s.wp, s.total);
+          if (!gate) continue;
           if (s.kind === 'main') {
             const k = `${uid}|${aid}|${s.mode}`;
-            if (!mainQual[k]) mainQual[k] = { wp: s.wp, total: s.total };
+            if (!mainQual[k]) mainQual[k] = { wp: s.wp, total: s.total, tier: gate.tier };
           } else {
             const gt = gtOf(s.mode, s.kind);
             if (gt == null) continue;
             const k = `${uid}|${aid}|${s.mode}|${gt}`;
-            if (!qual[k]) qual[k] = { wp: s.wp, w: s.w, l: s.l, total: s.total, label: '追蹤·' + QUAL_GT[s.mode][gt] };
+            if (!qual[k]) qual[k] = { wp: s.wp, w: s.w, l: s.l, total: s.total, tier: gate.tier, label: '追蹤·' + QUAL_GT[s.mode][gt] };
           }
           if (s.wp > best) best = s.wp;
         }
@@ -586,7 +648,7 @@ async function run() {
             team: p.team ? (feedCanon(p.team, lg) || p.team) : null,
             side: p.side, line: p.line,
             srcMode: p.mode, srcLabel: q ? q.label : '主推',
-            wp: src.wp, total: src.total,
+            wp: src.wp, total: src.total, tier: src.tier || 'formal',
             main: p.main, free: p.free, result: p.result,
             uid: uid, nickname: nick[uid] || uid,
           });
@@ -676,7 +738,11 @@ async function run() {
   if (decision.mode === 'final') for (const lg of decision.leagues) lastFinal[lg] = stamp;
 
   const out = {
-    updated: stamp, mode: decision.mode, during: DURING, thresholds: { wp: THRESH_WP, minBets: MIN_BETS },
+    updated: stamp, mode: decision.mode, during: DURING,
+    thresholds: EP_LEAGUE === 'nhl'
+      ? { wpExclusive: 60, observeMinBets: 0, candidateMinBets: 15, formalMinBets: 30 }
+      : { wp: THRESH_WP, minBets: MIN_BETS },
+    rollout: EP_LEAGUE === 'nhl' ? nhlRecommendationState(new Date().toISOString()) : undefined,
     lastFullAt: decision.mode === 'full' ? stamp : ((prev && prev.lastFullAt) || null),
     counts: { qualified: Object.keys(qual).length, mainQualified: Object.keys(mainQual).length, picks: merged.length, newThisRun: dedup.length },
     coverage: coverage,
@@ -697,4 +763,4 @@ if (require.main === module) {
   // 收尾一定要關 sidecar：它的 stdin 開著會讓 node 永遠不結束（workflow 會掛到 timeout）
   run().then(() => { closeTransport(); }, e => { console.error('未預期錯誤：', e); closeTransport(); process.exit(1); });
 }
-module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, coverageCollapsed, shouldReplaceScope, loadPrev, loadWhitelist, loadArchivePicks, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE };
+module.exports = { parsePick, parseExpertPage, parseRecordStats, boardMarket, gtOf, toHHMM, twDate, QUAL_GT, THRESH_WP, MIN_BETS, decideMode, mergePicks, coverageCollapsed, shouldReplaceScope, loadPrev, loadWhitelist, loadArchivePicks, loadScheduleTimes, rosterFromQual, FULL_GAP_H, fixMorningDate, markPreGamers, rosterFilterFull, PREGAME_LEAD_MIN, PREGAMER_DAYS, TRIAL_DAYS, ACTIVE_ALLIANCES, OUT_PATH: OUT, EP_LEAGUE, qualificationForLeague, nhlRecommendationState };

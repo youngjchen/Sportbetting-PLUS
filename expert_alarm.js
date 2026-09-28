@@ -26,8 +26,10 @@ const BASELINES = {
   // 與 npb 12/15/18、kbo 12:30/15:30/18:30、cpbl 13/16、mlb 9~18/22/23:30/1/2:30 全部相隔 ≥30 分。
   wnba: { hot: [[11,30],[14,30],[17,30],[21,30],[23,0],[0,30],[2,0]], deep: [4,40] },
   // （deep 04:40 錯開 mlb 04:00/kbo 04:00/cpbl 04:20,2026-08-03 使用者核准）
+  // NHL 同為台灣清晨賽程；與 MLB/WNBA 波次錯開，深掃 05:00。
+  nhl:  { hot: [[10,30],[13,30],[16,30],[20,30],[22,30],[0,0],[1,30],[3,0]], deep: [5,0] },
 };
-const PFX = { npb:'NPB', kbo:'KBO', cpbl:'CPBL', mlb:'MLB', wnba:'WNBA' };
+const PFX = { npb:'NPB', kbo:'KBO', cpbl:'CPBL', mlb:'MLB', wnba:'WNBA', nhl:'NHL' };
 // 賽後公開單（殺手單）與 result 回補不在此排波：改由深掃輪加抓玩運彩 yesterday 頁完成
 // （2026-07-26 使用者釐清：單子不會消失，過午夜只是掛到昨天 → 按日期往前撈即可）。
 // 見 expert_picks.js 的 dates 建構。此處刻意不留晚間回收波，避免同資料重複掃兩次。
@@ -35,9 +37,14 @@ const CLUSTER_MIN = 60, T_FULL_MIN = 120, T_FINAL_MIN = 35, LATE_OK_MIN = 35, DE
 const SUBGROUP_MIN = 20, LOOKBACK_MIN = 45;
 
 function twDayStartMs(nowMs) { const d = new Date(nowMs + TZ8); return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) - TZ8; }
+function scheduleFileFor(lg) {
+  if (lg === 'wnba') return 'data/wnba_pregame.json';
+  if (lg === 'nhl') return 'data/nhl_pregame.json';
+  return 'data/pregame_data.json';
+}
 function loadGames(lg, nowMs) {
   let arr = [];
-  const file = lg === 'wnba' ? 'data/wnba_pregame.json' : 'data/pregame_data.json';   // 籃球賽程獨立檔（Q5B 拍板）
+  const file = scheduleFileFor(lg);   // WNBA/NHL 各自獨立，不污染棒球賽程檔
   try { const j = JSON.parse(fs.readFileSync(file, 'utf8')); arr = Array.isArray(j) ? j : (Array.isArray(j.games) ? j.games : Object.values(j)); } catch (_) { return []; }
   const out = [];
   for (const g of arr) {
@@ -72,7 +79,7 @@ function targetsFor(lg, games, nowMs) {
         // 2026-07-24 Day1 稽核修正：亞洲三聯盟 T-35 升級為全量——final 只回訪已有單者，
         // 看不到「上次全量之後才第一次貼單」的新面孔（中職實測漏 27 筆）。亞洲名冊小(6~8分)
         // 全量落地仍在 T-25+ 紅線內；mlb 名冊大維持 final，靠 22~04 每 2h 保底封洞。
-        t.push({ atMs: s - T_FINAL_MIN*60e3, mode: lg === 'mlb' ? 'final' : 'full', deep:0, gameMs:s, label:'簇T-35' });
+        t.push({ atMs: s - T_FINAL_MIN*60e3, mode: (lg === 'mlb' || lg === 'nhl') ? 'final' : 'full', deep:0, gameMs:s, label:'簇T-35' });
       }
     }
   }
@@ -125,4 +132,4 @@ if (require.main === module) {
   const w = computeNextWave(lg, loadGames(lg, nowMs), nowMs, afterMs);
   console.log(JSON.stringify(w));
 }
-module.exports = { computeNextWave, clusterGames, targetsFor, loadGames, BASELINES };
+module.exports = { computeNextWave, clusterGames, targetsFor, loadGames, scheduleFileFor, BASELINES };
