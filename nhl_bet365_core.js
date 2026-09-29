@@ -126,11 +126,42 @@
     };
   }
 
+  function marketOutcome(market, side) {
+    if (!market || !Array.isArray(market.outcomes)) return null;
+    return market.outcomes.find((outcome) => outcome && outcome.side === side) || null;
+  }
+
+  function applyBet365ToPregame(pregame, item, match, defaultFavorite = 'home') {
+    const source = pregame && typeof pregame === 'object' ? pregame : {};
+    const state = item && typeof item === 'object' ? item : {};
+    const hd = match && match.hd;
+    const bet365Favorite = hd && (hd.favSide === 'away' || hd.favSide === 'home') ? hd.favSide : null;
+    let hdFav = bet365Favorite ||
+      (source.hdFav === 'away' || source.hdFav === 'home' ? source.hdFav : defaultFavorite);
+    if (state.hdFavOverride === 'away' || state.hdFavOverride === 'home') {
+      hdFav = state.hdFavOverride;
+    } else if (state.hdSwap) {
+      hdFav = hdFav === 'away' ? 'home' : 'away';
+    }
+
+    const bet365Line = Number(hd && hd.line);
+    const sourceLine = Number(source.hdVal);
+    return {
+      hdFav,
+      hdVal: Number.isFinite(bet365Line) ? Math.abs(bet365Line) :
+        (Number.isFinite(sourceLine) ? Math.abs(sourceLine) : source.hdVal),
+      hdSrc: hd ? 'BET365' : source.hdSrc,
+      bet365: match || null,
+    };
+  }
+
   return {
     TEAM_ZH,
     translateTeam,
     stableGameKey,
     mergeBet365Game,
     findBet365Game,
+    marketOutcome,
+    applyBet365ToPregame,
   };
 });

@@ -511,6 +511,7 @@
   </div>
 
 <script src="./storage-pressure.js?v=20260924idb1"></script>
+<script src="./nhl_bet365_core.js?v=20260930b3651"></script>
 <script>
 "use strict";
 // ===== 文檔（與棒球板完全隔離的命名空間）=====
@@ -746,12 +747,12 @@ async function loadPregame(){
       render(); } }
   }catch(e){}
   try{
-    const r2 = await fetch(`data/stake_api_odds.json?t=${Date.now()}`);
+    const r2 = await fetch(`data/nhl_bet365_odds.json?t=${Date.now()}`);
     if(r2.ok){ const j2 = await r2.json(); if(j2 && j2.games){
       oddsCache = j2;
       const st=$("#stamp");
       if(st){
-        const suffix=j2.mode==="awaiting-key" ? "STAKE 待金鑰" : (j2.mode==="shadow" ? "STAKE shadow" : "");
+        const suffix=j2.provider==="bet365-official" ? `BET365 ${Number(j2.health&&j2.health.gameCount)||Object.keys(j2.games).length} 場` : "";
         if(suffix && !st.textContent.includes(suffix)) st.textContent += ` · ${suffix}`;
       }
       render();
@@ -778,14 +779,15 @@ function autoSettleFromPregame(){
     const old = gameFind(rec.sid, rec.date, "NHL", rec.awayTeam, rec.homeTeam);
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
     // it.settled 同步（手動結算優先;卡片 pills／戰績／導覽全讀這份=棒球資料流）
-    // 異常快照落印（2026-08-04）：分類依據=STAKE vs 台彩;odds 快取 5 天滾動,結算當下不落印=歷史永久失考
+    // 異常快照落印：Bet365 官方賠率與卡片盤口狀態一併保存，供結算後回看。
     if(!it.anomSnap){
       const _i = intlFor(g), _l = lswFor(g);
-      const _mlo = (oddsCache.games && oddsCache.games[g.officialId] && oddsCache.games[g.officialId].ml) || null;
+      const _b365 = bet365OddsFor(g), _mlo = _b365&&_b365.ml;
+      const _ma = _mlo&&window.NhlBet365.marketOutcome(_mlo,"away"), _mh = _mlo&&window.NhlBet365.marketOutcome(_mlo,"home");
       it.anomSnap = {
         flip: !!(_i && g.hdFav && ((_i.fav==="away") !== (g.hdFav==="away"))),
         bswaps: _i ? (_i.flips||0) : 0, lsw: _l||0,
-        mlFav: (_mlo && _mlo.curH && _mlo.curA) ? (_mlo.curA < _mlo.curH ? "away" : "home") : null
+        mlFav: (_ma&&_mh) ? (_ma.odds < _mh.odds ? "away" : "home") : null
       };
     }
     if(!it.settled || !it.settled.manual){
@@ -815,43 +817,16 @@ function ensureItem(date, id){
   return it;
 }
 
-// ===== STAKE 官方 shadow 軸 =====
-// 官方盤口尚未完成「specifier 正負號對應哪一隊」的真人抽查前，只顯示原始線與變化，
-// 不拿來改卡片讓分方，也不判平台顛倒，避免把 shadow 資料誤當結論。
-const STAKE_TEAM_ZH = {
-  "Anaheim Ducks":"巨鴨", "Boston Bruins":"棕熊", "Buffalo Sabres":"軍刀", "Calgary Flames":"火焰",
-  "Carolina Hurricanes":"颶風", "Chicago Blackhawks":"黑鷹", "Colorado Avalanche":"雪崩", "Columbus Blue Jackets":"藍衣",
-  "Dallas Stars":"達拉斯", "Detroit Red Wings":"紅翼", "Edmonton Oilers":"油人", "Florida Panthers":"佛羅里",
-  "Los Angeles Kings":"國王", "Minnesota Wild":"荒野", "Montreal Canadiens":"加拿大", "Nashville Predators":"掠奪者",
-  "New Jersey Devils":"魔鬼", "New York Islanders":"島人", "New York Rangers":"遊騎兵", "Ottawa Senators":"參議員",
-  "Philadelphia Flyers":"飛人", "Pittsburgh Penguins":"企鵝", "San Jose Sharks":"鯊魚", "Seattle Kraken":"海怪",
-  "St Louis Blues":"藍調", "St. Louis Blues":"藍調", "Tampa Bay Lightning":"閃電", "Toronto Maple Leafs":"楓葉",
-  "Utah Mammoth":"猛瑪象", "Vancouver Canucks":"加人", "Vegas Golden Knights":"騎士", "Washington Capitals":"首都", "Winnipeg Jets":"噴射機"
-};
-function stakeTeam(name){ return STAKE_TEAM_ZH[String(name||"").trim()] || String(name||"").trim(); }
-function stakeShadowFor(g){
-  const rows=Object.values((oddsCache&&oddsCache.games)||{});
-  const matches=rows.filter(x=>{ const t=(x.teams||[]).map(stakeTeam); return t.includes(g.away)&&t.includes(g.home); });
-  const targetMs=/^\d{4}-\d{2}-\d{2}$/.test(String(g.date||"")) && /^\d{1,2}:\d{2}$/.test(String(g.time||""))
-    ? Date.parse(`${g.date}T${g.time}:00+08:00`) : NaN;
-  let o=null;
-  if(Number.isFinite(targetMs)){
-    const timed=matches.filter(x=>Number.isFinite(Number(x.startTime))).sort((a,b)=>
-      Math.abs(Number(a.startTime)-targetMs)-Math.abs(Number(b.startTime)-targetMs));
-    if(timed.length && Math.abs(Number(timed[0].startTime)-targetMs)<=12*3600e3) o=timed[0];
-  }
-  if(!o && !Number.isFinite(targetMs) && matches.length===1) o=matches[0];
-  if(!o) return null;
-  const h=Array.isArray(o.history)?o.history:[];
-  const latest=h[0]||o, open=h[h.length-1]||o;
-  const events=Array.isArray(o.events)?o.events:[];
-  const fmtOut=(m)=> ((m&&m.outcomes)||[]).map(x=>`${stakeTeam(x.name)} ${Number(x.odds).toFixed(2)}`).join(" / ");
-  return {
-    game:o, latest, open, events,
-    hdLine:latest.hd&&latest.hd.line, hdOpen:open.hd&&open.hd.line,
-    totLine:latest.tot&&latest.tot.line, totOpen:open.tot&&open.tot.line,
-    hdOdds:fmtOut(latest.hd), mlOdds:fmtOut(latest.ml), totOdds:fmtOut(latest.tot),
-    changes:Math.max(0,h.length-1), updated:oddsCache.updated||null
+// ===== Bet365 官方 NHL 賠率軸 =====
+function bet365OddsFor(g){
+  if(!window.NhlBet365) return null;
+  const match=window.NhlBet365.findBet365Game(oddsCache,g);
+  if(!match) return null;
+  const fmtOut=(m)=>((m&&m.outcomes)||[]).map(x=>`${x.side==="away"?g.away:g.home} ${Number(x.odds).toFixed(2)}`).join(" / ");
+  return { ...match,
+    hdLine:match.hd&&match.hd.line, hdOpen:match.open&&match.open.hd&&match.open.hd.line,
+    hdOdds:fmtOut(match.hd), mlOdds:fmtOut(match.ml),
+    events:Array.isArray(match.game.events)?match.game.events:[], updated:oddsCache.updated||null
   };
 }
 function intlFor(){ return null; }
@@ -996,12 +971,13 @@ function openSettleModal(model){
     </div>`;
   body.appendChild(scoreRow);
 
-  // 顛倒場狀態 + 賠率三組 + 對調 + 讓分線變動 + 成交線（棒球同構;賽前線變動預填 STAKE 序列）
+  // 顛倒場狀態 + 賠率三組 + 對調 + 讓分線變動 + 成交線（賽前線變動預填 Bet365 序列）
   const _hdL = Math.abs(parseFloat(model.hdVal));
   const _gA = model.hdFav === "away";
   const _defHdA = (!isNaN(_hdL)) ? ((_gA ? it.hdGive.bet : it.hdRecv.bet) ? (_gA ? -_hdL : _hdL) : null) : null;
   const _defHdH = (!isNaN(_hdL)) ? ((_gA ? it.hdRecv.bet : it.hdGive.bet) ? (_gA ? _hdL : -_hdL) : null) : null;
   const intl = intlFor(model);
+  const bet365 = model.bet365 || bet365OddsFor(model);
   const flipWrap = document.createElement("div"); flipWrap.className="settle-q";
   const fs0 = cardFlipState(it);
   const _fopt = (v,l)=>`<option value="${v}"${fs0===v?" selected":""}>${l}</option>`;
@@ -1037,9 +1013,9 @@ function openSettleModal(model){
     </label>
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
       <span style="color:var(--ink-dim);">賽前讓分線變動</span>
-      <input id="settleOpenHd" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="開盤" value="${it.openHdLine!=null?it.openHdLine:(intl&&intl.open?intl.open.line:"")}">
+      <input id="settleOpenHd" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="開盤" value="${it.openHdLine!=null?it.openHdLine:(bet365&&bet365.hdOpen!=null?bet365.hdOpen:"")}">
       <span style="color:var(--ink-dim);">→</span>
-      <input id="settleCloseHd" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="收盤" value="${it.closeHdLine!=null?it.closeHdLine:(intl&&intl.latest?intl.latest.line:"")}">
+      <input id="settleCloseHd" class="sline" type="number" inputmode="decimal" step="0.5" placeholder="收盤" value="${it.closeHdLine!=null?it.closeHdLine:(bet365&&bet365.hdLine!=null?bet365.hdLine:"")}">
     </div>
     <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:13px;flex-wrap:wrap;">
       <span style="color:var(--ink-dim);">我的大小成交線</span>
@@ -1067,17 +1043,17 @@ function openSettleModal(model){
     $("#settleFlipState").addEventListener("change", _showMyHd);
     $("#settlePreSwap").addEventListener("change", _showMyHd);
   }
-  // 國際軸自動判（STAKE vs 台彩;唯讀參考）
-  if(intl || (model.hdSrc==="運彩"&&model.hdVal!=null)){
-    const flip = intl && model.hdFav && ((intl.fav==="away") !== (model.hdFav==="away"));
-    const vTxt = flip ? "目前兩邊相反" : (intl&&intl.flips>0 ? "STAKE 曾換邊，未見相反" : "無異常");
+  // Bet365 官方盤口摘要（唯讀參考）。
+  if(bet365 || (model.hdSrc==="BET365"&&model.hdVal!=null)){
+    const flips = bet365&&bet365.events.filter(x=>x&&x.type==="favorite-flip").length;
+    const vTxt = flips ? `讓分方曾換邊 ${flips} 次` : "目前讓分方未換邊";
     const bar=document.createElement("div");
     bar.style.cssText="margin-top:12px;background:rgba(58,160,255,.08);border:1px solid rgba(58,160,255,.4);border-radius:8px;padding:8px 10px;font-size:13px;cursor:pointer;line-height:1.7;";
-    bar.innerHTML = `🌐 自動判（國際軸）：<b>${vTxt}</b><span style="float:right;color:var(--ink-dim)">▸</span>`+
+    bar.innerHTML = `🌐 BET365 官方：<b>${vTxt}</b><span style="float:right;color:var(--ink-dim)">▸</span>`+
       `<div class="iad" style="display:none;margin-top:6px;color:var(--ink-dim);line-height:1.8">`+
-      (intl?`STAKE：${esc(intl.fav==="home"?model.home:model.away)} 讓${intl.il}${intl.flips?`（⇄${intl.flips}）`:""}`:`STAKE：無資料`)+
-      `<br>台彩：${model.hdVal!=null?esc(model.hdFav==="home"?model.home:model.away)+" 讓"+model.hdVal:"無資料"}${lswFor(model)?`　⇄${lswFor(model)}`:""}`+
-      `<br>僅供參考；下方顛倒狀態照你親眼所見選。</div>`;
+      `讓分：${model.hdVal!=null?esc(model.hdFav==="home"?model.home:model.away)+" 讓 "+model.hdVal:"無資料"}`+
+      (bet365&&bet365.hdOdds?`<br>賠率：${esc(bet365.hdOdds)}`:"")+
+      `<br>負號隊伍已自動設為讓分方；你仍可用卡片 ⇄ 覆蓋。</div>`;
     bar.onclick=()=>{ const d=bar.querySelector(".iad"); d.style.display = d.style.display==="none" ? "block" : "none"; };
     body.appendChild(bar);
   }
@@ -1366,7 +1342,7 @@ function renderAnomSection(leagueFilter){
     x+=row("單獨",G.solo)+row("＋對調",G.swap)+row("＋背離",G.div)+row("＋對調＋背離",G.both);
     return x+`</table>`;
   };
-  h+=grpBlock("顛倒（台彩 vs STAKE 收盤相反）", ct.grp.flip);
+  h+=grpBlock("顛倒（手動標記與 BET365 收盤相反）", ct.grp.flip);
   h+=grpBlock("收斂（曾相反,收盤一致）", ct.grp.conv);
   if(ct.other.swapOnly.n||ct.other.bothOD.n){
     h+=`<div class="rv-head" style="font-size:14px;margin-top:14px">其他異常　<span class="rv-sub">非顛倒非收斂,但有對調或背離</span></div>`;
@@ -1686,9 +1662,10 @@ function renderMatchNav(){
         const old=t.querySelector(".nvtip"); if(old){ old.remove(); return; }
         const tip=document.createElement("div"); tip.className="nvtip";
         tip.onclick=(ev)=>ev.stopPropagation();
-        tip.innerHTML = `<b style="color:#3aa0ff">國際軸（STAKE vs 台彩）</b><br>`+
-          (intl?`STAKE：<b>${esc(intl.fav==="home"?m.home:m.away)} 讓${intl.il}</b>${intl.flips?`　⇄${intl.flips}`:""}`:`STAKE：無資料`)+
-          `<br>台彩：${m.hdVal!=null?`<b>${esc(m.hdFav==="home"?m.home:m.away)} 讓${m.hdVal}</b>`:"無資料"}${lswFor(m)?`　⇄${lswFor(m)}`:""}`;
+        const b365=m.bet365||bet365OddsFor(m);
+        tip.innerHTML = `<b style="color:#3aa0ff">BET365 官方盤口</b><br>`+
+          (b365?`讓分：<b>${esc(m.hdFav==="home"?m.home:m.away)} 讓 ${m.hdVal}</b>${b365.changes?`　變動 ${b365.changes} 次`:""}`:`BET365：無資料`)+
+          (b365&&b365.hdOdds?`<br>賠率：${esc(b365.hdOdds)}`:"");
         t.appendChild(tip);
         setTimeout(()=>{ const hnd=(ev)=>{ if(!tip.contains(ev.target)&&ev.target!==bd){ tip.remove(); document.removeEventListener("pointerdown",hnd,true); } };
           document.addEventListener("pointerdown",hnd,true); },0);
@@ -1752,7 +1729,7 @@ function renderCardW(model){
 
   const season = seasonOf(model.date);
   const intl = model.league==="NHL" ? intlFor(model) : null;
-  const stake = model.league==="NHL" ? stakeShadowFor(model) : null;
+  const bet365 = model.league==="NHL" ? (model.bet365||bet365OddsFor(model)) : null;
   const lsw = model.league==="NHL" ? lswFor(model) : 0;
 
   /* ---------- 標頭 ---------- */
@@ -1764,8 +1741,8 @@ function renderCardW(model){
   // 【明牌 ×N】膠囊由 nhl-picks-addon.decorate() 插入（棒球同路徑：含未讀 .ep-new 與面板入口）
   if(settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改（手動覆蓋管線）"; sm.onclick=()=>openSettleModal(model); head.appendChild(sm); }
   if(model.status==="postponed"){ const pd=document.createElement("span"); pd.className="bbadge ppd"; pd.textContent="⏸ 延賽"; pd.title="來源判定延賽,此卡不會結算"; head.appendChild(pd); }
-  const hasLine = model.hdSrc==="運彩" && model.hdVal!=null;
-  const preB = document.createElement("button"); preB.className="bbadge"+(hasLine?" done":""); preB.textContent = hasLine?"賽前 ✓":"賽前 待盤"; preB.title = hasLine?"台彩盤口已到位 / 點開結算視窗":"台彩尚未開盤 / 點開結算視窗"; preB.onclick=()=>openSettleModal(model);
+  const hasLine = model.hdSrc==="BET365" && model.hdVal!=null;
+  const preB = document.createElement("button"); preB.className="bbadge"+(hasLine?" done":""); preB.textContent = hasLine?"BET365 ✓":"BET365 待盤"; preB.title = hasLine?"Bet365 官方盤口已到位 / 點開結算視窗":"Bet365 官方盤口尚未配對 / 點開結算視窗"; preB.onclick=()=>openSettleModal(model);
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; saveDoc(doc); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除（此日期不再顯示這張卡）"; delB.onclick=()=>{ snapshot(); it.hidden=true; saveDoc(doc); render(); };
   head.append(preB, colB, delB);
@@ -1779,7 +1756,7 @@ function renderCardW(model){
   if(it.platformFlip){
     el.classList.add("flip");
     const bn=document.createElement("div"); bn.className="bflipbanner";
-    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：台彩與 STAKE 讓分方相反";
+    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：手動標記與 BET365 讓分方相反";
     el.appendChild(bn);
   } else if(it.flipVanished){
     el.classList.add("flip-was");
@@ -1794,12 +1771,12 @@ function renderCardW(model){
   } else if(intlFlip){
     el.classList.add("flip");
     const bn=document.createElement("div"); bn.className="bflipbanner";
-    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：台彩與 STAKE 讓分方相反";
+    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：參考盤與 BET365 讓分方相反";
     el.appendChild(bn);
   } else if(lsw>0 || (intl && intl.flips>0)){
     el.classList.add("flip-swap");
     const bn=document.createElement("div"); bn.className="bflipbanner swap";
-    bn.innerHTML=`<span class='ic'>⇆</span>賽前讓分方曾對調（台彩換邊 ${lsw} 次${intl&&intl.flips?`・STAKE 換邊 ${intl.flips} 次`:""}）`;
+    bn.innerHTML=`<span class='ic'>⇆</span>賽前讓分方曾對調（參考序列 ${lsw} 次${intl&&intl.flips?`・國際盤 ${intl.flips} 次`:""}）`;
     el.appendChild(bn);
   }
 
@@ -1825,11 +1802,21 @@ function renderCardW(model){
       sc.textContent = side==="away"?model.awayScore:model.homeScore;
       return sc;
     }
-    // 模型/盤口%（棒球同構:盤口=結算視窗填的下注賠率去水;手動未填時退 STAKE 歐指現盤,2026-08-04 接入）
+    // 模型/盤口%：結算視窗手動賠率優先，未填時使用 Bet365 官方獨贏現盤去水。
     // 注意 1x2 欄序=主在前;impliedAway 吃(客,主)
-    const _oML = (oddsCache.games && oddsCache.games[model.officialId] && oddsCache.games[model.officialId].ml) || null;
+    const _curMlA = bet365&&window.NhlBet365.marketOutcome(bet365.ml,"away");
+    const _curMlH = bet365&&window.NhlBet365.marketOutcome(bet365.ml,"home");
+    const _openMl = bet365&&bet365.open&&bet365.open.ml;
+    const _openMlA = _openMl&&window.NhlBet365.marketOutcome(_openMl,"away");
+    const _openMlH = _openMl&&window.NhlBet365.marketOutcome(_openMl,"home");
+    const _oML = (_curMlA&&_curMlH) ? { curA:_curMlA.odds, curH:_curMlH.odds,
+      openA:_openMlA?_openMlA.odds:_curMlA.odds, openH:_openMlH?_openMlH.odds:_curMlH.odds } : null;
     const _mpA = impliedAway(parseFloat(it.flipOddsAway), parseFloat(it.flipOddsHome))
               ?? (_oML ? impliedAway(_oML.curA, _oML.curH) : null);
+    const mlHv=(side)=>{ const o=bet365&&window.NhlBet365.marketOutcome(bet365.ml,side); return o?`BET365 ${Number(o.odds).toFixed(2)}`:""; };
+    const signed=(n)=> Number(n)>0?`+${Number(n)}`:`${Number(n)}`;
+    const hdHv=(side,roleLine)=>{ const o=bet365&&window.NhlBet365.marketOutcome(bet365.hd,side); if(!o) return signed(roleLine);
+      const official=signed(o.line), role=signed(roleLine); return Number(o.line)===Number(roleLine) ? `${role} · BET365 ${Number(o.odds).toFixed(2)}` : `${role} · BET365原盤 ${official} ${Number(o.odds).toFixed(2)}`; };
     function pctsEl(side){
       if(_mpA==null) return null;
       const imp = side==="away" ? Math.round(_mpA*100) : Math.round((1-_mpA)*100);
@@ -1896,11 +1883,12 @@ function renderCardW(model){
     }
     const wrapDiv = ()=>{ const d=document.createElement("div"); d.className="bmkt"; return d; };
 
-    // 賠率趨勢評語：STAKE shadow 只描述原始線移，不推論讓分方。
+    // Bet365 讓分趨勢：官方負號選項就是讓分方，盤口與換邊可直接使用。
     function hdTrend(){
-      if(stake && stake.hdLine!=null){
-        const moved=stake.hdOpen!=null && stake.hdOpen!==stake.hdLine;
-        return { html:`<span class="l">STAKE</span><span class="tm">${moved?`原始線 ${stake.hdOpen}→${stake.hdLine}`:`原始線 ${stake.hdLine}`}</span>`, strong:moved };
+      if(bet365 && bet365.hdLine!=null){
+        const flipped=bet365.events.some(x=>x&&x.type==="favorite-flip");
+        const moved=bet365.hdOpen!=null && bet365.hdOpen!==bet365.hdLine;
+        return { html:`<span class="l">BET365</span><span class="tm">${flipped?`讓分方曾換邊 ⇄`:(moved?`盤口 ${bet365.hdOpen}→${bet365.hdLine}`:`盤口 ${bet365.hdLine}`)}</span>`, strong:flipped||moved };
       }
       if(!intl) return null;
       if(intl.flips>0) return { html:`<span class="l">賠率</span><span class="tm">讓分方曾換邊 ⇄${intl.flips}</span>`, strong:true };
@@ -1909,9 +1897,6 @@ function renderCardW(model){
       return { html:`<span class="l">賠率</span>持平` };
     }
     function ouTrend(){
-      if(stake && stake.totLine!=null && stake.totOpen!=null && stake.totLine!==stake.totOpen){
-        return { html:`<span class="l">STAKE</span><span class="tm">大小 ${stake.totOpen}→${stake.totLine}</span>`, strong:Math.abs(stake.totLine-stake.totOpen)>=1 };
-      }
       if(!intl || !intl.ouMove) return null;
       const m = intl.ouMove;
       if(Math.abs(m)>=3) return { html:`<span class="l">賠率</span><span class="tm">大幅轉向 ${m>0?"大":"小"}分</span>`, strong:true };
@@ -1921,7 +1906,7 @@ function renderCardW(model){
 
     // 獨贏
     const mlWrap=wrapDiv();
-    // 獨贏賠率評語：STAKE 歐指 初盤→現盤 位移（棒球「市場態度」同語彙;≥2.5pp=大幅）
+    // 獨贏賠率評語：Bet365 十進位賠率初盤→現盤位移（≥2.5pp=大幅）。
     function mlTrend(){
       if(!_oML || !_oML.openH || !_oML.curH) return null;
       const mp0 = impliedAway(_oML.openA, _oML.openH), mp1 = impliedAway(_oML.curA, _oML.curH);
@@ -1932,15 +1917,15 @@ function renderCardW(model){
       return { html:`<span class="l">賠率</span><span class="tm">${strong?"大幅轉向":"轉向"}看好 ${esc(team)}</span>`, strong };
     }
     mlWrap.append(mktSecHead("獨贏", mlConflict, [], mlTrend()),
-      mktRow("客","", model.away, "", it.mlAway, bCoverHTML(pctInfo(model.league,season,model.away,"ml","away")), mlConflict),
-      mktRow("主","", model.home, "", it.mlHome, bCoverHTML(pctInfo(model.league,season,model.home,"ml","home")), mlConflict));
+      mktRow("客","", model.away, mlHv("away"), it.mlAway, bCoverHTML(pctInfo(model.league,season,model.away,"ml","away")), mlConflict),
+      mktRow("主","", model.home, mlHv("home"), it.mlHome, bCoverHTML(pctInfo(model.league,season,model.home,"ml","home")), mlConflict));
     ana.appendChild(mlWrap);
 
     // 讓分（⇄=手動換讓分方,燈跟隊;棒球同款）
     const hdWrap=wrapDiv();
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方（燈跟隊走）";
     swap.onclick=()=>{ snapshot(); it.hdFavOverride=favSide==="away"?"home":"away"; delete it.hdSwap; const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
-    // 使用者在結算視窗填的盤口優先；沒填才用賽程管線的台彩盤口
+    // 使用者在結算視窗填的盤口優先；沒填才用 Bet365 官方 Puck Line。
     const hv = (it.hdVal!=null && it.hdVal!=="" && !isNaN(parseFloat(it.hdVal)))
              ? String(Math.abs(parseFloat(it.hdVal)))
              : (model.hdVal!=null ? String(model.hdVal) : "");
@@ -1948,28 +1933,26 @@ function renderCardW(model){
     try{ const ai=bAnomInfo(model, it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
     hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], hdTrend()),
-      mktRow("讓","give", favName, hv?("−"+hv):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
-      mktRow("受讓","recv", undName, hv?("+"+hv):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
+      mktRow("讓","give", favName, hv?hdHv(favSide,-Math.abs(Number(hv))):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
+      mktRow("受讓","recv", undName, hv?hdHv(undSide,Math.abs(Number(hv))):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
     ana.appendChild(hdWrap);
 
-    // 國際軸藍帶（STAKE 官方 shadow＋台彩；唯讀）
-    if(stake || intl || hasLine){
-      const dotc = intlFlip ? "#e08020" : ((lsw>0||(intl&&intl.flips>0)) ? "#2bbfa0" : "#5b6b80");
+    // Bet365 官方藍帶：展開可看獨贏、讓分賠率與變動次數。
+    if(bet365 || hasLine){
+      const bFlips=bet365&&bet365.events.some(x=>x&&x.type==="favorite-flip");
+      const dotc = bFlips ? "#e08020" : (bet365&&bet365.changes>0 ? "#2bbfa0" : "#5b6b80");
       const strip=document.createElement("div"); strip.className="intl-strip";
       strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
-        `<span>🌐 <b style="color:#3aa0ff">${stake?("STAKE shadow "+(stake.hdLine!=null?"原始線 "+stake.hdLine:"待讓分盤")):"STAKE 未啟用"}</b>・`+
-        `<b style="color:#ffd08a">${hasLine?("台彩 "+esc(favName)+"讓"+model.hdVal):"台彩未開盤"}</b></span>`;
+        `<span>🌐 <b style="color:#3aa0ff">${bet365?("BET365 官方 "+(bet365.hdLine!=null?esc(favName)+" 讓 "+bet365.hdLine:"待讓分盤")):"BET365 未配對"}</b></span>`;
       const more=document.createElement("div"); more.className="intl-more";
-      more.innerHTML = (stake?(`STAKE 官方：${stake.hdOpen!=null?`初見 ${stake.hdOpen}`:"初見—"} → 最新 ${stake.hdLine!=null?stake.hdLine:"—"}・變動 ${stake.changes} 次`+
-        (stake.hdOdds?`<br>讓分賠率：${esc(stake.hdOdds)}`:"")+(stake.mlOdds?`<br>獨贏賠率：${esc(stake.mlOdds)}`:"")+
-        `<br>shadow 尚未校準正負號隊別，因此不會自動改卡片讓分方。`):"STAKE 官方盤口尚未啟用（需 STAKE_ODDS_API_KEY）")+
-        (lsw?`<br>台彩換邊 ⇄${lsw}（序列偵測）`:"")+
-        `<br>此帶唯讀（國際軸），不會改卡片任何欄位。`;
+      more.innerHTML = bet365?(`BET365 官方：${bet365.hdOpen!=null?`初見 ${bet365.hdOpen}`:"初見—"} → 最新 ${bet365.hdLine!=null?bet365.hdLine:"—"}・變動 ${bet365.changes} 次`+
+        (bet365.hdOdds?`<br>讓分賠率：${esc(bet365.hdOdds)}`:"")+(bet365.mlOdds?`<br>獨贏賠率：${esc(bet365.mlOdds)}`:"")+
+        `<br>負號隊伍自動設為讓分方；手動 ⇄ 仍優先。`):"BET365 官方盤口尚未配對";
       strip.onclick=(e)=>{ e.stopPropagation(); strip.classList.toggle("open"); };
       ana.appendChild(strip); ana.appendChild(more);
     }
 
-    // 大小（基準=可編輯,預設帶台彩線;棒球同款）
+    // 大小：Bet365 聯盟頁目前沒有可穩定抓取的 totals，維持可編輯且預設 6.5。
     const totWrap=wrapDiv();
     const basis=document.createElement("span"); basis.className="basis";
     const tv = String(totalLineFor(it, model));
@@ -2032,19 +2015,13 @@ function totalLineFor(it, model){
 }
 function tvOf(it,model){ return " "+totalLineFor(it,model); }
 
-function hdFavFor(g, it){
-  if(it.hdFavOverride==="away" || it.hdFavOverride==="home") return it.hdFavOverride;
-  let fav = (g.hdFav==="away" || g.hdFav==="home") ? g.hdFav : DEFAULT_NHL_HD_FAV;
-  if(it.hdSwap) fav = fav==="away"?"home":"away"; // 相容上線前已儲存的舊狀態
-  return fav;
-}
-
 // 管線場次 → 卡片 model（含使用者 ⇄ 覆蓋讓分方）
 function modelFromPregame(g){
   const it = ensureItem(g.date, g.officialId);
-  const hdFav = hdFavFor(g, it);
+  const bet365 = bet365OddsFor(g);
+  const applied = window.NhlBet365.applyBet365ToPregame(g, it, bet365, DEFAULT_NHL_HD_FAV);
   // id/type/gameTime＝棒球 item 介面（nhl-picks-addon 沿用棒球比對邏輯,需要這三個欄位）
-  return { ...g, id: g.officialId, type: 'match', gameTime: g.time, hdFav,
+  return { ...g, ...applied, id: g.officialId, type: 'match', gameTime: g.time,
     inning:g.period||g.inning||"", qAway:g.periodsAway||g.qAway||[], qHome:g.periodsHome||g.qHome||[], _item: it,
     get settled(){ return it.settled; }, get expertApplied(){ return it.expertApplied; } };
 }

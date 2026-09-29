@@ -9,6 +9,8 @@ const {
   stableGameKey,
   mergeBet365Game,
   findBet365Game,
+  applyBet365ToPregame,
+  marketOutcome,
 } = require('../nhl_bet365_core.js');
 
 const ALL_TEAMS = [
@@ -121,4 +123,42 @@ test('does not match a same-team event outside the twelve-hour window', () => {
     away: '佛羅里', home: '颶風', date: '2026-10-02', time: '07:01',
   });
   assert.equal(match, null);
+});
+
+test('applies the negative Bet365 puck line as the automatic card favorite', () => {
+  const game = mergeBet365Game(null, sampleGame(), '2026-09-30T00:00:00.000Z');
+  const match = findBet365Game({ games: { game } }, {
+    away: '佛羅里', home: '颶風', date: '2026-10-01', time: '07:00',
+  });
+  const applied = applyBet365ToPregame({ hdFav: null, hdVal: null, hdSrc: '運彩' }, {}, match);
+
+  assert.equal(applied.hdFav, 'home');
+  assert.equal(applied.hdVal, 1.5);
+  assert.equal(applied.hdSrc, 'BET365');
+  assert.equal(applied.bet365, match);
+});
+
+test('keeps a manual card swap above the Bet365 automatic favorite', () => {
+  const game = mergeBet365Game(null, sampleGame(), '2026-09-30T00:00:00.000Z');
+  const match = findBet365Game({ games: { game } }, {
+    away: '佛羅里', home: '颶風', date: '2026-10-01', time: '07:00',
+  });
+  const applied = applyBet365ToPregame(
+    { hdFav: null, hdVal: null, hdSrc: '運彩' },
+    { hdFavOverride: 'away' },
+    match,
+  );
+
+  assert.equal(applied.hdFav, 'away');
+  assert.equal(applied.hdVal, 1.5);
+});
+
+test('returns the Bet365 decimal price and signed line for one side', () => {
+  const game = sampleGame();
+  assert.deepEqual(marketOutcome(game.ml, 'away'), {
+    name: 'FLA Panthers', side: 'away', odds: 2.05,
+  });
+  assert.deepEqual(marketOutcome(game.hd, 'home'), {
+    name: 'CAR Hurricanes', side: 'home', line: -1.5, odds: 2.85,
+  });
 });
