@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-09-30T04:55:09+08:00",
+  "updatedAt": "2026-09-30T05:10:05+08:00",
   "health": {
-    "discovered": 0,
-    "succeeded": 0,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 0,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -166078,10 +166078,10 @@
       "bet365": {
         "side": "home",
         "line": 1.5,
-        "at": "2026-09-30T01:35:00+08:00",
+        "at": "2026-09-30T04:46:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-09-30T04:40:39+08:00"
+        "observedAt": "2026-09-30T05:10:05+08:00"
       },
       "eventId": "8hNcryE5",
       "league": "mlb",
@@ -166091,7 +166091,7 @@
       "awayTeam": "白襪",
       "homeTeam": "太空人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/houston-astros-chicago-white-sox/8hNcryE5/",
-      "observedAt": "2026-09-30T04:40:39+08:00",
+      "observedAt": "2026-09-30T05:10:05+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -166101,9 +166101,15 @@
             "away": 2.12
           },
           "active": {
-            "at": "2026-09-29T23:30:07+08:00",
-            "home": 1.78,
-            "away": 2.04
+            "at": "2026-09-30T05:10:05+08:00",
+            "home": 1.8,
+            "away": 2.06
+          },
+          "close": {
+            "at": "2026-09-30T04:01:00+08:00",
+            "home": 1.8,
+            "away": 2.06,
+            "final": true
           }
         },
         "hd": {
@@ -166115,11 +166121,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-09-29T23:30:07+08:00",
-            "home": 2.5,
-            "away": 1.53,
-            "line": 1.5,
+            "at": "2026-09-30T05:10:05+08:00",
+            "home": 2.11,
+            "away": 1.73,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-09-30T04:01:00+08:00",
+            "home": 2.11,
+            "away": 1.73,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -166130,10 +166144,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-09-29T23:30:07+08:00",
+            "at": "2026-09-30T05:10:05+08:00",
             "over": 1.43,
             "under": 2.75,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-09-29T17:01:00+08:00",
+            "over": 1.43,
+            "under": 2.75,
+            "line": 6.5,
+            "final": true
           }
         }
       },
@@ -166144,12 +166165,13 @@
           "home"
         ],
         "struckSide": [
-          "away"
+          "away",
+          "home"
         ],
         "lines": [
           {
             "line": -4.5,
-            "active": true,
+            "active": false,
             "created": "29,09,2026,10,11"
           },
           {
@@ -166158,9 +166180,19 @@
             "created": "29,09,2026,15,43"
           },
           {
+            "line": -3.0,
+            "active": true,
+            "created": "29,09,2026,21,01"
+          },
+          {
             "line": -2.5,
             "active": true,
             "created": "29,09,2026,15,43"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "29,09,2026,21,01"
           },
           {
             "line": -1.5,
@@ -166168,14 +166200,29 @@
             "created": "29,09,2026,15,43"
           },
           {
+            "line": -1.0,
+            "active": true,
+            "created": "29,09,2026,21,01"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "29,09,2026,21,01"
+          },
+          {
             "line": 1.5,
             "active": true,
             "created": "29,09,2026,15,43"
           },
           {
+            "line": 2.0,
+            "active": true,
+            "created": "29,09,2026,21,01"
+          },
+          {
             "line": 2.5,
             "active": false,
-            "created": "29,09,2026,10,12"
+            "created": "29,09,2026,20,02"
           },
           {
             "line": 4.5,
