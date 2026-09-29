@@ -2,6 +2,14 @@ name: scrape-odds
 
 on:
   workflow_dispatch:
+  # 爬蟲本身的修復一上 main 就立即啟動，不必等可能延遲的 cron。
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/scrape.yml'
+      - 'index.js'
+      - 'sidecar_client.js'
+      - 'bet365_fallback.js'
   schedule:
     # GitHub 的 schedule 不準、會被大量延遲/丟棄（越高頻越會被降級），
     # 所以這裡【不靠它每 5 分鐘】，只把它當「迴圈結束後重啟」的後援。
@@ -16,7 +24,8 @@ on:
 # 同一時間只允許一個迴圈在跑；期間被觸發的新 run 會排隊(pending)，
 # 等正在跑的迴圈結束後【立刻接手】→ 近乎不間斷的 5 分鐘輪詢。
 concurrency:
-  group: scrape-odds-loop
+  # v2 讓本次修復脫離已卡死的舊 concurrency run；舊 run 結束後不會再擋新管線。
+  group: scrape-odds-loop-v2
   cancel-in-progress: false
 
 permissions:
@@ -55,8 +64,14 @@ jobs:
             git rebase --abort 2>/dev/null || true
             git fetch origin main || true
             git reset --hard origin/main || true
-            node index.js
-            if [ -f data/odds_log.json ]; then
+            # 單輪硬上限：任何外站／瀏覽器收尾卡死都只能損失一輪，不能拖垮整個 5h run。
+            SCRAPE_OK=0
+            if timeout 240 node index.js; then
+              SCRAPE_OK=1
+            else
+              echo "WARN [$(date -u +%FT%TZ)] odds scraper rc=$?（本輪拒絕提交，5 分鐘後重試）"
+            fi
+            if [ "$SCRAPE_OK" -eq 1 ] && [ -f data/odds_log.json ]; then
               git add data/odds_log.json
               [ -f data/intl_state.json ] && git add data/intl_state.json
               [ -d data/intl_archive ] && git add data/intl_archive

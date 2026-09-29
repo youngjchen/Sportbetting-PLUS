@@ -3527,19 +3527,33 @@ function intlArchFor(month){
   return null;
 }
 function intlFor(it,dateKey){
-  if(!__intl || !__intl.games || !it || it.type!=="match") return null;
+  if(!it || it.type!=="match") return null;
   const lg = (typeof leagueOf==="function") ? leagueOf(it) : (it.league||"mlb");
   const activeDate = dateKey || doc.activeDate;
   const base = lg+"|"+activeDate+"|"+it.away+"|"+it.home;
   const tm = String(it.gameTime||"").match(/\d{1,2}:\d{2}/);
   const timed = tm ? base+"|"+tm[0].padStart(5,"0") : null;
-  const live = (timed && __intl.games[timed]) || __intl.games[base] || null;
-  if(live) return live;
+  // 台彩資料本來就已在玩運彩 feed；不能因 Titan／intl_state 管線停更而一起消失。
+  // intl_state 有盤中序列時仍以它為準，只在條目或台彩側缺漏時用賽前快照補上。
+  const withLotteryFallback = (current)=>{
+    if(current && current.ls) return current;
+    try{
+      const fu=window.__psFusion;
+      const game=(fu&&fu.findGame&&fu.getData)?fu.findGame(fu.getData(),it,activeDate):null;
+      const lh=game&&game.lotteryHandicap;
+      if(!lh || lh.src!=="運彩" || !lh.favSide) return current||null;
+      return Object.assign({ is:null,il:null,sw:0,tr:null,iseq:[],ls:null,ll:null,lsLive:false,
+        lsw:0,ltr:null,mf:null,dv:null,eo:null,v:null,u:null },current||{},
+        { ls:lh.favSide,ll:lh.line!=null?lh.line:null,lsLive:false });
+    }catch(_){ return current||null; }
+  };
+  const live = (__intl && __intl.games) ? ((timed && __intl.games[timed]) || __intl.games[base] || null) : null;
+  if(live) return withLotteryFallback(live);
   const month = String(activeDate||"").slice(0,7);
-  if(!/^\d{4}-\d{2}$/.test(month)) return null;
+  if(!/^\d{4}-\d{2}$/.test(month)) return withLotteryFallback(null);
   const arch = intlArchFor(month);
-  if(!arch) return null;
-  return (timed && arch.games[timed]) || arch.games[base] || null;
+  if(!arch) return withLotteryFallback(null);
+  return withLotteryFallback((timed && arch.games[timed]) || arch.games[base] || null);
 }
 // BE 為主的國際軸裁決（2026-08-15 使用者拍板）：讓分「現行方向」以 bet365 上架列
 // （BetExplorer 抓的 game.bet365）為準——Titan 頁面會凍結出假方向（皇家@天使凍在

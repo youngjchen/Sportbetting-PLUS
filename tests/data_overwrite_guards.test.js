@@ -41,6 +41,26 @@ test('sidecar protocol forwards request headers and timeout to Scrapling', () =>
   );
 });
 
+test('sidecar shutdown force-kills a browser process that ignores the graceful quit', async () => {
+  const sidecar = require('../sidecar_client.js');
+  const writes = [];
+  const kills = [];
+  const child = {
+    stdin: {
+      write: (value) => { writes.push(value); },
+      end: () => {},
+    },
+    once: () => {},
+    kill: (signal) => { kills.push(signal); },
+  };
+
+  sidecar.stopSidecarProcess(child, 5);
+  await new Promise(resolve => setTimeout(resolve, 20));
+
+  assert.match(writes.join(''), /"quit":true/);
+  assert.deepEqual(kills, ['SIGKILL']);
+});
+
 test('playsport refuses to replace malformed tracked pregame data', () => {
   const scraper = require('../playsport_scraper.js');
   inTempDir(() => {

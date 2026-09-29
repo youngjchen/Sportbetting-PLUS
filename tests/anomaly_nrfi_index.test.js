@@ -5,6 +5,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const test = require('node:test');
 const vm = require('node:vm');
+const { findGame } = require('../pregame-integration.js');
 
 const root = path.resolve(__dirname, '..');
 const indexSource = fs.readFileSync(path.join(root, 'index.html'), 'utf8');
@@ -28,6 +29,26 @@ function loadBAnomInfo(intlState, crossTab) {
   };
   vm.runInNewContext(`${indexSource.slice(start, end)}\nthis.bAnomInfo = bAnomInfo;`, sandbox);
   return sandbox.bAnomInfo;
+}
+
+function loadIntlFor(intlState, pregameData) {
+  const start = indexSource.indexOf('function intlFor(it,dateKey)');
+  const end = indexSource.indexOf('// BE 為主的國際軸裁決', start);
+  assert.ok(start >= 0 && end > start, '找不到 intlFor 原始函式');
+  const sandbox = {
+    __intl: intlState,
+    doc: { activeDate: '2026-09-30' },
+    leagueOf: () => 'mlb',
+    intlArchFor: () => null,
+    window: {
+      __psFusion: {
+        getData: () => pregameData,
+        findGame,
+      },
+    },
+  };
+  vm.runInNewContext(`${indexSource.slice(start, end)}\nthis.intlFor = intlFor;`, sandbox);
+  return sandbox.intlFor;
 }
 
 function crossTabFixture() {
@@ -148,6 +169,24 @@ test('國際軸晚於結算載入時，會按結算日期重新配對並觸發�
     indexSource,
     /__intlRaw = txt; __intl = JSON\.parse\(txt\);\s*try\{ backfillRecentBet365TaiwanSnapshots\(\); \}catch\(_\)\{\}/,
   );
+});
+
+test('國際軸缺少當日條目時仍直接顯示玩運彩讓分方', () => {
+  const intlFor = loadIntlFor({ games: {} }, [{
+    league: 'MLB', date: '2026-09-30', time: '08:00',
+    awayTeam: '紅襪', homeTeam: '洋基',
+    lotteryHandicap: { favSide: 'home', line: 1.5, src: '運彩' },
+  }]);
+
+  const state = intlFor({
+    type: 'match', league: 'mlb', gameTime: '08:00',
+    away: '紅襪', home: '洋基',
+  });
+
+  assert.equal(state.is, null);
+  assert.equal(state.ls, 'home');
+  assert.equal(state.ll, 1.5);
+  assert.equal(state.lsLive, false);
 });
 
 test('正式歷史快照維持 262 個 Stake sid 與 Bet365 × 台彩七類 273 場', () => {

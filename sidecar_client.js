@@ -123,8 +123,20 @@ async function fetchText(url, headers, timeoutMs) {
   return b;
 }
 
-function shutdown() {
-  if (proc) { try { proc.stdin.write(JSON.stringify({ quit: true }) + '\n'); } catch (_) {} try { proc.stdin.end(); } catch (_) {} }
+function stopSidecarProcess(child, graceMs = 5000) {
+  if (!child) return null;
+  try { child.stdin.write(JSON.stringify({ quit: true }) + '\n'); } catch (_) {}
+  try { child.stdin.end(); } catch (_) {}
+  // Scrapling／瀏覽器收尾偶爾卡住，會讓 node index.js 永不結束，整條五分鐘迴圈因此停擺。
+  // 先給正常清理時間；仍未退出就強制終止，避免一輪請求拖垮整個工作流。
+  const timer = setTimeout(() => { try { child.kill('SIGKILL'); } catch (_) {} }, graceMs);
+  if (timer.unref) timer.unref();
+  if (child.once) child.once('exit', () => clearTimeout(timer));
+  return timer;
 }
 
-module.exports = { fetchText, shutdown, makeSidecarRequest, usingSidecar: () => curlBlocked };
+function shutdown() {
+  stopSidecarProcess(proc);
+}
+
+module.exports = { fetchText, shutdown, stopSidecarProcess, makeSidecarRequest, usingSidecar: () => curlBlocked };
