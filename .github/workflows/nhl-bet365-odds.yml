@@ -3,6 +3,12 @@ name: nhl-bet365-odds
 
 on:
   workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - nhl_bet365_odds.js
+      - nhl_bet365_core.js
+      - .github/workflows/nhl-bet365-odds.yml
   schedule:
     - cron: '11,41 * * * *'
 
