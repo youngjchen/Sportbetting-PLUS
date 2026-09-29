@@ -153,6 +153,16 @@ test('keeps a manual card swap above the Bet365 automatic favorite', () => {
   assert.equal(applied.hdVal, 1.5);
 });
 
+test('keeps a missing handicap line empty when no Bet365 game matches', () => {
+  const applied = applyBet365ToPregame(
+    { hdFav: null, hdVal: null, hdSrc: '運彩' },
+    {},
+    null,
+  );
+  assert.equal(applied.hdVal, null);
+  assert.equal(applied.hdSrc, '運彩');
+});
+
 test('returns the Bet365 decimal price and signed line for one side', () => {
   const game = sampleGame();
   assert.deepEqual(marketOutcome(game.ml, 'away'), {

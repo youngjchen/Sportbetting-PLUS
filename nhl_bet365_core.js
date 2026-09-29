@@ -144,8 +144,10 @@
       hdFav = hdFav === 'away' ? 'home' : 'away';
     }
 
-    const bet365Line = Number(hd && hd.line);
-    const sourceLine = Number(source.hdVal);
+    const hasBet365Line = !!hd && hd.line != null && hd.line !== '';
+    const hasSourceLine = source.hdVal != null && source.hdVal !== '';
+    const bet365Line = hasBet365Line ? Number(hd.line) : NaN;
+    const sourceLine = hasSourceLine ? Number(source.hdVal) : NaN;
     return {
       hdFav,
       hdVal: Number.isFinite(bet365Line) ? Math.abs(bet365Line) :
