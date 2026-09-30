@@ -41,6 +41,25 @@ test('sidecar protocol forwards request headers and timeout to Scrapling', () =>
   );
 });
 
+test('sidecar retries transport failures and status zero in the browser, but not a real 404', () => {
+  const sidecar = require('../sidecar_client.js');
+  assert.equal(typeof sidecar.shouldUseBrowserFallback, 'function');
+  assert.equal(sidecar.shouldUseBrowserFallback(Object.assign(new Error('socket hang up'), { code: 'ECONNRESET' })), true);
+  assert.equal(sidecar.shouldUseBrowserFallback(Object.assign(new Error('curl status zero'), { httpCode: 0 })), true);
+  assert.equal(sidecar.shouldUseBrowserFallback(Object.assign(new Error('forbidden'), { httpCode: 403 })), true);
+  assert.equal(sidecar.shouldUseBrowserFallback(Object.assign(new Error('not found'), { httpCode: 404 })), false);
+});
+
+test('Titan JavaScript returned through the browser can be unwrapped before VM parsing', () => {
+  const scraper = require('../index.js');
+  assert.equal(typeof scraper.unwrapScriptPayload, 'function');
+  assert.equal(
+    scraper.unwrapScriptPayload('<html><body><p>var arrData = [[1,&quot;x&quot;]];</p></body></html>'),
+    'var arrData = [[1,"x"]];'
+  );
+  assert.equal(scraper.unwrapScriptPayload('var arrData = [];'), 'var arrData = [];');
+});
+
 test('sidecar shutdown force-kills a browser process that ignores the graceful quit', async () => {
   const sidecar = require('../sidecar_client.js');
   const writes = [];

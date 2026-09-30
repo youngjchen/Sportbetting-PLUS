@@ -10,11 +10,13 @@
 // ============================================================================
 
 const axios = require('axios');
+const cheerio = require('cheerio');
 const vm = require('vm');
 const fs = require('fs');
 const path = require('path');
 const { readJsonRequired } = require('./safe_json.js');
 const bet365Fallback = require('./bet365_fallback.js');
+const sidecar = require('./sidecar_client.js');
 
 // ---- 可調參數 ---------------------------------------------------------------
 // 只抓「未來這麼多小時內開打」的比賽。24＝提前一天開始記，涵蓋隔天整批賽事；
@@ -48,6 +50,33 @@ const HEADERS = {
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
   'Referer': 'https://sports.titan007.com/'
 };
+
+let preferFallbackTransport = false;
+
+// Titan 偶爾會對 axios 直接斷線（socket hang up），但同一網址用瀏覽器仍可正常取得。
+// 第一個直連失敗後，本輪其餘請求直接沿用 sidecar，避免每個市場都先白等一次 timeout。
+async function fetchTextResilient(url, options = {}) {
+  const headers = options.headers || HEADERS;
+  const timeout = options.timeout || 15000;
+  if (!preferFallbackTransport && !sidecar.usingSidecar()) {
+    try {
+      const response = await axios.get(url, { headers, timeout });
+      return response.data;
+    } catch (error) {
+      preferFallbackTransport = true;
+      console.log(`  ⓘ 直連失敗（${error.message}）→ 改用瀏覽器傳輸保底`);
+    }
+  }
+  return sidecar.fetchText(url, headers, Math.max(timeout, 30000));
+}
+
+// Scrapling 讀 .js 端點時，瀏覽器會把純文字包成 <html><body><p>…</p>。
+// VM 只能執行原始 JavaScript，故在解析前把瀏覽器外殼拆掉並還原 HTML entities。
+function unwrapScriptPayload(payload) {
+  const text = String(payload == null ? '' : payload);
+  if (!/^\s*<html[\s>]/i.test(text)) return text.trim();
+  return cheerio.load(text).text().trim();
+}
 
 const ML_BOOKS = [
   { id: '12bet',  kw: '12'  },
@@ -239,8 +268,8 @@ function parseHistoryTableTs(html) {
 async function fetchMatchOdds(match) {
   const out = { ml: {}, hd: null, ou: null };
   try {
-    const res = await axios.get(`${ODDS_BASE_URL}${match.id}.js`, { headers: HEADERS, timeout: 15000 });
-    const sb = {}; vm.createContext(sb); vm.runInContext(res.data, sb);
+    const body = await fetchTextResilient(`${ODDS_BASE_URL}${match.id}.js`);
+    const sb = {}; vm.createContext(sb); vm.runInContext(unwrapScriptPayload(body), sb);
     if (Array.isArray(sb.game)) {
       for (const item of sb.game) {
         const c = item.split('|');
@@ -257,14 +286,14 @@ async function fetchMatchOdds(match) {
     if (!(e.response && e.response.status === 404)) console.log(`  ❌ 獨贏: ${e.message}`);
   }
   try {
-    const res = await axios.get(`${HANDICAP_URL}?id=${match.id}&companyid=8&t=2`, { headers: HEADERS, timeout: 15000 });
-    const rows = parseHistoryTable(res.data);
+    const body = await fetchTextResilient(`${HANDICAP_URL}?id=${match.id}&companyid=8&t=2`);
+    const rows = parseHistoryTable(body);
     if (rows) out.hd = rows.map(x => ({ home: toNum(x.a), line: x.line, away: toNum(x.b) }));
-    out.hdTs = parseHistoryTableTs(res.data);      // intl_state 用（帶時間戳＋走地旗標）
+    out.hdTs = parseHistoryTableTs(body);      // intl_state 用（帶時間戳＋走地旗標）
   } catch (e) { console.log(`  ❌ 讓分: ${e.message}`); }
   try {
-    const res = await axios.get(`${OVERUNDER_URL}?id=${match.id}&companyid=8&t=2`, { headers: HEADERS, timeout: 15000 });
-    const rows = parseHistoryTable(res.data);
+    const body = await fetchTextResilient(`${OVERUNDER_URL}?id=${match.id}&companyid=8&t=2`);
+    const rows = parseHistoryTable(body);
     if (rows) out.ou = rows.map(x => ({ over: toNum(x.a), line: x.line, under: toNum(x.b) }));
   } catch (e) { console.log(`  ❌ 大小: ${e.message}`); }
   return out;
@@ -284,8 +313,8 @@ async function fetchUpcomingMatches() {
     let data = [];
     for (const url of scheduleURLsForLeague(lg.id)) {
       try {
-        const res = await axios.get(url, { headers: HEADERS, timeout: 15000 });
-        const sb = {}; vm.createContext(sb); vm.runInContext(res.data, sb);
+        const body = await fetchTextResilient(url);
+        const sb = {}; vm.createContext(sb); vm.runInContext(unwrapScriptPayload(body), sb);
         if (Array.isArray(sb.arrTeam)) sb.arrTeam.forEach(t => { teamDict[t[0]] = t[2]; });
         if (Array.isArray(sb.arrData)) data = data.concat(sb.arrData);
         anyOk = true;
@@ -1058,4 +1087,4 @@ if (require.main === module) {
     .finally(() => bet365Fallback.shutdown());
 }
 
-module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, handleImpossibleCarryover, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, stripReusedMl, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN };
+module.exports = { mapTeam, feedCanon, applyLot, buildIntlState, parseHistoryTable, parseTaiwan, captureState, scheduleURLsForLeague, nowTaiwanISO, LEAGUES_CFG, LEAGUE_TEAMS, START_GRACE_MIN, ACTIVE_WINDOW_HOURS, scheduleMove, handleScheduleMove, handleImpossibleCarryover, loadLog, loadPregamePairCount, MOVE_MIN, stripArchivedRows, stripReusedMl, snapUpcoming, loadOfficialTimes, pairKeyOf, SNAP_TOL, MLB_TEAM_CN, fetchTextResilient, unwrapScriptPayload };

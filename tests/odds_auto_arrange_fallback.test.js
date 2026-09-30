@@ -148,6 +148,35 @@ test('官方已確認雙重賽時，賠率只有第一場也必須補出 07:05 �
   assert.deepEqual(missing.map(odds.gStartHHMM), ['07:05']);
 });
 
+test('10/1 Titan 與 BetExplorer 都漏掉日韓時，官方賽程仍須補齊四場日職與四場韓職', () => {
+  assert.equal(typeof odds.addScheduleFallback, 'function', '尚未加入一般賽程保底候選');
+
+  const oddsCandidates = [
+    { id: 'be:mlb1', league: 'mlb', awayTeam: '費城人', homeTeam: '勇士', startISO: '2026-10-01T02:00:00+08:00' },
+    { id: 'be:cpbl1', league: 'cpbl', awayTeam: '統一獅', homeTeam: '味全龍', startISO: '2026-10-01T18:35:00+08:00' },
+  ];
+  const officialSchedule = [
+    { league: 'MLB', date: '2026-10-01', time: '02:00', awayTeam: '費城人', homeTeam: '勇士', status: 'upcoming' },
+    { league: 'CPBL', date: '2026-10-01', time: '18:35', awayTeam: '統一獅', homeTeam: '味全龍', status: 'upcoming' },
+    { league: 'NPB', officialId: 'NPB_20261001_Giants@Tigers_1700', date: '2026-10-01', time: '17:00', awayTeam: '巨人', homeTeam: '阪神', status: 'upcoming' },
+    { league: 'NPB', officialId: 'NPB_20261001_Dragons@Carp_1700', date: '2026-10-01', time: '17:00', awayTeam: '中日', homeTeam: '廣島', status: 'upcoming' },
+    { league: 'NPB', officialId: 'NPB_20261001_Hawks@Rakuten_1700', date: '2026-10-01', time: '17:00', awayTeam: '軟銀', homeTeam: '樂天', status: 'upcoming' },
+    { league: 'NPB', officialId: 'NPB_20261001_Fighters@Marines_1700', date: '2026-10-01', time: '17:00', awayTeam: '火腿', homeTeam: '羅德', status: 'upcoming' },
+    { league: 'KBO', officialId: 'KBO_20261001_NC@DOOSAN_1730', date: '2026-10-01', time: '17:30', awayTeam: '恐龍', homeTeam: '斗山熊', status: 'upcoming' },
+    { league: 'KBO', officialId: 'KBO_20261001_HANWHA@SAMSUNG_1730', date: '2026-10-01', time: '17:30', awayTeam: '華老鷹', homeTeam: '三星獅', status: 'upcoming' },
+    { league: 'KBO', officialId: 'KBO_20261001_LG@SSG_1730', date: '2026-10-01', time: '17:30', awayTeam: '雙子', homeTeam: '登陸者', status: 'upcoming' },
+    { league: 'KBO', officialId: 'KBO_20261001_KT@KIA_1730', date: '2026-10-01', time: '17:30', awayTeam: '巫師', homeTeam: '起亞虎', status: 'upcoming' },
+  ];
+
+  const candidates = odds.addScheduleFallback(oddsCandidates, officialSchedule, '2026-10-01');
+  const scheduleOnly = candidates.filter(game => game._scheduleOnly);
+
+  assert.equal(candidates.length, 10);
+  assert.equal(scheduleOnly.filter(game => game.league === 'npb').length, 4);
+  assert.equal(scheduleOnly.filter(game => game.league === 'kbo').length, 4);
+  assert.ok(scheduleOnly.every(game => String(game.id).startsWith('schedule:')));
+});
+
 test('auto arrange uses the official schedule as whitelist and collapses temporary Bet365 duplicates', () => {
   assert.equal(typeof odds.filterAutoArrangeGames, 'function', '尚未把官方賽程設為自動排盤白名單');
   const candidates = [

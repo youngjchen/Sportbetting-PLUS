@@ -112,15 +112,25 @@ async function fetchText(url, headers, timeoutMs) {
       console.log('  ⓘ curl 收到挑戰頁 → 立即用隱形瀏覽器重試同一頁，本輪後續沿用瀏覽器');
     }
     catch (e) {
-      if (e.httpCode === 403 || e.httpCode === 503) {
+      if (shouldUseBrowserFallback(e)) {
         curlBlocked = true;
-        console.log(`  ⓘ curl 被擋（${e.httpCode}）→ 立即用隱形瀏覽器重試同一頁，本輪後續沿用瀏覽器`);
+        const reason = e.httpCode == null ? (e.code || e.message) : e.httpCode;
+        console.log(`  ⓘ curl 無法取得有效回應（${reason}）→ 立即用隱形瀏覽器重試同一頁，本輪後續沿用瀏覽器`);
       } else { throw e; }
     }
   }
   const b = await sidecarGet(url, headers, timeoutMs);
   if (isChallenged(b)) throw new Error('challenge page (sidecar)');   // python 端 solve 層也沒過 → 當抓取失敗
   return b;
+}
+
+// curl 的 status 0／連線重設與 403 挑戰頁一樣，都代表「這個傳輸層拿不到頁面」，
+// 不能直接讓整輪爬蟲失敗。真正的 4xx（例如 404 月檔尚未發佈）則保留原錯誤，
+// 避免把不存在的網址也丟進瀏覽器浪費整輪時間。
+function shouldUseBrowserFallback(error) {
+  const status = Number(error && error.httpCode);
+  if (!Number.isFinite(status) || status === 0) return true;
+  return status === 403 || status === 429 || status >= 500;
 }
 
 function stopSidecarProcess(child, graceMs = 5000) {
@@ -139,4 +149,4 @@ function shutdown() {
   stopSidecarProcess(proc);
 }
 
-module.exports = { fetchText, shutdown, stopSidecarProcess, makeSidecarRequest, usingSidecar: () => curlBlocked };
+module.exports = { fetchText, shutdown, stopSidecarProcess, makeSidecarRequest, shouldUseBrowserFallback, usingSidecar: () => curlBlocked };
