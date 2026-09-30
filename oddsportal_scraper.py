@@ -31,14 +31,16 @@ LEAGUE_URLS = {
     "kbo": "/baseball/south-korea/kbo/",
     "cpbl": "/baseball/taiwan/cpbl/",
     "wnba": "/basketball/usa/wnba/",
+    "nhl": "/hockey/usa/nhl/",
 }
 
-# 籃球聯盟：讓分盤口不是棒球的固定 ±1.5，每場不同（-2.5、-5.5、-8.5…）。
-# 這類聯盟的讓分改用「莊家家數最多的那條＝主盤」抓法（跟大小分同一套邏輯）。
+# 讓分主盤不是棒球固定 ±1.5 的聯盟：取莊家家數最多的主盤。
 BASKETBALL_LEAGUES = frozenset({"wnba"})
+MAIN_LINE_LEAGUES = frozenset({"wnba", "nhl"})
 
-# WNBA 賽程不在 pregame_data.json，而是自己的檔（欄位也不同：away/home/time）
+# WNBA／NHL 賽程不在 pregame_data.json，而是自己的檔（欄位為 away/home/time）
 WNBA_SCHEDULE_FILE = "wnba_pregame.json"
+NHL_SCHEDULE_FILE = "nhl_pregame.json"
 
 
 def _norm(value: str) -> str:
@@ -46,6 +48,18 @@ def _norm(value: str) -> str:
 
 
 TEAM_ALIASES = {
+    # NHL（OddsPortal 英文全名；中文短名同 data/nhl_pregame.json）
+    "Anaheim Ducks": "巨鴨", "Boston Bruins": "棕熊", "Buffalo Sabres": "軍刀",
+    "Calgary Flames": "火焰", "Carolina Hurricanes": "颶風", "Chicago Blackhawks": "黑鷹",
+    "Colorado Avalanche": "雪崩", "Columbus Blue Jackets": "藍衣", "Dallas Stars": "達拉斯",
+    "Detroit Red Wings": "紅翼", "Edmonton Oilers": "油人", "Florida Panthers": "佛羅里",
+    "Los Angeles Kings": "國王", "Minnesota Wild": "荒野", "Montreal Canadiens": "加拿大",
+    "Nashville Predators": "掠奪者", "New Jersey Devils": "魔鬼", "New York Islanders": "島人",
+    "New York Rangers": "遊騎兵", "Ottawa Senators": "參議員", "Philadelphia Flyers": "飛人",
+    "Pittsburgh Penguins": "企鵝", "San Jose Sharks": "鯊魚", "Seattle Kraken": "海怪",
+    "St. Louis Blues": "藍調", "Tampa Bay Lightning": "閃電", "Toronto Maple Leafs": "楓葉",
+    "Utah Mammoth": "猛瑪象", "Utah Hockey Club": "猛瑪象", "Vancouver Canucks": "加人",
+    "Vegas Golden Knights": "騎士", "Washington Capitals": "首都", "Winnipeg Jets": "噴射機",
     # WNBA（2026 賽季 15 隊；中文短名同 data/wnba_pregame.json）
     "Las Vegas Aces": "王牌", "Chicago Sky": "天空", "New York Liberty": "自由",
     "Phoenix Mercury": "水星", "Indiana Fever": "狂熱", "Minnesota Lynx": "山貓",
@@ -373,24 +387,37 @@ def _discover_events(response: Any, league: str, now: datetime | None = None, in
     found: dict[str, dict[str, Any]] = {}
     current_date = None
     now = now or datetime.now(TW)
-    for container in response.css('div.eventRow[id]'):
+    sport = (LEAGUE_URLS.get(league) or "/baseball/").strip("/").split("/")[0]
+    entries: list[tuple[Any, Any, Any]] = []
+    legacy = response.css('div.eventRow[id]')
+    if legacy:
+        for container in legacy:
+            row = container.css('div.group[data-testid="game-row"]').first
+            if not row:
+                continue
+            link = row.css(f'a[href*="/{sport}/h2h/"]').first
+            if link:
+                entries.append((container, row, link))
+    else:
+        # 2026-10 NHL uses the current generic match row: no eventRow id and no
+        # data-testid=game-row. The event id remains in the H2H hash, while the
+        # date header is embedded in the third ancestor of each first daily row.
+        for link in response.css(f'a[href*="/{sport}/h2h/"]'):
+            ancestors = list(link.iterancestors())
+            container = ancestors[2] if len(ancestors) > 2 else (ancestors[-1] if ancestors else link)
+            entries.append((container, link, link))
+
+    for container, row, link in entries:
         container_text = container.get_all_text(separator=" | ", strip=True)
         current_date = _parse_listing_date(container_text, now) or current_date
-        row = container.css('div.group[data-testid="game-row"]').first
-        if not row:
-            continue
         pregame = _is_pregame_listing(row.get_all_text(separator=" | ", strip=True))
         if not pregame and not include_started:
-            continue
-        # 運動別由聯盟網址推出（/baseball/… 或 /basketball/…）——2026-08-05 WNBA 納入前
-        # 這行寫死 baseball，籃球列表因此永遠配到 0 場。
-        sport = (LEAGUE_URLS.get(league) or "/baseball/").strip("/").split("/")[0]
-        link = row.css(f'a[href*="/{sport}/h2h/"]').first
-        if not link:
             continue
         href = link.attrib.get("href") or ""
         event_id = str(container.attrib.get("id") or "") or _event_id_from_href(href)
         names = [img.attrib.get("alt") for img in row.css('[data-testid="event-participants"] img[alt]')]
+        if len([name for name in names if name]) < 2:
+            names = [img.attrib.get("alt") for img in link.css('img[alt]')]
         names = [name for name in names if name]
         if not event_id or len(names) < 2:
             continue
@@ -515,8 +542,55 @@ def _capture_stake_row(row: Any, page: Any, event_start: datetime, with_history:
     }
 
 
+def _parse_stake_table_cells(cells: list[str], market: str) -> dict[str, Any] | None:
+    """Normalize the current OddsPortal table layout into the legacy row shape."""
+    offset = 1 if market == "ml" else 2
+    if len(cells) <= offset + 1:
+        return None
+    line = None if market == "ml" else _parse_number(cells[1])
+    first = _parse_number(cells[offset])
+    second = _parse_number(cells[offset + 1])
+    if (market != "ml" and line is None) or first is None or second is None:
+        return None
+    return {
+        "line": line, "firstOdds": first, "secondOdds": second,
+        "firstIndex": offset, "secondIndex": offset + 1,
+    }
+
+
+def _capture_stake_table_row(row: Any, page: Any, event_start: datetime,
+                             with_history: bool, market: str) -> dict[str, Any]:
+    cells = row.locator("td")
+    texts = [cells.nth(index).inner_text() for index in range(cells.count())]
+    parsed = _parse_stake_table_cells(texts, market)
+    if not parsed:
+        return {}
+    first_cell = cells.nth(parsed["firstIndex"])
+    second_cell = cells.nth(parsed["secondIndex"])
+    return {
+        "line": parsed["line"],
+        "first": {
+            "odds": parsed["firstOdds"], "active": True, "struck": False,
+            "history": _row_history(first_cell, page, event_start, with_history),
+        },
+        "second": {
+            "odds": parsed["secondOdds"], "active": True, "struck": False,
+            "history": _row_history(second_cell, page, event_start, with_history),
+        },
+        "active": True, "struck": False, "selected": False,
+    }
+
+
 def _wait_for_market_navigation(page: Any) -> None:
-    page.get_by_test_id("bet-types-nav").wait_for(state="visible", timeout=20000)
+    nav = page.get_by_test_id("bet-types-nav")
+    try:
+        if nav.count():
+            nav.wait_for(state="visible", timeout=20000)
+            return
+    except AttributeError:
+        nav.wait_for(state="visible", timeout=20000)
+        return
+    page.get_by_text("Home/Away", exact=True).last.wait_for(state="visible", timeout=20000)
 
 
 def _dismiss_consent(page: Any) -> None:
@@ -541,10 +615,71 @@ def _dismiss_consent(page: Any) -> None:
         pass
 
 
+def _collect_market_table(page: Any, label: str, event_start: datetime,
+                          with_history: bool) -> list[dict[str, Any]]:
+    """Collect Stake from the current OddsPortal table UI (2026-10 layout)."""
+    tab = page.get_by_text(label, exact=True)
+    if not tab.count():
+        return []
+    tab.last.click(timeout=8000)
+    page.wait_for_timeout(700)
+    overtime = page.get_by_text("FT including OT", exact=True)
+    if overtime.count():
+        overtime.last.click(timeout=8000)
+        page.wait_for_timeout(700)
+
+    market = {"Home/Away": "ml", "Over/Under": "ou", "Asian Handicap": "hd"}[label]
+    collected: list[dict[str, Any]] = []
+    seen: set[tuple[Any, ...]] = set()
+
+    def capture_visible() -> None:
+        stake_labels = page.get_by_text(BOOKMAKER, exact=True)
+        for index in range(stake_labels.count()):
+            row = stake_labels.nth(index).locator("xpath=ancestor::tr[1]")
+            if not row.count():
+                continue
+            cells = row.locator("td")
+            texts = [cells.nth(cell_index).inner_text() for cell_index in range(cells.count())]
+            parsed = _parse_stake_table_cells(texts, market)
+            if not parsed:
+                continue
+            sig = (parsed["line"], parsed["firstOdds"], parsed["secondOdds"])
+            if sig in seen:
+                continue
+            seen.add(sig)
+            item = _capture_stake_table_row(row, page, event_start, with_history, market)
+            if item:
+                collected.append(item)
+
+    capture_visible()
+    if market == "ml":
+        return collected
+
+    prefix = f"{label} "
+    labels = page.locator("tr").evaluate_all(
+        "(els,prefix) => [...new Set(els.map(el => (el.innerText || '').trim().split('\\n')[0])"
+        ".filter(text => text.startsWith(prefix)))]",
+        prefix,
+    )
+    for target in labels:
+        option = page.get_by_text(target, exact=True)
+        if not option.count():
+            continue
+        try:
+            option.last.click(timeout=5000)
+            page.wait_for_timeout(350)
+            capture_visible()
+        except Exception:
+            continue
+    return collected
+
+
 def _collect_market(page: Any, label: str, event_start: datetime, with_history: bool,
                     main_line: bool = False) -> list[dict[str, Any]]:
     """main_line=True（籃球）：讓分不篩 ±1.5，改抓莊家家數最多的主盤。"""
     nav = page.get_by_test_id("bet-types-nav")
+    if not nav.count():
+        return _collect_market_table(page, label, event_start, with_history)
     tab = nav.get_by_text(label, exact=True)
     if not tab.count():
         return []
@@ -873,20 +1008,20 @@ def _load_schedule(path: Path, now: datetime, from_hours: float = 0.0, to_hours:
     # 2026-08-04 拆掉「開賽後一律不採樣」硬限制：頁面永存（含完賽），收盤已改
     # 走勢史時戳取法（_closing_from_rows），開賽後採樣不再有走地價污染問題。
     # 視窗由呼叫端給：from_hours 可為負（回補過去缺口），to_hours 往未來。
-    # WNBA 賽程住在自己的檔（data/wnba_pregame.json，物件包 games，欄位 away/home/time）
-    # ——2026-08-05 使用者要求 WNBA 也要初盤/收盤。這裡正規化成跟棒球同一種列。
-    try:
-        wnba_raw = json.loads((path.parent / WNBA_SCHEDULE_FILE).read_text(encoding="utf-8"))
-        for g in (wnba_raw.get("games") or []) if isinstance(wnba_raw, dict) else []:
-            rows.append({
-                "league": "wnba", "date": g.get("date"),
-                "gameTime": g.get("time") or g.get("gameTime"),
-                "awayTeam": g.get("away") or g.get("awayTeam"),
-                "homeTeam": g.get("home") or g.get("homeTeam"),
-                "officialId": g.get("officialId"),
-            })
-    except Exception:
-        pass          # WNBA 檔缺席不影響棒球（球季外／檔案還沒推上來都算正常）
+    # 各運動獨立賽程檔正規化成棒球共用欄位；檔案缺席（休季）不影響其他聯盟。
+    for league, filename in (("wnba", WNBA_SCHEDULE_FILE), ("nhl", NHL_SCHEDULE_FILE)):
+        try:
+            raw = json.loads((path.parent / filename).read_text(encoding="utf-8"))
+            for g in (raw.get("games") or []) if isinstance(raw, dict) else []:
+                rows.append({
+                    "league": league, "date": g.get("date"),
+                    "gameTime": g.get("time") or g.get("gameTime"),
+                    "awayTeam": g.get("away") or g.get("awayTeam"),
+                    "homeTeam": g.get("home") or g.get("homeTeam"),
+                    "officialId": g.get("officialId"),
+                })
+        except Exception:
+            pass
     start = (now + timedelta(hours=float(from_hours))).isoformat()
     end = (now + timedelta(hours=float(to_hours))).isoformat()
     out = []
@@ -928,10 +1063,10 @@ def scrape_event(session: Any, event: dict[str, Any], schedule: list[dict[str, A
             event_start = datetime.fromtimestamp(stamp, tz=TW) if stamp else datetime.now(TW)
         _wait_for_market_navigation(page)
         _dismiss_consent(page)
-        _basket = str(event.get("league") or "").lower() in BASKETBALL_LEAGUES
+        _main_line = str(event.get("league") or "").lower() in MAIN_LINE_LEAGUES
         captured["ml"] = _collect_market(page, "Home/Away", event_start, with_history)
         captured["ou"] = _collect_market(page, "Over/Under", event_start, with_history)
-        captured["hd"] = _collect_market(page, "Asian Handicap", event_start, with_history, main_line=_basket)
+        captured["hd"] = _collect_market(page, "Asian Handicap", event_start, with_history, main_line=_main_line)
         try:
             captured["visibleBookmakers"] = page.locator(
                 '[data-testid="over-under-expanded-row"] img[alt]'
@@ -984,12 +1119,34 @@ def _load_summary(path: Path) -> dict[str, Any]:
     return data
 
 
+def _project_league_summary(summary: dict[str, Any], league: str) -> dict[str, Any]:
+    """Create a small consumer feed without the other sports' historical payload."""
+    wanted = str(league or "").lower()
+    return {
+        "version": summary.get("version", 1),
+        "source": summary.get("source", "OddsPortal"),
+        "bookmaker": summary.get("bookmaker", BOOKMAKER),
+        "league": wanted,
+        "updatedAt": summary.get("updatedAt"),
+        "health": copy.deepcopy(summary.get("health") or {}),
+        "games": {
+            key: copy.deepcopy(game)
+            for key, game in (summary.get("games") or {}).items()
+            if str(game.get("league") or "").lower() == wanted
+        },
+    }
+
+
 def _write_json_atomic(path: Path, data: dict[str, Any]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     temp = path.with_suffix(path.suffix + ".tmp")
     temp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     json.loads(temp.read_text(encoding="utf-8"))
     temp.replace(path)
+
+
+def _write_league_projection(path: Path, summary: dict[str, Any], league: str) -> None:
+    _write_json_atomic(path, _project_league_summary(summary, league))
 
 
 def _append_daily_archive(path: Path, record: dict[str, Any]) -> None:
@@ -1104,7 +1261,8 @@ def pick_targets(schedule: list[dict[str, Any]], summary: dict[str, Any], now: d
 
 def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues: list[str],
              from_hours: float = 0.0, to_hours: float = float(ACTIVE_WINDOW_HOURS),
-             max_games: int = 0, include_started: bool = False, refresh_upcoming: bool = False, match: str = "") -> dict[str, Any]:
+              max_games: int = 0, include_started: bool = False, refresh_upcoming: bool = False,
+              match: str = "", nhl_summary_path: Path | None = None) -> dict[str, Any]:
     try:
         import scrapling.fetchers as fetchers
     except ImportError as exc:
@@ -1201,6 +1359,8 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
         },
     })
     _write_json_atomic(summary_path, summary)
+    if nhl_summary_path is not None and any(game.get("league") == "nhl" for game in successes):
+        _write_league_projection(nhl_summary_path, summary, "nhl")
     archive_record = {
         "observedAt": observed_at, "source": "OddsPortal", "bookmaker": BOOKMAKER,
         "games": successes, "errors": errors,
@@ -1212,6 +1372,7 @@ def run_once(summary_path: Path, history_dir: Path, schedule_path: Path, leagues
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--summary", default="data/oddsportal_summary.json")
+    parser.add_argument("--nhl-summary", default="data/nhl_oddsportal_stake.json")
     parser.add_argument("--history-dir", default="data/oddsportal_history")
     parser.add_argument("--schedule", default="data/pregame_data.json")
     parser.add_argument("--leagues", default=",".join(LEAGUE_URLS))
@@ -1231,6 +1392,7 @@ def main(argv: list[str] | None = None) -> int:
             Path(args.summary), Path(args.history_dir), Path(args.schedule), leagues,
             from_hours=args.from_hours, to_hours=args.to_hours, max_games=args.max_games,
             include_started=args.include_started, refresh_upcoming=args.refresh_upcoming, match=args.match,
+            nhl_summary_path=Path(args.nhl_summary),
         )
         print(json.dumps(result.get("health"), ensure_ascii=False))
         return 0

@@ -146,10 +146,11 @@ test('Python selection prefers the explicit runtime then the user-local runtime'
   assert.equal(new Set(values).size, values.length);
 });
 
-test('local runner stages only the OddsPortal summary and compressed history directory', () => {
+test('local runner stages the shared summary, compact NHL feed, and compressed history', () => {
   const { OUTPUT_PATHS } = loadModule();
   assert.deepEqual(OUTPUT_PATHS, [
     'data/oddsportal_summary.json',
+    'data/nhl_oddsportal_stake.json',
     'data/oddsportal_history',
   ]);
 });
@@ -177,6 +178,24 @@ test('gates: asia same-day and mlb previous-day open plus flip/close anchors', (
   assert.equal(byId['close_mlb_2026-08-05_1020'].at, Date.parse('2026-08-05T10:20:00+08:00'));  // 10:10 + 10m
   assert.equal(byId['flip_mlb_2026-08-05'].refreshUpcoming, true);
   assert.equal(gates.length, 8);
+});
+
+test('NHL gets its own previous-day open, pregame refresh, and close gates', () => {
+  const { computeOddsPortalGates, prefersDirectOddsPortal } = loadModule();
+  const gates = computeOddsPortalGates([
+    { league: 'nhl', date: '2026-10-02', gameTime: '07:30' },
+    { league: 'nhl', date: '2026-10-02', gameTime: '10:00' },
+  ]);
+  const byId = Object.fromEntries(gates.map((gate) => [gate.id, gate]));
+
+  assert.equal(byId['open_nhl_2026-10-02'].at, Date.parse('2026-10-01T08:00:00+08:00'));
+  assert.equal(byId['flip_nhl_2026-10-02'].at, Date.parse('2026-10-02T05:00:00+08:00'));
+  assert.equal(byId['flip_nhl_2026-10-02'].refreshUpcoming, true);
+  assert.equal(byId['close_nhl_2026-10-02_0740'].at, Date.parse('2026-10-02T07:40:00+08:00'));
+  assert.equal(byId['close_nhl_2026-10-02_1010'].at, Date.parse('2026-10-02T10:10:00+08:00'));
+  assert.deepEqual(byId['open_nhl_2026-10-02'].leagues, ['nhl']);
+  assert.equal(prefersDirectOddsPortal(byId['open_nhl_2026-10-02']), true);
+  assert.equal(prefersDirectOddsPortal({ leagues: ['mlb'] }), false);
 });
 
 test('close gates split a date into nearby-start clusters so early games finalize on time', () => {

@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, markOddsPortalGateAttempt, markOddsPortalGateSuccess, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues, missingCloseEventIds } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, markOddsPortalGateAttempt, markOddsPortalGateSuccess, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues, missingCloseEventIds, prefersDirectOddsPortal } = require('./oddsportal_local.js');
 const { mirrorPregameOutputs } = require('./local_failover_workspace.js');
 
 const REPO_DIR = __dirname;
@@ -136,6 +136,14 @@ function run() {
           awayTeam: g.away || g.awayTeam, homeTeam: g.home || g.homeTeam });
       }
     } catch (_) {}
+    // NHL 賽程也住獨立檔；Stake 主盤必須交給 OddsPortal，不走沒有冰球的 BetExplorer。
+    try {
+      const n = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'nhl_pregame.json'), 'utf8'));
+      for (const g of (n.games || [])) {
+        games.push({ league: 'nhl', date: g.date, gameTime: g.time || g.gameTime,
+          awayTeam: g.away || g.awayTeam, homeTeam: g.home || g.homeTeam });
+      }
+    } catch (_) {}
     const gate = dueOddsPortalGate(computeOddsPortalGates(games, Date.now()), state, Date.now())
       || dueSwapGate(state, Date.now());
     if (gate) {
@@ -144,21 +152,26 @@ function run() {
       state.oddsportal_last_attempt = Date.now();
       saveState(state);
       log(`閘 ${gate.id} 到點（${gate.mode}／${gate.leagues.join('+')}）→ 抓取`);
-      // 2026-08-07 使用者拍板：BetExplorer 當主來源（OddsPortal 上架列表當日場次大量缺漏）。
-      // 兩道防線：BetExplorer 先跑，丟例外才退回 OddsPortal，避免單一來源故障就整輪空手。
+      // 棒球／WNBA 仍以 BetExplorer 為主、OddsPortal 為備；NHL 沒有 BetExplorer 盤，直接走 OddsPortal。
       let outputs;
       try {
-        let eventIds = null;
-        if (gate.mode === 'close') {
-          const summary = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'oddsportal_summary.json'), 'utf8'));
-          eventIds = missingCloseEventIds(
-            summary, gate.leagues, Date.now(), gate.startMin, gate.startMax,
-          );
-          if (eventIds.length) log(`收盤閘直接補抓 ${eventIds.length} 個既有 eventId（不再依賽後 upcoming 列表）`);
+        if (prefersDirectOddsPortal(gate)) {
+          outputs = runOddsPortal({ repoDir: REPO_DIR, gate });
+          log('NHL OddsPortal／Stake 主來源完成');
+        } else {
+          let eventIds = null;
+          if (gate.mode === 'close') {
+            const summary = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'oddsportal_summary.json'), 'utf8'));
+            eventIds = missingCloseEventIds(
+              summary, gate.leagues, Date.now(), gate.startMin, gate.startMax,
+            );
+            if (eventIds.length) log(`收盤閘直接補抓 ${eventIds.length} 個既有 eventId（不再依賽後 upcoming 列表）`);
+          }
+          outputs = runBetExplorer({ repoDir: REPO_DIR, leagues: gate.leagues, eventIds });
+          log('BetExplorer 主來源完成');
         }
-        outputs = runBetExplorer({ repoDir: REPO_DIR, leagues: gate.leagues, eventIds });
-        log('BetExplorer 主來源完成');
       } catch (error) {
+        if (prefersDirectOddsPortal(gate)) throw error;
         log(`BetExplorer 失敗（${String(error.message).split(/\r?\n/)[0]}）→ 退回 OddsPortal`);
         outputs = runOddsPortal({ repoDir: REPO_DIR, gate });
       }

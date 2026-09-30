@@ -30,8 +30,11 @@ const OPEN_MLB_HHMM = '07:00';
 // WNBA（2026-08-05 使用者要求納入）：賽事在台灣清晨 01:00~11:00，與 MLB 同型態＝前一天開盤。
 // 07:30＝比 MLB 閘晚半小時，沿用使用者的「WNBA 跟棒球工作流錯開半小時」規則避免推送打架。
 const OPEN_WNBA_HHMM = '07:30';
+// NHL 多在台灣清晨開賽；前一天 08:00 建初盤，並與 MLB/WNBA 錯開。
+const OPEN_NHL_HHMM = '08:00';
 const OUTPUT_PATHS = Object.freeze([
   'data/oddsportal_summary.json',
+  'data/nhl_oddsportal_stake.json',
   'data/oddsportal_history',
 ]);
 
@@ -145,7 +148,9 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
   const groups = new Map();
   for (const game of games || []) {
     const league = String((game && game.league) || '').toLowerCase();
-    const grp = league === 'mlb' ? 'mlb' : (league === 'wnba' ? 'wnba' : (ASIA_LEAGUES.includes(league) ? 'asia' : null));
+    const grp = league === 'mlb' ? 'mlb'
+      : (league === 'wnba' ? 'wnba'
+        : (league === 'nhl' ? 'nhl' : (ASIA_LEAGUES.includes(league) ? 'asia' : null)));
     if (!grp) continue;
     const startMs = gameStartMs(game);
     if (!startMs) continue;
@@ -160,12 +165,15 @@ function computeOddsPortalGates(games, nowMs = Date.now()) {
   const gates = [];
   for (const [key, span] of groups) {
     const [grp, date] = key.split('|');
-    const leagues = grp === 'mlb' ? ['mlb'] : (grp === 'wnba' ? ['wnba'] : [...ASIA_LEAGUES]);
+    const leagues = grp === 'mlb' ? ['mlb']
+      : (grp === 'wnba' ? ['wnba'] : (grp === 'nhl' ? ['nhl'] : [...ASIA_LEAGUES]));
     const openAt = grp === 'mlb'
       ? Date.parse(`${dayBefore(date)}T${OPEN_MLB_HHMM}:00+08:00`)
       : (grp === 'wnba'
         ? Date.parse(`${dayBefore(date)}T${OPEN_WNBA_HHMM}:00+08:00`)
-        : Date.parse(`${date}T${OPEN_ASIA_HHMM}:00+08:00`));
+        : (grp === 'nhl'
+          ? Date.parse(`${dayBefore(date)}T${OPEN_NHL_HHMM}:00+08:00`)
+          : Date.parse(`${date}T${OPEN_ASIA_HHMM}:00+08:00`)));
     const flipAt = span.min - T_FLIP_MIN * 60e3;
     gates.push({ id: `open_${grp}_${date}`, at: openAt, mode: 'open', leagues, fromHours: -BACKFILL_HOURS, toHours: 36, maxGames: 40 });
     gates.push({ id: `flip_${grp}_${date}`, at: flipAt, mode: 'flip', leagues, fromHours: -BACKFILL_HOURS, toHours: Math.max(2, Math.ceil((span.max - flipAt) / 3600e3) + 1), maxGames: 40, refreshUpcoming: true });
@@ -344,6 +352,10 @@ function oddsPortalArgs(gate) {
   return args;
 }
 
+function prefersDirectOddsPortal(gate) {
+  return Boolean(gate && Array.isArray(gate.leagues) && gate.leagues.includes('nhl'));
+}
+
 function runOddsPortal({ repoDir, gate = null, python = resolvePython(), timeoutMs = 30 * 60_000 }) {
   execFileSync(python, oddsPortalArgs(gate), {
     cwd: repoDir,
@@ -378,6 +390,7 @@ module.exports = {
   markOddsPortalGateSuccess,
   pruneOddsPortalGateState,
   oddsPortalArgs,
+  prefersDirectOddsPortal,
   pythonCandidates,
   resolvePython,
   runOddsPortal,

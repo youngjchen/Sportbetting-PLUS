@@ -523,3 +523,192 @@ class ListingDateHeaderTests(unittest.TestCase):
                      "01:05 | New York Yankees | – | Boston Red Sox | 1.85 | 1.95",
                      "Finished | FIN | Cincinnati Reds | 6 | – | 5 | Athletics | 1.64 | 2.59"):
             self.assertIsNone(_parse_listing_date(text, self.now), text)
+
+
+class NhlSupportTests(unittest.TestCase):
+    """NHL must reuse the Stake browser path without inheriting baseball's fixed ±1.5 scan."""
+
+    def test_nhl_is_registered_as_hockey_with_dynamic_main_line(self):
+        from oddsportal_scraper import LEAGUE_URLS, MAIN_LINE_LEAGUES
+
+        self.assertEqual(LEAGUE_URLS["nhl"], "/hockey/usa/nhl/")
+        self.assertIn("nhl", MAIN_LINE_LEAGUES)
+        self.assertNotIn("mlb", MAIN_LINE_LEAGUES)
+
+    def test_discovers_nhl_from_current_generic_listing_rows(self):
+        from oddsportal_scraper import _discover_events, TW
+
+        class Node:
+            def __init__(self, text="", attrs=None, css_map=None, ancestors=None):
+                self._text = text
+                self.attrib = attrs or {}
+                self._css_map = css_map or {}
+                self._ancestors = ancestors or []
+
+            def css(self, selector):
+                return self._css_map.get(selector, [])
+
+            def get_all_text(self, **_kwargs):
+                return self._text
+
+            def iterancestors(self):
+                return iter(self._ancestors)
+
+        images = [Node(attrs={"alt": "Philadelphia Flyers"}), Node(attrs={"alt": "Pittsburgh Penguins"})]
+        container = Node("Today, 01 Oct | 1 | X | 2 | 07:30 | Philadelphia Flyers | - | Pittsburgh Penguins")
+        link = Node(
+            "07:30 | Philadelphia Flyers | - | Pittsburgh Penguins",
+            attrs={"href": "/hockey/h2h/philadelphia-flyers-QySGG7oT/pittsburgh-penguins-AkN0nWU6/#dW4Uio9K"},
+            css_map={'img[alt]': images},
+            ancestors=[Node(), Node(), container],
+        )
+        response = Node(css_map={
+            'div.eventRow[id]': [],
+            'a[href*="/hockey/h2h/"]': [link],
+        })
+
+        events = _discover_events(response, "nhl", datetime(2026, 10, 1, 1, 0, tzinfo=TW))
+
+        self.assertEqual(events, [{
+            "eventId": "dW4Uio9K", "league": "nhl", "awayTeam": "企鵝", "homeTeam": "飛人",
+            "sourceUrl": "https://www.oddsportal.com/hockey/h2h/philadelphia-flyers-QySGG7oT/pittsburgh-penguins-AkN0nWU6/#dW4Uio9K",
+            "sourceNamesHomeAway": ["Philadelphia Flyers", "Pittsburgh Penguins"],
+            "listingDate": "2026-10-01", "listingTime": "07:30",
+        }])
+
+    def test_all_oddsportal_nhl_club_names_map_to_board_names(self):
+        from oddsportal_scraper import team_zh
+
+        expected = {
+            "Anaheim Ducks": "巨鴨", "Boston Bruins": "棕熊",
+            "Buffalo Sabres": "軍刀", "Calgary Flames": "火焰",
+            "Carolina Hurricanes": "颶風", "Chicago Blackhawks": "黑鷹",
+            "Colorado Avalanche": "雪崩", "Columbus Blue Jackets": "藍衣",
+            "Dallas Stars": "達拉斯", "Detroit Red Wings": "紅翼",
+            "Edmonton Oilers": "油人", "Florida Panthers": "佛羅里",
+            "Los Angeles Kings": "國王", "Minnesota Wild": "荒野",
+            "Montreal Canadiens": "加拿大", "Nashville Predators": "掠奪者",
+            "New Jersey Devils": "魔鬼", "New York Islanders": "島人",
+            "New York Rangers": "遊騎兵", "Ottawa Senators": "參議員",
+            "Philadelphia Flyers": "飛人", "Pittsburgh Penguins": "企鵝",
+            "San Jose Sharks": "鯊魚", "Seattle Kraken": "海怪",
+            "St. Louis Blues": "藍調", "Tampa Bay Lightning": "閃電",
+            "Toronto Maple Leafs": "楓葉", "Utah Mammoth": "猛瑪象",
+            "Vancouver Canucks": "加人", "Vegas Golden Knights": "騎士",
+            "Washington Capitals": "首都", "Winnipeg Jets": "噴射機",
+        }
+        self.assertEqual({name: team_zh(name) for name in expected}, expected)
+        self.assertIsNone(team_zh("Quebec Nordiques"))
+
+    def test_parses_current_table_rows_for_all_three_stake_markets(self):
+        from oddsportal_scraper import _parse_stake_table_cells
+
+        self.assertEqual(
+            _parse_stake_table_cells(["Stake.com\nCLAIM BONUS", "1.67", "2.12", "93.4%"], "ml"),
+            {"line": None, "firstOdds": 1.67, "secondOdds": 2.12, "firstIndex": 1, "secondIndex": 2},
+        )
+        self.assertEqual(
+            _parse_stake_table_cells(["Stake.com\nCLAIM BONUS", "+6", "1.84", "1.89", "93.2%"], "ou"),
+            {"line": 6.0, "firstOdds": 1.84, "secondOdds": 1.89, "firstIndex": 2, "secondIndex": 3},
+        )
+        self.assertEqual(
+            _parse_stake_table_cells(["Stake.com\nCLAIM BONUS", "-1.5", "2.60", "1.46", "93.5%"], "hd"),
+            {"line": -1.5, "firstOdds": 2.6, "secondOdds": 1.46, "firstIndex": 2, "secondIndex": 3},
+        )
+        self.assertIsNone(_parse_stake_table_cells(["Stake.com", "+6", "-", "1.89", "-"], "ou"))
+
+    def test_market_navigation_accepts_current_text_tabs_without_test_ids(self):
+        from oddsportal_scraper import _wait_for_market_navigation
+
+        calls = []
+
+        class Locator:
+            def __init__(self, count):
+                self._count = count
+                self.last = self
+
+            def count(self):
+                return self._count
+
+            def wait_for(self, **kwargs):
+                calls.append(kwargs)
+
+        class Page:
+            def get_by_test_id(self, _value):
+                return Locator(0)
+
+            def get_by_text(self, value, exact=False):
+                self.requested = (value, exact)
+                return Locator(1)
+
+        page = Page()
+        _wait_for_market_navigation(page)
+
+        self.assertEqual(page.requested, ("Home/Away", True))
+        self.assertEqual(calls, [{"state": "visible", "timeout": 20000}])
+
+    def test_load_schedule_merges_nhl_pregame_file(self):
+        from oddsportal_scraper import _load_schedule, TW
+
+        with tempfile.TemporaryDirectory() as tmp:
+            data = Path(tmp)
+            (data / "pregame_data.json").write_text("[]", encoding="utf-8")
+            (data / "nhl_pregame.json").write_text(json.dumps({"games": [
+                {"date": "2026-10-01", "time": "07:30", "away": "企鵝", "home": "飛人",
+                 "officialId": "NHL_20261001_企鵝@飛人_0730"},
+            ]}, ensure_ascii=False), encoding="utf-8")
+            now = datetime.fromisoformat("2026-10-01T00:30:00+08:00").astimezone(TW)
+
+            rows = _load_schedule(data / "pregame_data.json", now, from_hours=-1, to_hours=24)
+
+        self.assertEqual(rows, [{
+            "league": "nhl", "date": "2026-10-01", "startTime": "07:30",
+            "startISO": "2026-10-01T07:30:00+08:00", "awayTeam": "企鵝",
+            "homeTeam": "飛人", "officialId": "NHL_20261001_企鵝@飛人_0730",
+        }])
+
+    def test_compact_nhl_projection_drops_other_leagues_without_dropping_metadata(self):
+        from oddsportal_scraper import _project_league_summary
+
+        summary = {
+            "version": 1, "source": "OddsPortal", "bookmaker": "Stake.com",
+            "updatedAt": "2026-10-01T01:00:00+08:00",
+            "health": {"succeeded": 2, "failed": 0},
+            "games": {
+                "nhl-game": {"eventId": "n1", "league": "nhl", "markets": {
+                    "ml": {"active": {"away": 2.1, "home": 1.8}},
+                    "hd": {"active": {"line": -1.5, "favorite": "home", "away": 1.5, "home": 2.6}},
+                    "ou": {"active": {"line": 6.5, "over": 1.91, "under": 1.89}},
+                }},
+                "mlb-game": {"eventId": "b1", "league": "mlb", "markets": {}},
+            },
+        }
+
+        projected = _project_league_summary(summary, "nhl")
+
+        self.assertEqual(projected["source"], "OddsPortal")
+        self.assertEqual(projected["bookmaker"], "Stake.com")
+        self.assertEqual(projected["league"], "nhl")
+        self.assertEqual(projected["updatedAt"], "2026-10-01T01:00:00+08:00")
+        self.assertEqual(projected["health"], {"succeeded": 2, "failed": 0})
+        self.assertEqual(list(projected["games"]), ["nhl-game"])
+
+    def test_league_projection_is_written_atomically_as_valid_json(self):
+        from oddsportal_scraper import _write_league_projection
+
+        summary = {
+            "version": 1, "source": "OddsPortal", "bookmaker": "Stake.com",
+            "updatedAt": "2026-10-01T01:05:00+08:00", "health": {"succeeded": 1},
+            "games": {"n": {"league": "nhl", "eventId": "n1", "markets": {
+                "ou": {"active": {"line": 6.0, "over": 1.95, "under": 1.85}},
+            }}},
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            target = Path(tmp) / "nhl_oddsportal_stake.json"
+
+            _write_league_projection(target, summary, "nhl")
+
+            written = json.loads(target.read_text(encoding="utf-8"))
+            self.assertEqual(written["league"], "nhl")
+            self.assertEqual(written["games"]["n"]["markets"]["ou"]["active"]["line"], 6.0)
+            self.assertFalse(target.with_suffix(".json.tmp").exists())

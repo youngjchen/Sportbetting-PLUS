@@ -4,9 +4,9 @@
 
 - 網站來源：OddsPortal 正常比賽頁；不直接連 Stake 網站。
 - 莊家：OddsPortal 表格內的 `Stake.com` 列。
-- 聯盟：MLB、NPB、KBO、CPBL。
+- 聯盟：MLB、NPB、KBO、CPBL、WNBA、NHL。
 - 市場：獨贏、亞洲讓分、大小分。
-- 輪詢：本機 `BB-ScrapeFailover` 每 5 分鐘喚醒，OddsPortal 模組以 15 分鐘節流；只抓已排程且距開賽 18 小時內的比賽，首次進窗時從 hover 歷史回補真正初盤與此前變價，開賽後停止更新收盤。
+- 輪詢：本機 `BB-ScrapeFailover` 每 5 分鐘喚醒，依賽程觸發初盤、賽前 2.5 小時與收盤閨。NHL 強制走 OddsPortal，不送往沒有冰球的 BetExplorer。
 - 效能：使用兩個彼此獨立的 Scrapling browser worker 分批抓取；資料仍由主執行緒合併後原子寫入。
 
 GitHub hosted runner 實測雖能取得 OddsPortal HTTP 200，但事件頁不提供 bookmaker rows，無法讀取 `Stake.com`。正式輪詢因此沿用專案既有的台灣本機 failover 專用 clone、共用防重入鎖與安全 push；GitHub Actions 僅在 push 跑合約測試，手動 dispatch 才保留雲端診斷入口。這個安排不需要代理、API key 或額外付費。
@@ -14,6 +14,7 @@ GitHub hosted runner 實測雖能取得 OddsPortal HTTP 200，但事件頁不提
 ## 資料
 
 - `data/oddsportal_summary.json`：板端使用。每場保存初盤、最新賽前盤（開賽後即為收盤）、首次換邊、最後換邊與是否曾換邊。
+- `data/nhl_oddsportal_stake.json`：NHL 專用的輕量投影，只含 NHL 比賽與 Stake 三種市場，避免前端下載整份棒球歷史檔。
 - `data/oddsportal_history/YYYY-MM-DD.jsonl.gz`：每輪的完整正規化觀測，採每日 gzip JSON Lines。
 - 雙重賽唯一鍵固定包含聯盟、日期、主客隊、開球時間與 OddsPortal event ID。
 

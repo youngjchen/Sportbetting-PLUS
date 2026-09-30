@@ -122,7 +122,7 @@ test('renders Bet365 prices, official favorite, manual swap, and a 6.5 total', a
     const text = section?.querySelector('.bmkt-row .bnm')?.textContent || '';
     return text.startsWith('佛羅里') ? { current, text } : null;
   });
-  assert.match(swapped.text, /BET365原盤 \+1\.5 1\.40/);
+  assert.match(swapped.text, /-1\.5↔\+1\.5 1\.40/);
   assert.equal(
     JSON.parse(dom.window.localStorage.getItem('sportbetting_nhl_doc_v1'))
       .boards['2026-10-01'].items[0].hdFavOverride,
