@@ -3,13 +3,18 @@
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
   "league": "nhl",
-  "updatedAt": "2026-10-01T01:40:46+08:00",
+  "updatedAt": "2026-10-01T05:05:15+08:00",
   "health": {
-    "scheduled": 1,
-    "discovered": 1,
-    "succeeded": 1,
-    "failed": 0,
-    "errors": []
+    "scheduled": 22,
+    "discovered": 21,
+    "succeeded": 17,
+    "failed": 4,
+    "errors": [
+      "nhl YL5cwnfR: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "nhl 29eHrXfn: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "nhl rNgGZE54: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "nhl EsbA7JwJ: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+    ]
   },
   "games": {
     "nhl|2026-10-01|企鵝|飛人|07:30|dW4Uio9K": {
@@ -21,29 +26,1009 @@
       "awayTeam": "企鵝",
       "homeTeam": "飛人",
       "sourceUrl": "https://www.oddsportal.com/hockey/h2h/philadelphia-flyers-QySGG7oT/pittsburgh-penguins-AkN0nWU6/#dW4Uio9K",
-      "observedAt": "2026-10-01T01:40:46+08:00",
+      "observedAt": "2026-10-01T05:05:15+08:00",
       "markets": {
         "ml": {
           "active": {
-            "at": "2026-10-01T01:40:46+08:00",
+            "at": "2026-10-01T05:05:15+08:00",
             "home": 1.67,
             "away": 2.12
           }
         },
         "hd": {
           "active": {
-            "at": "2026-10-01T01:40:46+08:00",
+            "at": "2026-10-01T05:05:15+08:00",
             "home": 2.6,
-            "away": 1.46,
+            "away": 1.47,
             "line": -1.5,
             "favorite": "home"
           }
         },
         "ou": {
           "active": {
-            "at": "2026-10-01T01:40:46+08:00",
+            "at": "2026-10-01T05:05:15+08:00",
             "over": 1.84,
             "under": 1.89,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
+      }
+    },
+    "nhl|2026-09-30|遊騎兵|棕熊|08:00|44dTXPHl": {
+      "eventId": "44dTXPHl",
+      "league": "nhl",
+      "date": "2026-09-30",
+      "startTime": "08:00",
+      "startISO": "2026-09-30T08:00:00+08:00",
+      "awayTeam": "遊騎兵",
+      "homeTeam": "棕熊",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/boston-bruins-jeans23J/new-york-rangers-O4zxeyWN/#44dTXPHl",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.92,
+            "away": 1.89,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.92,
+            "away": 1.89
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.37,
+            "away": 3.15,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.37,
+            "away": 3.15,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.96,
+            "under": 1.85,
+            "line": 6.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.96,
+            "under": 1.85,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-30|黑鷹|騎士|10:30|UPCrUsHD": {
+      "eventId": "UPCrUsHD",
+      "league": "nhl",
+      "date": "2026-09-30",
+      "startTime": "10:30",
+      "startISO": "2026-09-30T10:30:00+08:00",
+      "awayTeam": "黑鷹",
+      "homeTeam": "騎士",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/chicago-blackhawks-A1kbmKeg/vegas-golden-knights-fTT0TsUg/#UPCrUsHD",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.4,
+            "away": 3.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.4,
+            "away": 3.0
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.98,
+            "away": 1.83,
+            "line": -1.5,
+            "favorite": "home",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.98,
+            "away": 1.83,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.9,
+            "under": 1.91,
+            "line": 6.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.9,
+            "under": 1.91,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|鯊魚|騎士|10:00|251nOKVh": {
+      "eventId": "251nOKVh",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "10:00",
+      "startISO": "2026-09-27T10:00:00+08:00",
+      "awayTeam": "鯊魚",
+      "homeTeam": "騎士",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/san-jose-sharks-E588Co9j/vegas-golden-knights-fTT0TsUg/#251nOKVh",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.56,
+            "away": 2.39,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.56,
+            "away": 2.39
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|魔鬼|島人|07:30|2DBiVOad": {
+      "eventId": "2DBiVOad",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "07:30",
+      "startISO": "2026-09-27T07:30:00+08:00",
+      "awayTeam": "魔鬼",
+      "homeTeam": "島人",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/new-jersey-devils-Kh0O591A/new-york-islanders-xESz5TGG/#2DBiVOad",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.13,
+            "away": 1.69,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.13,
+            "away": 1.69
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.86,
+            "under": 1.88,
+            "line": 5.5,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.86,
+            "under": 1.88,
+            "line": 5.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|藍衣|紅翼|07:00|6Nq4WZUF": {
+      "eventId": "6Nq4WZUF",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "07:00",
+      "startISO": "2026-09-27T07:00:00+08:00",
+      "awayTeam": "藍衣",
+      "homeTeam": "紅翼",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/columbus-blue-jackets-0vCzmbQ5/detroit-red-wings-dnJdmCF0/#6Nq4WZUF",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.99,
+            "away": 1.79,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.99,
+            "away": 1.79
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.39,
+            "away": 2.85,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.39,
+            "away": 2.85,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.91,
+            "under": 1.83,
+            "line": 6.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.91,
+            "under": 1.83,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|海怪|加人|07:00|CbaQ3q6L": {
+      "eventId": "CbaQ3q6L",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "07:00",
+      "startISO": "2026-09-27T07:00:00+08:00",
+      "awayTeam": "海怪",
+      "homeTeam": "加人",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/seattle-kraken-MibYQ5nU/vancouver-canucks-YiOrnTV9/#CbaQ3q6L",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.95,
+            "away": 1.83,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.95,
+            "away": 1.83
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.36,
+            "away": 3.0,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.36,
+            "away": 3.0,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.82,
+            "under": 1.92,
+            "line": 5.5,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.82,
+            "under": 1.92,
+            "line": 5.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|雪崩|猛瑪象|05:00|Miayht5m": {
+      "eventId": "Miayht5m",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "05:00",
+      "startISO": "2026-09-27T05:00:00+08:00",
+      "awayTeam": "雪崩",
+      "homeTeam": "猛瑪象",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/colorado-avalanche-hACAnvBa/utah-mammoth-hnwxhtVp/#Miayht5m",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.3,
+            "away": 3.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.3,
+            "away": 3.0
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.9,
+            "away": 1.8,
+            "line": -1.5,
+            "favorite": "home",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.9,
+            "away": 1.8,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|巨鴨|國王|04:00|Q7v96uKt": {
+      "eventId": "Q7v96uKt",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "04:00",
+      "startISO": "2026-09-27T04:00:00+08:00",
+      "awayTeam": "巨鴨",
+      "homeTeam": "國王",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/anaheim-ducks-4CM4ojpD/los-angeles-kings-CIDo8i2o/#Q7v96uKt",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.6,
+            "away": 2.3,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.6,
+            "away": 2.3
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.83,
+            "under": 1.91,
+            "line": 6.5,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.83,
+            "under": 1.91,
+            "line": 6.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|颶風|掠奪者|03:00|Y9oHjRVa": {
+      "eventId": "Y9oHjRVa",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "03:00",
+      "startISO": "2026-09-27T03:00:00+08:00",
+      "awayTeam": "颶風",
+      "homeTeam": "掠奪者",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/carolina-hurricanes-Sx0gl0tm/nashville-predators-QV0K6kn4/#Y9oHjRVa",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.2,
+            "away": 1.65,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.2,
+            "away": 1.65
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.48,
+            "away": 2.55,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.48,
+            "away": 2.55,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.86,
+            "under": 1.88,
+            "line": 6.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.86,
+            "under": 1.88,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-30|加人|油人|10:00|dCEzW3n1": {
+      "eventId": "dCEzW3n1",
+      "league": "nhl",
+      "date": "2026-09-30",
+      "startTime": "10:00",
+      "startISO": "2026-09-30T10:00:00+08:00",
+      "awayTeam": "加人",
+      "homeTeam": "油人",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/edmonton-oilers-Mg0qoxeI/vancouver-canucks-YiOrnTV9/#dCEzW3n1",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.32,
+            "away": 3.4,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.32,
+            "away": 3.4
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.77,
+            "away": 2.06,
+            "line": -1.5,
+            "favorite": "home",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.77,
+            "away": 2.06,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.88,
+            "under": 1.93,
+            "line": 6.5,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.88,
+            "under": 1.93,
+            "line": 6.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-10-01|島人|楓葉|07:30|GIjmtWem": {
+      "eventId": "GIjmtWem",
+      "league": "nhl",
+      "date": "2026-10-01",
+      "startTime": "07:30",
+      "startISO": "2026-10-01T07:30:00+08:00",
+      "awayTeam": "島人",
+      "homeTeam": "楓葉",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/new-york-islanders-xESz5TGG/toronto-maple-leafs-ShE7Z8G3/#GIjmtWem",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.75,
+            "away": 2.05
+          }
+        },
+        "ou": {
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.9,
+            "under": 1.88,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-10-01|國王|雪崩|10:00|SEe0nPWs": {
+      "eventId": "SEe0nPWs",
+      "league": "nhl",
+      "date": "2026-10-01",
+      "startTime": "10:00",
+      "startISO": "2026-10-01T10:00:00+08:00",
+      "awayTeam": "國王",
+      "homeTeam": "雪崩",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/colorado-avalanche-hACAnvBa/los-angeles-kings-CIDo8i2o/#SEe0nPWs",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.51,
+            "away": 2.47
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-10-01T04:01:00+08:00",
+            "home": 11.0,
+            "away": 1.03,
+            "line": -4.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.21,
+            "away": 1.65,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.81,
+            "under": 1.94,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
+      }
+    },
+    "nhl|2026-09-30|佛羅里|颶風|05:00|087ku8PE": {
+      "eventId": "087ku8PE",
+      "league": "nhl",
+      "date": "2026-09-30",
+      "startTime": "05:00",
+      "startISO": "2026-09-30T05:00:00+08:00",
+      "awayTeam": "佛羅里",
+      "homeTeam": "颶風",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/carolina-hurricanes-Sx0gl0tm/florida-panthers-fc1eq8Pp/#087ku8PE",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.79,
+            "away": 2.04,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.79,
+            "away": 2.04
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.85,
+            "away": 1.43,
+            "line": -1.5,
+            "favorite": "home",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.85,
+            "away": 1.43,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.81,
+            "under": 2.01,
+            "line": 6.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.81,
+            "under": 2.01,
+            "line": 6.0
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|加拿大|參議員|07:00|KWjPqOEk": {
+      "eventId": "KWjPqOEk",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "07:00",
+      "startISO": "2026-09-27T07:00:00+08:00",
+      "awayTeam": "加拿大",
+      "homeTeam": "參議員",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/montreal-canadiens-nu2G7VWc/ottawa-senators-noTCHmWM/#KWjPqOEk",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.4,
+            "away": 1.45,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.4,
+            "away": 1.45
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|首都|飛人|05:00|42NxgSll": {
+      "eventId": "42NxgSll",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "05:00",
+      "startISO": "2026-09-27T05:00:00+08:00",
+      "awayTeam": "首都",
+      "homeTeam": "飛人",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/philadelphia-flyers-QySGG7oT/washington-capitals-UND9nmoG/#42NxgSll",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.32,
+            "away": 3.3,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.32,
+            "away": 3.3
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
+      }
+    },
+    "nhl|2026-09-27|企鵝|軍刀|03:00|l44WHzGM": {
+      "eventId": "l44WHzGM",
+      "league": "nhl",
+      "date": "2026-09-27",
+      "startTime": "03:00",
+      "startISO": "2026-09-27T03:00:00+08:00",
+      "awayTeam": "企鵝",
+      "homeTeam": "軍刀",
+      "sourceUrl": "https://www.oddsportal.com/hockey/h2h/buffalo-sabres-UobjtMIP/pittsburgh-penguins-AkN0nWU6/#l44WHzGM",
+      "observedAt": "2026-10-01T05:05:15+08:00",
+      "markets": {
+        "ml": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.68,
+            "away": 2.15,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 1.68,
+            "away": 2.15
+          }
+        },
+        "hd": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.6,
+            "away": 1.47,
+            "line": -1.5,
+            "favorite": "home",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "home": 2.6,
+            "away": 1.47,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "close": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.81,
+            "under": 1.94,
+            "line": 6.0,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-01T05:05:15+08:00",
+            "over": 1.81,
+            "under": 1.94,
             "line": 6.0
           }
         }
