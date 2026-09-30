@@ -381,6 +381,8 @@
     Object.keys(games).forEach(function (key) {
       var g = games[key];
       if (!g || !g.awayTeam || !g.homeTeam) return;
+      var league = String(g.league || '').toLowerCase();
+      if (['mlb', 'npb', 'kbo', 'cpbl'].indexOf(league) < 0) return;
       var d = String(g.date || (g.startISO || "").slice(0, 10));
       if (!d || (dateKey && d !== dateKey)) return;
       var hhmm = gStartHHMM(g) || String(g.startTime || "").slice(0, 5);
@@ -399,7 +401,7 @@
       }
       out.push({
         id: "be:" + String(g.eventId || key),
-        league: g.league || null,
+        league: league,
         awayTeam: g.awayTeam,
         homeTeam: g.homeTeam,
         startISO: g.startISO || (d + "T" + hhmm + ":00+08:00"),

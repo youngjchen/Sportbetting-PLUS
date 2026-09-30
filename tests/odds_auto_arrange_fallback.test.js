@@ -62,6 +62,21 @@ test('auto arrange unions BetExplorer fallback without duplicating the Titan dou
   assert.equal(missing[0]._autoFavTeam, '響尾蛇');
 });
 
+test('baseball auto arrange ignores NHL rows stored in the shared OddsPortal summary', () => {
+  const fallback = odds.oddsPortalAutoGames({ games: {
+    hockey: {
+      eventId: 'nhl-1', league: 'nhl', date: '2026-10-01', startTime: '07:00',
+      awayTeam: '棕熊', homeTeam: '首都', markets: { ml: { open: { away: 1.9, home: 2.0 } } },
+    },
+    baseball: {
+      eventId: 'mlb-1', league: 'mlb', date: '2026-10-01', startTime: '08:00',
+      awayTeam: '紅襪', homeTeam: '洋基', markets: { ml: { open: { away: 2.1, home: 1.8 } } },
+    },
+  } }, '2026-10-01');
+
+  assert.deepEqual(fallback.map(game => game.id), ['be:mlb-1']);
+});
+
 test('MLB 暫定雙重賽時間不得吃掉有賠率來源的 07:05 第二場', () => {
   const pregamePath = require.resolve('../pregame-integration.js');
   delete require.cache[pregamePath];
