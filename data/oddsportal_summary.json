@@ -2,14 +2,17 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-01T16:45:05+08:00",
+  "updatedAt": "2026-10-01T17:10:13+08:00",
   "health": {
-    "discovered": 15,
-    "succeeded": 9,
-    "failed": 0,
+    "discovered": 5,
+    "succeeded": 4,
+    "failed": 2,
     "added": 0,
-    "updated": 9,
-    "errors": []
+    "updated": 4,
+    "errors": [
+      "軟銀@樂天: BetExplorer 讀取失敗 https://www.betexplorer.com/match-odds-old/UsPpZiQi/0/ah/1/en/?sportname=",
+      "eventId UsPpZiQi: 指定收盤未抓到"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -45518,9 +45521,10 @@
       "bet365": {
         "side": "away",
         "line": 1.5,
-        "at": "2026-08-22T06:28:00+08:00",
+        "at": "2026-10-01T15:06:00+08:00",
         "flipEver": false,
-        "struck": []
+        "struck": [],
+        "observedAt": "2026-10-01T17:10:13+08:00"
       },
       "eventId": "ADAKCSlf",
       "league": "npb",
@@ -45530,7 +45534,7 @@
       "awayTeam": "火腿",
       "homeTeam": "羅德",
       "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/chiba-lotte-marines-nippon-ham-fighters/ADAKCSlf/",
-      "observedAt": "2026-08-22T10:00:06+08:00",
+      "observedAt": "2026-10-01T17:10:13+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -45540,9 +45544,9 @@
             "away": 1.73
           },
           "active": {
-            "at": "2026-08-22T10:00:06+08:00",
-            "home": 2.05,
-            "away": 1.72
+            "at": "2026-10-01T17:10:13+08:00",
+            "home": 2.39,
+            "away": 1.58
           }
         },
         "hd": {
@@ -45554,9 +45558,9 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-08-22T10:00:06+08:00",
-            "home": 1.56,
-            "away": 2.23,
+            "at": "2026-10-01T17:10:13+08:00",
+            "home": 1.71,
+            "away": 2.05,
             "line": 1.5,
             "favorite": "away"
           }
@@ -45569,10 +45573,10 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-08-22T10:00:06+08:00",
-            "over": 1.72,
-            "under": 1.96,
-            "line": 6.5
+            "at": "2026-10-01T17:10:13+08:00",
+            "over": 1.6,
+            "under": 2.24,
+            "line": 5.5
           }
         }
       },
@@ -45586,7 +45590,17 @@
           {
             "line": 1.5,
             "active": true,
-            "created": "22,08,2026,01,17"
+            "created": "01,10,2026,09,50"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "01,10,2026,09,50"
+          },
+          {
+            "line": 3.5,
+            "active": true,
+            "created": "01,10,2026,09,44"
           }
         ]
       }
@@ -167752,7 +167766,7 @@
         "at": "2026-10-01T15:06:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-10-01T16:45:05+08:00"
+        "observedAt": "2026-10-01T17:10:13+08:00"
       },
       "eventId": "ADAKCSlf",
       "league": "npb",
@@ -167762,7 +167776,7 @@
       "awayTeam": "火腿",
       "homeTeam": "羅德",
       "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/chiba-lotte-marines-nippon-ham-fighters/ADAKCSlf/",
-      "observedAt": "2026-10-01T16:45:05+08:00",
+      "observedAt": "2026-10-01T17:10:13+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -167772,9 +167786,15 @@
             "away": 1.73
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
+            "at": "2026-10-01T17:10:13+08:00",
             "home": 2.39,
             "away": 1.58
+          },
+          "close": {
+            "at": "2026-10-01T15:28:00+08:00",
+            "home": 2.39,
+            "away": 1.58,
+            "final": true
           }
         },
         "hd": {
@@ -167786,11 +167806,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
-            "home": 1.7,
-            "away": 2.07,
+            "at": "2026-10-01T17:10:13+08:00",
+            "home": 1.71,
+            "away": 2.05,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-10-01T16:50:00+08:00",
+            "home": 1.71,
+            "away": 2.05,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -167801,10 +167829,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
-            "over": 1.65,
-            "under": 2.15,
+            "at": "2026-10-01T17:10:13+08:00",
+            "over": 1.6,
+            "under": 2.24,
             "line": 5.5
+          },
+          "close": {
+            "at": "2026-10-01T16:50:00+08:00",
+            "over": 1.6,
+            "under": 2.24,
+            "line": 5.5,
+            "final": true
           }
         }
       },
@@ -167818,17 +167853,17 @@
           {
             "line": 1.5,
             "active": true,
-            "created": "01,10,2026,08,28"
+            "created": "01,10,2026,09,50"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "01,10,2026,08,20"
+            "created": "01,10,2026,09,50"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "01,10,2026,08,20"
+            "created": "01,10,2026,09,44"
           }
         ]
       }
@@ -167840,7 +167875,7 @@
         "at": "2026-10-01T16:43:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-10-01T16:45:05+08:00"
+        "observedAt": "2026-10-01T17:10:13+08:00"
       },
       "eventId": "2Hht0hXi",
       "league": "npb",
@@ -167850,7 +167885,7 @@
       "awayTeam": "巨人",
       "homeTeam": "阪神",
       "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/hanshin-tigers-yomiuri-giants/2Hht0hXi/",
-      "observedAt": "2026-10-01T16:45:05+08:00",
+      "observedAt": "2026-10-01T17:10:13+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -167860,9 +167895,15 @@
             "away": 2.55
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
+            "at": "2026-10-01T17:10:13+08:00",
             "home": 1.53,
             "away": 2.55
+          },
+          "close": {
+            "at": "2026-10-01T15:32:00+08:00",
+            "home": 1.53,
+            "away": 2.55,
+            "final": true
           }
         },
         "hd": {
@@ -167874,11 +167915,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
-            "home": 2.31,
-            "away": 1.57,
+            "at": "2026-10-01T17:10:13+08:00",
+            "home": 2.25,
+            "away": 1.6,
             "line": 1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-01T16:41:00+08:00",
+            "home": 2.25,
+            "away": 1.6,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -167889,10 +167938,17 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
-            "over": 1.61,
-            "under": 2.22,
+            "at": "2026-10-01T17:10:13+08:00",
+            "over": 1.57,
+            "under": 2.3,
             "line": 4.5
+          },
+          "close": {
+            "at": "2026-10-01T16:55:00+08:00",
+            "over": 1.57,
+            "under": 2.3,
+            "line": 4.5,
+            "final": true
           }
         }
       },
@@ -167906,17 +167962,17 @@
           {
             "line": -3.5,
             "active": true,
-            "created": "01,10,2026,08,01"
+            "created": "01,10,2026,09,44"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "01,10,2026,08,01"
+            "created": "01,10,2026,09,53"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "01,10,2026,08,32"
+            "created": "01,10,2026,09,41"
           }
         ]
       }
@@ -167934,7 +167990,7 @@
             "at": "2026-05-03T12:11:00+08:00"
           }
         ],
-        "observedAt": "2026-10-01T16:45:05+08:00"
+        "observedAt": "2026-10-01T17:10:13+08:00"
       },
       "eventId": "ITOjkNaU",
       "league": "npb",
@@ -167944,7 +168000,7 @@
       "awayTeam": "中日",
       "homeTeam": "廣島",
       "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/hiroshima-carp-chunichi-dragons/ITOjkNaU/",
-      "observedAt": "2026-10-01T16:45:05+08:00",
+      "observedAt": "2026-10-01T17:10:13+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -167954,9 +168010,15 @@
             "away": 2.14
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
+            "at": "2026-10-01T17:10:13+08:00",
             "home": 1.92,
             "away": 1.89
+          },
+          "close": {
+            "at": "2026-10-01T15:01:00+08:00",
+            "home": 1.92,
+            "away": 1.89,
+            "final": true
           }
         },
         "hd": {
@@ -167968,11 +168030,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
+            "at": "2026-10-01T17:10:13+08:00",
             "home": 1.47,
-            "away": 2.55,
+            "away": 2.6,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-10-01T16:09:00+08:00",
+            "home": 1.47,
+            "away": 2.6,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -167983,10 +168053,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-10-01T15:35:17+08:00",
-            "over": 1.55,
-            "under": 2.34,
+            "at": "2026-10-01T17:10:13+08:00",
+            "over": 1.6,
+            "under": 2.25,
             "line": 5.5
+          },
+          "close": {
+            "at": "2026-10-01T16:51:00+08:00",
+            "over": 1.6,
+            "under": 2.25,
+            "line": 5.5,
+            "final": true
           }
         }
       },
@@ -168043,7 +168120,7 @@
           {
             "line": 1.5,
             "active": true,
-            "created": "01,10,2026,08,33"
+            "created": "01,10,2026,09,09"
           },
           {
             "line": 2.0,
@@ -168053,12 +168130,12 @@
           {
             "line": 2.5,
             "active": true,
-            "created": "01,10,2026,08,33"
+            "created": "01,10,2026,09,51"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "01,10,2026,08,33"
+            "created": "01,10,2026,09,14"
           }
         ]
       }
