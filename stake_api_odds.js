@@ -92,6 +92,68 @@ function validOdds(value) {
   return Number.isFinite(Number(value)) && Number(value) > 1;
 }
 
+function stakeHomeAway(name) {
+  const teams = parseStakeFixtureName(name);
+  if (teams.length !== 2) throw new Error(`STAKE 官方賽事名稱無法辨識：${name || ''}`);
+  // Stake/Betradar 的 fixture title 固定為「主隊 - 客隊」。
+  return { home: teams[0], away: teams[1] };
+}
+
+function normalizedTeamName(value) {
+  return String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+}
+
+function orientTeamMarket(market, away, home) {
+  if (!market || !Array.isArray(market.outcomes)) return market || null;
+  const awayKey = normalizedTeamName(away);
+  const homeKey = normalizedTeamName(home);
+  const oriented = market.outcomes.map((outcome) => {
+    const nameKey = normalizedTeamName(outcome && outcome.name);
+    const side = nameKey === awayKey ? 'away' : nameKey === homeKey ? 'home' : outcome && outcome.side;
+    return { ...outcome, ...(side ? { side } : {}) };
+  });
+  const awayOutcome = oriented.find((outcome) => outcome.side === 'away');
+  const homeOutcome = oriented.find((outcome) => outcome.side === 'home');
+  const outcomes = awayOutcome && homeOutcome ? [awayOutcome, homeOutcome] : oriented;
+  const negative = outcomes.find((outcome) => Number(outcome && outcome.line) < 0);
+  return {
+    ...market,
+    ...(negative && (negative.side === 'away' || negative.side === 'home') ? { favSide: negative.side } : {}),
+    outcomes,
+  };
+}
+
+function orientMarkets(markets, fixtureName) {
+  const { away, home } = stakeHomeAway(fixtureName);
+  const result = { ...(markets || {}) };
+  for (const kind of ['ml', 'hd']) {
+    if (result[kind]) result[kind] = orientTeamMarket(result[kind], away, home);
+  }
+  return result;
+}
+
+function repairStoredOrientation(previous, fixtureName) {
+  if (!previous || typeof previous !== 'object') return previous;
+  const { away, home } = stakeHomeAway(fixtureName);
+  const repairSnapshot = (snapshot) => {
+    if (!snapshot || typeof snapshot !== 'object') return snapshot;
+    return {
+      ...snapshot,
+      ...(snapshot.ml ? { ml: orientTeamMarket(snapshot.ml, away, home) } : {}),
+      ...(snapshot.hd ? { hd: orientTeamMarket(snapshot.hd, away, home) } : {}),
+    };
+  };
+  return {
+    ...repairSnapshot(previous),
+    teams: [away, home],
+    awayName: away,
+    homeName: home,
+    awayTeam: translateTeam(away),
+    homeTeam: translateTeam(home),
+    history: Array.isArray(previous.history) ? previous.history.map(repairSnapshot) : [],
+  };
+}
+
 function balancedPair(pairs) {
   const valid = pairs.filter((pair) => validOdds(pair.first.odds) && validOdds(pair.second.odds));
   valid.sort((left, right) => Math.abs(left.first.odds - left.second.odds) - Math.abs(right.first.odds - right.second.odds));
@@ -108,9 +170,7 @@ function pairedButtons($, accordion) {
 }
 
 function parseStakeOfficialPage(html, fixture) {
-  const teams = parseStakeFixtureName(fixture && fixture.name);
-  if (teams.length !== 2) throw new Error(`STAKE 官方賽事名稱無法辨識：${fixture && fixture.name || ''}`);
-  const [away, home] = teams;
+  const { away, home } = stakeHomeAway(fixture && fixture.name);
   const $ = cheerio.load(String(html || ''));
   const result = {};
 
@@ -120,8 +180,8 @@ function parseStakeOfficialPage(html, fixture) {
     result.ml = {
       market: 'Winner (Incl. Overtime and Penalties)',
       outcomes: [
-        { name: away, side: 'away', odds: winnerButtons[0].odds },
-        { name: home, side: 'home', odds: winnerButtons[1].odds },
+        { name: away, side: 'away', odds: winnerButtons[1].odds },
+        { name: home, side: 'home', odds: winnerButtons[0].odds },
       ],
     };
   }
@@ -156,14 +216,14 @@ function parseStakeOfficialPage(html, fixture) {
       && Math.abs(pair.first.line) === Math.abs(pair.second.line)));
   if (handicapPair) {
     const line = Math.abs(handicapPair.first.line);
-    const favSide = handicapPair.first.line < 0 ? 'away' : 'home';
+    const favSide = handicapPair.first.line < 0 ? 'home' : 'away';
     result.hd = {
       market: 'Handicap (Incl. Overtime and Penalties)',
       line,
       favSide,
       outcomes: [
-        { name: away, side: 'away', line: handicapPair.first.line, odds: handicapPair.first.odds },
-        { name: home, side: 'home', line: handicapPair.second.line, odds: handicapPair.second.odds },
+        { name: away, side: 'away', line: handicapPair.second.line, odds: handicapPair.second.odds },
+        { name: home, side: 'home', line: handicapPair.first.line, odds: handicapPair.first.odds },
       ],
     };
   }
@@ -221,7 +281,7 @@ function withUiMarkets(game, observedAt, sourceMode) {
     const open = uiSnapshot(oldest[field], kind, oldest.at || observedAt);
     if (active || open) markets[kind] = { ...(open ? { open } : {}), ...(active ? { active } : {}) };
   }
-  const [awayName, homeName] = parseStakeFixtureName(game.name);
+  const { away: awayName, home: homeName } = stakeHomeAway(game.name);
   const startTime = Number(game.startTime);
   return {
     ...game,
@@ -275,7 +335,7 @@ async function collectStakeOdds(options) {
           const body = await request(`/odds/${encodeURIComponent(fixture.slug)}`, apiKey);
           detail = body && body.fixture ? body.fixture : body;
           const groups = detail && detail.groups;
-          const normalized = normalizeStakeMarkets(groups);
+          const normalized = orientMarkets(normalizeStakeMarkets(groups), detail.name || fixture.name);
           if (groups && Object.keys(normalized).length) {
             markets = normalized;
             rawMarkets = compactRawMarkets(groups);
@@ -304,18 +364,21 @@ async function collectStakeOdds(options) {
         sourceMode = sourceMode === 'official-api' ? 'hybrid' : 'official-page';
         pageSucceeded++;
       }
+      const fixtureName = detail.name || fixture.name || '';
+      const fixtureTeams = stakeHomeAway(fixtureName);
       const current = {
         fixtureId: detail.id || fixture.id || null,
         slug: detail.slug || fixture.slug,
-        name: detail.name || fixture.name || '',
-        teams: parseStakeFixtureName(detail.name || fixture.name),
+        name: fixtureName,
+        teams: [fixtureTeams.away, fixtureTeams.home],
         startTime,
         status: detail.status || fixture.status || null,
         ...markets,
         rawMarkets,
       };
       if (!(current.startTime > now)) continue;
-      const merged = mergeStakeGame(games[current.slug], current, observedAt);
+      const previousGame = repairStoredOrientation(games[current.slug], current.name);
+      const merged = mergeStakeGame(previousGame, current, observedAt);
       games[current.slug] = withUiMarkets(merged, observedAt, sourceMode);
       succeeded++;
     } catch (error) {

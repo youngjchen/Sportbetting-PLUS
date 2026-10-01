@@ -50,7 +50,7 @@ jobs:
             git rebase --abort 2>/dev/null || true
             git fetch origin main || true
             git reset --hard origin/main || true
-            if timeout 240 node stake_api_odds.js; then
+            if timeout 420 node stake_api_odds.js; then
               git add data/stake_api_odds.json 2>/dev/null || true
               if ! git diff --cached --quiet; then
                 git commit -m "stake api odds $(date -u +%FT%TZ) [skip ci]" || true

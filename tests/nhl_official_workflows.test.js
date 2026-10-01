@@ -39,7 +39,7 @@ test('Stake official workflow runs the page transport even when the optional API
   assert.match(install.run, /pip -q install -r requirements-scraping\.txt/);
   assert.match(install.run, /scrapling install --force/);
   const loop = steps.find((step) => String(step.name || '').includes('5h10m'));
-  assert.match(loop.run, /timeout 240 node stake_api_odds\.js/);
+  assert.match(loop.run, /timeout 420 node stake_api_odds\.js/);
   assert.match(loop.run, /git add data\/stake_api_odds\.json/);
   assert.doesNotMatch(loop.run, /尚未設定 STAKE_ODDS_API_KEY|exit 0[\s\S]*STAKE_ODDS_API_KEY/);
   const handoff = steps.find((step) => step.name === '自我接棒');

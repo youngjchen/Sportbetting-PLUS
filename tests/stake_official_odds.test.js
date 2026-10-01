@@ -11,6 +11,7 @@ const {
   collectStakeOdds,
 } = require('../stake_api_odds.js');
 const { mergeStakeGame } = require('../nhl_core.js');
+const { findStakeGame } = require('../nhl_stake_core.js');
 
 const EVENT_HTML = fs.readFileSync(
   path.join(__dirname, 'fixtures', 'stake-nhl-event.html'),
@@ -30,20 +31,20 @@ test('pregame selector rejects fixtures exactly at or before the observation tim
   assert.deepEqual(selected.map((fixture) => fixture.slug), ['future']);
 });
 
-test('Stake official page selects the balanced full-game lines instead of alternate lines', () => {
+test('Stake official page treats its fixture title as home-away and selects the main lines', () => {
   const markets = parseStakeOfficialPage(EVENT_HTML, {
     name: 'New York Rangers - Tampa Bay Lightning',
   });
 
   assert.deepEqual(markets.ml.outcomes, [
-    { name: 'New York Rangers', side: 'away', odds: 2.11 },
-    { name: 'Tampa Bay Lightning', side: 'home', odds: 1.68 },
+    { name: 'Tampa Bay Lightning', side: 'away', odds: 1.68 },
+    { name: 'New York Rangers', side: 'home', odds: 2.11 },
   ]);
   assert.equal(markets.hd.line, 1.5);
-  assert.equal(markets.hd.favSide, 'home');
+  assert.equal(markets.hd.favSide, 'away');
   assert.deepEqual(markets.hd.outcomes.map((outcome) => [outcome.side, outcome.line, outcome.odds]), [
-    ['away', 1.5, 1.45],
-    ['home', -1.5, 2.6],
+    ['away', -1.5, 2.6],
+    ['home', 1.5, 1.45],
   ]);
   assert.equal(markets.tot.line, 6);
   assert.deepEqual(markets.tot.outcomes, [
@@ -80,12 +81,15 @@ test('collector uses the official event page without an API key and preserves st
   const future = output.games['future-game'];
   assert.equal(output.provider, 'stake-official');
   assert.equal(output.mode, 'official-page');
-  assert.equal(future.awayTeam, '遊騎兵');
-  assert.equal(future.homeTeam, '閃電');
-  assert.equal(future.markets.ml.active.away, 2.11);
-  assert.equal(future.markets.hd.active.favorite, 'home');
+  assert.equal(future.awayTeam, '閃電');
+  assert.equal(future.homeTeam, '遊騎兵');
+  assert.equal(future.markets.ml.active.away, 1.68);
+  assert.equal(future.markets.hd.active.favorite, 'away');
   assert.equal(future.markets.ou.active.line, 6);
   assert.ok(Date.parse(future.lastPregameAt) < future.startTime);
+  assert.ok(findStakeGame(output, {
+    date: '2026-10-02', time: '08:00', away: '閃電', home: '遊騎兵',
+  }));
 });
 
 test('collector supplements an incomplete official API response from the official event page', async () => {
@@ -122,9 +126,82 @@ test('collector supplements an incomplete official API response from the officia
   assert.equal(output.mode, 'hybrid');
   assert.equal(output.health.apiSucceeded, 1);
   assert.equal(output.health.pageSucceeded, 1);
-  assert.equal(output.games['future-game'].markets.ml.active.away, 2.2);
+  assert.equal(output.games['future-game'].markets.ml.active.away, 1.64);
+  assert.equal(output.games['future-game'].markets.ml.active.home, 2.2);
   assert.equal(output.games['future-game'].markets.hd.active.line, 1.5);
   assert.equal(output.games['future-game'].markets.ou.active.line, 6);
+});
+
+test('collector repairs previously stored reversed sides without inventing a favorite flip', async () => {
+  const previous = {
+    slug: 'future-game',
+    name: 'New York Rangers - Tampa Bay Lightning',
+    startTime: FUTURE,
+    awayName: 'New York Rangers',
+    homeName: 'Tampa Bay Lightning',
+    awayTeam: '遊騎兵',
+    homeTeam: '閃電',
+    ml: {
+      market: 'Winner (Incl. Overtime and Penalties)',
+      outcomes: [
+        { name: 'New York Rangers', side: 'away', odds: 2.15 },
+        { name: 'Tampa Bay Lightning', side: 'home', odds: 1.7 },
+      ],
+    },
+    hd: {
+      market: 'Handicap (Incl. Overtime and Penalties)',
+      line: 1.5,
+      favSide: 'home',
+      outcomes: [
+        { name: 'New York Rangers', side: 'away', line: 1.5, odds: 1.45 },
+        { name: 'Tampa Bay Lightning', side: 'home', line: -1.5, odds: 2.6 },
+      ],
+    },
+    history: [{
+      at: '2026-09-30T20:00:00.000Z',
+      ml: {
+        market: 'Winner (Incl. Overtime and Penalties)',
+        outcomes: [
+          { name: 'New York Rangers', side: 'away', odds: 2.15 },
+          { name: 'Tampa Bay Lightning', side: 'home', odds: 1.7 },
+        ],
+      },
+      hd: {
+        market: 'Handicap (Incl. Overtime and Penalties)',
+        line: 1.5,
+        favSide: 'home',
+        outcomes: [
+          { name: 'New York Rangers', side: 'away', line: 1.5, odds: 1.45 },
+          { name: 'Tampa Bay Lightning', side: 'home', line: -1.5, odds: 2.6 },
+        ],
+      },
+    }],
+    events: [],
+  };
+  const schedule = { schedule: [{ fixtures: [{
+    slug: 'future-game',
+    name: 'New York Rangers - Tampa Bay Lightning',
+    date: FUTURE,
+    status: 'active',
+    preMatchEnabled: true,
+  }] }] };
+
+  const output = await collectStakeOdds({
+    apiKey: '',
+    now: NOW,
+    previous: { games: { 'future-game': previous } },
+    request: async () => schedule,
+    fetchPage: async () => EVENT_HTML,
+  });
+  const game = output.games['future-game'];
+
+  assert.equal(game.awayTeam, '閃電');
+  assert.equal(game.homeTeam, '遊騎兵');
+  assert.deepEqual(game.markets.ml.open, {
+    at: '2026-09-30T20:00:00.000Z', away: 1.7, home: 2.15,
+  });
+  assert.equal(game.markets.hd.open.favorite, 'away');
+  assert.equal(game.events.some((event) => event.type === 'favorite-flip'), false);
 });
 
 test('handicap price movement cannot create a favorite flip while the negative line stays on one team', () => {
