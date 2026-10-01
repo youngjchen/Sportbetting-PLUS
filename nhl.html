@@ -511,7 +511,7 @@
   </div>
 
 <script src="./storage-pressure.js?v=20260924idb1"></script>
-<script src="./nhl_stake_core.js?v=20261001stake1"></script>
+<script src="./nhl_stake_core.js?v=20261001official2"></script>
 <script src="./nhl_bet365_core.js?v=20260930b3651"></script>
 <script>
 "use strict";
@@ -737,7 +737,7 @@ async function loadSeedGames(){
 
 // ===== 每日管線載入 =====
 let pregameCache = { updated:null, games:[] };
-let stakeOddsCache = { updatedAt:null, games:{} };
+let stakeOddsCache = { updated:null, games:{} };
 let oddsCache = { updated:null, games:{} };
 let seriesCache = {};
 async function loadPregame(){
@@ -749,8 +749,8 @@ async function loadPregame(){
       render(); } }
   }catch(e){}
   try{
-    const rs = await fetch(`data/nhl_oddsportal_stake.json?t=${Date.now()}`);
-    if(rs.ok){ const js = await rs.json(); if(js && js.games){
+    const rs = await fetch(`data/stake_api_odds.json?t=${Date.now()}`);
+    if(rs.ok){ const js = await rs.json(); if(js && js.provider==="stake-official" && js.games){
       stakeOddsCache = js;
       autoSettleFromPregame();
       const st=$("#stamp");
@@ -834,11 +834,11 @@ function ensureItem(date, id){
   return it;
 }
 
-// ===== OddsPortal Stake 主軸／Bet365 參考軸 =====
+// ===== Stake 官方主軸／Bet365 官方備援軸 =====
 function stakeOddsFor(g){
   if(!window.NhlStake) return null;
   const match=window.NhlStake.findStakeGame(stakeOddsCache,g);
-  return match ? { ...match, updated:stakeOddsCache.updatedAt||null } : null;
+  return match ? { ...match, updated:stakeOddsCache.updated||stakeOddsCache.updatedAt||null } : null;
 }
 function bet365OddsFor(g){
   if(!window.NhlBet365) return null;
@@ -1079,7 +1079,7 @@ function openSettleModal(model){
       `獨贏 客/主：${pair(stake.ml,"away","home")}`+
       `<br>讓分 客/主：${pair(stake.hd,"away","home")}`+
       `<br>大小 ${stake.ou&&stake.ou.line!=null?stake.ou.line:"—"} 大/小：${pair(stake.ou,"over","under")}`+
-      `<br>來源：OddsPortal；手動輸入仍優先。</div>`;
+      `<br>來源：Stake 官方；手動輸入仍優先。</div>`;
     bar.onclick=()=>{ const d=bar.querySelector(".iad"); d.style.display = d.style.display==="none" ? "block" : "none"; };
     body.appendChild(bar);
   }
@@ -1785,7 +1785,7 @@ function renderCardW(model){
   const hasStake = !!(stake && (stake.ml||stake.hd||stake.ou));
   const hasLine = model.hdVal!=null && (model.hdSrc==="STAKE" || model.hdSrc==="BET365");
   const sourceName = hasStake ? "STAKE" : (hasLine ? "BET365" : "STAKE");
-  const preB = document.createElement("button"); preB.className="bbadge"+((hasStake||hasLine)?" done":""); preB.textContent = (hasStake||hasLine)?`${sourceName} ✓`:"STAKE 待盤"; preB.title = hasStake?"OddsPortal 的 Stake 主盤已到位 / 點開結算視窗":(hasLine?"Stake 缺盤，暫用 Bet365 參考盤 / 點開結算視窗":"Stake 主盤尚未配對 / 點開結算視窗"); preB.onclick=()=>openSettleModal(model);
+  const preB = document.createElement("button"); preB.className="bbadge"+((hasStake||hasLine)?" done":""); preB.textContent = (hasStake||hasLine)?`${sourceName} ✓`:"STAKE 待盤"; preB.title = hasStake?"Stake 官方主盤已到位 / 點開結算視窗":(hasLine?"Stake 缺盤，暫用 Bet365 官方備援 / 點開結算視窗":"Stake 官方主盤尚未配對 / 點開結算視窗"); preB.onclick=()=>openSettleModal(model);
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; saveDoc(doc); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除（此日期不再顯示這張卡）"; delB.onclick=()=>{ snapshot(); it.hidden=true; saveDoc(doc); render(); };
   head.append(preB, colB, delB);
@@ -2008,7 +2008,7 @@ function renderCardW(model){
         `<span>🌐 <b style="color:${stake?"#2bbfa0":"#3aa0ff"}">${stake?("STAKE 主盤 "+(stake.hd&&stake.hd.line!=null?esc(favName)+" 讓 "+Math.abs(Number(stake.hd.line)):"待讓分盤")):(bet365?"BET365 備援":"STAKE 未配對")}</b></span>`;
       const more=document.createElement("div"); more.className="intl-more";
       const stakePair=(m,a,b)=>{ const x=m&&window.NhlStake.marketOutcome(m,a), y=m&&window.NhlStake.marketOutcome(m,b); return x&&y?`${Number(x.odds).toFixed(2)} / ${Number(y.odds).toFixed(2)}`:"—"; };
-      more.innerHTML = stake?(`STAKE 主盤（OddsPortal）：`+
+      more.innerHTML = stake?(`STAKE 官方主盤：`+
         `<br>獨贏 客/主：${stakePair(stake.ml,"away","home")}`+
         `<br>讓分：${stake.hd&&stake.hd.line!=null?`${esc(favName)} -${Math.abs(Number(stake.hd.line))}・客/主 ${stakePair(stake.hd,"away","home")}`:"—"}`+
         `<br>大小：${stake.ou&&stake.ou.line!=null?`${stake.ou.line}・大/小 ${stakePair(stake.ou,"over","under")}`:"—"}`):"STAKE 主盤尚未配對";

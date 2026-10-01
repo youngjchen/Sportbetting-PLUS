@@ -1,8 +1,14 @@
-# STAKE 官方 NHL 賠率 shadow 管線。缺 STAKE_ODDS_API_KEY 時不寫空檔、不自我接棒。
+# STAKE 官方 NHL 賽前盤。API key 可選；沒有 key 時讀官方賽事頁。
 name: stake-api-odds
 
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - stake_api_odds.js
+      - nhl_core.js
+      - .github/workflows/stake-api-odds.yml
   schedule:
     - cron: '13,43 * * * *'
 
@@ -20,18 +26,22 @@ jobs:
     timeout-minutes: 350
     env:
       STAKE_ODDS_API_KEY: ${{ secrets.STAKE_ODDS_API_KEY }}
+      EP_TRANSPORT: sidecar
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
       - run: npm ci
-      - name: 5h10m 官方賠率 shadow 迴圈
+      - name: 安裝 Scrapling 官方頁傳輸層
         run: |
-          if [ -z "$STAKE_ODDS_API_KEY" ]; then
-            echo "INFO 尚未設定 STAKE_ODDS_API_KEY；賽程可讀，但官方盤口不會回傳 groups，本輪安全停用"
-            exit 0
-          fi
+          pip -q install -r requirements-scraping.txt
+          scrapling install --force >/dev/null 2>&1 || echo "WARN Scrapling 瀏覽器安裝非零，本輪抓取會自行報錯並保留舊資料"
+      - name: 5h10m Stake NHL 官方賠率迴圈
+        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           END=$(( SECONDS + 18600 ))
@@ -60,6 +70,5 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
-          if [ -z "$STAKE_ODDS_API_KEY" ]; then echo "INFO 無 STAKE key，不接棒"; exit 0; fi
           if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
           gh workflow run stake-api-odds.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"

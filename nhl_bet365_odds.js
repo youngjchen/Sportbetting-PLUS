@@ -131,11 +131,12 @@ async function collectBet365NhlOdds(options = {}) {
 
   const now = Number.isFinite(Number(options.now)) ? Number(options.now) : Date.now();
   const observedAt = new Date(now).toISOString();
+  const upcoming = complete.filter((game) => Number(game.startTime) > now);
   const previous = options.previous && typeof options.previous === 'object' ? options.previous : { games: {} };
   const previousGames = previous.games && typeof previous.games === 'object' ? previous.games : {};
   const games = {};
 
-  for (const game of complete) {
+  for (const game of upcoming) {
     const key = stableGameKey(game);
     games[key] = mergeBet365Game(previousGames[key], game, observedAt);
   }
@@ -150,8 +151,8 @@ async function collectBet365NhlOdds(options = {}) {
     source: HUB_URL,
     health: {
       status: 'ok',
-      gameCount: complete.length,
-      marketCount: complete.length * 2,
+      gameCount: upcoming.length,
+      marketCount: upcoming.length * 2,
     },
     games,
   };

@@ -123,6 +123,12 @@ function stableMarketJson(value) {
 
 function favoriteName(hd) {
   if (!hd || !Array.isArray(hd.outcomes) || hd.outcomes.length !== 2) return null;
+  if (hd.favSide === 'away' || hd.favSide === 'home') {
+    const explicit = hd.outcomes.find((outcome) => outcome && outcome.side === hd.favSide);
+    if (explicit && explicit.name) return explicit.name;
+  }
+  const signed = hd.outcomes.find((outcome) => Number(outcome && outcome.line) < 0);
+  if (signed && signed.name) return signed.name;
   const sorted = hd.outcomes.slice().sort((a, b) => Number(a.odds) - Number(b.odds));
   return Number(sorted[0].odds) < Number(sorted[1].odds) ? sorted[0].name : null;
 }

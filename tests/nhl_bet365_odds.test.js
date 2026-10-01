@@ -11,6 +11,7 @@ const {
   collectBet365NhlOdds,
   updateOddsFile,
 } = require('../nhl_bet365_odds.js');
+const { stableGameKey } = require('../nhl_bet365_core.js');
 
 const FIXTURE_HTML = fs.readFileSync(
   path.join(__dirname, 'fixtures', 'nhl-bet365-hub.html'),
@@ -102,6 +103,42 @@ test('merges prior history and prunes games more than three days old', async () 
   assert.equal(output.health.gameCount, 2);
   assert.equal(Object.prototype.hasOwnProperty.call(output.games, 'old'), false);
   assert.ok(Object.values(output.games).every((game) => game.history.length === 1));
+});
+
+test('started Bet365 fixtures keep their last pregame snapshot unchanged', async () => {
+  const [started] = parseBet365NhlHub(FIXTURE_HTML);
+  const key = stableGameKey(started);
+  const frozen = {
+    ...started,
+    ml: {
+      market: 'Money Line',
+      outcomes: [
+        { name: started.away, side: 'away', odds: 2.25 },
+        { name: started.home, side: 'home', odds: 1.65 },
+      ],
+    },
+    history: [{
+      at: '2026-09-30T22:59:00.000Z',
+      ml: {
+        market: 'Money Line',
+        outcomes: [
+          { name: started.away, side: 'away', odds: 2.25 },
+          { name: started.home, side: 'home', odds: 1.65 },
+        ],
+      },
+      hd: started.hd,
+    }],
+    events: [],
+  };
+
+  const output = await collectBet365NhlOdds({
+    fetchText: async () => FIXTURE_HTML,
+    previous: { games: { [key]: frozen } },
+    now: started.startTime + 1,
+  });
+
+  assert.deepEqual(output.games[key], frozen);
+  assert.equal(output.health.gameCount, 1);
 });
 
 test('failed collection leaves the last valid file byte-for-byte unchanged', async (t) => {

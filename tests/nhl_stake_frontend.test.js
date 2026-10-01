@@ -29,7 +29,7 @@ function waitFor(check, timeoutMs = 3000) {
   });
 }
 
-test('renders Stake ML/HD/OU as primary and keeps Bet365 as reference', async (t) => {
+test('renders Stake official ML/HD/OU as primary and never requests an NHL aggregator feed', async (t) => {
   const pregame = {
     updated: '2026-10-01T00:30:00.000Z',
     games: [{
@@ -43,7 +43,8 @@ test('renders Stake ML/HD/OU as primary and keeps Bet365 as reference', async (t
   const stakeGame = {
     eventId: 'stake-1', league: 'nhl', date: '2026-10-01', startTime: '07:30',
     startISO: '2026-10-01T07:30:00+08:00', awayTeam: '企鵝', homeTeam: '飛人',
-    sourceUrl: 'https://www.oddsportal.com/hockey/h2h/example/#stake-1',
+    sourceMode: 'official-page',
+    sourceUrl: 'https://stake.com/sports/ice-hockey/usa/nhl/stake-1',
     markets: {
       ml: {
         open: { away: 2.15, home: 1.75 },
@@ -60,8 +61,8 @@ test('renders Stake ML/HD/OU as primary and keeps Bet365 as reference', async (t
     },
   };
   const stakeFeed = {
-    source: 'OddsPortal', bookmaker: 'Stake.com', league: 'nhl',
-    updatedAt: '2026-10-01T00:30:00+08:00', health: { succeeded: 1 },
+    provider: 'stake-official', mode: 'official-page',
+    updated: '2026-10-01T00:30:00+08:00', health: { succeeded: 1 },
     games: { one: stakeGame },
   };
   const betGame = {
@@ -81,6 +82,7 @@ test('renders Stake ML/HD/OU as primary and keeps Bet365 as reference', async (t
 
   const virtualConsole = new VirtualConsole();
   const jsdomErrors = [];
+  const requested = [];
   virtualConsole.on('jsdomError', (error) => jsdomErrors.push(error));
   const dom = new JSDOM(fs.readFileSync(path.join(ROOT, 'nhl.html'), 'utf8'), {
     url: 'http://local.test/nhl.html',
@@ -108,8 +110,9 @@ test('renders Stake ML/HD/OU as primary and keeps Bet365 as reference', async (t
       }));
       window.fetch = (url) => {
         const text = String(url);
+        requested.push(text);
         if (text.includes('nhl_pregame.json')) return jsonResponse(pregame);
-        if (text.includes('nhl_oddsportal_stake.json')) return jsonResponse(stakeFeed);
+        if (text.includes('stake_api_odds.json')) return jsonResponse(stakeFeed);
         if (text.includes('nhl_bet365_odds.json')) return jsonResponse(betFeed);
         if (text.includes('nhl_games.json')) return jsonResponse({ games: [], count: 0 });
         if (text.includes('nhl_lottery_series.json')) return jsonResponse({});
@@ -144,6 +147,9 @@ test('renders Stake ML/HD/OU as primary and keeps Bet365 as reference', async (t
   assert.equal(card.querySelector('.basis input').value, '6.5');
   assert.match(totalRows[0], /大.*6\.5.*STAKE 2\.02/);
   assert.match(totalRows[1], /小.*6\.5.*STAKE 1\.80/);
+  assert.ok(requested.some((url) => url.includes('stake_api_odds.json')));
+  assert.equal(requested.some((url) => url.includes('nhl_oddsportal_stake.json')), false);
+  assert.doesNotMatch(card.textContent, /OddsPortal/);
 
   card.querySelector('.bbadge').click();
   assert.equal(dom.window.document.querySelector('#openOddsAway').value, '2.15');
