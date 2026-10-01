@@ -59,4 +59,3 @@ NHL 比賽卡只接受 Stake 與 Bet365 官方來源的賽前盤。BetExplorer �
 - 前端測試證明只載入 Stake／Bet365 官方檔、今日三場呈現修復後盤口、手動對調仍優先、大小分缺盤仍預設 6.5。
 - workflow 測試證明 OddsPortal NHL 閘與資料提交已移除，Stake 無金鑰仍會運行官方頁模式。
 - 全部測試、JSON 驗證、YAML/BOM 檢查及瀏覽器檢查通過後才推送 `main`。
-

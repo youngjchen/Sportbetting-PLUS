@@ -54,4 +54,3 @@ test('the two official workflows stay isolated to their own data files', () => {
   assert.doesNotMatch(stakeLoop, /nhl_bet365_odds|nhl_oddsportal_stake/);
   assert.doesNotMatch(betLoop, /stake_api_odds|nhl_oddsportal_stake/);
 });
-

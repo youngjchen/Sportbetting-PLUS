@@ -154,4 +154,3 @@ test('handicap price movement cannot create a favorite flip while the negative l
 
   assert.equal(after.events.some((event) => event.type === 'favorite-flip'), false);
 });
-

@@ -220,4 +220,3 @@ Expected: 全部 PASS，無 whitespace error。
 - [ ] **Step 5: 瀏覽器驗證與部署**
 
 啟動本機 HTTP server，確認今日三場不再顯示 1.22／4.25、讓分換邊或 -4.5→-1.5；確認明日場顯示「STAKE 官方」。完成後依 `AGENTS.md` 先 `git status`、commit、`git show --stat`，再 `git pull --rebase origin main`、重跑測試、推送 `HEAD:main`，最後核對 GitHub Pages 資料時間與內容。
-
