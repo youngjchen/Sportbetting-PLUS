@@ -1,6 +1,6 @@
 {
  "provider": "bet365-official",
- "updated": "2026-10-01T17:58:08.415Z",
+ "updated": "2026-10-01T18:03:10.126Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -24,12 +24,12 @@
      {
       "name": "BUF Sabres",
       "side": "away",
-      "odds": 1.86
+      "odds": 1.83
      },
      {
       "name": "CLB Blue Jackets",
       "side": "home",
-      "odds": 1.86
+      "odds": 1.91
      }
     ]
    },
@@ -53,6 +53,43 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-01T18:03:10.126Z",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "BUF Sabres",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "CLB Blue Jackets",
+        "side": "home",
+        "odds": 1.91
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "BUF Sabres",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.1
+       },
+       {
+        "name": "CLB Blue Jackets",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.35
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-01T16:32:15.881Z",
      "ml": {
@@ -716,23 +753,60 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "SEA Kraken",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.35
+      "line": -1.5,
+      "odds": 3.1
      },
      {
       "name": "CGY Flames",
       "side": "home",
-      "line": -1.5,
-      "odds": 3.1
+      "line": 1.5,
+      "odds": 1.35
      }
     ]
    },
    "history": [
+    {
+     "at": "2026-10-01T18:03:10.126Z",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "SEA Kraken",
+        "side": "away",
+        "odds": 1.86
+       },
+       {
+        "name": "CGY Flames",
+        "side": "home",
+        "odds": 1.86
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "SEA Kraken",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.1
+       },
+       {
+        "name": "CGY Flames",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.35
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-01T08:21:14.226Z",
      "ml": {
@@ -808,7 +882,14 @@
      }
     }
    ],
-   "events": []
+   "events": [
+    {
+     "at": "2026-10-01T18:03:10.126Z",
+     "type": "favorite-flip",
+     "from": "home",
+     "to": "away"
+    }
+   ]
   },
   "1790905020000|CHI Blackhawks|UTA Mammoth": {
    "startTime": 1790905020000,
