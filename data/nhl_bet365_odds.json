@@ -1,6 +1,6 @@
 {
  "provider": "bet365-official",
- "updated": "2026-10-01T16:37:13.399Z",
+ "updated": "2026-10-01T16:42:14.707Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -1655,23 +1655,60 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "MTL Canadiens",
       "side": "away",
-      "line": -1.5,
-      "odds": 3.2
+      "line": 1.5,
+      "odds": 1.35
      },
      {
       "name": "PIT Penguins",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.34
+      "line": -1.5,
+      "odds": 3.1
      }
     ]
    },
    "history": [
+    {
+     "at": "2026-10-01T16:42:14.707Z",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "MTL Canadiens",
+        "side": "away",
+        "odds": 1.86
+       },
+       {
+        "name": "PIT Penguins",
+        "side": "home",
+        "odds": 1.86
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "MTL Canadiens",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.35
+       },
+       {
+        "name": "PIT Penguins",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.1
+       }
+      ]
+     }
+    },
     {
      "at": "2026-09-29T23:28:50.139Z",
      "ml": {
@@ -1710,7 +1747,14 @@
      }
     }
    ],
-   "events": []
+   "events": [
+    {
+     "at": "2026-10-01T16:42:14.707Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    }
+   ]
   },
   "1791068820000|WAS Capitals|TB Lightning": {
    "startTime": 1791068820000,
