@@ -379,6 +379,11 @@
   .stats-team .mkt .cells{flex:1;display:flex;gap:6px}
   .stats-team .mkt .cells .statcell{flex:1;background:rgba(255,255,255,.02)}
   .statcell .colhd{font-size:10px;color:#5c6678}
+  .nba-odds-monitor{padding:8px 14px;border-bottom:1px solid rgba(255,255,255,.07);background:rgba(6,10,16,.46);font-size:11.5px;line-height:1.65;color:#bac7d6}
+  .nba-odds-row{white-space:normal;overflow-wrap:anywhere}
+  .nba-odds-stake{color:#d7c5ff}.nba-odds-bet365{color:#9fc8ff}.nba-odds-台彩{color:#ffd08a}
+  .nba-odds-auto,.nba-odds-history-toggle{margin:5px 6px 0 0;padding:2px 7px;border:1px solid #465367;border-radius:6px;background:#1b2430;color:#cbd6e4;font:inherit;cursor:pointer}
+  .nba-odds-history{margin-top:5px;padding:5px 8px;border-left:2px solid #7660a6;color:#94a2b5}
 </style>
 </head>
 <body>
@@ -733,16 +738,25 @@ async function loadSeedGames(){
 
 // ===== 每日管線載入 =====
 let pregameCache = { updated:null, games:[] };
+let pregameFeeds = { WNBA:{ updated:null, games:[] }, NBA:{ updated:null, games:[] } };
 let oddsCache = { updated:null, games:{} };
 let seriesCache = {};
 async function loadPregame(){
-  try{
-    const r = await fetch(`data/wnba_pregame.json?t=${Date.now()}`);
-    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.games)){ pregameCache = j; autoSettleFromPregame();
-      const st=$("#stamp"); if(st && j.updated){ const d=new Date(j.updated); if(!isNaN(d)){ const t=new Date(d.getTime()+8*3600e3);
-        st.textContent = `資料更新 ${String(t.getUTCMonth()+1).padStart(2,"0")}-${String(t.getUTCDate()).padStart(2,"0")} ${String(t.getUTCHours()).padStart(2,"0")}:${String(t.getUTCMinutes()).padStart(2,"0")}`; } }
-      render(); } }
-  }catch(e){}
+  const feeds = [["WNBA","data/wnba_pregame.json"],["NBA","data/nba_pregame.json"]];
+  await Promise.all(feeds.map(async ([league,url])=>{
+    try{
+      const r=await fetch(`${url}?t=${Date.now()}`);
+      if(!r.ok) return;
+      const j=await r.json();
+      if(j&&Array.isArray(j.games)) pregameFeeds[league]={...j,games:j.games.map(g=>({...g,league:g.league||league}))};
+    }catch(_){}
+  }));
+  const updated=[pregameFeeds.WNBA.updated,pregameFeeds.NBA.updated].filter(Boolean).sort().pop()||null;
+  pregameCache={updated,games:[...(pregameFeeds.WNBA.games||[]),...(pregameFeeds.NBA.games||[])]};
+  autoSettleFromPregame();
+  const st=$("#stamp"); if(st&&updated){ const d=new Date(updated); if(!isNaN(d)){ const t=new Date(d.getTime()+8*3600e3);
+    st.textContent=`資料更新 ${String(t.getUTCMonth()+1).padStart(2,"0")}-${String(t.getUTCDate()).padStart(2,"0")} ${String(t.getUTCHours()).padStart(2,"0")}:${String(t.getUTCMinutes()).padStart(2,"0")}`; } }
+  render();
   try{
     const r2 = await fetch(`data/wnba_odds_log.json?t=${Date.now()}`);
     if(r2.ok){ const j2 = await r2.json(); if(j2 && j2.games){ oddsCache = j2; render(); } }
@@ -758,17 +772,19 @@ function autoSettleFromPregame(){
   let changed = false;
   for(const g of pregameCache.games||[]){
     if(g.status!=="finished" || g.awayScore==null || g.homeScore==null) continue;
-    const useHd = g.hdSrc==="運彩" && g.hdFav && g.hdVal!=null;
-    const rec = { sid:g.officialId, date:g.date, league:"WNBA", awayTeam:g.away, homeTeam:g.home,
+    const league=g.league||(String(g.officialId||"").startsWith("NBA_")?"NBA":"WNBA");
+    const it=ensureItem(g.date,g.officialId);
+    const settledModel=(league==="NBA"&&window.__nbaOddsIntegration)?window.__nbaOddsIntegration.composeModel(g,it):g;
+    const useHd = settledModel.hdFav && settledModel.hdVal!=null;
+    const rec = { sid:g.officialId, date:g.date, league, awayTeam:g.away, homeTeam:g.home,
       awayScore:g.awayScore, homeScore:g.homeScore,
-      hdFav:useHd?g.hdFav:null, hdVal:useHd?g.hdVal:null,
-      totBasis:g.totLine!=null?g.totLine:null, mlOffered:g.mlOffered!==false };
-    const old = gameFind(rec.sid, rec.date, "WNBA", rec.awayTeam, rec.homeTeam);
+      hdFav:useHd?settledModel.hdFav:null, hdVal:useHd?settledModel.hdVal:null,
+      totBasis:settledModel.totLine!=null?settledModel.totLine:null, mlOffered:g.mlOffered!==false };
+    const old = gameFind(rec.sid, rec.date, league, rec.awayTeam, rec.homeTeam);
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
     // it.settled 同步（手動結算優先;卡片 pills／戰績／導覽全讀這份=棒球資料流）
-    const it = ensureItem(g.date, g.officialId);
     // 異常快照落印（2026-08-04）：分類依據=bet365 vs 台彩;odds 快取 5 天滾動,結算當下不落印=歷史永久失考
-    if(!it.anomSnap){
+    if(league==="WNBA"&&!it.anomSnap){
       const _i = intlFor(g), _l = lswFor(g);
       const _mlo = (oddsCache.games && oddsCache.games[g.officialId] && oddsCache.games[g.officialId].ml) || null;
       it.anomSnap = {
@@ -778,7 +794,7 @@ function autoSettleFromPregame(){
       };
     }
     if(!it.settled || !it.settled.manual){
-      const auto = computeAutoSettled(g);
+      const auto = computeAutoSettled(settledModel);
       if(auto && JSON.stringify(it.settled||null)!==JSON.stringify(auto)){ it.settled = auto; changed = true; }
     }
     if(old && JSON.stringify(old)===JSON.stringify(rec)) continue;
@@ -793,7 +809,7 @@ function ensureItem(date, id){
   const b = doc.boards[date] = doc.boards[date] || {};
   const items = b.items = b.items || [];
   let it = items.find(x=>x.id===id);
-  if(!it){ it = { id, league:"WNBA" }; items.push(it); }
+  if(!it){ it = { id, league:String(id||"").startsWith("NBA_")?"NBA":"WNBA" }; items.push(it); }
   for(const k of OPT_KEYS){
     if(!it[k] || typeof it[k].lights!=="number"){
       const oldL = (it.L&&it.L[k])||0, oldB = !!(it.bets&&it.bets[k]);
@@ -924,7 +940,7 @@ function computeAutoSettled(model){
   if(a==null||h==null) return null;
   const s = { awayScore:a, homeScore:h };
   s.ml = a>h ? "away" : "home";
-  if(model.hdSrc==="運彩" && model.hdFav && model.hdVal!=null){
+  if(model.hdFav && model.hdVal!=null){
     const favM = model.hdFav==="home" ? (h-a) : (a-h);
     s.hd = favM - model.hdVal > 0 ? "cover" : (favM - model.hdVal === 0 ? "push" : "nocover");
   }
@@ -1177,8 +1193,7 @@ $("#settleRemove").onclick = ()=>{
 // ===== 重點總結／今日戰績（棒球版移植） =====
 function leagueOfModel(m){ return (m.league||"WNBA").toLowerCase(); }
 function currentModels(){
-  if(doc.activeLeague!=="WNBA") return [];
-  return (pregameCache.games||[]).filter(g=>g.date===doc.activeDate)
+  return (pregameCache.games||[]).filter(g=>g.date===doc.activeDate&&g.league===doc.activeLeague)
     .map(modelFromPregame).filter(m=>!m._item.hidden);
 }
 function collectSummary(models){
@@ -1730,8 +1745,8 @@ function renderCardW(model){
   // 【明牌 ×N】膠囊由 wnba-picks-addon.decorate() 插入（棒球同路徑：含未讀 .ep-new 與面板入口）
   if(settled){ const sm=document.createElement("span"); sm.className="bbadge done"; sm.textContent="✓ 已結算"; sm.title="點擊修改（手動覆蓋管線）"; sm.onclick=()=>openSettleModal(model); head.appendChild(sm); }
   if(model.status==="postponed"){ const pd=document.createElement("span"); pd.className="bbadge ppd"; pd.textContent="⏸ 延賽"; pd.title="來源判定延賽,此卡不會結算"; head.appendChild(pd); }
-  const hasLine = model.hdSrc==="運彩" && model.hdVal!=null;
-  const preB = document.createElement("button"); preB.className="bbadge"+(hasLine?" done":""); preB.textContent = hasLine?"賽前 ✓":"賽前 待盤"; preB.title = hasLine?"台彩盤口已到位 / 點開結算視窗":"台彩尚未開盤 / 點開結算視窗"; preB.onclick=()=>openSettleModal(model);
+  const hasLine = model.hdVal!=null;
+  const preB = document.createElement("button"); preB.className="bbadge"+(hasLine?" done":""); preB.textContent = hasLine?"賽前 ✓":"賽前 待盤"; preB.title = hasLine?`${model.hdSrc||"賽前"}盤口已到位 / 點開結算視窗`:"盤口尚未到位 / 點開結算視窗"; preB.onclick=()=>openSettleModal(model);
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; saveDoc(doc); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除（此日期不再顯示這張卡）"; delB.onclick=()=>{ snapshot(); it.hidden=true; saveDoc(doc); render(); };
   head.append(preB, colB, delB);
@@ -1767,6 +1782,11 @@ function renderCardW(model){
     const bn=document.createElement("div"); bn.className="bflipbanner swap";
     bn.innerHTML=`<span class='ic'>⇆</span>賽前讓分方曾對調（台彩換邊 ${lsw} 次${intl&&intl.flips?`・bet365 換邊 ${intl.flips} 次`:""}）`;
     el.appendChild(bn);
+  }
+
+  if(model.league==="NBA"&&window.__nbaOddsIntegration){
+    const monitor=window.__nbaOddsIntegration.renderMonitor(model,it);
+    if(monitor) el.appendChild(monitor);
   }
 
   if(!it.collapsed){
@@ -1898,7 +1918,10 @@ function renderCardW(model){
     // 讓分（⇄=手動換讓分方,燈跟隊;棒球同款）
     const hdWrap=wrapDiv();
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方（燈跟隊走）";
-    swap.onclick=()=>{ snapshot(); it.hdSwap=!it.hdSwap; const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
+    swap.onclick=()=>{ snapshot();
+      if(model.league==="NBA"&&window.__nbaOddsIntegration){ window.__nbaOddsIntegration.markManual(it,"handicap",favSide==="away"?"home":"away"); }
+      else it.hdSwap=!it.hdSwap;
+      const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
     // 使用者在結算視窗填的盤口優先；沒填才用賽程管線的台彩盤口
     const hv = (it.hdVal!=null && it.hdVal!=="" && !isNaN(parseFloat(it.hdVal)))
              ? String(Math.abs(parseFloat(it.hdVal)))
@@ -1912,7 +1935,7 @@ function renderCardW(model){
     ana.appendChild(hdWrap);
 
     // 國際軸藍帶（bet365＋台彩;棒球同構;唯讀）
-    if(intl || hasLine){
+    if(model.league==="WNBA"&&(intl || hasLine)){
       const dotc = intlFlip ? "#e08020" : ((lsw>0||(intl&&intl.flips>0)) ? "#2bbfa0" : "#5b6b80");
       const strip=document.createElement("div"); strip.className="intl-strip";
       strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
@@ -1933,7 +1956,7 @@ function renderCardW(model){
     basis.innerHTML="基準 ";
     const tinp=document.createElement("input"); tinp.type="number"; tinp.step="1"; tinp.min="0.5"; tinp.inputMode="decimal"; tinp.value=tv;
     tinp.onclick=(e)=>e.stopPropagation();
-    tinp.oninput=()=>{ it.totVal = tinp.value.trim(); saveDoc(doc); };
+    tinp.oninput=()=>{ it.totVal = tinp.value.trim(); if(model.league==="NBA"&&window.__nbaOddsIntegration) window.__nbaOddsIntegration.markManual(it,"total"); saveDoc(doc); };
     basis.appendChild(tinp);
     const aT=pctInfo(model.league,season,model.away,"tot","away"), hT=pctInfo(model.league,season,model.home,"tot","home");
     let overPct=null, lowS=false, samp=0;
@@ -1986,10 +2009,12 @@ function tvOf(it,model){ const v=(it.totVal!=null&&it.totVal!=="")?it.totVal:(mo
 // 管線場次 → 卡片 model（含使用者 ⇄ 覆蓋讓分方）
 function modelFromPregame(g){
   const it = ensureItem(g.date, g.officialId);
-  let hdFav = g.hdFav;
-  if(it.hdSwap && hdFav) hdFav = hdFav==="away"?"home":"away";
+  let base=g;
+  if(g.league==="NBA"&&window.__nbaOddsIntegration) base=window.__nbaOddsIntegration.composeModel(g,it);
+  let hdFav = base.hdFav;
+  if(g.league!=="NBA"&&it.hdSwap && hdFav) hdFav = hdFav==="away"?"home":"away";
   // id/type/gameTime＝棒球 item 介面（wnba-picks-addon 沿用棒球比對邏輯,需要這三個欄位）
-  return { ...g, id: g.officialId, type: 'match', gameTime: g.time, hdFav, _item: it,
+  return { ...base, id: g.officialId, type: 'match', gameTime: g.time, hdFav, _item: it,
     get settled(){ return it.settled; }, get expertApplied(){ return it.expertApplied; } };
 }
 
@@ -1998,13 +2023,13 @@ function renderDates(){
   const bar = document.getElementById("datebar");
   bar.querySelectorAll(".dbtn").forEach(b=>b.remove());
   const dates = Object.keys(doc.boards).sort();
-  for(const g of pregameCache.games||[]) if(!dates.includes(g.date)) dates.push(g.date);
-  for(const g of doc.games||[]) if(g.league==="WNBA" && !dates.includes(g.date) && g.date>=twOffset(-7)) dates.push(g.date);
+  for(const g of pregameCache.games||[]) if(g.league===doc.activeLeague&&!dates.includes(g.date)) dates.push(g.date);
+  for(const g of doc.games||[]) if(g.league===doc.activeLeague && !dates.includes(g.date) && g.date>=twOffset(-7)) dates.push(g.date);
   if(!dates.includes(doc.activeDate)) dates.push(doc.activeDate);
   const cnt = (d)=>{
     const s=new Set();
-    for(const g of pregameCache.games||[]) if(g.date===d) s.add(g.officialId);
-    for(const g of doc.games||[]) if(g.league==="WNBA"&&g.date===d) s.add(g.sid);
+    for(const g of pregameCache.games||[]) if(g.league===doc.activeLeague&&g.date===d) s.add(g.officialId);
+    for(const g of doc.games||[]) if(g.league===doc.activeLeague&&g.date===d) s.add(g.sid);
     return s.size;
   };
   for(const d of dates.sort()){
@@ -2053,7 +2078,7 @@ function sortedTeams(league, teams, season){
 function teamsForToday(league){
   const s = new Set();
   for(const g of (doc.games||[])) if(g.league===league && g.date===doc.activeDate){ s.add(g.awayTeam); s.add(g.homeTeam); }
-  for(const g of (pregameCache.games||[])) if(g.date===doc.activeDate){ s.add(g.away); s.add(g.home); }
+  for(const g of (pregameCache.games||[])) if(g.league===league&&g.date===doc.activeDate){ s.add(g.away); s.add(g.home); }
   return s;
 }
 function isMobileLayout(){ return window.matchMedia("(max-width:700px)").matches; }
@@ -2369,30 +2394,24 @@ function render(){
   if(doc.cols!=="auto"){ board.style.gridTemplateColumns=`repeat(${doc.cols}, minmax(0,1fr))`; board.style.alignItems="start"; board.style.justifyItems="center"; }
   else { board.style.gridTemplateColumns=""; }
   document.body.style.zoom = doc.uiScale!==1 ? doc.uiScale : "";
-  if(doc.activeLeague==="WNBA"){
-    let todays=(pregameCache.games||[]).filter(g=>g.date===doc.activeDate)
-      .sort((a,b)=> (a.time||"") < (b.time||"") ? -1 : 1);
-    if(doc.sortMkt){
-      const key={ml:["mlAway","mlHome"],hd:["hdGive","hdRecv"],tot:["over","under"]}[doc.sortMkt]||[];
-      const litOf=(g)=>{ const it=ensureItem(g.date,g.officialId); return Math.max(...key.map(k=>it[k].lights),0); };
-      todays = todays.slice().sort((a,b)=> litOf(b)-litOf(a));
-    }
-    const visible = todays.filter(g=>{ const it=ensureItem(g.date,g.officialId); return !it.hidden; });
-    if(visible.length){
-      for(const g of visible){ const md=modelFromPregame(g); board.appendChild(renderCardW(md));
-        try{ window.__expertPicks && window.__expertPicks.decorate(md); }catch(_){} }
-      renderSummary(); renderMatchNav(); layoutRightColumns();
-      return;
-    }
-    const e=document.createElement("div"); e.className="empty";
-    const n = (doc.games||[]).filter(g=>g.league==="WNBA").length;
-    e.innerHTML=`<b>WNBA 排盤板</b><br>本季數據 ${n} 場已入庫（📊 隊伍統計可看全隊過盤率）。<br>此日期無賽程;有比賽的日子卡片由管線自動生成。`;
-    board.appendChild(e);
-  } else {
-    const e=document.createElement("div"); e.className="empty";
-    e.innerHTML=`<b>NBA 排盤板</b><br>2026-27 賽季 10 月開打;管線沿用 WNBA 同架構（l1、allianceid 3）於開季前接入。`;
-    board.appendChild(e);
+  let todays=(pregameCache.games||[]).filter(g=>g.league===doc.activeLeague&&g.date===doc.activeDate)
+    .sort((a,b)=> (a.time||"") < (b.time||"") ? -1 : 1);
+  if(doc.sortMkt){
+    const key={ml:["mlAway","mlHome"],hd:["hdGive","hdRecv"],tot:["over","under"]}[doc.sortMkt]||[];
+    const litOf=(g)=>{ const it=ensureItem(g.date,g.officialId); return Math.max(...key.map(k=>it[k].lights),0); };
+    todays = todays.slice().sort((a,b)=> litOf(b)-litOf(a));
   }
+  const visible = todays.filter(g=>{ const it=ensureItem(g.date,g.officialId); return !it.hidden; });
+  if(visible.length){
+    for(const g of visible){ const md=modelFromPregame(g); board.appendChild(renderCardW(md));
+      try{ window.__expertPicks && window.__expertPicks.decorate(md); }catch(_){} }
+    renderSummary(); renderMatchNav(); layoutRightColumns();
+    return;
+  }
+  const e=document.createElement("div"); e.className="empty";
+  const n = (doc.games||[]).filter(g=>g.league===doc.activeLeague).length;
+  e.innerHTML=`<b>${esc(doc.activeLeague)} 排盤板</b><br>本季數據 ${n} 場已入庫。<br>此日期無賽程;有比賽的日子卡片由管線自動生成。`;
+  board.appendChild(e);
   renderSummary(); renderMatchNav(); layoutRightColumns();
 }
 render();
@@ -2402,5 +2421,6 @@ loadPregame();
 <script src="wnba-picks-addon.js?v=20260803wnba1"></script>
 <script src="wnba-divination-addon.js?v=20260924idb1"></script>
 <script src="oddsportal-integration.js?v=20260902dedupe2"></script>
+<script src="nba-odds-integration.js?v=20261004nba1"></script>
 </body>
 </html>

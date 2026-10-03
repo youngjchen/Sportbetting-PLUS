@@ -1,0 +1,76 @@
+# Bet365 NBA 三盤；以 Titan companyId=8 的公開盤口歷史取開賽前資料。
+name: nba-bet365-odds
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - nba_bet365_odds.js
+      - nba_odds_core.js
+      - nba-odds-integration.js
+      - .github/workflows/nba-bet365-odds.yml
+  schedule:
+    - cron: '14,44 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: nba-bet365-odds
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      EP_TRANSPORT: sidecar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: 安裝 Bet365 備援傳輸層
+        run: |
+          pip -q install -r requirements-scraping.txt
+          scrapling install --force >/dev/null 2>&1 || echo "WARN Scrapling 瀏覽器安裝非零；下一輪仍會重試"
+      - name: 驗證 NBA Bet365 收集器
+        run: node --test tests/nba_collectors.test.js tests/nba_three_source_frontend.test.js
+      - name: 5h10m NBA Bet365 盤口迴圈
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          END=$(( SECONDS + 18600 ))
+          while [ "$SECONDS" -lt "$END" ]; do
+            T0=$SECONDS
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            if timeout 300 node nba_bet365_odds.js; then
+              git add data/nba_bet365_odds.json 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                git commit -m "nba bet365 odds $(date -u +%FT%TZ) [skip ci]" || true
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
+              fi
+            else
+              echo "WARN NBA Bet365 盤口抓取失敗；保留上一份有效資料，下一輪重試"
+            fi
+            EL=$(( SECONDS - T0 ))
+            [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))
+          done
+      - name: 自我接棒
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
+          gh workflow run nba-bet365-odds.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"

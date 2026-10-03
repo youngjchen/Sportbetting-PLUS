@@ -1,0 +1,75 @@
+# NBA 台彩賽程／三盤／比分。長迴圈每五分鐘更新；cron 只作斷鏈備援。
+name: nba-scrape
+
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - nba_scraper.js
+      - nba_odds_core.js
+      - .github/workflows/nba-scrape.yml
+  schedule:
+    - cron: '4,34 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: nba-scrape
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      EP_TRANSPORT: sidecar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: 安裝玩運彩反封鎖傳輸層
+        run: |
+          pip -q install -r requirements-scraping.txt
+          scrapling install --force >/dev/null 2>&1 || echo "WARN Scrapling 瀏覽器安裝非零；下一輪仍會重試"
+      - name: 驗證 NBA 台彩收集器
+        run: node --test tests/nba_odds_core.test.js tests/nba_collectors.test.js
+      - name: 5h10m NBA 台彩賽程與比分迴圈
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          END=$(( SECONDS + 18600 ))
+          while [ "$SECONDS" -lt "$END" ]; do
+            T0=$SECONDS
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            if timeout 300 node nba_scraper.js; then
+              git add data/nba_pregame.json data/nba_lottery_series.json 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                git commit -m "nba scrape $(date -u +%FT%TZ) [skip ci]" || true
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
+              fi
+            else
+              echo "WARN NBA 台彩抓取失敗；保留上一份有效資料，下一輪重試"
+            fi
+            EL=$(( SECONDS - T0 ))
+            [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))
+          done
+      - name: 自我接棒
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
+          gh workflow run nba-scrape.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"
