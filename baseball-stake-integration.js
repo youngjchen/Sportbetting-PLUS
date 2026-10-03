@@ -129,26 +129,47 @@
     if (!game) return 'Stake：無資料';
     const favorite = sideName(game, game.favorite);
     const odds = game.handicapOdds && game.handicapOdds[game.favorite];
-    const total = game.total && game.total.line != null ? game.total.line : '—';
+    const dogSide = game.favorite === 'away' ? 'home' : 'away';
+    const dog = sideName(game, dogSide);
+    const dogOdds = game.handicapOdds && game.handicapOdds[dogSide];
+    const ml = game.moneyline || {};
+    const total = game.total || {};
+    const line = game.canonicalLine == null ? '—' : game.canonicalLine;
     const transitions = Array.isArray(game.favoriteTransitions) ? game.favoriteTransitions : [];
     const latest = transitions[transitions.length - 1];
     const flip = latest
       ? `換邊 ${game.favoriteFlipCount || transitions.length} 次｜${sideName(game, latest.from)}→${sideName(game, latest.to)} ${timeText(latest.at)}`
       : '讓分方未換邊';
-    return `Stake：${favorite}讓 ${game.canonicalLine == null ? '—' : game.canonicalLine}` +
-      `${odds == null ? '' : `（${odds}）`}｜大小 ${total}｜${flip}｜${healthLabel(game, now == null ? Date.now() : now)}`;
+    return `Stake：${favorite}讓 ${line}${odds == null ? '' : `（${odds}）`}` +
+      `｜獨贏 客 ${game.away} ${ml.away == null ? '—' : ml.away}／主 ${game.home} ${ml.home == null ? '—' : ml.home}` +
+      `｜讓 ${favorite} -${line} ${odds == null ? '—' : odds}／受讓 ${dog} +${line} ${dogOdds == null ? '—' : dogOdds}` +
+      `｜大小 ${total.line == null ? '—' : total.line}｜大 ${total.line == null ? '—' : total.line} ${total.over == null ? '—' : total.over}` +
+      `／小 ${total.line == null ? '—' : total.line} ${total.under == null ? '—' : total.under}` +
+      `｜${flip}｜${healthLabel(game, now == null ? Date.now() : now)}`;
   }
 
-  function renderCardStatus(card, game, now, documentRef) {
-    if (!card || !game || !documentRef) return null;
+  function noGameText(feed, card) {
+    const wantedLeague = cardLeague(card);
+    const state = feed && feed.leagues && feed.leagues[wantedLeague];
+    if (state && state.status === 'ok' && state.health && Number(state.health.discovered) === 0) {
+      return 'Stake：官方目前未開盤（持續監控）';
+    }
+    if (state && state.status && state.status !== 'ok') return 'Stake：管線異常（持續重試）';
+    return 'Stake：本場尚未配對（持續監控）';
+  }
+
+  function renderCardStatus(card, game, now, documentRef, feed) {
+    if (!card || !documentRef) return null;
     const row = documentRef.createElement('div');
-    const health = healthLabel(game, now == null ? Date.now() : now);
+    const health = game ? healthLabel(game, now == null ? Date.now() : now) : '未開盤';
     row.className = `bstake-monitor ${health === '已過期' ? 'stale' : health === '部分缺漏' ? 'partial' : health === '已凍結' ? 'frozen' : 'ok'}`;
-    row.title = `方向：${game.sources && game.sources.direction || '無'}；讓分賠率：${game.sources && game.sources.handicapOdds || '無'}；大小：${game.sources && game.sources.total || '無'}；更新 ${timeText(game.observedAt)}`;
+    row.title = game ? `方向：${game.sources && game.sources.direction || '無'}；讓分賠率：${game.sources && game.sources.handicapOdds || '無'}；大小：${game.sources && game.sources.total || '無'}；更新 ${timeText(game.observedAt)}` : 'Stake 官方盤口會每五分鐘持續重試';
     const text = documentRef.createElement('span');
     text.className = 'bstake-monitor-text';
-    text.textContent = statusText(game, now);
+    text.textContent = game ? statusText(game, now) : noGameText(feed, card);
     row.appendChild(text);
+
+    if (!game) return row;
 
     function restoreButton(field, label) {
       const button = documentRef.createElement('button');
@@ -275,7 +296,7 @@
       statusText: function (card) { return statusText(gameFor(card), Date.now()); },
       renderCardStatus: function (card) {
         const game = gameFor(card);
-        return game ? renderCardStatus(card, game, Date.now(), global.document) : null;
+        return renderCardStatus(card, game, Date.now(), global.document, feed);
       },
       _setFeed: function (value) { if (validFeed(value)) feed = value; },
       _getFeed: function () { return feed; },

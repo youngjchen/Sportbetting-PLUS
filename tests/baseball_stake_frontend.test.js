@@ -24,6 +24,7 @@ function game(overrides = {}) {
     scheduledStart: '2026-10-04T09:00:00.000Z', away: '阪神', home: '橫濱',
     favorite: 'away', rawLine: 1.5, canonicalLine: 1.5,
     handicapOdds: { away: 2.32, home: 1.52 },
+    moneyline: { away: 1.86, home: 1.88 },
     total: { line: 7.5, over: 1.89, under: 1.79 },
     observedAt: '2026-10-03T14:05:00.000Z', frozenAt: null, partial: false,
     favoriteFlipCount: 1,
@@ -120,6 +121,9 @@ test('card row directly shows favorite, odds, total, flip direction, and health'
   const row = renderCardStatus(blankCard(), monitored, NOW, dom.window.document);
   assert.equal(row.classList.contains('bstake-monitor'), true);
   assert.match(row.textContent, /Stake：阪神讓 1.5（2.32）/);
+  assert.match(row.textContent, /獨贏 客 阪神 .*／主 橫濱/);
+  assert.match(row.textContent, /受讓 橫濱 \+1.5 1.52/);
+  assert.match(row.textContent, /大 7.5 1.89／小 7.5 1.79/);
   assert.match(row.textContent, /大小 7.5/);
   assert.match(row.textContent, /橫濱→阪神/);
   assert.match(row.textContent, /部分缺漏/);
@@ -128,6 +132,15 @@ test('card row directly shows favorite, odds, total, flip direction, and health'
   assert.ok(history);
   assert.match(history.textContent, /21:40 橫濱讓 1.5/);
   assert.match(history.textContent, /21:50 阪神讓 1.5/);
+});
+
+test('CPBL 官方零場時卡片仍顯示 STAKE 未開盤而不是整列消失', () => {
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const card = blankCard({ officialId: 'CPBL_20261004_LIONS@BROTHERS_1705', league: 'cpbl', away: '統一獅', home: '中信兄弟' });
+  const feed = { matches: {}, leagues: { CPBL: { status: 'ok', health: { discovered: 0, matched: 0 } } } };
+  const row = renderCardStatus(card, null, NOW, dom.window.document, feed);
+  assert.ok(row);
+  assert.match(row.textContent, /Stake：官方目前未開盤（持續監控）/);
 });
 
 test('index hooks both favorite swap and total input, and loads versioned integration add-on', () => {
