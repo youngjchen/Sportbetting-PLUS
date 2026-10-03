@@ -48,6 +48,13 @@ test('finds a four-league monitor game by officialId without opening a match pag
   assert.equal(found, monitored);
 });
 
+test('matches NPB board full team names when a legacy card has no officialId', () => {
+  const monitored = game();
+  const card = blankCard({ officialId: null, away: '阪神虎', home: '橫濱DeNA' });
+  const found = findGame({ matches: { [monitored.officialId]: monitored } }, card, '2026-10-04');
+  assert.equal(found, monitored);
+});
+
 test('blank card is auto-owned and receives Stake favorite, line, and total', () => {
   const card = blankCard();
   const changed = applyToCard(card, game(), NOW);
@@ -93,17 +100,24 @@ test('restore auto immediately reapplies only the selected field', () => {
 });
 
 test('stale live data is visible but does not overwrite the card; frozen data remains usable', () => {
+  const dom = new JSDOM('<!doctype html><body></body>');
   const stale = game({ observedAt: '2026-10-03T13:00:00.000Z' });
   const card = blankCard();
   assert.equal(applyToCard(card, stale, NOW), false);
-  assert.match(statusText(stale, NOW), /已過期/);
+  const staleRow = renderCardStatus(card, stale, NOW, dom.window.document);
+  assert.equal(staleRow.classList.contains('stale'), true);
+  staleRow.querySelector('.bstake-history-toggle').click();
+  assert.match(staleRow.querySelector('.bstake-history').textContent, /已過期/);
 
   const frozen = game({ observedAt: '2026-10-03T13:00:00.000Z', frozenAt: '2026-10-04T08:59:30.000Z' });
   assert.equal(applyToCard(card, frozen, NOW), true);
-  assert.match(statusText(frozen, NOW), /已凍結/);
+  const frozenRow = renderCardStatus(card, frozen, NOW, dom.window.document);
+  assert.equal(frozenRow.classList.contains('frozen'), true);
+  frozenRow.querySelector('.bstake-history-toggle').click();
+  assert.match(frozenRow.querySelector('.bstake-history').textContent, /已凍結/);
 });
 
-test('card row directly shows favorite, odds, total, flip direction, and health', () => {
+test('card row shows only whether Stake flipped and keeps market data inside details', () => {
   const dom = new JSDOM('<!doctype html><body></body>');
   const monitored = game({
     partial: true,
@@ -120,18 +134,24 @@ test('card row directly shows favorite, odds, total, flip direction, and health'
   });
   const row = renderCardStatus(blankCard(), monitored, NOW, dom.window.document);
   assert.equal(row.classList.contains('bstake-monitor'), true);
-  assert.match(row.textContent, /Stake：阪神讓 1.5（2.32）/);
-  assert.match(row.textContent, /獨贏 客 阪神 .*／主 橫濱/);
-  assert.match(row.textContent, /受讓 橫濱 \+1.5 1.52/);
-  assert.match(row.textContent, /大 7.5 1.89／小 7.5 1.79/);
-  assert.match(row.textContent, /大小 7.5/);
-  assert.match(row.textContent, /橫濱→阪神/);
-  assert.match(row.textContent, /部分缺漏/);
+  assert.equal(row.querySelector('.bstake-monitor-text').textContent, 'Stake：曾對調讓分 1 次');
+  assert.doesNotMatch(row.querySelector('.bstake-monitor-text').textContent, /獨贏|大小|正常|部分缺漏/);
   row.querySelector('.bstake-history-toggle').click();
   const history = row.querySelector('.bstake-history');
   assert.ok(history);
+  assert.match(history.textContent, /目前 .*阪神讓 1.5（2.32）/);
+  assert.match(history.textContent, /獨贏 客 阪神 1.86／主 橫濱 1.88/);
+  assert.match(history.textContent, /受讓 橫濱 \+1.5 1.52/);
+  assert.match(history.textContent, /大 7.5 1.89／小 7.5 1.79/);
+  assert.match(history.textContent, /部分缺漏/);
   assert.match(history.textContent, /21:40 橫濱讓 1.5/);
   assert.match(history.textContent, /21:50 阪神讓 1.5/);
+});
+
+test('card row says the Stake favorite never flipped when transition history is empty', () => {
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const row = renderCardStatus(blankCard(), game({ favoriteFlipCount: 0, favoriteTransitions: [] }), NOW, dom.window.document);
+  assert.equal(row.querySelector('.bstake-monitor-text').textContent, 'Stake：讓分方未對調');
 });
 
 test('CPBL 官方零場時卡片仍顯示 STAKE 未開盤而不是整列消失', () => {

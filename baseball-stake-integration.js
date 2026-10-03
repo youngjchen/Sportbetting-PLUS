@@ -15,7 +15,12 @@
     return ['MLB', 'NPB', 'KBO', 'CPBL'].includes(text) ? text : '';
   }
 
-  const TEAM_SYNONYM = { '韓華鷹': '華老鷹', '韓華': '華老鷹', '橫濱DeNA': '橫濱' };
+  const TEAM_SYNONYM = {
+    '韓華鷹': '華老鷹', '韓華': '華老鷹',
+    '讀賣巨人': '巨人', '阪神虎': '阪神', '橫濱DeNA': '橫濱',
+    '廣島鯉魚': '廣島', '養樂多燕子': '養樂多', '中日龍': '中日',
+    '軟銀鷹': '軟銀', '日本火腿': '火腿', '樂天金鷲': '樂天', '西武獅': '西武',
+  };
   function team(value) {
     const text = String(value || '').trim();
     return TEAM_SYNONYM[text] || text;
@@ -127,25 +132,28 @@
 
   function statusText(game, now) {
     if (!game) return 'Stake：無資料';
-    const favorite = sideName(game, game.favorite);
-    const odds = game.handicapOdds && game.handicapOdds[game.favorite];
-    const dogSide = game.favorite === 'away' ? 'home' : 'away';
-    const dog = sideName(game, dogSide);
-    const dogOdds = game.handicapOdds && game.handicapOdds[dogSide];
-    const ml = game.moneyline || {};
-    const total = game.total || {};
-    const line = game.canonicalLine == null ? '—' : game.canonicalLine;
     const transitions = Array.isArray(game.favoriteTransitions) ? game.favoriteTransitions : [];
-    const latest = transitions[transitions.length - 1];
-    const flip = latest
-      ? `換邊 ${game.favoriteFlipCount || transitions.length} 次｜${sideName(game, latest.from)}→${sideName(game, latest.to)} ${timeText(latest.at)}`
-      : '讓分方未換邊';
-    return `Stake：${favorite}讓 ${line}${odds == null ? '' : `（${odds}）`}` +
+    const count = Number(game.favoriteFlipCount) || transitions.length;
+    return count > 0 ? `Stake：曾對調讓分 ${count} 次` : 'Stake：讓分方未對調';
+  }
+
+  function marketDetailText(game, snapshot, prefix) {
+    const value = snapshot || game || {};
+    const favorite = sideName(game, value.favorite);
+    const favoriteOdds = value.handicapOdds && value.handicapOdds[value.favorite];
+    const dogSide = value.favorite === 'away' ? 'home' : 'away';
+    const dog = sideName(game, dogSide);
+    const dogOdds = value.handicapOdds && value.handicapOdds[dogSide];
+    const ml = value.moneyline || {};
+    const total = value.total || {};
+    const line = value.canonicalLine == null ? '—' : value.canonicalLine;
+    return `${prefix} ${favorite}讓 ${line}${favoriteOdds == null ? '' : `（${favoriteOdds}）`}` +
       `｜獨贏 客 ${game.away} ${ml.away == null ? '—' : ml.away}／主 ${game.home} ${ml.home == null ? '—' : ml.home}` +
-      `｜讓 ${favorite} -${line} ${odds == null ? '—' : odds}／受讓 ${dog} +${line} ${dogOdds == null ? '—' : dogOdds}` +
-      `｜大小 ${total.line == null ? '—' : total.line}｜大 ${total.line == null ? '—' : total.line} ${total.over == null ? '—' : total.over}` +
-      `／小 ${total.line == null ? '—' : total.line} ${total.under == null ? '—' : total.under}` +
-      `｜${flip}｜${healthLabel(game, now == null ? Date.now() : now)}`;
+      `｜讓 ${favorite} -${line} ${favoriteOdds == null ? '—' : favoriteOdds}` +
+      `／受讓 ${dog} +${line} ${dogOdds == null ? '—' : dogOdds}` +
+      `｜大小 ${total.line == null ? '—' : total.line}` +
+      `｜大 ${total.line == null ? '—' : total.line} ${total.over == null ? '—' : total.over}` +
+      `／小 ${total.line == null ? '—' : total.line} ${total.under == null ? '—' : total.under}`;
   }
 
   function noGameText(feed, card) {
@@ -189,36 +197,38 @@
     if (card.stakeAutoHandicap === false) restoreButton('handicap', '↻讓');
     if (card.stakeAutoTotal === false) restoreButton('total', '↻大');
     const snapshots = Array.isArray(game.history) ? game.history : [];
-    if (snapshots.length) {
-      const toggle = documentRef.createElement('button');
-      toggle.type = 'button';
-      toggle.className = 'bstake-history-toggle';
-      toggle.textContent = '▾';
-      toggle.title = '展開 Stake 盤口歷史明細';
-      toggle.onclick = function (event) {
-        event.stopPropagation();
-        let history = row.querySelector('.bstake-history');
-        if (!history) {
-          history = documentRef.createElement('div');
-          history.className = 'bstake-history';
-          history.hidden = true;
-          for (const snapshot of snapshots) {
-            const line = documentRef.createElement('div');
-            const favorite = sideName(game, snapshot.favorite);
-            const hdOdds = snapshot.handicapOdds || {};
-            const totalLine = snapshot.total && snapshot.total.line != null ? snapshot.total.line : '—';
-            line.textContent = `${timeText(snapshot.observedAt)} ${favorite}讓 ${snapshot.canonicalLine == null ? '—' : snapshot.canonicalLine}` +
-              `（客 ${hdOdds.away == null ? '—' : hdOdds.away}／主 ${hdOdds.home == null ? '—' : hdOdds.home}）` +
-              `｜大小 ${totalLine}`;
-            history.appendChild(line);
-          }
-          row.appendChild(history);
+    const toggle = documentRef.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'bstake-history-toggle';
+    toggle.textContent = '▾';
+    toggle.title = '展開 Stake 盤口歷史明細';
+    toggle.onclick = function (event) {
+      event.stopPropagation();
+      let history = row.querySelector('.bstake-history');
+      if (!history) {
+        history = documentRef.createElement('div');
+        history.className = 'bstake-history';
+        history.hidden = true;
+        const current = documentRef.createElement('div');
+        current.textContent = marketDetailText(game, game, `目前 ${timeText(game.observedAt)}`) +
+          `｜${healthLabel(game, now == null ? Date.now() : now)}`;
+        history.appendChild(current);
+        for (const snapshot of snapshots) {
+          const line = documentRef.createElement('div');
+          line.textContent = marketDetailText(game, snapshot, timeText(snapshot.observedAt));
+          history.appendChild(line);
         }
-        history.hidden = !history.hidden;
-        toggle.textContent = history.hidden ? '▾' : '▴';
-      };
-      row.appendChild(toggle);
-    }
+        const sources = game.sources || {};
+        const sourceLine = documentRef.createElement('div');
+        sourceLine.textContent = `來源：方向 ${sources.direction || '無'}／讓分 ${sources.handicapOdds || '無'}` +
+          `／大小 ${sources.total || '無'}／獨贏 ${sources.moneyline || '無'}`;
+        history.appendChild(sourceLine);
+        row.appendChild(history);
+      }
+      history.hidden = !history.hidden;
+      toggle.textContent = history.hidden ? '▾' : '▴';
+    };
+    row.appendChild(toggle);
     return row;
   }
 
