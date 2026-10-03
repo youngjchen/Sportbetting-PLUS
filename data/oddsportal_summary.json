@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-04T06:30:06+08:00",
+  "updatedAt": "2026-10-04T06:40:07+08:00",
   "health": {
-    "discovered": 23,
-    "succeeded": 10,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 10,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -172535,7 +172535,7 @@
         "at": "2026-10-04T06:27:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-10-04T06:30:06+08:00"
+        "observedAt": "2026-10-04T06:40:07+08:00"
       },
       "eventId": "UH6whoPp",
       "league": "mlb",
@@ -172545,7 +172545,7 @@
       "awayTeam": "洋基",
       "homeTeam": "光芒",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/tampa-bay-rays-new-york-yankees/UH6whoPp/",
-      "observedAt": "2026-10-04T06:30:06+08:00",
+      "observedAt": "2026-10-04T06:40:07+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -172555,9 +172555,15 @@
             "away": 2.07
           },
           "active": {
-            "at": "2026-10-03T22:30:09+08:00",
-            "home": 1.73,
-            "away": 2.12
+            "at": "2026-10-04T06:40:07+08:00",
+            "home": 1.72,
+            "away": 2.17
+          },
+          "close": {
+            "at": "2026-10-04T05:30:00+08:00",
+            "home": 1.72,
+            "away": 2.17,
+            "final": true
           }
         },
         "hd": {
@@ -172569,11 +172575,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-03T22:30:09+08:00",
-            "home": 2.5,
-            "away": 1.53,
-            "line": 1.5,
+            "at": "2026-10-04T06:40:07+08:00",
+            "home": 2.04,
+            "away": 1.79,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-04T05:30:00+08:00",
+            "home": 2.04,
+            "away": 1.79,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -172584,10 +172598,17 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-03T22:30:09+08:00",
-            "over": 1.26,
-            "under": 3.75,
-            "line": 4.5
+            "at": "2026-10-04T06:40:07+08:00",
+            "over": 1.49,
+            "under": 2.55,
+            "line": 5.5
+          },
+          "close": {
+            "at": "2026-10-04T05:30:00+08:00",
+            "over": 1.49,
+            "under": 2.55,
+            "line": 5.5,
+            "final": true
           }
         }
       },
@@ -172597,32 +172618,65 @@
           "away",
           "home"
         ],
-        "struckSide": [],
+        "struckSide": [
+          "away",
+          "home"
+        ],
         "lines": [
           {
             "line": -4.5,
-            "active": true,
-            "created": "03,10,2026,11,30"
+            "active": false,
+            "created": "03,10,2026,22,16"
           },
           {
             "line": -3.5,
             "active": true,
-            "created": "03,10,2026,13,05"
+            "created": "03,10,2026,22,16"
+          },
+          {
+            "line": -3.0,
+            "active": true,
+            "created": "03,10,2026,22,30"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "03,10,2026,13,08"
+            "created": "03,10,2026,23,00"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "03,10,2026,22,30"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "03,10,2026,13,05"
+            "created": "03,10,2026,23,00"
+          },
+          {
+            "line": -1.0,
+            "active": true,
+            "created": "03,10,2026,22,30"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "03,10,2026,22,30"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "03,10,2026,13,05"
+            "created": "03,10,2026,22,16"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "03,10,2026,22,30"
+          },
+          {
+            "line": 2.5,
+            "active": false,
+            "created": "03,10,2026,21,31"
           }
         ]
       }
