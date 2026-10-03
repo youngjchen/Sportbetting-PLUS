@@ -150,6 +150,7 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
   assert.match(card.textContent, /STAKE 2\.05/);
   assert.match(card.textContent, /STAKE 1\.82/);
   assert.match(card.textContent, /BET365 參考/);
+  assert.match(dom.window.document.querySelector('#stamp').textContent, /STAKE 1 場/);
   assert.match(card.textContent, /STAKE 換邊 1 次/);
   assert.match(card.textContent, /BET365 換邊 1 次/);
   assert.match(card.textContent, /企鵝 -1\.5/);

@@ -756,7 +756,11 @@ async function loadPregame(){
       const st=$("#stamp");
       if(st){
         const fresh=window.NhlStake&&window.NhlStake.isFeedFresh(js);
-        const suffix=fresh?`STAKE ${Object.keys(js.games).length} 場`:`STAKE 停更`;
+        const targeted=Number(js.health&&js.health.targeted), succeeded=Number(js.health&&js.health.succeeded);
+        const round=Number.isFinite(targeted)&&targeted>0&&Number.isFinite(succeeded)
+          ? (succeeded===targeted?`${succeeded} 場`:`${succeeded}/${targeted} 場`)
+          : `${Object.keys(js.games).length} 場`;
+        const suffix=fresh?`STAKE ${round}`:`STAKE 停更`;
         if(!st.textContent.includes(suffix)) st.textContent += ` · ${suffix}`;
       }
       render();
