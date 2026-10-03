@@ -101,6 +101,27 @@ function teamOdds(market, teams) {
   return output.away && output.home ? output : null;
 }
 
+function handicapCandidate(market, teams) {
+  const odds = teamOdds(market, teams);
+  if (!market || !odds) return null;
+  const signed = {};
+  for (const outcome of market.outcomes || []) {
+    const side = outcomeSide(outcome && outcome.name, teams);
+    const lineMatch = String(outcome && outcome.name || '').match(/\(([+-]?\d+(?:\.\d+)?)\)\s*$/);
+    if (side && lineMatch) signed[side] = Number(lineMatch[1]);
+  }
+  const favorite = signed.away < 0 ? 'away' : signed.home < 0 ? 'home' : null;
+  const line = Math.abs(signed.away || signed.home || taggedLine(market, 'hcp'));
+  return favorite && Number.isFinite(line) && line > 0 ? { favorite, line, ...odds } : null;
+}
+
+function balancedHandicap(candidates) {
+  // Stake returns every alternate run line in an unstable order; its displayed main line is the closest-priced pair.
+  return candidates.filter(Boolean).sort((a, b) =>
+    Math.abs(a.away - a.home) - Math.abs(b.away - b.home)
+  )[0] || null;
+}
+
 function parseStakeApiMarkets(groups, fixture) {
   const teams = fixtureSides(fixture);
   const markets = [];
@@ -109,8 +130,8 @@ function parseStakeApiMarkets(groups, fixture) {
   const wholeGame = active.filter((market) => !/(?:innings?\s+1\s+to\s+5|\d+(?:st|nd|rd|th) inning|team total|player)/i.test(String(market.name || '')));
   const winner = wholeGame.find((market) => /^Winner\s*\(Incl\. Extra Innings\)$/i.test(String(market.name || '')))
     || wholeGame.find((market) => /^(?:Money Line|Match Winner)$/i.test(String(market.name || '')));
-  const handicap = wholeGame.find((market) => /^Handicap\s*\(Incl\. Extra Innings\)$/i.test(String(market.name || '')))
-    || wholeGame.find((market) => /^(?:Run Line|Spread)$/i.test(String(market.name || '')));
+  let handicapMarkets = wholeGame.filter((market) => /^Handicap\s*\(Incl\. Extra Innings\)$/i.test(String(market.name || '')));
+  if (!handicapMarkets.length) handicapMarkets = wholeGame.filter((market) => /^(?:Run Line|Spread)$/i.test(String(market.name || '')));
   const totalMarkets = wholeGame.filter((market) => /^Total\s*\(Incl\. Extra Innings\)$/i.test(String(market.name || '')));
   if (!totalMarkets.length) totalMarkets.push(...wholeGame.filter((market) => /^Total$/i.test(String(market.name || ''))));
   const output = {};
@@ -118,18 +139,8 @@ function parseStakeApiMarkets(groups, fixture) {
   const ml = teamOdds(winner, teams);
   if (ml) output.ml = ml;
 
-  const hdOdds = teamOdds(handicap, teams);
-  if (handicap && hdOdds) {
-    const signed = {};
-    for (const outcome of handicap.outcomes || []) {
-      const side = outcomeSide(outcome && outcome.name, teams);
-      const lineMatch = String(outcome && outcome.name || '').match(/\(([+-]?\d+(?:\.\d+)?)\)\s*$/);
-      if (side && lineMatch) signed[side] = Number(lineMatch[1]);
-    }
-    const favorite = signed.away < 0 ? 'away' : signed.home < 0 ? 'home' : null;
-    const line = Math.abs(signed.away || signed.home || taggedLine(handicap, 'hcp'));
-    if (favorite && Number.isFinite(line) && line > 0) output.hd = { favorite, line, ...hdOdds };
-  }
+  const hd = balancedHandicap(handicapMarkets.map((market) => handicapCandidate(market, teams)));
+  if (hd) output.hd = hd;
 
   const totalCandidates = totalMarkets.map((market) => {
     let over = null;
@@ -189,7 +200,8 @@ function parseStakeBaseballPage(html, fixture) {
   if (ml.away && ml.home) output.ml = ml;
 
   const handicap = pageButtons($, accordion($, 'Handicap (Incl. Extra Innings)'));
-  for (let index = 0; index + 1 < handicap.length && !output.hd; index += 2) {
+  const handicapCandidates = [];
+  for (let index = 0; index + 1 < handicap.length; index += 2) {
     const hd = {};
     const signed = {};
     for (const item of handicap.slice(index, index + 2)) {
@@ -204,8 +216,10 @@ function parseStakeBaseballPage(html, fixture) {
     }
     const favorite = signed.away < 0 ? 'away' : signed.home < 0 ? 'home' : null;
     const hdLine = Math.abs(signed.away || signed.home || 0);
-    if (favorite && hdLine && hd.away && hd.home) output.hd = { favorite, line: hdLine, ...hd };
+    if (favorite && hdLine && hd.away && hd.home) handicapCandidates.push({ favorite, line: hdLine, ...hd });
   }
+  const pageHandicap = balancedHandicap(handicapCandidates);
+  if (pageHandicap) output.hd = pageHandicap;
 
   const totals = pageButtons($, accordion($, 'Total (Incl. Extra Innings)'));
   const totalCandidates = [];

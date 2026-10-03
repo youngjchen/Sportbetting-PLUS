@@ -83,6 +83,34 @@ test('parses official API nested main markets and ignores first-five-innings mar
   assert.deepEqual(markets.total, { line: 7.5, over: 1.89, under: 1.79 });
 });
 
+test('selects the balanced Stake main handicap instead of the first alternate run line', () => {
+  const cleveland = fixture('Cleveland Guardians - Chicago White Sox');
+  const groups = [{ name: 'main', markets: [[
+    {
+      name: 'Handicap (Incl. Extra Innings)', status: 'active', specifiers: 'hcp=1', outcomes: [
+        { name: 'Cleveland Guardians (1)', odds: 1.44, active: true },
+        { name: 'Chicago White Sox (-1)', odds: 2.8, active: true },
+      ],
+    },
+    {
+      name: 'Handicap (Incl. Extra Innings)', status: 'active', specifiers: 'hcp=-1', outcomes: [
+        { name: 'Cleveland Guardians (-1)', odds: 1.98, active: true },
+        { name: 'Chicago White Sox (1)', odds: 1.84, active: true },
+      ],
+    },
+    {
+      name: 'Handicap (Incl. Extra Innings)', status: 'active', specifiers: 'hcp=-1.5', outcomes: [
+        { name: 'Cleveland Guardians (-1.5)', odds: 2.42, active: true },
+        { name: 'Chicago White Sox (1.5)', odds: 1.57, active: true },
+      ],
+    },
+  ]] }];
+
+  assert.deepEqual(parseStakeApiMarkets(groups, cleveland).hd, {
+    favorite: 'home', line: 1, away: 1.84, home: 1.98,
+  });
+});
+
 test('parses the same three full-game markets from a Stake official event page', () => {
   const html = fs.readFileSync(path.join(ROOT, 'tests/fixtures/stake-baseball-event.html'), 'utf8');
   const markets = parseStakeBaseballPage(html, fixture());
