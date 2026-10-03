@@ -1,0 +1,85 @@
+# MLB／NPB／KBO／CPBL Stake 官方賽前盤；每五分鐘更新大頁面監控資料。
+name: baseball-stake-odds
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - baseball_stake_core.js
+      - baseball_stake_odds.js
+      - baseball-stake-integration.js
+      - fetch_sidecar.py
+      - sidecar_client.js
+      - requirements-scraping.txt
+      - index.html
+      - .github/workflows/baseball-stake-odds.yml
+  schedule:
+    - cron: '18,48 * * * *'
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: baseball-stake-odds
+  cancel-in-progress: false
+
+jobs:
+  loop:
+    runs-on: ubuntu-latest
+    timeout-minutes: 350
+    env:
+      STAKE_ODDS_API_KEY: ${{ secrets.STAKE_ODDS_API_KEY }}
+      EP_TRANSPORT: sidecar
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: npm ci
+      - name: 安裝 Stake 官方頁備援傳輸層
+        run: |
+          pip -q install -r requirements-scraping.txt
+          scrapling install --force >/dev/null 2>&1 || echo "WARN Scrapling 瀏覽器安裝非零；API 完整時不受影響，缺盤時會保留舊資料"
+      - name: 驗證棒球 Stake 收集器
+        run: node --test tests/baseball_stake_core.test.js tests/baseball_stake_odds.test.js tests/baseball_stake_workflow.test.js
+      - name: 5h10m 四聯盟 Stake 官方盤迴圈
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          END=$(( SECONDS + 18600 ))
+          FAIL_STREAK=0
+          while [ "$SECONDS" -lt "$END" ]; do
+            T0=$SECONDS
+            git rebase --abort 2>/dev/null || true
+            git fetch origin main || true
+            git reset --hard origin/main || true
+            if timeout 420 node baseball_stake_odds.js; then
+              FAIL_STREAK=0
+              git add data/baseball_stake_odds.json 2>/dev/null || true
+              if ! git diff --cached --quiet; then
+                git commit -m "baseball stake odds $(date -u +%FT%TZ) [skip ci]" || true
+                if ! git push; then
+                  git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
+                  git push || true
+                fi
+              fi
+            else
+              FAIL_STREAK=$(( FAIL_STREAK + 1 ))
+              echo "WARN Stake 棒球官方盤失敗（連續 $FAIL_STREAK 次）；保留上一份有效資料"
+              if [ "$FAIL_STREAK" -ge 3 ]; then exit 1; fi
+            fi
+            EL=$(( SECONDS - T0 ))
+            [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))
+          done
+      - name: 自我接棒
+        if: ${{ !cancelled() }}
+        env:
+          GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+        run: |
+          if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
+          gh workflow run baseball-stake-odds.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"

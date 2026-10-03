@@ -90,6 +90,7 @@ jobs:
           if [ -n "$STAKE_ODDS_API_KEY" ]; then
             check "data/stake_api_odds.json" "stake-api-odds.yml" 25
           fi
+          check "data/baseball_stake_odds.json" "baseball-stake-odds.yml" 25
           # wnba 管線只在台灣 00~14 時窗運轉（cron UTC 16-23,0-6）;窗外停更=正常日休不告警。
           # 窗首小時(UTC16)跳過：檔帶前日時戳屬預期,避免與首棒 cron 重複派工。
           H=$((10#$(date -u +%H)))
