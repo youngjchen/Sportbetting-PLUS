@@ -51,7 +51,7 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
         active: { away: 2.05, home: 1.82 },
       },
       hd: {
-        open: { line: 1.5, favorite: 'away', away: 2.7, home: 1.45 },
+        open: { line: 1.5, favorite: 'home', away: 1.45, home: 2.7 },
         active: { line: 1.5, favorite: 'away', away: 2.55, home: 1.5 },
       },
       ou: {
@@ -59,10 +59,18 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
         active: { line: 6.5, over: 2.02, under: 1.8 },
       },
     },
+    history: [
+      { at: '2026-09-30T08:00:00.000Z', hd: { line: 1.5, favSide: 'home', outcomes: [
+        { side: 'away', line: 1.5, odds: 1.45 }, { side: 'home', line: -1.5, odds: 2.7 },
+      ] } },
+      { at: '2026-10-01T00:30:00.000Z', hd: { line: 1.5, favSide: 'away', outcomes: [
+        { side: 'away', line: -1.5, odds: 2.55 }, { side: 'home', line: 1.5, odds: 1.5 },
+      ] } },
+    ],
   };
   const stakeFeed = {
     provider: 'stake-official', mode: 'official-page',
-    updated: '2026-10-01T00:30:00+08:00', health: { succeeded: 1 },
+    updated: new Date().toISOString(), health: { succeeded: 1 },
     games: { one: stakeGame },
   };
   const betGame = {
@@ -73,7 +81,14 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
       { side: 'away', line: 2.5, odds: 1.5 }, { side: 'home', line: -2.5, odds: 2.5 },
     ] },
   };
-  betGame.history = [{ at: '2026-10-01T00:30:00.000Z', ml: betGame.ml, hd: betGame.hd }];
+  betGame.history = [
+    { at: '2026-09-30T08:05:00.000Z', ml: betGame.ml, hd: { line: 1.5, favSide: 'home', outcomes: [
+      { side: 'away', line: 1.5, odds: 1.5 }, { side: 'home', line: -1.5, odds: 2.5 },
+    ] } },
+    { at: '2026-10-01T00:35:00.000Z', ml: betGame.ml, hd: { line: 2.5, favSide: 'away', outcomes: [
+      { side: 'away', line: -2.5, odds: 2.5 }, { side: 'home', line: 2.5, odds: 1.5 },
+    ] } },
+  ];
   betGame.events = [];
   const betFeed = {
     provider: 'bet365-official', updated: '2026-10-01T00:30:00.000Z',
@@ -135,6 +150,9 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
   assert.match(card.textContent, /STAKE 2\.05/);
   assert.match(card.textContent, /STAKE 1\.82/);
   assert.match(card.textContent, /BET365 參考/);
+  assert.match(card.textContent, /STAKE 換邊 1 次/);
+  assert.match(card.textContent, /BET365 換邊 1 次/);
+  assert.match(card.textContent, /企鵝 -1\.5/);
 
   const sections = [...card.querySelectorAll('.bmkt')];
   const handicap = sections.find((section) => section.querySelector('.mname')?.textContent === '讓分');
@@ -159,6 +177,13 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
   assert.equal(dom.window.document.querySelector('#settleOpenHd').value, '1.5');
   assert.equal(dom.window.document.querySelector('#settleCloseHd').value, '1.5');
   assert.match(dom.window.document.querySelector('#settleBody').textContent, /STAKE 主盤/);
+  const flipOptions = [...dom.window.document.querySelector('#settleFlipState').options]
+    .map((option) => option.textContent).join('｜');
+  assert.match(flipOptions, /目前仍顛倒（STAKE≠BET365）/);
+  assert.match(flipOptions, /STAKE 換邊後收斂/);
+  assert.match(flipOptions, /BET365 換邊後收斂/);
+  assert.match(flipOptions, /雙方都換邊後收斂/);
+  assert.doesNotMatch(flipOptions, /台彩|國際/);
   dom.window.document.querySelector('#settleCancel').click();
 
   const settledDoc = JSON.parse(dom.window.localStorage.getItem('sportbetting_nhl_doc_v1'));
@@ -184,5 +209,92 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
   const saved = JSON.parse(dom.window.localStorage.getItem('sportbetting_nhl_doc_v1'));
   assert.equal(saved.boards['2026-10-01'].items[0].hdFavOverride, 'home');
   assert.equal(saved.boards['2026-10-01'].items[0].totVal, '7.5');
+  assert.deepEqual(jsdomErrors, []);
+});
+
+test('stale Stake odds are marked stopped and Bet365 becomes the live fallback', async (t) => {
+  const pregame = {
+    updated: new Date().toISOString(),
+    games: [{
+      officialId: 'NHL_20261003_颶風@飛人_0730', league: 'NHL',
+      date: '2026-10-03', time: '07:30', away: '颶風', home: '飛人',
+      status: 'scheduled', hdFav: null, hdVal: null, totLine: null, hdSrc: '運彩',
+    }],
+  };
+  const stakeFeed = {
+    provider: 'stake-official', updated: new Date().toISOString(),
+    games: { one: {
+      league: 'nhl', startISO: '2026-10-03T07:30:00+08:00',
+      date: '2026-10-03', startTime: '07:30', awayTeam: '颶風', homeTeam: '飛人',
+      lastPregameAt: '2026-10-01T00:00:00.000Z',
+      markets: {
+        ml: { active: { away: 1.4, home: 3.0 } },
+        hd: { active: { line: 1.5, favorite: 'away', away: 2.4, home: 1.5 } },
+        ou: { active: { line: 7.5, over: 1.9, under: 1.9 } },
+      },
+      history: [{ at: '2026-10-01T00:00:00.000Z', hd: { line: 1.5, favSide: 'away', outcomes: [
+        { side: 'away', line: -1.5, odds: 2.4 }, { side: 'home', line: 1.5, odds: 1.5 },
+      ] } }],
+    } },
+  };
+  const betGame = {
+    startTime: Date.parse('2026-10-02T23:30:00.000Z'), awayZh: '颶風', homeZh: '飛人',
+    away: 'CAR Hurricanes', home: 'PHI Flyers',
+    ml: { outcomes: [{ side: 'away', odds: 2.2 }, { side: 'home', odds: 1.7 }] },
+    hd: { line: 2.5, favSide: 'home', outcomes: [
+      { side: 'away', line: 2.5, odds: 1.5 }, { side: 'home', line: -2.5, odds: 2.5 },
+    ] },
+    history: [{ at: new Date().toISOString(), hd: { line: 2.5, favSide: 'home', outcomes: [
+      { side: 'away', line: 2.5, odds: 1.5 }, { side: 'home', line: -2.5, odds: 2.5 },
+    ] } }], events: [],
+  };
+  const betFeed = { provider: 'bet365-official', updated: new Date().toISOString(), games: { one: betGame } };
+  const virtualConsole = new VirtualConsole();
+  const jsdomErrors = [];
+  virtualConsole.on('jsdomError', (error) => jsdomErrors.push(error));
+  const dom = new JSDOM(fs.readFileSync(path.join(ROOT, 'nhl.html'), 'utf8'), {
+    url: 'http://local.test/nhl.html', runScripts: 'dangerously', pretendToBeVisual: true,
+    resources: { interceptors: [requestInterceptor((request) => {
+      const parsed = new URL(request.url);
+      if (parsed.hostname === 'fonts.googleapis.com') return new Response('', { status: 200 });
+      if (parsed.origin !== 'http://local.test') return new Response('', { status: 404 });
+      const file = path.join(ROOT, decodeURIComponent(parsed.pathname).replace(/^\//, ''));
+      if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return new Response('', { status: 404 });
+      return new Response(fs.readFileSync(file), { status: 200, headers: {
+        'Content-Type': file.endsWith('.js') ? 'application/javascript' : 'text/plain',
+      } });
+    })] },
+    virtualConsole,
+    beforeParse(window) {
+      window.localStorage.setItem('sportbetting_nhl_doc_v1', JSON.stringify({
+        v: 1, activeDate: '2026-10-03', activeLeague: 'NHL', boards: {}, games: [],
+      }));
+      window.fetch = (url) => {
+        const text = String(url);
+        if (text.includes('nhl_pregame.json')) return jsonResponse(pregame);
+        if (text.includes('stake_api_odds.json')) return jsonResponse(stakeFeed);
+        if (text.includes('nhl_bet365_odds.json')) return jsonResponse(betFeed);
+        if (text.includes('nhl_games.json')) return jsonResponse({ games: [] });
+        if (text.includes('expert_picks_nhl.json')) return jsonResponse({ picks: [] });
+        return jsonResponse({});
+      };
+      window.confirm = () => true;
+      window.alert = () => {};
+      window.ResizeObserver = class { observe() {} disconnect() {} };
+      window.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+    },
+  });
+  t.after(() => dom.window.close());
+
+  const card = await waitFor(() => {
+    const current = dom.window.document.querySelector('.card.bcard');
+    return current && /BET365 ✓/.test(current.textContent) ? current : null;
+  });
+  assert.match(card.textContent, /STAKE 停更/);
+  const handicap = [...card.querySelectorAll('.bmkt')]
+    .find((section) => section.querySelector('.mname')?.textContent === '讓分');
+  assert.match(handicap.querySelector('.bmkt-row .bnm').textContent, /飛人.*-2\.5.*BET365 2\.50/);
+  assert.equal(card.querySelector('.basis input').value, '6.5');
+  assert.doesNotMatch(card.textContent, /7\.5 · STAKE/);
   assert.deepEqual(jsdomErrors, []);
 });

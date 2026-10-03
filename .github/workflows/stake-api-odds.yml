@@ -8,6 +8,9 @@ on:
     paths:
       - stake_api_odds.js
       - nhl_core.js
+      - fetch_sidecar.py
+      - sidecar_client.js
+      - requirements-scraping.txt
       - .github/workflows/stake-api-odds.yml
   schedule:
     - cron: '13,43 * * * *'
@@ -45,12 +48,14 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           END=$(( SECONDS + 18600 ))
+          FAIL_STREAK=0
           while [ "$SECONDS" -lt "$END" ]; do
             T0=$SECONDS
             git rebase --abort 2>/dev/null || true
             git fetch origin main || true
             git reset --hard origin/main || true
             if timeout 420 node stake_api_odds.js; then
+              FAIL_STREAK=0
               git add data/stake_api_odds.json 2>/dev/null || true
               if ! git diff --cached --quiet; then
                 git commit -m "stake api odds $(date -u +%FT%TZ) [skip ci]" || true
@@ -60,7 +65,9 @@ jobs:
                 fi
               fi
             else
-              echo "WARN STAKE 官方盤口失敗；保留上一份有效資料，下一輪重試"
+              FAIL_STREAK=$(( FAIL_STREAK + 1 ))
+              echo "WARN STAKE 官方盤口失敗（連續 $FAIL_STREAK 次）；保留上一份有效資料"
+              if [ "$FAIL_STREAK" -ge 3 ]; then exit 1; fi
             fi
             EL=$(( SECONDS - T0 ))
             [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))

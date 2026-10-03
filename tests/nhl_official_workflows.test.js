@@ -30,6 +30,9 @@ test('Stake official workflow runs the page transport even when the optional API
   assert.deepEqual(workflow.on.push.paths, [
     'stake_api_odds.js',
     'nhl_core.js',
+    'fetch_sidecar.py',
+    'sidecar_client.js',
+    'requirements-scraping.txt',
     '.github/workflows/stake-api-odds.yml',
   ]);
   assert.equal(workflow.jobs.loop.env.EP_TRANSPORT, 'sidecar');
@@ -41,6 +44,9 @@ test('Stake official workflow runs the page transport even when the optional API
   const loop = steps.find((step) => String(step.name || '').includes('5h10m'));
   assert.match(loop.run, /timeout 420 node stake_api_odds\.js/);
   assert.match(loop.run, /git add data\/stake_api_odds\.json/);
+  assert.match(loop.run, /FAIL_STREAK=0/);
+  assert.match(loop.run, /FAIL_STREAK=\$\(\( FAIL_STREAK \+ 1 \)\)/);
+  assert.match(loop.run, /if \[ "\$FAIL_STREAK" -ge 3 \]; then exit 1; fi/);
   assert.doesNotMatch(loop.run, /尚未設定 STAKE_ODDS_API_KEY|exit 0[\s\S]*STAKE_ODDS_API_KEY/);
   const handoff = steps.find((step) => step.name === '自我接棒');
   assert.doesNotMatch(handoff.run, /STAKE_ODDS_API_KEY/);

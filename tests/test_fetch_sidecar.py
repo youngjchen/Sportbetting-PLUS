@@ -71,5 +71,49 @@ class FallbackFlowTests(unittest.TestCase):
             )
 
 
+class AsyncFallbackFlowTests(unittest.IsolatedAsyncioTestCase):
+    async def test_html_awaits_cloudflare_solver_after_first_browser_gets_403(self):
+        calls = []
+
+        async def browser(*_):
+            calls.append("browser")
+            return 403, "<title>Just a moment...</title>"
+
+        async def solve(*_):
+            calls.append("solve")
+            return 200, "<html>real Stake event page</html>"
+
+        status, body, layer = await SIDECAR.async_fetch_with_fallback(
+            url="https://stake.com/sports/ice-hockey/usa/nhl/event-1",
+            headers={},
+            timeout_ms=90000,
+            http_get=lambda *_: self.fail("HTTP JSON path must not run for HTML"),
+            browser_fetch=browser,
+            xhr_fetch=lambda *_: self.fail("XHR JSON path must not run for HTML"),
+            solve_fetch=solve,
+        )
+
+        self.assertEqual(
+            (status, body, layer),
+            (200, "<html>real Stake event page</html>", "solve-cloudflare"),
+        )
+        self.assertEqual(calls, ["browser", "solve"])
+
+    async def test_async_fallback_raises_when_solver_still_returns_challenge(self):
+        async def challenged(*_):
+            return 200, '<script src="challenges.cloudflare.com/x"></script>'
+
+        with self.assertRaisesRegex(RuntimeError, "challenge"):
+            await SIDECAR.async_fetch_with_fallback(
+                url="https://stake.com/sports/ice-hockey/usa/nhl/event-1",
+                headers={},
+                timeout_ms=90000,
+                http_get=lambda *_: self.fail("HTTP JSON path must not run for HTML"),
+                browser_fetch=challenged,
+                xhr_fetch=lambda *_: self.fail("XHR JSON path must not run for HTML"),
+                solve_fetch=challenged,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

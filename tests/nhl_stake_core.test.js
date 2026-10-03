@@ -8,6 +8,8 @@ const {
   marketSnapshot,
   marketOutcome,
   applyOddsToPregame,
+  isFeedFresh,
+  summarizeHandicapHistory,
 } = require('../nhl_stake_core.js');
 
 function stakeGame(overrides = {}) {
@@ -132,4 +134,102 @@ test('keeps the 6.5 default path available when neither feed has a total', () =>
   assert.equal(applied.hdVal, null);
   assert.equal(applied.totLine, null);
   assert.equal(applied.hdSrc, '運彩');
+});
+
+test('rejects a Stake feed that has stopped updating for more than thirty minutes', () => {
+  const now = Date.parse('2026-10-03T12:00:00.000Z');
+
+  assert.equal(isFeedFresh({ updated: '2026-10-03T11:31:00.000Z' }, now), true);
+  assert.equal(isFeedFresh({ updated: '2026-10-03T11:29:59.000Z' }, now), false);
+  assert.equal(isFeedFresh({ updated: 'not-a-date' }, now), false);
+});
+
+function historyHd(favorite, line, awayOdds, homeOdds) {
+  return {
+    line,
+    favSide: favorite,
+    outcomes: [
+      { side: 'away', line: favorite === 'away' ? -line : line, odds: awayOdds },
+      { side: 'home', line: favorite === 'home' ? -line : line, odds: homeOdds },
+    ],
+  };
+}
+
+test('Sea at Calgary records one Stake flip, one Bet365 flip, and final convergence', () => {
+  const stake = {
+    game: {
+      awayTeam: '海怪', homeTeam: '火焰',
+      history: [
+        { at: '2026-10-01T06:14:00.000Z', hd: historyHd('home', 1.5, 1.48, 2.55) },
+        { at: '2026-10-01T16:12:00.000Z', hd: historyHd('away', 1.5, 2.50, 1.50) },
+      ],
+    },
+  };
+  const bet365 = {
+    game: {
+      awayZh: '海怪', homeZh: '火焰',
+      history: [
+        { at: '2026-09-29T23:28:00.000Z', hd: historyHd('home', 1.5, 1.45, 2.60) },
+        { at: '2026-10-01T18:03:00.000Z', hd: historyHd('away', 1.5, 2.55, 1.47) },
+      ],
+    },
+  };
+
+  const summary = summarizeHandicapHistory(stake, bet365);
+
+  assert.equal(summary.stake.swapCount, 1);
+  assert.equal(summary.bet365.swapCount, 1);
+  assert.equal(summary.classification, 'converged_both');
+  assert.equal(summary.currentRelation, 'aligned');
+  assert.deepEqual(summary.relationTransitions.map((row) => [row.at, row.source, row.relation]), [
+    ['2026-10-01T16:12:00.000Z', 'STAKE', 'diverged'],
+    ['2026-10-01T18:03:00.000Z', 'BET365', 'aligned'],
+  ]);
+  assert.deepEqual(summary.stake.rows[1], {
+    at: '2026-10-01T16:12:00.000Z', favorite: 'away', line: 1.5,
+    awayOdds: 2.5, homeOdds: 1.5,
+  });
+});
+
+test('Canadiens at Penguins identifies Bet365 changing away-home-away before convergence', () => {
+  const stake = {
+    game: {
+      awayTeam: '加拿大人', homeTeam: '企鵝',
+      history: [
+        { at: '2026-09-30T06:00:00.000Z', hd: historyHd('away', 1.5, 2.55, 1.47) },
+        { at: '2026-10-02T00:00:00.000Z', hd: historyHd('away', 1.5, 2.50, 1.50) },
+      ],
+    },
+  };
+  const bet365 = {
+    game: {
+      awayZh: '加拿大人', homeZh: '企鵝',
+      history: [
+        { at: '2026-09-29T23:28:00.000Z', hd: historyHd('away', 1.5, 2.60, 1.45) },
+        { at: '2026-10-01T16:42:00.000Z', hd: historyHd('home', 1.5, 1.48, 2.55) },
+        { at: '2026-10-02T14:26:00.000Z', hd: historyHd('away', 1.5, 2.52, 1.49) },
+      ],
+    },
+  };
+
+  const summary = summarizeHandicapHistory(stake, bet365);
+
+  assert.equal(summary.stake.swapCount, 0);
+  assert.equal(summary.bet365.swapCount, 2);
+  assert.equal(summary.classification, 'converged_bet365');
+  assert.equal(summary.currentRelation, 'aligned');
+});
+
+test('keeps a current Stake and Bet365 disagreement classified as flipped', () => {
+  const stake = { game: { history: [
+    { at: '2026-10-03T01:00:00.000Z', hd: historyHd('away', 1.5, 2.4, 1.55) },
+  ] } };
+  const bet365 = { game: { history: [
+    { at: '2026-10-03T01:01:00.000Z', hd: historyHd('home', 1.5, 1.55, 2.4) },
+  ] } };
+
+  const summary = summarizeHandicapHistory(stake, bet365);
+
+  assert.equal(summary.classification, 'flipped');
+  assert.equal(summary.currentRelation, 'diverged');
 });

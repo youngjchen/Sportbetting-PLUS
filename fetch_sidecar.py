@@ -14,7 +14,7 @@ runner 上 scrapling StealthySession 直接 200 拿到真內容、每頁 1.1~1.3
 JSON 端點注意：瀏覽器可能把 JSON 包進檢視器 HTML（<pre> 或 <p>），
 本檔負責還原成純 JSON 再回傳，Node 端不必知道差別。
 """
-import sys, json, base64, re, html as htmlmod
+import asyncio, inspect, sys, json, base64, re, html as htmlmod
 
 JSON_WRAPPER_RE = re.compile(
     r'<(?P<tag>pre|p)\b[^>]*>(.*?)</(?P=tag)>',
@@ -118,15 +118,70 @@ def fetch_with_fallback(
     return int(status), raw, 'solve-cloudflare'
 
 
-def main():
+async def _call_async(fetcher, *args):
+    result = fetcher(*args)
+    return await result if inspect.isawaitable(result) else result
+
+
+async def async_fetch_with_fallback(
+    *,
+    url,
+    headers,
+    timeout_ms,
+    http_get,
+    browser_fetch,
+    xhr_fetch,
+    solve_fetch,
+):
+    """fetch_with_fallback 的非同步正式版。
+
+    Scrapling 的 Cloudflare 解題瀏覽器必須跑 Async API；若在 asyncio loop 內呼叫
+    Sync API，GitHub runner 會每場都報錯。callable 仍採注入，測試與正式控制流共用。
+    """
+    wants_json = 'json' in (
+        (headers.get('Accept') or headers.get('accept') or '').lower()
+    )
+    if wants_json:
+        try:
+            status, raw = await _call_async(http_get, url, headers, timeout_ms)
+        except Exception:
+            status, raw = 0, ''
+        body = valid_json_body(raw) if 200 <= int(status or 0) < 400 else None
+        if body is not None:
+            return int(status), body, 'http'
+        try:
+            status, raw = await _call_async(xhr_fetch, url, headers, timeout_ms)
+        except Exception as exc:
+            raise RuntimeError(f'page-xhr failed: {type(exc).__name__}: {exc}') from exc
+        body = valid_json_body(raw) if 200 <= int(status or 0) < 400 else None
+        if body is None:
+            raise RuntimeError(f'page-xhr returned invalid JSON/status {status}')
+        return int(status), body, 'page-xhr'
+
     try:
-        from scrapling.fetchers import StealthySession, FetcherSession
+        status, raw = await _call_async(browser_fetch, url, headers, timeout_ms)
+    except Exception:
+        status, raw = 0, ''
+    if 200 <= int(status or 0) < 400 and not looks_challenged(raw):
+        return int(status), raw, 'stealth-browser'
+    try:
+        status, raw = await _call_async(solve_fetch, url, headers, max(timeout_ms, 60000))
+    except Exception as exc:
+        raise RuntimeError(f'solve-cloudflare failed: {type(exc).__name__}: {exc}') from exc
+    if not (200 <= int(status or 0) < 400) or looks_challenged(raw):
+        raise RuntimeError(f'solve-cloudflare returned challenge/status {status}')
+    return int(status), raw, 'solve-cloudflare'
+
+
+async def async_main():
+    try:
+        from scrapling.fetchers import AsyncStealthySession, FetcherSession
     except Exception as e:  # 沒裝 scrapling → 讓 Node 立刻退回 curl
         print(json.dumps({"ready": False, "err": f"import: {e}"}), flush=True)
         return 1
 
-    session = StealthySession(headless=True, block_webrtc=True)
-    session.__enter__()
+    session_cm = AsyncStealthySession(headless=True, block_webrtc=True)
+    session = await session_cm.__aenter__()
     # JSON 端點專用：chrome TLS 模擬的純 HTTP（2026-07-29 probe4 實證雲端 200＋真 rankers）。
     # ‼️ 不可用瀏覽器「導航」拿 JSON：雲端會回 SPA 外殼（118KB Vue 頁、資料不在內），
     #    外殼 JS 原始碼裡含 "rankers" 字樣 → 字串判定會誤判成功，一定要 json.loads 驗證。
@@ -140,23 +195,23 @@ def main():
     # HTML:  第1層 隱形瀏覽器 → 第2層 solve_cloudflare 解題模式（懶建，用到才開第二顆瀏覽器）
     solve_holder = {}
 
-    def solve_session():
+    async def solve_session():
         if 'cm' not in solve_holder:
-            cm = StealthySession(headless=True, block_webrtc=True, solve_cloudflare=True)
+            cm = AsyncStealthySession(headless=True, block_webrtc=True, solve_cloudflare=True)
             solve_holder['cm'] = cm
-            solve_holder['s'] = cm.__enter__()
+            solve_holder['s'] = await cm.__aenter__()
         return solve_holder['s']
 
-    def page_xhr_json(url, _headers, timeout_ms):
+    async def page_xhr_json(url, _headers, timeout_ms):
         holder = {}
 
-        def act(page):
-            holder['r'] = page.evaluate(
+        async def act(page):
+            holder['r'] = await page.evaluate(
                 "async (u)=>{const r=await fetch(u,{headers:{'X-Requested-With':'XMLHttpRequest',"
                 "'Accept':'application/json'},credentials:'include'});return {s:r.status,t:await r.text()};}",
                 url)
             return page
-        session.fetch(
+        await session.fetch(
             'https://www.playsport.cc/',
             page_action=act,
             google_search=False,
@@ -165,8 +220,10 @@ def main():
         rr = holder.get('r') or {}
         return int(rr.get('s') or 0), (rr.get('t') or '')
 
-    def http_get(url, headers, timeout_ms):
-        r = http.get(url, headers=headers, timeout=max(1, timeout_ms / 1000))
+    async def http_get(url, headers, timeout_ms):
+        r = await asyncio.to_thread(
+            http.get, url, headers=headers, timeout=max(1, timeout_ms / 1000)
+        )
         status = getattr(r, 'status', 200) or 200
         raw = getattr(r, 'body', None)
         if raw is None:
@@ -175,8 +232,8 @@ def main():
             raw = raw.decode('utf-8', 'replace')
         return status, raw
 
-    def browser_fetch(url, headers, timeout_ms):
-        page = session.fetch(
+    async def browser_fetch(url, headers, timeout_ms):
+        page = await session.fetch(
             url,
             extra_headers=headers,
             google_search=False,
@@ -186,8 +243,9 @@ def main():
         raw = getattr(page, 'html_content', None)
         return status, raw if raw is not None else str(page)
 
-    def solve_fetch(url, headers, timeout_ms):
-        page = solve_session().fetch(
+    async def solve_fetch(url, headers, timeout_ms):
+        solver = await solve_session()
+        page = await solver.fetch(
             url,
             extra_headers=headers,
             google_search=False,
@@ -199,45 +257,60 @@ def main():
 
     print(json.dumps({"ready": True}), flush=True)
 
-    for line in sys.stdin:
-        line = line.strip()
-        if not line:
-            continue
+    try:
+        while True:
+            line = await asyncio.to_thread(sys.stdin.readline)
+            if line == '':
+                break
+            line = line.strip()
+            if not line:
+                continue
+            try:
+                req = json.loads(line)
+            except Exception:
+                continue
+            if req.get('quit'):
+                break
+            rid, url = req.get('id'), req.get('url')
+            headers = {
+                str(k): str(v) for k, v in (req.get('headers') or {}).items()
+                if str(k).lower() != 'user-agent'
+            }
+            timeout_ms = max(1000, int(req.get('timeoutMs') or 30000))
+            try:
+                status, body, layer = await async_fetch_with_fallback(
+                    url=url,
+                    headers=headers,
+                    timeout_ms=timeout_ms,
+                    http_get=http_get,
+                    browser_fetch=browser_fetch,
+                    xhr_fetch=page_xhr_json,
+                    solve_fetch=solve_fetch,
+                )
+                out = {"id": rid, "status": status, "layer": layer,
+                       "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii')}
+            except Exception as e:
+                out = {"id": rid, "status": 0, "err": f"{type(e).__name__}: {e}"}
+            print(json.dumps(out), flush=True)
+    finally:
         try:
-            req = json.loads(line)
+            http_cm.__exit__(None, None, None)
         except Exception:
-            continue
-        if req.get('quit'):
-            break
-        rid, url = req.get('id'), req.get('url')
-        headers = {
-            str(k): str(v) for k, v in (req.get('headers') or {}).items()
-            if str(k).lower() != 'user-agent'
-        }
-        timeout_ms = max(1000, int(req.get('timeoutMs') or 30000))
+            pass
+        if 'cm' in solve_holder:
+            try:
+                await solve_holder['cm'].__aexit__(None, None, None)
+            except Exception:
+                pass
         try:
-            status, body, layer = fetch_with_fallback(
-                url=url,
-                headers=headers,
-                timeout_ms=timeout_ms,
-                http_get=http_get,
-                browser_fetch=browser_fetch,
-                xhr_fetch=page_xhr_json,
-                solve_fetch=solve_fetch,
-            )
-            out = {"id": rid, "status": status, "layer": layer,
-                   "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii')}
-        except Exception as e:
-            out = {"id": rid, "status": 0, "err": f"{type(e).__name__}: {e}"}
-        print(json.dumps(out), flush=True)
-
-    closers = [http_cm, session] + ([solve_holder['cm']] if 'cm' in solve_holder else [])
-    for s in closers:
-        try:
-            s.__exit__(None, None, None)
+            await session_cm.__aexit__(None, None, None)
         except Exception:
             pass
     return 0
+
+
+def main():
+    return asyncio.run(async_main())
 
 
 if __name__ == '__main__':
