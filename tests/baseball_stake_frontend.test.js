@@ -55,6 +55,43 @@ test('matches NPB board full team names when a legacy card has no officialId', (
   assert.equal(found, monitored);
 });
 
+test('matches every Asian-league board team name when a card has no officialId', () => {
+  const aliases = {
+    NPB: {
+      '讀賣巨人': '巨人', '阪神虎': '阪神', '橫濱DeNA': '橫濱', '廣島鯉魚': '廣島',
+      '養樂多燕子': '養樂多', '中日龍': '中日', '軟銀鷹': '軟銀', '日本火腿': '火腿',
+      '羅德': '羅德', '樂天金鷲': '樂天', '西武獅': '西武', '歐力士': '歐力士',
+    },
+    KBO: {
+      'LG雙子': '雙子', 'KT巫師': '巫師', 'SSG登陸者': '登陸者', 'NC恐龍': '恐龍',
+      '斗山熊': '斗山熊', '起亞虎': '起亞虎', '樂天巨人': '樂天', '三星獅': '三星獅',
+      '韓華鷹': '華老鷹', '培證英雄': '培證',
+    },
+    CPBL: {
+      '中信兄弟': '兄弟', '統一獅': '統一', '樂天桃猿': '樂天',
+      '富邦悍將': '富邦', '味全龍': '味全', '台鋼雄鷹': '台鋼',
+    },
+  };
+
+  for (const [leagueName, teams] of Object.entries(aliases)) {
+    for (const [boardName, stakeName] of Object.entries(teams)) {
+      const monitored = game({
+        league: leagueName, officialId: `${leagueName}_${stakeName}`,
+        away: stakeName, home: '共同測試主隊',
+      });
+      const card = blankCard({
+        officialId: null, league: leagueName.toLowerCase(),
+        away: boardName, home: '共同測試主隊',
+      });
+      assert.equal(
+        findGame({ matches: { [monitored.officialId]: monitored } }, card, '2026-10-04'),
+        monitored,
+        `${leagueName} ${boardName} 應對應 ${stakeName}`,
+      );
+    }
+  }
+});
+
 test('blank card is auto-owned and receives Stake favorite, line, and total', () => {
   const card = blankCard();
   const changed = applyToCard(card, game(), NOW);
