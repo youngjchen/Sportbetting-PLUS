@@ -105,14 +105,14 @@ test('stale live data is visible but does not overwrite the card; frozen data re
   const card = blankCard();
   assert.equal(applyToCard(card, stale, NOW), false);
   const staleRow = renderCardStatus(card, stale, NOW, dom.window.document);
-  assert.equal(staleRow.classList.contains('stale'), true);
+  assert.equal(staleRow.classList.contains('stale'), false);
   staleRow.querySelector('.bstake-history-toggle').click();
   assert.match(staleRow.querySelector('.bstake-history').textContent, /已過期/);
 
   const frozen = game({ observedAt: '2026-10-03T13:00:00.000Z', frozenAt: '2026-10-04T08:59:30.000Z' });
   assert.equal(applyToCard(card, frozen, NOW), true);
   const frozenRow = renderCardStatus(card, frozen, NOW, dom.window.document);
-  assert.equal(frozenRow.classList.contains('frozen'), true);
+  assert.equal(frozenRow.classList.contains('frozen'), false);
   frozenRow.querySelector('.bstake-history-toggle').click();
   assert.match(frozenRow.querySelector('.bstake-history').textContent, /已凍結/);
 });
@@ -136,6 +136,7 @@ test('card row shows only whether Stake flipped and keeps market data inside det
   assert.equal(row.classList.contains('bstake-monitor'), true);
   assert.equal(row.querySelector('.bstake-monitor-text').textContent, 'Stake：曾對調讓分 1 次');
   assert.doesNotMatch(row.querySelector('.bstake-monitor-text').textContent, /獨贏|大小|正常|部分缺漏/);
+  assert.equal(row.title, '展開查看 Stake 盤口明細');
   row.querySelector('.bstake-history-toggle').click();
   const history = row.querySelector('.bstake-history');
   assert.ok(history);

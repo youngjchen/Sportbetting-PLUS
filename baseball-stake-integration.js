@@ -169,9 +169,8 @@
   function renderCardStatus(card, game, now, documentRef, feed) {
     if (!card || !documentRef) return null;
     const row = documentRef.createElement('div');
-    const health = game ? healthLabel(game, now == null ? Date.now() : now) : '未開盤';
-    row.className = `bstake-monitor ${health === '已過期' ? 'stale' : health === '部分缺漏' ? 'partial' : health === '已凍結' ? 'frozen' : 'ok'}`;
-    row.title = game ? `方向：${game.sources && game.sources.direction || '無'}；讓分賠率：${game.sources && game.sources.handicapOdds || '無'}；大小：${game.sources && game.sources.total || '無'}；更新 ${timeText(game.observedAt)}` : 'Stake 官方盤口會每五分鐘持續重試';
+    row.className = 'bstake-monitor ok';
+    row.title = game ? '展開查看 Stake 盤口明細' : 'Stake 官方盤口會每五分鐘持續重試';
     const text = documentRef.createElement('span');
     text.className = 'bstake-monitor-text';
     text.textContent = game ? statusText(game, now) : noGameText(feed, card);
