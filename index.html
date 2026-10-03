@@ -1304,6 +1304,13 @@
 
 /* 平台顛倒醒目橫幅 */
 .bflipbanner{ display:flex; align-items:center; gap:8px; padding:7px 16px; background:rgba(160,90,255,.16); border-bottom:1px solid rgba(160,90,255,.45); color:#d9b3ff; font-size:12.5px; font-weight:700; letter-spacing:.02em; }
+.bstake-monitor{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;line-height:1.45;color:#b9d7c5;background:rgba(40,199,111,.07)}
+.bstake-monitor.partial{color:#ffd08a;background:rgba(255,176,46,.08)}
+.bstake-monitor.stale{color:#ff8d9e;background:rgba(255,93,122,.08)}
+.bstake-monitor.frozen{color:#aeb7ff;background:rgba(127,139,245,.09)}
+.bstake-monitor-text{min-width:0;flex:1}
+.bstake-auto,.bstake-history-toggle{flex:0 0 auto;border:1px solid currentColor;border-radius:6px;background:transparent;color:inherit;padding:2px 5px;font-size:11px;font-weight:800;cursor:pointer}
+.bstake-history{flex:1 0 100%;padding-top:4px;border-top:1px dashed currentColor;font-family:"Oswald";opacity:.9}
 .bflipbanner .ic{ font-size:15px; }
 .card.bcard.flip{ border-color:rgba(160,90,255,.6); box-shadow:0 0 0 1px rgba(160,90,255,.3),0 10px 26px rgba(0,0,0,.5); }
 /* 曾經顛倒(收盤前已收斂一致)：靛藍/長春花橫幅＋卡框，與「仍顛倒」的鮮紫同家族、清楚區分 */
@@ -2514,7 +2521,7 @@ function renderCard(it){
 
   // ---- 讓分 / 受讓 ----
   const favSwap = document.createElement("div"); favSwap.className="ico no-drag"; favSwap.title="切換讓分方"; favSwap.textContent="⇄";
-  favSwap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 燈跟隊：換讓分方時兩槽燈互換，明牌燈不再被平台對調搬家
+  favSwap.onclick=()=>{ snapshot(); it.stakeAutoHandicap=false; it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 人工換讓分方後停止 Stake 自動覆寫；燈跟隊
   { const hdSec = sec("讓分", favSwap, hdConflict, crossConflict?"⚠ 與獨贏矛盾":null);
     try{ const ai=bAnomInfo(it); if(ai){ const c=document.createElement("span"); c.className="banom "+ai.cls;
       c.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; c.title=ai.tip; hdSec.appendChild(c); } }catch(_){}
@@ -2922,6 +2929,13 @@ function renderCardB(it){
   head.addEventListener("contextmenu", (e)=>{ e.preventDefault(); openSettleModal(it); });  // 右鍵點卡片頂部＝開結算
   el.appendChild(head);
 
+  try{
+    if(window.__baseballStakeIntegration && window.__baseballStakeIntegration.renderCardStatus){
+      const stakeRow=window.__baseballStakeIntegration.renderCardStatus(it);
+      if(stakeRow) el.appendChild(stakeRow);
+    }
+  }catch(_){}
+
   // 平台顛倒 → 醒目橫幅（不只是按鈕變色）
   if(it.platformFlip){
     el.classList.add("flip");
@@ -3052,7 +3066,7 @@ function renderCardB(it){
     // 讓分
     const hdWrap=document.createElement("div"); hdWrap.className="bmkt";
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方";
-    swap.onclick=()=>{ snapshot(); it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 燈跟隊（同 favSwap）
+    swap.onclick=()=>{ snapshot(); it.stakeAutoHandicap=false; it.hdFav = it.hdFav==="away"?"home":"away"; [it.hdGive,it.hdRecv]=[it.hdRecv,it.hdGive]; save(); render(); };   // 人工換讓分方後停止 Stake 自動覆寫；燈跟隊
     // 「⚠疑顛倒場」晶片已移除（2026-07-26 使用者拍板）：警示條時代前的老提醒，
     // 現由頂部紫色「平台顛倒」橫幅＋異常晶片承擔，重複警示徒增版面噪音。
     const hv = it.hdVal || "1.5";
@@ -3101,7 +3115,7 @@ function renderCardB(it){
     basis.innerHTML="基準 ";
     const tinp=document.createElement("input"); tinp.type="number"; tinp.step="1"; tinp.min="0.5"; tinp.inputMode="decimal"; tinp.value=tv;  // 上下鍵 ±1 但對齊 .5 網格（8.5→9.5/7.5）
     tinp.onclick=(e)=>e.stopPropagation();
-    tinp.oninput=()=>{ it.totVal = tinp.value.trim(); save(); };
+    tinp.oninput=()=>{ it.stakeAutoTotal=false; it.totVal = tinp.value.trim(); save(); };
     basis.appendChild(tinp);
     const totH=mktSecHead("大小", totConflict, [basis], "tot");
     // 大/小 過盤率：兩隊大分率平均；小=100-大
@@ -7965,6 +7979,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260924evidence1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20260924evidence1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-stake-integration.js?v=20261003bs1"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
