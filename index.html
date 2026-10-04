@@ -1778,6 +1778,22 @@ function loadActiveBoard(){
   if(typeof applyView==="function") applyView();
 }
 
+// 跨日啟動守門：午夜後「今天」還沒排盤時，不要用一張全空的新盤遮住昨天的資料。
+// 今天仍會保留在日期列；使用者可切過去用賠率自動排盤。今天一旦已有卡，就照常直達今天。
+function startupDateFor(sourceDoc, today){
+  const boards = (sourceDoc && sourceDoc.boards) || {};
+  const hasMatches = date => {
+    const items = boards[date] && boards[date].items;
+    return Array.isArray(items) && items.some(item=>item && item.type==="match");
+  };
+  if(hasMatches(today)) return today;
+  const latest = Object.keys(boards)
+    .filter(date=>date<=today && hasMatches(date))
+    .sort()
+    .pop();
+  return latest || today;
+}
+
 /* ---------------- team stats (W-L cover rates per market/venue/season) ---------------- */
 // Markets:
 //   ml   = 獨贏       (has w/l/t — tie possible, esp. NPB)
@@ -8103,9 +8119,13 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   // localStorage 到 85% 時先釋放兩份可重建副本，保住盤面主檔與手動卦。
   try{ if(window.__storagePressure) window.__storagePressure.cleanup(localStorage, false); }catch(_){}
   recoverMissingSettledGames();
-  // always land on today's board (yesterday's stays in the date bar, doesn't get in the way)
+  // 今天尚未排盤時先顯示最近一個有卡片的日期，避免跨日後看起來像資料全數消失。
+  // 仍先建立今天的空盤，讓日期列保留「今天」供一鍵自動排盤。
   const t = todayStr();
-  if(doc.activeDate !== t){ ensureBoard(t); doc.activeDate = t; loadActiveBoard(); }
+  ensureBoard(t);
+  const startupDate = startupDateFor(doc, t);
+  if(doc.activeDate !== startupDate){ doc.activeDate = startupDate; }
+  loadActiveBoard();
   buildTray(); buildDateBar(); render(); updateUndoBtn(); refreshColBtns(); refreshPctBtns(); refreshThrBtns(); refreshUiBtns(); applyUiScale(); refreshVenueBtns();
   applyZoomctlCollapsed();
   applyView();
