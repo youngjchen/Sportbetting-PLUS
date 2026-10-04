@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const cheerio = require('cheerio');
 const sidecar = require('./sidecar_client.js');
+const { fetchBet365Page } = require('./bet365_official_transport.js');
 const {
   translateTeam,
   stableGameKey,
@@ -65,13 +66,27 @@ function puckLineMarket(game, outcomes) {
   };
 }
 
+function totalMarket(outcomes) {
+  if (!outcomes.Over || !outcomes.Under) return null;
+  const line = outcomes.Over.line;
+  if (!Number.isFinite(line) || line <= 0 || !Number.isFinite(outcomes.Over.odds) || !Number.isFinite(outcomes.Under.odds)) return null;
+  return {
+    market: 'Game Totals',
+    line,
+    outcomes: [
+      { name: 'Over', side: 'over', line, odds: outcomes.Over.odds },
+      { name: 'Under', side: 'under', line, odds: outcomes.Under.odds },
+    ],
+  };
+}
+
 function parseBet365NhlHub(html) {
   const $ = cheerio.load(String(html || ''));
   const games = new Map();
 
   $('li[data-item-category2="NHL"][data-item-name]').each((_, element) => {
     const category = $(element).attr('data-item-category3');
-    if (category !== 'Money Line' && category !== 'Puck Line') return;
+    if (category !== 'Money Line' && category !== 'Puck Line' && category !== 'Game Totals') return;
     const name = String($(element).attr('data-item-name') || '');
     const parts = name.split(/\s+@\s+/);
     if (parts.length !== 2) return;
@@ -102,6 +117,20 @@ function parseBet365NhlHub(html) {
         game.hd = market;
       }
     }
+    if (category === 'Game Totals') {
+      const market = totalMarket(outcomes);
+      if (market) {
+        game.fixtureIds.total = fixtureId;
+        game.total = market;
+      }
+    }
+    const eventUrl = String($(element).find('a.fas-EventLink[href]').first().attr('href') || '').trim();
+    if (eventUrl) {
+      game.sourceUrls = game.sourceUrls || {};
+      if (category === 'Money Line') game.sourceUrls.ml = eventUrl;
+      if (category === 'Puck Line') game.sourceUrls.hd = eventUrl;
+      if (category === 'Game Totals') game.sourceUrls.total = eventUrl;
+    }
     games.set(key, game);
   });
 
@@ -113,6 +142,15 @@ async function fetchOfficialHub() {
     Accept: 'text/html,application/xhtml+xml',
     'Accept-Language': 'en-US,en;q=0.9',
   }, 90000);
+}
+
+async function fetchOfficialDetails(game) {
+  const fixtureId = game && game.fixtureIds && (game.fixtureIds.ml || game.fixtureIds.hd);
+  const sourceUrl = game && game.sourceUrls && (game.sourceUrls.ml || game.sourceUrls.hd);
+  if (!sourceUrl && !fixtureId) return '';
+  const url = sourceUrl || `https://www.bet365.com/dl/sportsbookredirect/?bs=${encodeURIComponent(fixtureId)}-0~0&bet=1`;
+  const page = await fetchBet365Page(url, { waitMs: 5000, timeoutMs: 60000 });
+  return page.html;
 }
 
 async function collectBet365NhlOdds(options = {}) {
@@ -127,6 +165,27 @@ async function collectBet365NhlOdds(options = {}) {
   const complete = parsed.filter((game) => game.ml && game.hd);
   if (complete.length !== parsed.length) {
     throw new Error(`Bet365 NHL 官方頁解析不完整：完整 ${complete.length}/${parsed.length} 場，保留舊資料`);
+  }
+
+  const fetchDetails = options.fetchDetails === false || (options.fetchText && options.fetchDetails == null)
+    ? null
+    : (options.fetchDetails || fetchOfficialDetails);
+  if (fetchDetails) {
+    for (const game of complete.filter((item) => !item.total).slice(0, 8)) {
+      try {
+        const detailHtml = await fetchDetails(game);
+        if (!detailHtml) continue;
+        const detail = parseBet365NhlHub(detailHtml).find((item) =>
+          item.away === game.away && item.home === game.home && Math.abs(item.startTime - game.startTime) <= 60000
+        );
+        if (detail && detail.total) {
+          game.total = detail.total;
+          if (detail.fixtureIds && detail.fixtureIds.total) game.fixtureIds.total = detail.fixtureIds.total;
+        }
+      } catch (_) {
+        // Hub 的獨贏／讓分仍是有效官方資料；詳情頁失敗只讓大小分進備援層。
+      }
+    }
   }
 
   const now = Number.isFinite(Number(options.now)) ? Number(options.now) : Date.now();
@@ -147,12 +206,14 @@ async function collectBet365NhlOdds(options = {}) {
 
   return {
     provider: 'bet365-official',
+    strategy: 'official-first',
     updated: observedAt,
     source: HUB_URL,
     health: {
       status: 'ok',
       gameCount: upcoming.length,
-      marketCount: upcoming.length * 2,
+      marketCount: upcoming.reduce((count, game) => count + ['ml', 'hd', 'total'].filter((key) => game[key]).length, 0),
+      totalCount: upcoming.filter((game) => game.total).length,
     },
     games,
   };

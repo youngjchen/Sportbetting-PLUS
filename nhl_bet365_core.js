@@ -53,9 +53,10 @@
   }
 
   function marketSnapshot(game) {
-    const snapshot = {};
+    const snapshot = { provider: game && game.provider || 'bet365-official' };
     if (game && game.ml) snapshot.ml = game.ml;
     if (game && game.hd) snapshot.hd = game.hd;
+    if (game && game.total) snapshot.total = game.total;
     return snapshot;
   }
 
@@ -72,7 +73,14 @@
     const latest = history[0] || null;
 
     if (!latest || stableMarketJSON(latest) !== stableMarketJSON(snapshot)) {
-      if (latest && latest.hd && snapshot.hd) {
+      if (latest && latest.provider !== snapshot.provider) {
+        events.unshift({
+          at: observedAt,
+          type: 'source-change',
+          from: latest.provider || 'bet365-official',
+          to: snapshot.provider || 'bet365-official',
+        });
+      } else if (latest && latest.hd && snapshot.hd) {
         const beforeLine = Number(latest.hd.line);
         const afterLine = Number(snapshot.hd.line);
         if (Number.isFinite(beforeLine) && Number.isFinite(afterLine) && beforeLine !== afterLine) {
@@ -90,6 +98,7 @@
     return {
       ...oldGame,
       ...newGame,
+      provider: newGame.provider || oldGame.provider || 'bet365-official',
       history: history.slice(0, 240),
       events: events.slice(0, 120),
     };
@@ -122,6 +131,8 @@
       open,
       ml: latest.ml || game.ml || null,
       hd: latest.hd || game.hd || null,
+      total: latest.total || game.total || null,
+      openTotal: open.total || game.total || null,
       changes: Math.max(0, history.length - 1),
     };
   }

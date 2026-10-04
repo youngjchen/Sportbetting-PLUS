@@ -17,6 +17,10 @@ const FIXTURE_HTML = fs.readFileSync(
   path.join(__dirname, 'fixtures', 'nhl-bet365-hub.html'),
   'utf8',
 );
+const MARKET_FIXTURE_HTML = fs.readFileSync(
+  path.join(__dirname, 'fixtures', 'bet365-nhl-markets.html'),
+  'utf8',
+);
 
 test('joins separate Bet365 fixture ids without reversing away and home', () => {
   const games = parseBet365NhlHub(FIXTURE_HTML);
@@ -54,6 +58,31 @@ test('does not accept non-numeric decimal odds as a complete market', () => {
   const games = parseBet365NhlHub(html);
   assert.equal(games[0].ml, undefined);
   assert.ok(games[0].hd);
+});
+
+test('reads the official NHL game total without changing puck-line direction', () => {
+  const [game] = parseBet365NhlHub(MARKET_FIXTURE_HTML);
+  assert.deepEqual(game.total, {
+    market: 'Game Totals',
+    line: 6.5,
+    outcomes: [
+      { name: 'Over', side: 'over', line: 6.5, odds: 1.91 },
+      { name: 'Under', side: 'under', line: 6.5, odds: 1.91 },
+    ],
+  });
+  assert.equal(game.hd.favSide, 'home');
+});
+
+test('collector fills a hub game total from the Bet365 official event detail', async () => {
+  const output = await collectBet365NhlOdds({
+    fetchText: async () => FIXTURE_HTML,
+    fetchDetails: async (game) => game.away === 'FLA Panthers' ? MARKET_FIXTURE_HTML : '',
+    previous: { games: {} },
+    now: Date.parse('2026-09-30T12:00:00Z'),
+  });
+  const game = Object.values(output.games).find((item) => item.away === 'FLA Panthers');
+  assert.equal(game.total.line, 6.5);
+  assert.equal(game.total.outcomes[0].odds, 1.91);
 });
 
 test('rejects a Cloudflare challenge instead of creating an empty feed', async () => {

@@ -103,6 +103,33 @@ test('prepends price changes and records a puck-line favorite flip', () => {
   });
 });
 
+test('switching from official Bet365 to fallback does not invent a favorite flip', () => {
+  const first = mergeBet365Game(
+    null,
+    sampleGame({ provider: 'bet365-official' }),
+    '2026-09-30T00:00:00.000Z',
+  );
+  const fallback = sampleGame({
+    provider: 'betexplorer',
+    hd: {
+      market: 'Puck Line', line: 1.5, favSide: 'away',
+      outcomes: [
+        { name: 'FLA Panthers', side: 'away', line: -1.5, odds: 2.8 },
+        { name: 'CAR Hurricanes', side: 'home', line: 1.5, odds: 1.42 },
+      ],
+    },
+  });
+  const second = mergeBet365Game(first, fallback, '2026-09-30T00:05:00.000Z');
+
+  assert.equal(second.events.some((event) => event.type === 'favorite-flip'), false);
+  assert.deepEqual(second.events[0], {
+    at: '2026-09-30T00:05:00.000Z',
+    type: 'source-change',
+    from: 'bet365-official',
+    to: 'betexplorer',
+  });
+});
+
 test('matches a pregame card by translated teams and nearest start time', () => {
   const near = mergeBet365Game(null, sampleGame(), '2026-09-30T00:00:00.000Z');
   const far = mergeBet365Game(null, sampleGame({ startTime: Date.parse('2026-10-02T23:00:00Z') }), '2026-09-30T00:00:00.000Z');
@@ -171,4 +198,22 @@ test('returns the Bet365 decimal price and signed line for one side', () => {
   assert.deepEqual(marketOutcome(game.hd, 'home'), {
     name: 'CAR Hurricanes', side: 'home', line: -1.5, odds: 2.85,
   });
+});
+
+test('matched Bet365 game exposes official total line and prices', () => {
+  const game = mergeBet365Game(null, sampleGame({
+    total: {
+      market: 'Game Totals', line: 6.5,
+      outcomes: [
+        { name: 'Over', side: 'over', line: 6.5, odds: 1.91 },
+        { name: 'Under', side: 'under', line: 6.5, odds: 1.91 },
+      ],
+    },
+  }), '2026-09-30T00:00:00.000Z');
+  const match = findBet365Game({ games: { game } }, {
+    away: '佛羅里', home: '颶風', date: '2026-10-01', time: '07:00',
+  });
+
+  assert.equal(match.total.line, 6.5);
+  assert.equal(marketOutcome(match.total, 'over').odds, 1.91);
 });
