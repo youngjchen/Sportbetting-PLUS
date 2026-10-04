@@ -1,6 +1,7 @@
 # Phase 0 探針①前置＋③：四聯盟列表頁發現（ld+json＋比賽連結）＋ robots.txt
 # 訪客、零帳號、每頁一次。輸出 op_phase0_leagues.json
 import json, re, sys, io
+from pathlib import Path
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 from scrapling.fetchers import StealthyFetcher
 
@@ -76,5 +77,5 @@ for key, urls in LEAGUES:
     OUT[key] = got
     print(f"[{key}] {got.get('url')}  ld+json={got.get('nLd')}  連結={len(got.get('links', []))}  title={str(got.get('title'))[:60]}", flush=True)
 
-json.dump(OUT, open(r"C:\Users\User\Downloads\Sportbetting-PLUS\stake_lab\op_phase0_leagues.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
+json.dump(OUT, open(Path(__file__).resolve().parent / "op_phase0_leagues.json", "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("已存 op_phase0_leagues.json")

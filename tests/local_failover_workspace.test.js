@@ -25,6 +25,23 @@ function loadWorkspaceModule() {
   }
 }
 
+test('local failover defaults to a sibling clone beside the moved source repository', () => {
+  const { resolveFailoverWorkspace } = loadWorkspaceModule();
+  assert.equal(typeof resolveFailoverWorkspace, 'function');
+
+  assert.equal(
+    resolveFailoverWorkspace({ sourceRepo: 'D:\\Sportbetting-PLUS', env: {} }),
+    path.resolve('D:\\Sportbetting-PLUS-failover')
+  );
+  assert.equal(
+    resolveFailoverWorkspace({
+      sourceRepo: 'D:\\Sportbetting-PLUS',
+      env: { BB_FAILOVER_WORKSPACE: 'D:\\custom-failover' },
+    }),
+    path.resolve('D:\\custom-failover')
+  );
+});
+
 test('local failover installs runtime dependencies only when package-lock changes', () => {
   const { ensureRuntimeDependencies } = loadWorkspaceModule();
   assert.equal(typeof ensureRuntimeDependencies, 'function');

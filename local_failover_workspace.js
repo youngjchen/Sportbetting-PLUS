@@ -4,7 +4,6 @@
 const { execFileSync, spawnSync } = require('node:child_process');
 const crypto = require('node:crypto');
 const fs = require('node:fs');
-const os = require('node:os');
 const path = require('node:path');
 
 function git(args, cwd) {
@@ -22,6 +21,13 @@ function normalizedRemote(value) {
     return raw.replace(/\/+$/, '').toLowerCase();
   }
   return path.resolve(raw).replace(/[\\/]+$/, '').toLowerCase();
+}
+
+function resolveFailoverWorkspace({ sourceRepo, env = process.env }) {
+  return path.resolve(
+    env.BB_FAILOVER_WORKSPACE
+      || path.join(path.dirname(sourceRepo), 'Sportbetting-PLUS-failover')
+  );
 }
 
 // 備援自家會 stage 的全部產出路徑（local_failover.js 各 staged.push 的聯集）。
@@ -190,10 +196,7 @@ function ensureRuntimeDependencies(workspaceDir, install = null) {
 function main() {
   const sourceRepo = __dirname;
   const originUrl = process.env.BB_FAILOVER_ORIGIN || git(['remote', 'get-url', 'origin'], sourceRepo);
-  const workspaceDir = path.resolve(
-    process.env.BB_FAILOVER_WORKSPACE
-      || path.join(process.env.LOCALAPPDATA || os.tmpdir(), 'Sportbetting-PLUS-failover')
-  );
+  const workspaceDir = resolveFailoverWorkspace({ sourceRepo });
   ensureFailoverWorkspace({ originUrl, workspaceDir });
   ensureRuntimeDependencies(workspaceDir);
   const result = spawnSync(process.execPath, [path.join(workspaceDir, 'local_failover.js'), '--once'], {
@@ -222,5 +225,6 @@ module.exports = {
   classifyFailoverDirt,
   mirrorPregameOutputs,
   recoverOwnedRootOutputs,
+  resolveFailoverWorkspace,
   FAILOVER_OUTPUT_ROOTS,
 };

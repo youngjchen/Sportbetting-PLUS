@@ -4,6 +4,7 @@
 # 設計對應 2026-08-02 拍板：開盤/收盤各一次快照、收盤順帶回收全程波動（hover 歷史）、
 # 對調盯哨另行輕量執行（賠率出現即開始、30分/次、抓到一次即閂鎖停盯）。
 import json, re, sys, io, datetime
+from pathlib import Path
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 from scrapling.fetchers import StealthyFetcher
 
@@ -312,7 +313,7 @@ for k, h in SNAP["histories"].items():
     for p in h["points"]:
         if p["t"] > (NOW + datetime.timedelta(minutes=5)).isoformat(): SNAP["assertFail"].append(f"{k}:未來時戳{p['t']}"); break
 
-out = rf"C:\Users\User\Downloads\Sportbetting-PLUS\stake_lab\op_snap_{LEAGUE}.json"
+out = Path(__file__).resolve().parent / f"op_snap_{LEAGUE}.json"
 json.dump(SNAP, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 hist_sum = {k: (h["n"] if h else "×") for k, h in SNAP["histories"].items()}
 print(f"[{LEAGUE}] hdFav={SNAP['hdFav']}({SNAP['hdFavMode']})  歷史點數={json.dumps(hist_sum, ensure_ascii=False)}  斷言失敗={SNAP['assertFail'] or '無'}")

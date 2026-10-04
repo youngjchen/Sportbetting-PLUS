@@ -1,6 +1,7 @@
 # Phase 0 探針①主體＋④＋⑥：單場頁三市場 Stake 覆蓋率＋AH 劃線死組＋（--hover）浮窗時戳挖掘
 # 用法: python op_phase0_match.py <match_url> <league_label> [--hover]
 import json, sys, io
+from pathlib import Path
 sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
 from scrapling.fetchers import StealthyFetcher
 
@@ -151,6 +152,6 @@ def act(page):
 page = StealthyFetcher.fetch(URL, headless=True, real_chrome=True, network_idle=True,
                              locale="zh-TW", timezone_id="Asia/Taipei", timeout=220000, page_action=act)
 RESULT["xhr_tail"] = [u for u in XHRS if any(k in u.lower() for k in ("feed", "odds", "match", "event", "ajax", "api"))][-15:]
-out = rf"C:\Users\User\Downloads\Sportbetting-PLUS\stake_lab\op_phase0_{LABEL}.json"
+out = Path(__file__).resolve().parent / f"op_phase0_{LABEL}.json"
 json.dump(RESULT, open(out, "w", encoding="utf-8"), ensure_ascii=False, indent=1)
 print("已存", out)
