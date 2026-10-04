@@ -92,6 +92,7 @@ test('七類表放在獨立區塊，NRFI 在開大後，明細顯示首局證據
 
 test('歷史資料晚於回顧頁載入時，會重畫已開啟的回顧頁', async () => {
   let renders = 0;
+  let boardRenders = 0;
   const browser = {
     document: {
       getElementById(id) {
@@ -100,11 +101,13 @@ test('歷史資料晚於回顧頁載入時，會重畫已開啟的回顧頁', as
     },
     fetch: async () => ({ ok: true, json: async () => history }),
     renderReviewPage: () => { renders += 1; },
+    render: () => { boardRenders += 1; },
     console: { warn: () => {} },
   };
   install(browser);
   await browser.ANOMALY_NRFI_READY;
   assert.equal(renders, 1);
+  assert.equal(boardRenders, 1);
   assert.equal(browser.lookupStakeNrfi('stake_1').nrfi, true);
 });
 

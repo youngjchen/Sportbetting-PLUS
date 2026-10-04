@@ -31,6 +31,48 @@ function loadBAnomInfo(intlState, crossTab) {
   return sandbox.bAnomInfo;
 }
 
+function loadBAnomRecommendation(overrides = {}) {
+  const start = indexSource.indexOf('function bAnomRecommendationFor(it){');
+  const end = indexSource.indexOf('// 獨贏 ⓘ：STAKE 賠率評語', start);
+  assert.ok(start >= 0 && end > start, '找不到 bAnomRecommendationFor 原始函式');
+  const sandbox = {
+    bAnomInfo: () => ({ bucket: { n: 40, fw: 25, fwN: 40 }, lbl: '顛倒' }),
+    intlFor: () => ({ ls: 'home' }),
+    intlVerdict: () => ({ v: 'flip', side: 'away' }),
+    doc: { games: [] },
+    window: {
+      buildBet365TaiwanSnapshot: () => ({ relation: '顛倒', swapCombo: 'neither' }),
+      collectBet365Taiwan: () => ({ groups: { inverted: { neither: { n: 35, fw: 22, fwN: 35 } } } }),
+      __baseballStakeIntegration: {
+        gameFor: () => ({
+          favorite: 'away', canonicalLine: 1.5,
+          moneyline: { away: 1.70, home: 2.10 },
+          handicapOdds: { away: 2.20, home: 1.62 },
+          total: { line: 7.5, over: 1.90, under: 1.80 },
+        }),
+      },
+      buildAnomalyRecommendation: (input) => input,
+    },
+    ...overrides,
+  };
+  vm.runInNewContext(`${indexSource.slice(start, end)}\nthis.bAnomRecommendationFor = bAnomRecommendationFor;`, sandbox);
+  return sandbox.bAnomRecommendationFor;
+}
+
+function loadAppendBAnomRecommendation(overrides = {}) {
+  const start = indexSource.indexOf('function appendBAnomRecommendation(root,it){');
+  const end = indexSource.indexOf('function renderCardB(it){', start);
+  assert.ok(start >= 0 && end > start, '找不到 appendBAnomRecommendation 原始函式');
+  const rendered = { className: 'anom-decision' };
+  const sandbox = {
+    bAnomRecommendationFor: () => ({ markets: [] }),
+    window: { renderAnomalyRecommendation: () => rendered },
+    ...overrides,
+  };
+  vm.runInNewContext(`${indexSource.slice(start, end)}\nthis.appendBAnomRecommendation = appendBAnomRecommendation;`, sandbox);
+  return { append: sandbox.appendBAnomRecommendation, rendered };
+}
+
 function loadIntlFor(intlState, pregameData) {
   const start = indexSource.indexOf('function intlFor(it,dateKey)');
   const end = indexSource.indexOf('function intlVerdictColor', start);
@@ -152,6 +194,29 @@ test('晶片仍會顯示 Stake 與台彩當下方向相反的顛倒', () => {
   });
 
   assert.equal(info.lbl, '顛倒');
+});
+
+test('異常卡片把兩套對應分類與 Stake 即時三市場賠率交給決策器', () => {
+  const recommend = loadBAnomRecommendation();
+  const result = recommend({ away: '阪神', home: '橫濱', hdFav: 'away', hdVal: 1.5, totVal: 7.5 });
+
+  assert.deepEqual(Array.from(result.sources, (source) => source.label), ['異常統計', 'BET365 × 台彩七類']);
+  assert.equal(result.game.away, '阪神');
+  assert.equal(result.game.home, '橫濱');
+  assert.equal(result.game.moneyline.away, 1.70);
+  assert.equal(result.game.handicapOdds.home, 1.62);
+  assert.equal(result.game.total.under, 1.80);
+});
+
+test('未結算異常卡片直接掛上決策條，已結算卡片不再顯示即時下注判定', () => {
+  const { append, rendered } = loadAppendBAnomRecommendation();
+  const root = { children: [], appendChild(child) { this.children.push(child); } };
+  assert.equal(append(root, { settled: null }), rendered);
+  assert.deepEqual(root.children, [rendered]);
+
+  const settledRoot = { children: [], appendChild(child) { this.children.push(child); } };
+  assert.equal(append(settledRoot, { settled: { awayScore: 2, homeScore: 1 } }), null);
+  assert.deepEqual(settledRoot.children, []);
 });
 
 test('盤面用時間或官方賽事 ID 區分雙重賽，載入時修復遺漏的已結算卡片', () => {

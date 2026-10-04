@@ -1320,6 +1320,44 @@
 .bflipbanner.swap{ background:rgba(43,191,160,.13); border-bottom-color:rgba(43,191,160,.4); color:#7fe8d4; }
 .card.bcard.flip-swap{ border-color:rgba(43,191,160,.5); box-shadow:0 0 0 1px rgba(43,191,160,.26),0 10px 26px rgba(0,0,0,.5); }
 
+/* 異常投注決策：像盤口交易條，不再堆疊多顆互搶注意力的徽章。 */
+.anom-decision{
+  position:relative;padding:9px 16px 11px;background:#111a21;
+  border-bottom:1px solid rgba(255,255,255,.075);font-variant-numeric:tabular-nums;
+}
+.anom-decision::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#4d8fbd;}
+.anom-decision.has-conflict::before{background:#ff7185;}
+.anom-decision-toggle{
+  width:100%;display:flex;align-items:center;gap:8px;padding:0 0 6px;border:0;background:transparent;
+  color:inherit;text-align:left;cursor:pointer;font-family:inherit;
+}
+.anom-decision-toggle:focus-visible{outline:2px solid #71b9e8;outline-offset:3px;border-radius:3px;}
+.anom-decision-title{font-family:"Oswald";font-size:11px;font-weight:700;letter-spacing:.12em;color:#dce9f3;}
+.anom-decision-mode{font-size:10.5px;color:#7fa7c3;letter-spacing:.02em;}
+.anom-decision-caret{margin-left:auto;color:#6e8294;font-size:14px;line-height:1;transition:transform .16s ease;}
+.anom-decision.open .anom-decision-caret{transform:rotate(180deg);}
+.anom-picks{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
+.anom-pick,.anom-detail-row{
+  --decision-state:#8a97a8;display:grid;grid-template-columns:35px minmax(82px,1fr) auto auto;
+  align-items:baseline;gap:5px 8px;min-width:0;padding:6px 0;border-top:1px solid rgba(255,255,255,.055);
+  box-shadow:inset 2px 0 0 var(--decision-state);
+}
+.anom-pick{padding-left:8px;}
+.anom-pick.bet,.anom-detail-row.bet{--decision-state:#43d9a3;}
+.anom-pick.wait,.anom-detail-row.wait{--decision-state:#f0b35a;}
+.anom-pick.direction,.anom-detail-row.direction{--decision-state:#71b9e8;}
+.anom-pick.observe,.anom-detail-row.observe,.anom-pick.no_data,.anom-detail-row.no_data{--decision-state:#657789;}
+.anom-pick.conflict,.anom-detail-row.conflict{--decision-state:#ff7185;}
+.anom-market{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:#77899b;}
+.anom-choice{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#e7eef5;}
+.anom-price{font-family:"Oswald";font-size:11.5px;color:#9fb0c0;white-space:nowrap;}
+.anom-verdict{font-size:11px;font-weight:800;color:var(--decision-state);white-space:nowrap;text-align:right;}
+.anom-decision-detail{margin-top:6px;border-top:1px dashed rgba(113,185,232,.25);}
+.anom-decision-detail[hidden]{display:none!important;}
+.anom-detail-row{grid-template-columns:40px minmax(96px,1fr) auto 70px;padding:8px 2px 8px 10px;}
+.anom-evidence{grid-column:2/-1;color:#718293;font-size:10.5px;line-height:1.45;white-space:normal;}
+@media (prefers-reduced-motion:reduce){.anom-decision-caret{transition:none;}}
+
 .bbody{ display:grid; grid-template-columns:212px 1fr; align-items:stretch; }
 /* 左計分板：純隊名、直向置中。客隊比分在名字上、主隊比分在名字下，比分大、琥珀色 */
 .bscore{ display:flex; flex-direction:column; align-items:center; justify-content:space-evenly; gap:4px; padding:16px 14px; border-right:1px solid rgba(255,255,255,.07); text-align:center; }
@@ -1495,6 +1533,12 @@
   .blights{ gap:6px; }
   .blights .lt{ width:18px; height:18px; }
   .bmkt-sec .bcmt{ font-size:11px; }
+  .anom-decision{padding:9px 12px 10px;}
+  .anom-picks{grid-template-columns:1fr;gap:0;}
+  .anom-pick,.anom-detail-row{grid-template-columns:34px minmax(0,1fr) auto;padding-left:8px;}
+  .anom-price{grid-column:2/3;font-size:11px;}
+  .anom-verdict{grid-column:3/4;grid-row:1/2;}
+  .anom-evidence{grid-column:2/-1;}
   /* ⋯ 選單：限制在螢幕內、可上下捲，不再跑出畫面 */
   #moreMenu{ position:fixed; top:54px; right:8px; left:auto; max-width:calc(100vw - 16px); max-height:calc(100dvh - 66px); }
   #moreMenu .colrow{ flex-wrap:wrap; }
@@ -2825,7 +2869,54 @@ function bAnomInfo(it){
   if(!B || !B.n) return null;
   let tip = `${lbl}場歷史（全聯盟 ${B.n} 場）\n讓分過盤 ${pc(B.cov,B.covN)}・熱門勝 ${pc(B.fw,B.fwN)}・開大 ${pc(B.ov,B.ovN)}`;
   if(groupAll && groupAll.n) tip += `\n${groupName}全部：讓過 ${pc(groupAll.cov,groupAll.covN)}（${groupAll.n}場）`;
-  return { lbl, cls, covTxt: pc(B.cov,B.covN), n: B.n, tip };
+  return { lbl, cls, covTxt: pc(B.cov,B.covN), n: B.n, tip, bucket:B };
+}
+function bAnomRecommendationFor(it){
+  if(!it || !window.buildAnomalyRecommendation) return null;
+  const sources=[];
+  try{
+    const first=bAnomInfo(it);
+    if(first && first.bucket) sources.push({id:"stake-tw",label:"異常統計",bucket:first.bucket});
+  }catch(_){}
+  try{
+    const ist=(typeof intlFor==="function")?intlFor(it):null;
+    const iv=(typeof intlVerdict==="function")?intlVerdict(it,ist):null;
+    const snap=(ist&&iv&&window.buildBet365TaiwanSnapshot)?window.buildBet365TaiwanSnapshot(ist,iv):null;
+    if(snap && window.collectBet365Taiwan){
+      const all=window.collectBet365Taiwan("all",(typeof doc!=="undefined"&&Array.isArray(doc.games))?doc.games:[]);
+      const rel=snap.relation==="顛倒"?"inverted":snap.relation==="收斂"?"converged":null;
+      const B=rel&&all&&all.groups&&all.groups[rel]&&all.groups[rel][snap.swapCombo];
+      if(B) sources.push({id:"b365-tw",label:"BET365 × 台彩七類",bucket:B});
+    }
+  }catch(_){}
+  if(!sources.length) return null;
+  let stake=null;
+  try{
+    const api=window.__baseballStakeIntegration;
+    stake=(api&&api.gameFor)?api.gameFor(it):null;
+  }catch(_){}
+  let mlFav=null;
+  const currentMl=stake&&stake.moneyline;
+  if(currentMl&&Number.isFinite(Number(currentMl.away))&&Number.isFinite(Number(currentMl.home))&&Number(currentMl.away)!==Number(currentMl.home)){
+    mlFav=Number(currentMl.away)<Number(currentMl.home)?"away":"home";
+  }else{
+    const a=Number(it.closeOddsAway!=null?it.closeOddsAway:it.flipOddsAway);
+    const h=Number(it.closeOddsHome!=null?it.closeOddsHome:it.flipOddsHome);
+    if(Number.isFinite(a)&&Number.isFinite(h)&&a!==h) mlFav=a<h?"away":"home";
+  }
+  return window.buildAnomalyRecommendation({
+    game:{
+      away:it.away,home:it.home,
+      favorite:(stake&&(stake.favorite==="away"||stake.favorite==="home"))?stake.favorite:it.hdFav,
+      moneylineFavorite:mlFav,
+      line:(stake&&stake.canonicalLine!=null)?stake.canonicalLine:it.hdVal,
+      totalLine:(stake&&stake.total&&stake.total.line!=null)?stake.total.line:it.totVal,
+      moneyline:(stake&&stake.moneyline)||null,
+      handicapOdds:(stake&&stake.handicapOdds)||null,
+      total:(stake&&stake.total)||null
+    },
+    sources
+  });
 }
 // 獨贏 ⓘ：STAKE 賠率評語（同結算畫面）
 function bStakeReadHTML(it){
@@ -2870,6 +2961,17 @@ function bCoverHTML(team, market, venue){
   return `<span class="bcover ${cls}">${info.pct}${ss}</span>`;
 }
 function _firstEl(htmlStr){ const t=document.createElement("span"); t.innerHTML=htmlStr; return t.firstElementChild || t; }
+
+function appendBAnomRecommendation(root,it){
+  if(!root || !it || it.settled || !window.renderAnomalyRecommendation) return null;
+  let decision=null;
+  try{ decision=bAnomRecommendationFor(it); }catch(_){}
+  if(!decision) return null;
+  const view=window.renderAnomalyRecommendation(decision);
+  if(!view) return null;
+  root.appendChild(view);
+  return view;
+}
 
 function renderCardB(it){
   const el = document.createElement("div");
@@ -2949,6 +3051,8 @@ function renderCardB(it){
     bn.innerHTML="<span class='ic'>⇆</span>賽前讓分方曾對調（與顛倒/曾顛倒是不同訊號）";
     el.appendChild(bn);
   }
+
+  appendBAnomRecommendation(el,it);
 
   if(!it.collapsed){
     /* ---------- 兩區式本體 ---------- */
@@ -3066,11 +3170,7 @@ function renderCardB(it){
     // 「⚠疑顛倒場」晶片已移除（2026-07-26 使用者拍板）：警示條時代前的老提醒，
     // 現由頂部紫色「平台顛倒」橫幅＋異常晶片承擔，重複警示徒增版面噪音。
     const hv = it.hdVal || "1.5";
-    // 異常場即時晶片：這場屬於哪種異常＋該類歷史讓分過盤率（tooltip=組合細分）
-    let anomChip=null;
-    try{ const ai=bAnomInfo(it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
-      anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    const hdH=mktSecHead("讓分", hdConflict, [swap, anomChip], "hd");
+    const hdH=mktSecHead("讓分", hdConflict, [swap], "hd");
     hdWrap.append(hdH.sec,
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
@@ -7991,6 +8091,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20260924evidence1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs5"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261004rec1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs5"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

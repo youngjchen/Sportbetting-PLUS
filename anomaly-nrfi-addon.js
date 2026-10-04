@@ -199,6 +199,259 @@
     return total ? `${Math.round((100 * hit) / total)}%` : '—';
   }
 
+  const RECOMMENDATION_MARKETS = Object.freeze([
+    { market: 'ml', label: '獨贏', hitKey: 'fw', totalKey: 'fwN', positive: 'favorite', negative: 'underdog' },
+    { market: 'hd', label: '讓分', hitKey: 'cov', totalKey: 'covN', positive: 'favorite', negative: 'underdog' },
+    { market: 'ou', label: '大小', hitKey: 'ov', totalKey: 'ovN', positive: 'over', negative: 'under' },
+    { market: 'nrfi', label: '首局', hitKey: 'nr', totalKey: 'nrN', positive: 'nrfi', negative: 'yrfi' },
+  ]);
+
+  // 單尾 80% Wilson 下界：避免把小樣本的表面高命中率直接當成真實機率。
+  // 下注價另加 5% 安全邊際；兩套系統樣本重疊時取較保守者，不疊加樣本。
+  function wilsonLower(hit, total, z) {
+    const n = Number(total);
+    const wins = Number(hit);
+    const score = Number.isFinite(Number(z)) ? Number(z) : 0.84;
+    if (!(n > 0) || !Number.isFinite(wins)) return null;
+    const p = Math.max(0, Math.min(n, wins)) / n;
+    const z2 = score * score;
+    const denom = 1 + z2 / n;
+    const center = (p + z2 / (2 * n)) / denom;
+    const spread = score * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n)) / denom;
+    return Math.max(0, center - spread);
+  }
+
+  function roundUpHundredth(value) {
+    return Number.isFinite(value) ? Math.ceil((value - Number.EPSILON) * 100) / 100 : null;
+  }
+
+  function marketSide(game, market, direction) {
+    const value = game || {};
+    let favorite = value.favorite === 'home' ? 'home' : 'away';
+    if (market === 'ml') {
+      if (value.moneylineFavorite === 'home' || value.moneylineFavorite === 'away') favorite = value.moneylineFavorite;
+      const away = Number(value.moneyline && value.moneyline.away);
+      const home = Number(value.moneyline && value.moneyline.home);
+      if (Number.isFinite(away) && Number.isFinite(home) && away !== home) favorite = away < home ? 'away' : 'home';
+    }
+    if (market === 'ml' || market === 'hd') {
+      return direction === 'favorite' ? favorite : (favorite === 'away' ? 'home' : 'away');
+    }
+    return direction;
+  }
+
+  function marketPresentation(game, market, direction) {
+    const value = game || {};
+    const side = marketSide(value, market, direction);
+    if (market === 'ml') {
+      const offered = value.moneyline && value.moneyline[side];
+      return {
+        pickKey: side,
+        pickLabel: `${side === 'away' ? value.away : value.home} 獨贏`,
+        currentOdds: offered != null && Number.isFinite(Number(offered)) ? Number(offered) : null,
+      };
+    }
+    if (market === 'hd') {
+      const line = Number.isFinite(Number(value.line)) ? Number(value.line) : 1.5;
+      const isFavorite = side === value.favorite;
+      const offered = value.handicapOdds && value.handicapOdds[side];
+      return {
+        pickKey: side,
+        pickLabel: `${side === 'away' ? value.away : value.home} ${isFavorite ? '-' : '+'}${line}`,
+        currentOdds: offered != null && Number.isFinite(Number(offered)) ? Number(offered) : null,
+      };
+    }
+    if (market === 'ou') {
+      const line = value.totalLine == null ? (value.total && value.total.line) : value.totalLine;
+      const offered = value.total && value.total[direction];
+      return {
+        pickKey: direction,
+        pickLabel: `${direction === 'over' ? '大' : '小'} ${line == null ? '—' : line}`,
+        currentOdds: offered != null && Number.isFinite(Number(offered)) ? Number(offered) : null,
+      };
+    }
+    return { pickKey: direction, pickLabel: direction === 'nrfi' ? 'NRFI' : 'YRFI', currentOdds: null };
+  }
+
+  function sourceSignal(source, definition) {
+    const item = source || {};
+    const data = item.bucket || {};
+    const total = Number(data[definition.totalKey]) || 0;
+    const positiveHits = Number(data[definition.hitKey]) || 0;
+    if (total < 15) return null;
+    const positiveRate = positiveHits / total;
+    if (positiveRate === 0.5) return null;
+    const isPositive = positiveRate > 0.5;
+    const hits = isPositive ? positiveHits : total - positiveHits;
+    return {
+      id: item.id || '',
+      label: item.label || item.id || '異常統計',
+      direction: isPositive ? definition.positive : definition.negative,
+      sample: total,
+      hit: hits,
+      rawRate: hits / total,
+      conservativeRate: wilsonLower(hits, total),
+      tier: total >= 60 ? 'stable' : total >= 30 ? 'ready' : 'observe',
+    };
+  }
+
+  function emptyMarket(definition) {
+    return {
+      market: definition.market, marketLabel: definition.label, status: 'no_data',
+      pickKey: null, pickLabel: '樣本不足', currentOdds: null, minOdds: null,
+      edgePct: null, conservativeRate: null, sample: 0, sourceMode: 'none', evidence: [],
+    };
+  }
+
+  function buildMarketRecommendation(game, sources, definition, margin) {
+    const signals = (Array.isArray(sources) ? sources : []).map((source) => sourceSignal(source, definition)).filter(Boolean);
+    if (!signals.length) return emptyMarket(definition);
+    const ready = signals.filter((signal) => signal.tier !== 'observe');
+    const selected = ready.length ? ready : signals;
+    const directions = new Set(selected.map((signal) => signal.direction));
+    if (directions.size !== 1) {
+      return Object.assign(emptyMarket(definition), {
+        status: 'conflict', pickLabel: '兩套方向分歧', sourceMode: 'conflict',
+        sample: Math.min(...selected.map((signal) => signal.sample)), evidence: selected,
+      });
+    }
+    const direction = selected[0].direction;
+    const presentation = marketPresentation(game, definition.market, direction);
+    const conservativeRate = Math.min(...selected.map((signal) => signal.conservativeRate));
+    const minOdds = conservativeRate > 0 ? roundUpHundredth((1 + margin) / conservativeRate) : null;
+    const observationOnly = !ready.length;
+    let status = observationOnly ? 'observe' : 'direction';
+    let edgePct = null;
+    if (!observationOnly && presentation.currentOdds != null && minOdds != null) {
+      edgePct = (presentation.currentOdds * conservativeRate - 1) * 100;
+      status = presentation.currentOdds >= minOdds ? 'bet' : 'wait';
+    }
+    return {
+      market: definition.market,
+      marketLabel: definition.label,
+      direction,
+      pickKey: presentation.pickKey,
+      pickLabel: presentation.pickLabel,
+      currentOdds: presentation.currentOdds,
+      minOdds,
+      edgePct,
+      conservativeRate,
+      sample: Math.min(...selected.map((signal) => signal.sample)),
+      sourceMode: selected.length > 1 ? 'consensus' : 'single',
+      status,
+      evidence: selected,
+    };
+  }
+
+  function buildAnomalyRecommendation(options) {
+    const opts = options || {};
+    const margin = Number.isFinite(Number(opts.margin)) ? Number(opts.margin) : 0.05;
+    const markets = RECOMMENDATION_MARKETS.map((definition) => (
+      buildMarketRecommendation(opts.game || {}, opts.sources || [], definition, margin)
+    ));
+    const rank = { bet: 0, wait: 1, direction: 2, observe: 3, conflict: 4, no_data: 5 };
+    const summary = markets.filter((market) => market.status !== 'no_data').slice().sort((a, b) => {
+      const byStatus = rank[a.status] - rank[b.status];
+      if (byStatus) return byStatus;
+      return (b.edgePct == null ? -Infinity : b.edgePct) - (a.edgePct == null ? -Infinity : a.edgePct);
+    }).slice(0, 2);
+    const hasConsensus = markets.some((market) => market.sourceMode === 'consensus');
+    const hasConflict = markets.some((market) => market.status === 'conflict');
+    return { markets, summary, hasConsensus, hasConflict, margin };
+  }
+
+  function fixedOdds(value) {
+    return value == null ? '—' : Number(value).toFixed(2);
+  }
+
+  function verdictText(market) {
+    if (market.status === 'bet') return `可下 ${market.edgePct >= 0 ? '+' : ''}${market.edgePct.toFixed(1)}%`;
+    if (market.status === 'wait') return '未到價';
+    if (market.status === 'direction') return '只看方向';
+    if (market.status === 'observe') return '樣本觀察';
+    if (market.status === 'conflict') return '不下注';
+    return '暫無建議';
+  }
+
+  function appendPick(documentRef, parent, market, className) {
+    const row = documentRef.createElement('div');
+    row.className = `${className} ${market.status}`;
+    row.dataset.market = market.market;
+    const marketLabel = documentRef.createElement('span');
+    marketLabel.className = 'anom-market';
+    marketLabel.textContent = market.marketLabel;
+    const choice = documentRef.createElement('strong');
+    choice.className = 'anom-choice';
+    choice.textContent = market.pickLabel;
+    const price = documentRef.createElement('span');
+    price.className = 'anom-price';
+    if (market.market === 'nrfi') price.textContent = '';
+    else if (market.minOdds != null) price.textContent = `${market.status === 'observe' ? '參考' : '門檻'} ${fixedOdds(market.minOdds)}${market.currentOdds == null ? '' : `／Stake ${fixedOdds(market.currentOdds)}`}`;
+    else price.textContent = '—';
+    const verdict = documentRef.createElement('span');
+    verdict.className = 'anom-verdict';
+    verdict.textContent = verdictText(market);
+    row.append(marketLabel, choice, price, verdict);
+    parent.appendChild(row);
+    return row;
+  }
+
+  function renderAnomalyRecommendation(decision, documentRef) {
+    if (!decision || !documentRef) return null;
+    const root = documentRef.createElement('section');
+    root.className = `anom-decision${decision.hasConflict ? ' has-conflict' : ''}`;
+    const toggle = documentRef.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'anom-decision-toggle';
+    toggle.setAttribute('aria-expanded', 'false');
+    toggle.title = '展開四個市場與兩套異常統計證據';
+    const title = documentRef.createElement('span');
+    title.className = 'anom-decision-title';
+    title.textContent = '異常決策';
+    const mode = documentRef.createElement('span');
+    mode.className = 'anom-decision-mode';
+    mode.textContent = decision.hasConflict ? '含分歧' : decision.hasConsensus ? '兩套共識' : '單一系統';
+    const caret = documentRef.createElement('span');
+    caret.className = 'anom-decision-caret';
+    caret.textContent = '⌄';
+    toggle.append(title, mode, caret);
+    root.appendChild(toggle);
+
+    const summary = documentRef.createElement('div');
+    summary.className = 'anom-picks';
+    if (decision.summary.length) decision.summary.forEach((market) => appendPick(documentRef, summary, market, 'anom-pick'));
+    else {
+      const empty = documentRef.createElement('div');
+      empty.className = 'anom-pick no_data';
+      empty.textContent = '有效樣本未滿 15 場，暫不提供方向';
+      summary.appendChild(empty);
+    }
+    root.appendChild(summary);
+
+    const detail = documentRef.createElement('div');
+    detail.className = 'anom-decision-detail';
+    detail.hidden = true;
+    decision.markets.forEach((market) => {
+      const row = appendPick(documentRef, detail, market, 'anom-detail-row');
+      if (market.evidence.length) {
+        const evidence = documentRef.createElement('small');
+        evidence.className = 'anom-evidence';
+        evidence.textContent = `${market.conservativeRate == null ? '' : `保守${Math.round(market.conservativeRate * 100)}%｜`}${market.evidence.map((item) => (
+          `${item.label} ${Math.round(item.rawRate * 100)}%（${item.hit}/${item.sample}）`
+        )).join('｜')}`;
+        row.appendChild(evidence);
+      }
+    });
+    root.appendChild(detail);
+    toggle.onclick = function (event) {
+      event.stopPropagation();
+      detail.hidden = !detail.hidden;
+      toggle.setAttribute('aria-expanded', detail.hidden ? 'false' : 'true');
+      root.classList.toggle('open', !detail.hidden);
+    };
+    return root;
+  }
+
   function esc(value) {
     return String(value == null ? '' : value)
       .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
@@ -280,6 +533,8 @@
     target.resolveSettlementOfficialId = resolveSettlementOfficialId;
     target.collectBet365Taiwan = (league, settledGames) => collectBet365Taiwan(target.anomalyNrfiHistory, league, settledGames);
     target.renderBet365TaiwanSection = (league, helpers) => renderBet365TaiwanSection(league, target.anomalyNrfiHistory, helpers);
+    target.buildAnomalyRecommendation = buildAnomalyRecommendation;
+    target.renderAnomalyRecommendation = (decision) => renderAnomalyRecommendation(decision, target.document);
 
     if (typeof target.fetch !== 'function') {
       target.ANOMALY_NRFI_READY = Promise.resolve(target.anomalyNrfiHistory);
@@ -292,6 +547,7 @@
       })
       .then((history) => {
         target.anomalyNrfiHistory = history;
+        if (typeof target.render === 'function') target.render();
         const page = target.document && target.document.getElementById('reviewpage');
         if (page && page.classList && page.classList.contains('show') && typeof target.renderReviewPage === 'function') target.renderReviewPage();
         return history;
@@ -305,6 +561,6 @@
 
   return {
     lookupStakeNrfi, classifyBet365TaiwanEvidence, buildBet365TaiwanSnapshot, backfillBet365TaiwanSnapshots, resolveSettlementOfficialId, settledGameToBet365TaiwanRow,
-    collectBet365Taiwan, renderBet365TaiwanSection, install, detailRole,
+    collectBet365Taiwan, renderBet365TaiwanSection, buildAnomalyRecommendation, renderAnomalyRecommendation, wilsonLower, install, detailRole,
   };
 });
