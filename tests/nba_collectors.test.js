@@ -5,7 +5,21 @@ const assert = require('node:assert/strict');
 
 const { extractLive, mergeDayGames, collectNbaPregame } = require('../nba_scraper.js');
 const { flattenSchedule, collectStakeNbaOdds } = require('../nba_stake_odds.js');
-const { parseMonth, parseChangeRows, keepPregameRows } = require('../nba_bet365_odds.js');
+const fs = require('node:fs');
+const path = require('node:path');
+const {
+  parseMonth,
+  parseChangeRows,
+  keepPregameRows,
+  parseBet365BasketballPage,
+  translateBasketballTeam,
+  collectBet365BasketballOdds,
+} = require('../nba_bet365_odds.js');
+
+const BET365_BASKETBALL_HTML = fs.readFileSync(
+  path.join(__dirname, 'fixtures', 'bet365-basketball-markets.html'),
+  'utf8'
+);
 
 const LIVE_HTML = `
 <div class="outer-gamebox" id="outer-gamebox-41137761" data-oid="NBA_20261004_MIA@TOR">
@@ -129,4 +143,45 @@ test('Bet365 變盤只保留開賽前列，不讓場中盤污染收盤', () => {
   const rows = parseChangeRows(html);
   const pregame = keepPregameRows(rows, '2026-10-04 07:00');
   assert.deepEqual(pregame, [{ t: '10-4 06:59', line: -3.5, o1: 1.88, o2: 1.92 }]);
+});
+
+test('Bet365 官方籃球頁合併獨贏讓分大小分', () => {
+  const games = parseBet365BasketballPage(BET365_BASKETBALL_HTML);
+  const nba = games.find((game) => game.league === 'NBA');
+  assert.equal(nba.away, '熱火');
+  assert.equal(nba.home, '暴龍');
+  assert.deepEqual(nba.fixtureIds, { ml: 'nba-ml', hd: 'nba-hd', total: 'nba-ou' });
+  assert.equal(nba.markets.hd.favorite, 'home');
+  assert.equal(nba.markets.hd.line, 3.5);
+  assert.deepEqual(nba.markets.total, { line: 229.5, over: 1.85, under: 1.85 });
+});
+
+test('NBA 與 WNBA 同名隊伍使用各自聯盟翻譯', () => {
+  assert.equal(translateBasketballTeam('NBA', 'PHX Suns'), '太陽');
+  assert.equal(translateBasketballTeam('WNBA', 'CON Sun'), '太陽');
+  assert.equal(translateBasketballTeam('WNBA', 'NY Liberty'), '自由');
+});
+
+test('籃球收集器以 Bet365 官網資料同時配對 NBA 與 WNBA', async () => {
+  const output = await collectBet365BasketballOdds({
+    now: Date.parse('2026-10-05T20:00:00.000Z'),
+    previous: { matches: {}, leagues: {} },
+    nbaPregame: { games: [{
+      officialId: 'NBA_20261006_MIA@TOR', league: 'NBA', date: '2026-10-06', time: '07:00',
+      away: '熱火', home: '暴龍', status: 'upcoming',
+    }] },
+    wnbaPregame: { games: [{
+      officialId: 'WNBA_20261006_自由_美夢_0800', league: 'WNBA', date: '2026-10-06', time: '08:00',
+      away: '自由', home: '美夢', status: 'upcoming',
+    }] },
+    betExplorer: { games: {} },
+    fetchPages: async () => [{ html: BET365_BASKETBALL_HTML }],
+  });
+
+  assert.equal(output.provider, 'bet365-official-first');
+  assert.equal(output.leagues.NBA.officialMatched, 1);
+  assert.equal(output.leagues.WNBA.officialMatched, 1);
+  assert.equal(output.matches['NBA_20261006_MIA@TOR'].provider, 'bet365-official');
+  assert.equal(output.matches['NBA_20261006_MIA@TOR'].total.line, 229.5);
+  assert.equal(output.matches['WNBA_20261006_自由_美夢_0800'].moneyline.away, 2.1);
 });
