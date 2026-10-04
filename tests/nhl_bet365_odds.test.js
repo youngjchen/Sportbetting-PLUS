@@ -170,6 +170,31 @@ test('started Bet365 fixtures keep their last pregame snapshot unchanged', async
   assert.equal(output.health.gameCount, 1);
 });
 
+test('final thirty seconds are excluded and keep the last NHL pregame snapshot unchanged', async () => {
+  const [closing] = parseBet365NhlHub(FIXTURE_HTML);
+  const key = stableGameKey(closing);
+  const frozen = {
+    ...closing,
+    ml: {
+      market: 'Money Line',
+      outcomes: [
+        { name: closing.away, side: 'away', odds: 2.25 },
+        { name: closing.home, side: 'home', odds: 1.65 },
+      ],
+    },
+    history: [{ at: '2026-09-30T22:58:00.000Z', ml: closing.ml, hd: closing.hd }],
+    events: [],
+  };
+
+  const output = await collectBet365NhlOdds({
+    fetchText: async () => FIXTURE_HTML,
+    previous: { games: { [key]: frozen } },
+    now: closing.startTime - 20000,
+  });
+
+  assert.deepEqual(output.games[key], frozen);
+});
+
 test('failed collection leaves the last valid file byte-for-byte unchanged', async (t) => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nhl-bet365-'));
   const out = path.join(dir, 'odds.json');

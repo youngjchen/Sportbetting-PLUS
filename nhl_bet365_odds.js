@@ -190,7 +190,8 @@ async function collectBet365NhlOdds(options = {}) {
 
   const now = Number.isFinite(Number(options.now)) ? Number(options.now) : Date.now();
   const observedAt = new Date(now).toISOString();
-  const upcoming = complete.filter((game) => Number(game.startTime) > now);
+  // 開賽前最後 30 秒開始凍結，避免頁面切成場中盤後把即時盤誤當賽前收盤。
+  const upcoming = complete.filter((game) => Number(game.startTime) > now + 30000);
   const previous = options.previous && typeof options.previous === 'object' ? options.previous : { games: {} };
   const previousGames = previous.games && typeof previous.games === 'object' ? previous.games : {};
   const games = {};
