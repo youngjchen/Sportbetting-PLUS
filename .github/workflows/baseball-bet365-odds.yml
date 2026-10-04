@@ -1,27 +1,29 @@
-# Bet365 官方 NHL 獨贏／讓分盤。長迴圈每 5 分鐘更新；cron 只作斷鏈備援。
-name: nhl-bet365-odds
+# Bet365 官網優先的 MLB／NPB／KBO／CPBL 獨贏、讓分、大小盤；BetExplorer 只補缺盤。
+name: baseball-bet365-odds
 
 on:
   workflow_dispatch: {}
   push:
     branches: [main]
     paths:
-      - nhl_bet365_odds.js
-      - nhl_bet365_core.js
+      - baseball_bet365_odds.js
+      - bet365_official_core.js
       - bet365_official_transport.js
       - fetch_sidecar.py
       - sidecar_client.js
       - requirements-scraping.txt
-      - .github/workflows/nhl-bet365-odds.yml
+      - baseball-bet365-integration.js
+      - index.html
+      - .github/workflows/baseball-bet365-odds.yml
   schedule:
-    - cron: '11,41 * * * *'
+    - cron: '16,46 * * * *'
 
 permissions:
   contents: write
   actions: write
 
 concurrency:
-  group: nhl-bet365-odds
+  group: baseball-bet365-odds
   cancel-in-progress: false
 
 jobs:
@@ -39,31 +41,37 @@ jobs:
         with:
           python-version: '3.12'
       - run: npm ci
-      - name: 安裝 Scrapling 官方頁傳輸層
+      - name: 安裝 Bet365 官網渲染傳輸層
         run: |
           pip -q install -r requirements-scraping.txt
-          scrapling install --force >/dev/null 2>&1 || echo "WARN Scrapling 瀏覽器安裝非零，本輪抓取會自行報錯並保留舊資料"
-      - name: 5h10m Bet365 NHL 賠率迴圈
+          scrapling install --force >/dev/null 2>&1 || echo "WARN Scrapling 瀏覽器安裝非零；本輪會保留舊官網快照或使用 BetExplorer 備援"
+      - name: 驗證四聯盟 Bet365 收集器
+        run: node --test tests/bet365_official_core.test.js tests/bet365_official_transport.test.js tests/baseball_bet365_odds.test.js tests/baseball_bet365_frontend.test.js
+      - name: 5h10m 四聯盟 Bet365 官網優先盤口迴圈
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           END=$(( SECONDS + 18600 ))
+          FAIL_STREAK=0
           while [ "$SECONDS" -lt "$END" ]; do
             T0=$SECONDS
             git rebase --abort 2>/dev/null || true
             git fetch origin main || true
             git reset --hard origin/main || true
-            if timeout 240 node nhl_bet365_odds.js; then
-              git add data/nhl_bet365_odds.json 2>/dev/null || true
+            if timeout 420 node baseball_bet365_odds.js; then
+              FAIL_STREAK=0
+              git add data/baseball_bet365_odds.json 2>/dev/null || true
               if ! git diff --cached --quiet; then
-                git commit -m "nhl bet365 odds $(date -u +%FT%TZ) [skip ci]" || true
+                git commit -m "baseball bet365 official odds $(date -u +%FT%TZ) [skip ci]" || true
                 if ! git push; then
                   git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
                   git push || true
                 fi
               fi
             else
-              echo "WARN Bet365 NHL 官方頁抓取失敗；保留上一份有效資料，下一輪重試"
+              FAIL_STREAK=$(( FAIL_STREAK + 1 ))
+              echo "WARN Bet365 棒球官網優先管線失敗（連續 $FAIL_STREAK 次）；保留上一份有效資料"
+              if [ "$FAIL_STREAK" -ge 3 ]; then exit 1; fi
             fi
             EL=$(( SECONDS - T0 ))
             [ "$EL" -lt 300 ] && sleep $(( 300 - EL ))
@@ -74,4 +82,4 @@ jobs:
           GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
           if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
-          gh workflow run nhl-bet365-odds.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"
+          gh workflow run baseball-bet365-odds.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"

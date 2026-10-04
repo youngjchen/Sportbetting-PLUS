@@ -32,6 +32,10 @@ test('defines an isolated non-cancelling NHL Bet365 workflow', () => {
   assert.deepEqual(workflow.on.push.paths, [
     'nhl_bet365_odds.js',
     'nhl_bet365_core.js',
+    'bet365_official_transport.js',
+    'fetch_sidecar.py',
+    'sidecar_client.js',
+    'requirements-scraping.txt',
     '.github/workflows/nhl-bet365-odds.yml',
   ]);
   assert.equal(workflow.concurrency.group, 'nhl-bet365-odds');

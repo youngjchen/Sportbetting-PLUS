@@ -91,9 +91,11 @@ jobs:
             check "data/stake_api_odds.json" "stake-api-odds.yml" 25
           fi
           check "data/baseball_stake_odds.json" "baseball-stake-odds.yml" 25
+          check "data/baseball_bet365_odds.json" "baseball-bet365-odds.yml" 25
           check "data/nba_pregame.json" "nba-scrape.yml" 25
           check "data/nba_stake_odds.json" "nba-stake-odds.yml" 25
           check "data/nba_bet365_odds.json" "nba-bet365-odds.yml" 25
+          check "data/nhl_bet365_odds.json" "nhl-bet365-odds.yml" 25
           # wnba 管線只在台灣 00~14 時窗運轉（cron UTC 16-23,0-6）;窗外停更=正常日休不告警。
           # 窗首小時(UTC16)跳過：檔帶前日時戳屬預期,避免與首棒 cron 重複派工。
           H=$((10#$(date -u +%H)))

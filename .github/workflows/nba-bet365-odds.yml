@@ -1,4 +1,4 @@
-# Bet365 NBA 三盤；以 Titan companyId=8 的公開盤口歷史取開賽前資料。
+# Bet365 官網優先的 NBA／WNBA 三盤；BetExplorer 只補官網缺少的市場。
 name: nba-bet365-odds
 
 on:
@@ -7,7 +7,11 @@ on:
     branches: [main]
     paths:
       - nba_bet365_odds.js
-      - nba_odds_core.js
+      - bet365_official_core.js
+      - bet365_official_transport.js
+      - fetch_sidecar.py
+      - sidecar_client.js
+      - requirements-scraping.txt
       - nba-odds-integration.js
       - .github/workflows/nba-bet365-odds.yml
   schedule:
@@ -36,7 +40,7 @@ jobs:
         with:
           python-version: '3.12'
       - run: npm ci
-      - name: 安裝 Bet365 備援傳輸層
+      - name: 安裝 Bet365 官網渲染傳輸層
         run: |
           pip -q install -r requirements-scraping.txt
           scrapling install --force >/dev/null 2>&1 || echo "WARN Scrapling 瀏覽器安裝非零；下一輪仍會重試"
