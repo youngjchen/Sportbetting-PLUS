@@ -1,7 +1,7 @@
 {
  "provider": "stake-official",
  "mode": "official-page",
- "updated": "2026-10-04T08:33:37.336Z",
+ "updated": "2026-10-04T08:38:36.912Z",
  "source": {
   "schedule": "/schedule/sport/ice-hockey/usa/tournament/nhl",
   "odds": "/odds/{fixtureSlug}",
@@ -10,11 +10,16 @@
  "health": {
   "discovered": 5,
   "targeted": 5,
-  "succeeded": 5,
+  "succeeded": 4,
   "apiSucceeded": 0,
-  "pageSucceeded": 5,
-  "failed": 0,
-  "failures": []
+  "pageSucceeded": 4,
+  "failed": 1,
+  "failures": [
+   {
+    "slug": "46925423-vancouver-canucks-vegas-golden-knights",
+    "error": "STAKE 官方賽事頁沒有可辨識的全場賽前盤"
+   }
+  ]
  },
  "games": {
   "46728064-new-york-rangers-tampa-bay-lightning": {
@@ -11768,7 +11773,7 @@
    "homeTeam": "海怪",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925318-seattle-kraken-calgary-flames",
-   "lastPregameAt": "2026-10-04T08:33:37.336Z",
+   "lastPregameAt": "2026-10-04T08:38:36.912Z",
    "markets": {
     "ml": {
      "open": {
@@ -11777,7 +11782,7 @@
       "home": 1.71
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "away": 2.15,
       "home": 1.65
      }
@@ -11791,7 +11796,7 @@
       "home": 2.75
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.46,
@@ -11806,7 +11811,7 @@
       "under": 1.87
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 5.5,
       "over": 1.79,
       "under": 1.95
@@ -12714,7 +12719,7 @@
    "homeTeam": "巨鴨",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925061-anaheim-ducks-florida-panthers",
-   "lastPregameAt": "2026-10-04T08:33:37.336Z",
+   "lastPregameAt": "2026-10-04T08:38:36.912Z",
    "markets": {
     "ml": {
      "open": {
@@ -12723,7 +12728,7 @@
       "home": 1.97
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "away": 1.72,
       "home": 2.05
      }
@@ -12737,7 +12742,7 @@
       "home": 1.42
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2.65,
@@ -12752,7 +12757,7 @@
       "under": 2.03
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 6.5,
       "over": 1.82,
       "under": 1.92
@@ -12776,31 +12781,31 @@
      {
       "name": "Winnipeg Jets",
       "side": "away",
-      "odds": 1.88
+      "odds": 1.85
      },
      {
       "name": "Detroit Red Wings",
       "side": "home",
-      "odds": 1.85
+      "odds": 1.89
      }
     ]
    },
    "hd": {
     "market": "Handicap (Incl. Overtime and Penalties)",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "Winnipeg Jets",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.35
+      "line": -1.5,
+      "odds": 3.05
      },
      {
       "name": "Detroit Red Wings",
       "side": "home",
-      "line": -1.5,
-      "odds": 3.05
+      "line": 1.5,
+      "odds": 1.35
      }
     ]
    },
@@ -12824,6 +12829,61 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-04T08:38:36.912Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Winnipeg Jets",
+        "side": "away",
+        "odds": 1.85
+       },
+       {
+        "name": "Detroit Red Wings",
+        "side": "home",
+        "odds": 1.89
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Winnipeg Jets",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.05
+       },
+       {
+        "name": "Detroit Red Wings",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.35
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 5.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 5.5,
+        "odds": 1.77
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 5.5,
+        "odds": 1.98
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-04T08:33:37.336Z",
      "ml": {
@@ -13762,6 +13822,12 @@
    ],
    "events": [
     {
+     "at": "2026-10-04T08:38:36.912Z",
+     "type": "favorite-flip",
+     "from": "Detroit Red Wings",
+     "to": "Winnipeg Jets"
+    },
+    {
      "at": "2026-10-04T08:33:37.336Z",
      "type": "favorite-flip",
      "from": "Winnipeg Jets",
@@ -13807,7 +13873,7 @@
    "homeTeam": "紅翼",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925114-detroit-red-wings-winnipeg-jets",
-   "lastPregameAt": "2026-10-04T08:33:37.336Z",
+   "lastPregameAt": "2026-10-04T08:38:36.912Z",
    "markets": {
     "ml": {
      "open": {
@@ -13816,9 +13882,9 @@
       "home": 1.78
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
-      "away": 1.88,
-      "home": 1.85
+      "at": "2026-10-04T08:38:36.912Z",
+      "away": 1.85,
+      "home": 1.89
      }
     },
     "hd": {
@@ -13830,11 +13896,11 @@
       "home": 2.85
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 1.5,
-      "favorite": "home",
-      "away": 1.35,
-      "home": 3.05
+      "favorite": "away",
+      "away": 3.05,
+      "home": 1.35
      }
     },
     "ou": {
@@ -13845,7 +13911,7 @@
       "under": 2
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 5.5,
       "over": 1.77,
       "under": 1.98
@@ -14588,7 +14654,7 @@
    "homeTeam": "遊騎兵",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925286-new-york-rangers-utah-mammoth",
-   "lastPregameAt": "2026-10-04T08:33:37.336Z",
+   "lastPregameAt": "2026-10-04T08:38:36.912Z",
    "markets": {
     "ml": {
      "open": {
@@ -14597,7 +14663,7 @@
       "home": 1.73
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "away": 2.03,
       "home": 1.73
      }
@@ -14611,7 +14677,7 @@
       "home": 2.75
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.42,
@@ -14626,7 +14692,7 @@
       "under": 2.07
      },
      "active": {
-      "at": "2026-10-04T08:33:37.336Z",
+      "at": "2026-10-04T08:38:36.912Z",
       "line": 5.5,
       "over": 1.79,
       "under": 1.96
