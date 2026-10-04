@@ -443,8 +443,14 @@
   .nv-intl.bi{text-shadow:0 0 6px rgba(107,123,255,.95),0 0 2px rgba(107,123,255,.9);}
   .nv-intl.bg{text-shadow:0 0 6px rgba(43,191,160,.95),0 0 2px rgba(43,191,160,.9);}
   .nvtip{position:absolute;z-index:60;top:calc(100% + 5px);left:6px;right:6px;background:#0e1620;border:1px solid #3aa0ff;border-radius:9px;padding:9px 11px;font-size:13px;line-height:1.75;box-shadow:0 8px 24px rgba(0,0,0,.5);text-align:left;white-space:normal;cursor:default;}
-  .intl-strip{display:flex;align-items:center;gap:8px;background:rgba(58,160,255,.07);border:1px solid rgba(58,160,255,.3);border-radius:8px;padding:6px 10px;margin:8px 6px 2px;font-size:13px;cursor:pointer;line-height:1.6;}
-  .intl-more{display:none;color:var(--ink-dim);font-size:12.5px;padding:5px 12px 2px;line-height:1.8;}
+  .intl-strip{display:grid;grid-template-columns:8px minmax(0,1fr) auto;align-items:center;gap:9px;background:transparent;border:0;border-top:1px solid rgba(255,255,255,.07);border-bottom:1px solid rgba(255,255,255,.07);padding:9px 2px;margin:9px 0 2px;font-size:12px;cursor:pointer;line-height:1.45;color:#b6c4d2;}
+  .intl-strip:focus-visible{outline:2px solid #71b9e8;outline-offset:3px;border-radius:4px;}
+  .intl-dot{width:7px;height:7px;border-radius:50%;box-shadow:0 0 0 3px rgba(255,255,255,.035);}
+  .intl-summary{display:flex;align-items:center;flex-wrap:wrap;gap:3px 6px;min-width:0;}
+  .intl-bet365{color:#72b9f4;font-weight:700;}.intl-taiwan{color:#e6bd70;font-weight:700;}.intl-sep{color:#465668;}
+  .intl-state{color:#8998a8;font-size:10.5px;letter-spacing:.04em;}.intl-fingerprint{color:#55cdb5;font-size:10.5px;}
+  .intl-caret{color:#68798a;font-size:14px;transition:transform .16s ease;}.intl-strip.open .intl-caret{transform:rotate(180deg);}
+  .intl-more{display:none;color:var(--ink-dim);font-size:11.5px;padding:7px 2px 2px;line-height:1.75;}
   .intl-strip.open + .intl-more{display:block;}
   .betchip{font-size:11px;border:1.5px dashed #4a5a70;border-radius:6px;color:var(--ink-dim);cursor:pointer;user-select:none;width:26px;box-sizing:border-box;text-align:center;line-height:1.55;justify-self:center;padding:1px 0;}
   .betchip.on{border:1.5px solid var(--lit);color:#1a1205;font-weight:700;background:var(--lit);box-shadow:0 0 8px var(--lit-glow);}
@@ -1302,60 +1308,63 @@
 .bico:hover{ background:#222a36; color:var(--ink); }
 .bico.bdel:hover{ color:var(--danger); }
 
-/* 平台顛倒醒目橫幅 */
-.bflipbanner{ display:flex; align-items:center; gap:8px; padding:7px 16px; background:rgba(160,90,255,.16); border-bottom:1px solid rgba(160,90,255,.45); color:#d9b3ff; font-size:12.5px; font-weight:700; letter-spacing:.02em; }
-.bstake-monitor{display:flex;align-items:center;flex-wrap:wrap;gap:6px;padding:6px 16px;border-bottom:1px solid rgba(255,255,255,.06);font-size:12px;line-height:1.45;color:#b9d7c5;background:rgba(40,199,111,.07)}
-.bstake-monitor.partial{color:#ffd08a;background:rgba(255,176,46,.08)}
-.bstake-monitor.stale{color:#ff8d9e;background:rgba(255,93,122,.08)}
-.bstake-monitor.frozen{color:#aeb7ff;background:rgba(127,139,245,.09)}
-.bstake-monitor-text{min-width:0;flex:1}
-.bstake-auto,.bstake-history-toggle{flex:0 0 auto;border:1px solid currentColor;border-radius:6px;background:transparent;color:inherit;padding:2px 5px;font-size:11px;font-weight:800;cursor:pointer}
-.bstake-history{flex:1 0 100%;padding-top:4px;border-top:1px dashed currentColor;font-family:"Oswald";opacity:.9}
-.bflipbanner .ic{ font-size:15px; }
+/* 盤口監控列：只露結論，盤口、來源與健康狀態全部收進明細。 */
+.bflipbanner{display:flex;align-items:center;gap:8px;margin:0 16px;padding:8px 0;border-bottom:1px solid rgba(185,126,240,.22);background:transparent;color:#c9a6ec;font-size:11.5px;font-weight:650;letter-spacing:.01em;}
+.bstake-monitor{display:flex;align-items:center;flex-wrap:wrap;gap:7px;margin:0 16px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.07);font-size:11.5px;line-height:1.35;color:#8fa1b2;background:transparent;}
+.bstake-status-dot{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:#647687;box-shadow:0 0 0 3px rgba(100,118,135,.12);}
+.bstake-status-dot.flipped{background:#e8a84f;box-shadow:0 0 0 3px rgba(232,168,79,.12);}
+.bstake-source{font-family:"Oswald";font-size:10px;letter-spacing:.12em;color:#93a6b8;}
+.bstake-monitor-text{min-width:0;flex:1;color:#d8e2eb;font-weight:600;}
+.bstake-auto,.bstake-history-toggle{flex:0 0 auto;border:0;border-radius:5px;background:rgba(255,255,255,.045);color:#8fa1b2;padding:3px 6px;font-size:10.5px;font-weight:800;cursor:pointer;}
+.bstake-auto:hover,.bstake-history-toggle:hover{background:rgba(255,255,255,.09);color:#d8e2eb;}
+.bstake-history{flex:1 0 100%;margin-top:3px;padding:8px 10px;border:1px solid rgba(255,255,255,.06);border-radius:7px;background:#0d151c;color:#8191a1;font-family:"Oswald";line-height:1.65;}
+.bflipbanner .ic{font-size:13px;opacity:.8;}
 .card.bcard.flip{ border-color:rgba(160,90,255,.6); box-shadow:0 0 0 1px rgba(160,90,255,.3),0 10px 26px rgba(0,0,0,.5); }
 /* 曾經顛倒(收盤前已收斂一致)：靛藍/長春花橫幅＋卡框，與「仍顛倒」的鮮紫同家族、清楚區分 */
-.bflipbanner.was{ background:rgba(127,139,245,.14); border-bottom-color:rgba(127,139,245,.42); color:#c7cdff; }
+.bflipbanner.was{background:transparent;border-bottom-color:rgba(127,139,245,.22);color:#aeb6ef;}
 .card.bcard.flip-was{ border-color:rgba(127,139,245,.55); box-shadow:0 0 0 1px rgba(127,139,245,.28),0 10px 26px rgba(0,0,0,.5); }
 /* 賽前讓分方曾對調：青綠橫幅＋卡框，與顛倒(紫)/曾顛倒(靛藍)三類分色 */
-.bflipbanner.swap{ background:rgba(43,191,160,.13); border-bottom-color:rgba(43,191,160,.4); color:#7fe8d4; }
+.bflipbanner.swap{background:transparent;border-bottom-color:rgba(43,191,160,.22);color:#75cdbb;}
 .card.bcard.flip-swap{ border-color:rgba(43,191,160,.5); box-shadow:0 0 0 1px rgba(43,191,160,.26),0 10px 26px rgba(0,0,0,.5); }
 
-/* 異常投注決策：像盤口交易條，不再堆疊多顆互搶注意力的徽章。 */
+/* 異常投注參考：與監控列共用安靜的資訊層級，分類與場數先於下注方向。 */
 .anom-decision{
-  position:relative;padding:9px 16px 11px;background:#111a21;
-  border-bottom:1px solid rgba(255,255,255,.075);font-variant-numeric:tabular-nums;
+  position:relative;margin:10px 16px 0;padding:10px 12px 11px;
+  background:linear-gradient(145deg,rgba(30,45,56,.72),rgba(17,27,35,.84));
+  border:1px solid rgba(119,155,181,.22);border-radius:10px;font-variant-numeric:tabular-nums;
 }
-.anom-decision::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:#4d8fbd;}
-.anom-decision.has-conflict::before{background:#ff7185;}
+.anom-decision.has-conflict{border-color:rgba(255,113,133,.34);}
 .anom-decision-toggle{
-  width:100%;display:flex;align-items:center;gap:8px;padding:0 0 6px;border:0;background:transparent;
+  width:100%;display:flex;align-items:center;gap:8px;padding:0;border:0;background:transparent;
   color:inherit;text-align:left;cursor:pointer;font-family:inherit;
 }
 .anom-decision-toggle:focus-visible{outline:2px solid #71b9e8;outline-offset:3px;border-radius:3px;}
-.anom-decision-title{font-family:"Oswald";font-size:11px;font-weight:700;letter-spacing:.12em;color:#dce9f3;}
-.anom-decision-mode{font-size:10.5px;color:#7fa7c3;letter-spacing:.02em;}
+.anom-decision-title{font-family:"Oswald";font-size:10px;font-weight:700;letter-spacing:.13em;color:#b9c9d6;}
+.anom-decision-mode{font-size:10px;color:#6f899c;letter-spacing:.02em;}
 .anom-decision-caret{margin-left:auto;color:#6e8294;font-size:14px;line-height:1;transition:transform .16s ease;}
 .anom-decision.open .anom-decision-caret{transform:rotate(180deg);}
-.anom-picks{display:grid;grid-template-columns:1fr 1fr;gap:0 18px;}
+.anom-context{display:grid;gap:4px;margin:8px 0 2px;padding:7px 0;border-top:1px solid rgba(255,255,255,.055);border-bottom:1px solid rgba(255,255,255,.055);}
+.anom-context-row{display:grid;grid-template-columns:minmax(105px,.8fr) minmax(0,1.5fr);gap:10px;align-items:baseline;font-size:10.5px;}
+.anom-context-source{color:#72889a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.anom-context-value{color:#bdcad4;text-align:right;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.anom-picks{display:grid;grid-template-columns:1fr 1fr;gap:0 16px;}
 .anom-pick,.anom-detail-row{
-  --decision-state:#8a97a8;display:grid;grid-template-columns:35px minmax(82px,1fr) auto auto;
-  align-items:baseline;gap:5px 8px;min-width:0;padding:6px 0;border-top:1px solid rgba(255,255,255,.055);
-  box-shadow:inset 2px 0 0 var(--decision-state);
+  --decision-state:#8a97a8;display:grid;grid-template-columns:34px minmax(72px,1fr) auto auto;
+  align-items:baseline;gap:4px 7px;min-width:0;padding:7px 0;border-top:1px solid rgba(255,255,255,.045);
 }
-.anom-pick{padding-left:8px;}
 .anom-pick.bet,.anom-detail-row.bet{--decision-state:#43d9a3;}
 .anom-pick.wait,.anom-detail-row.wait{--decision-state:#f0b35a;}
 .anom-pick.direction,.anom-detail-row.direction{--decision-state:#71b9e8;}
 .anom-pick.observe,.anom-detail-row.observe,.anom-pick.no_data,.anom-detail-row.no_data{--decision-state:#657789;}
 .anom-pick.conflict,.anom-detail-row.conflict{--decision-state:#ff7185;}
 .anom-market{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:#77899b;}
-.anom-choice{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;color:#e7eef5;}
-.anom-price{font-family:"Oswald";font-size:11.5px;color:#9fb0c0;white-space:nowrap;}
+.anom-choice{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;color:#e7eef5;}
+.anom-price{font-family:"Oswald";font-size:11px;color:#91a3b2;white-space:nowrap;}
 .anom-verdict{font-size:11px;font-weight:800;color:var(--decision-state);white-space:nowrap;text-align:right;}
-.anom-decision-detail{margin-top:6px;border-top:1px dashed rgba(113,185,232,.25);}
+.anom-decision-detail{margin-top:5px;border-top:1px solid rgba(113,185,232,.13);}
 .anom-decision-detail[hidden]{display:none!important;}
-.anom-detail-row{grid-template-columns:40px minmax(96px,1fr) auto 70px;padding:8px 2px 8px 10px;}
-.anom-evidence{grid-column:2/-1;color:#718293;font-size:10.5px;line-height:1.45;white-space:normal;}
+.anom-detail-row{grid-template-columns:38px minmax(90px,1fr) auto 68px;padding:8px 0;}
+.anom-evidence{grid-column:2/-1;color:#697d8e;font-size:10px;line-height:1.45;white-space:normal;}
 @media (prefers-reduced-motion:reduce){.anom-decision-caret{transition:none;}}
 
 .bbody{ display:grid; grid-template-columns:212px 1fr; align-items:stretch; }
@@ -2828,8 +2837,20 @@ function bWinProbs(it){
 // bGapInfo（差N/避開膠囊）已刪（2026-07-20）：模型vs盤口勝差回測=決定性null、ERA修正顯著有害
 // ---- 異常場即時數據晶片：這場現在屬於哪種異常＋該類歷史讓分過盤率（決策點直接看，免開回顧）----
 // 2026-07-20 使用者實戰教訓：把「收斂」誤認成「顛倒+對調」下注守護者+1.5 輸慘 → 卡上直接標型+數據
-let __ctMemo=null, __ctMemoAt=0;
-function crossTabCached(){ const n=Date.now(); if(!__ctMemo || n-__ctMemoAt>800){ try{ __ctMemo=collectCrossTab("all"); }catch(_){ __ctMemo=null; } __ctMemoAt=n; } return __ctMemo; }
+let __ctMemo=Object.create(null), __ctMemoAt=0;
+function crossTabCached(league){
+  const n=Date.now(), key=league||"all";
+  if(n-__ctMemoAt>800){ __ctMemo=Object.create(null); __ctMemoAt=n; }
+  if(!Object.prototype.hasOwnProperty.call(__ctMemo,key)){
+    try{ __ctMemo[key]=collectCrossTab(key); }catch(_){ __ctMemo[key]=null; }
+  }
+  return __ctMemo[key];
+}
+function bLeagueMeta(it){
+  let league="all";
+  try{ league=String((it&&it.league)||leagueOf(it)||"all").toLowerCase(); }catch(_){ league=String(it&&it.league||"all").toLowerCase(); }
+  return {league,label:({mlb:"MLB",npb:"日職",kbo:"韓職",cpbl:"中職"})[league]||league.toUpperCase()||"全部"};
+}
 function bAnomInfo(it){
   const ist = (typeof intlFor==="function") ? intlFor(it) : null;
   // 第一套晶片只比較 Stake（卡片 hdFav）× 台彩（intl ls）。
@@ -2838,7 +2859,8 @@ function bAnomInfo(it){
   const kind = it.platformFlip ? "flip" : it.flipVanished ? "was"
              : stakeTaiwanFlip ? "flip" : it.preGameSwap ? "swap" : null;
   if(!kind) return null;
-  const ct = crossTabCached(); if(!ct || !ct.total) return null;
+  const meta=bLeagueMeta(it);
+  const ct = crossTabCached(meta.league); if(!ct || !ct.total) return null;
   // 本場的組合成分（與統計同口徑）：對調=preGameSwap；背離=收盤(缺→下注)賠率低賠方≠讓分方
   const sw = !!it.preGameSwap;
   const dvLive = (()=>{
@@ -2867,26 +2889,28 @@ function bAnomInfo(it){
     groupAll = null;
   }
   if(!B || !B.n) return null;
-  let tip = `${lbl}場歷史（全聯盟 ${B.n} 場）\n讓分過盤 ${pc(B.cov,B.covN)}・熱門勝 ${pc(B.fw,B.fwN)}・開大 ${pc(B.ov,B.ovN)}`;
+  let tip = `${meta.label} ${lbl}（${B.n} 場）\n讓分過盤 ${pc(B.cov,B.covN)}・熱門勝 ${pc(B.fw,B.fwN)}・開大 ${pc(B.ov,B.ovN)}`;
   if(groupAll && groupAll.n) tip += `\n${groupName}全部：讓過 ${pc(groupAll.cov,groupAll.covN)}（${groupAll.n}場）`;
-  return { lbl, cls, covTxt: pc(B.cov,B.covN), n: B.n, tip, bucket:B };
+  return { lbl, cls, covTxt: pc(B.cov,B.covN), n: B.n, tip, bucket:B, league:meta.league, leagueLabel:meta.label };
 }
 function bAnomRecommendationFor(it){
   if(!it || !window.buildAnomalyRecommendation) return null;
+  const meta=bLeagueMeta(it);
   const sources=[];
   try{
     const first=bAnomInfo(it);
-    if(first && first.bucket) sources.push({id:"stake-tw",label:"異常統計",bucket:first.bucket});
+    if(first && first.bucket) sources.push({id:"stake-tw",label:"異常統計",category:first.lbl,leagueLabel:first.leagueLabel||meta.label,bucket:first.bucket});
   }catch(_){}
   try{
     const ist=(typeof intlFor==="function")?intlFor(it):null;
     const iv=(typeof intlVerdict==="function")?intlVerdict(it,ist):null;
     const snap=(ist&&iv&&window.buildBet365TaiwanSnapshot)?window.buildBet365TaiwanSnapshot(ist,iv):null;
     if(snap && window.collectBet365Taiwan){
-      const all=window.collectBet365Taiwan("all",(typeof doc!=="undefined"&&Array.isArray(doc.games))?doc.games:[]);
+      const all=window.collectBet365Taiwan(meta.league,(typeof doc!=="undefined"&&Array.isArray(doc.games))?doc.games:[]);
       const rel=snap.relation==="顛倒"?"inverted":snap.relation==="收斂"?"converged":null;
       const B=rel&&all&&all.groups&&all.groups[rel]&&all.groups[rel][snap.swapCombo];
-      if(B) sources.push({id:"b365-tw",label:"BET365 × 台彩七類",bucket:B});
+      const comboLabel=({neither:"雙方都未對調",taiwan_only:"只有台彩對調",bet365_only:"只有 BET365 對調",both:"雙方都對調"})[snap.swapCombo]||snap.swapCombo;
+      if(B) sources.push({id:"b365-tw",label:"BET365 × 台彩七類",category:`${snap.relation}－${comboLabel}`,leagueLabel:meta.label,bucket:B});
     }
   }catch(_){}
   if(!sources.length) return null;
@@ -3038,17 +3062,17 @@ function renderCardB(it){
   if(it.platformFlip){
     el.classList.add("flip");
     const bn=document.createElement("div"); bn.className="bflipbanner";
-    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：台彩與 STAKE 受讓方相反";
+    bn.innerHTML="<span class='ic'>⇅</span>Stake × 台彩：目前讓分方相反";
     el.appendChild(bn);
   } else if(it.flipVanished){                              // 曾經顛倒→收盤前變一致：靛藍橫幅＋卡框
     el.classList.add("flip-was");
     const bn=document.createElement("div"); bn.className="bflipbanner was";
-    bn.innerHTML="<span class='ic'>⇄</span>平台曾顛倒：收盤前已收斂一致";
+    bn.innerHTML="<span class='ic'>⇄</span>Stake × 台彩：曾經相反，賽前已同向";
     el.appendChild(bn);
   } else if(it.preGameSwap){                                // 人工紀錄；Stake 官方對調狀態只顯示在資訊條
     el.classList.add("flip-swap");
     const bn=document.createElement("div"); bn.className="bflipbanner swap";
-    bn.innerHTML="<span class='ic'>⇆</span>賽前讓分方曾對調（與顛倒/曾顛倒是不同訊號）";
+    bn.innerHTML="<span class='ic'>⇆</span>卡片紀錄：讓分方曾對調";
     el.appendChild(bn);
   }
 
@@ -3187,10 +3211,13 @@ function renderCardB(it){
         const has = !!iv.side;
         const useSide = iv.side, useLine = iv.line;
         const strip=document.createElement("div"); strip.className="intl-strip no-drag";
+        strip.setAttribute("role","button"); strip.setAttribute("tabindex","0"); strip.setAttribute("aria-expanded","false");
         const dotc = intlVerdictColor(iv.v, has);
-        strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
-          `<span>🌐 <b style="color:#3aa0ff">${has?((iv.sourceLabel||"BET365")+" "+esc(useSide==="home"?it.home:it.away)+"讓"+useLine):"BET365 未開盤"}</b>・`+
-          `<b style="color:#ffd08a">${(ist&&ist.ls)?("台彩 "+esc(ist.ls==="home"?it.home:it.away)+"讓"+(ist.ll!=null?ist.ll:"")):"台彩無資料"}</b>${epSwShow?` <b style="color:#2bbfa0">⚠曾對調</b>`:""}</span>`;
+        const relationText=!(has&&ist&&ist.ls)?(iv.v==="swap"?"曾換邊":"待比對"):iv.v==="flip"?"顛倒":iv.v==="was"?"已收斂":"同向";
+        strip.innerHTML = `<span class="intl-dot" style="background:${dotc}"></span>`+
+          `<span class="intl-summary"><b class="intl-bet365">${has?("BET365 "+esc(useSide==="home"?it.home:it.away)+"讓"+(useLine!=null?useLine:"")):"BET365 未開盤"}</b>`+
+          `<span class="intl-sep">／</span><b class="intl-taiwan">${(ist&&ist.ls)?("台彩 "+esc(ist.ls==="home"?it.home:it.away)+"讓"+(ist.ll!=null?ist.ll:"")):"台彩無資料"}</b>`+
+          `<span class="intl-state">${relationText}</span>${epSwShow?` <b class="intl-fingerprint">⚠曾對調</b>`:""}</span><span class="intl-caret">⌄</span>`;
         const more=document.createElement("div"); more.className="intl-more no-drag";
         const beHistory = intlBet365HistoryHTML(it, ist, iv);
         const beDetail = be365 ? (`${esc(iv.sourceLabel||"BET365")} 現行（${(be365.observedAt||be365.at)?esc(String(be365.observedAt||be365.at).slice(5,16).replace("T"," ")):"時刻不明"} 上架）`+
@@ -3200,7 +3227,9 @@ function renderCardB(it){
           (iv.dv?`・<span style="color:#ff5d7a">背離（獨贏熱門 ${esc(ist.mf==="home"?it.home:it.away)}）</span>`:"")):`Titan 序列無資料`)+
           ((ist&&ist.ltr)?`<br>台彩換邊 ⇄${ist.lsw}：${esc(ist.ltr)}`:"")+
           (epSwShow?`<br><span style="color:#2bbfa0">台彩⚠曾對調（明牌指紋）：序列未錄到換邊，但台彩線讓分單兩邊都出現過讓方（${epSw}）＝期間曾對調遭空窗漏錄、確切時間不可考，結算時記得勾「賽前對調」。</span>`:"")+`<br>台彩側＝${(ist&&ist.lsLive)?"玩運彩盤中序列（現況）":"玩運彩開盤快照"}；此帶唯讀（國際軸＋明牌指紋），不會改卡片任何欄位。`;
-        strip.onclick=(e)=>{ e.stopPropagation(); strip.classList.toggle("open"); };
+        const toggleIntl=(e)=>{ e.stopPropagation(); const open=strip.classList.toggle("open"); strip.setAttribute("aria-expanded",open?"true":"false"); };
+        strip.onclick=toggleIntl;
+        strip.onkeydown=(e)=>{ if(e.key==="Enter"||e.key===" "){ e.preventDefault(); toggleIntl(e); } };
         ana.appendChild(strip); ana.appendChild(more);
       } }
 
@@ -8091,6 +8120,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261004rec1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs5"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

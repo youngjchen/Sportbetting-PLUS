@@ -13,6 +13,7 @@ const {
 } = require('../baseball-bet365-integration.js');
 
 const ROOT = path.resolve(__dirname, '..');
+const INDEX_SOURCE = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
 
 function officialGame(overrides = {}) {
   return {
@@ -141,4 +142,17 @@ test('index international verdict uses the new official feed even when legacy Be
 test('index loads the versioned Bet365 baseball integration', () => {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert.match(html, /baseball-bet365-integration\.js\?v=\d+/);
+});
+
+test('卡片警示條一律只顯示 BET365，備援來源只留在展開明細', () => {
+  const start = INDEX_SOURCE.indexOf('strip.innerHTML =');
+  const end = INDEX_SOURCE.indexOf('const more=document.createElement', start);
+  const visibleStrip = INDEX_SOURCE.slice(start, end);
+  const detailEnd = INDEX_SOURCE.indexOf('more.innerHTML =', end);
+  const detailSetup = INDEX_SOURCE.slice(end, detailEnd);
+
+  assert.ok(start >= 0 && end > start);
+  assert.match(visibleStrip, /BET365/);
+  assert.doesNotMatch(visibleStrip, /sourceLabel|BetExplorer|備援/);
+  assert.match(detailSetup, /sourceLabel/);
 });

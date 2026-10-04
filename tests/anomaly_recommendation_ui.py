@@ -143,7 +143,10 @@ def run_viewport(page, width, height, screenshot_name, document, history, monito
           intlVerdict=() => ({be:null,side:'away',line:1.5,v:'flip',lag:false,dv:false});
           window.__baseballBet365Integration = {gameFor:() => null};
           window.__oddsPortalIntegration = {gameFor:() => null};
-          window.__baseballStakeIntegration = {gameFor:() => stakeGame};
+          const stakeApi=window.__baseballStakeIntegration;
+          if(stakeApi&&stakeApi._setFeed){
+            stakeApi._setFeed({schemaVersion:1,provider:'stake-official',matches:{[stakeGame.officialId]:stakeGame},leagues:{}});
+          }
           render();
           return !!document.querySelector('.anom-decision');
         }""",
@@ -152,9 +155,12 @@ def run_viewport(page, width, height, screenshot_name, document, history, monito
     assert mounted
     strip = page.locator(".anom-decision").first
     strip.wait_for(state="visible", timeout=10_000)
-    assert strip.locator(".anom-pick").count() == 2
-    assert "異常決策" in strip.inner_text()
-    if "兩套共識" not in strip.inner_text():
+    pick_count = strip.locator(".anom-pick").count()
+    if pick_count != 2:
+        diagnostics = page.evaluate("() => bAnomRecommendationFor(state.items[0])")
+        raise AssertionError({"count": pick_count, "text": strip.inner_text(), "decision": diagnostics})
+    assert "異常投注參考" in strip.inner_text()
+    if "兩套一致" not in strip.inner_text():
         diagnostics = page.evaluate(
             """() => {
               const card=state.items[0], ist=intlFor(card), iv=intlVerdict(card,ist);
@@ -177,6 +183,8 @@ def run_viewport(page, width, height, screenshot_name, document, history, monito
     )
     assert sizes["stripWidth"] <= sizes["cardWidth"] + 1, sizes
     assert sizes["scrollWidth"] <= sizes["clientWidth"] + 1, sizes
+
+    page.screenshot(path=str(RESULTS / screenshot_name.replace(".png", "-compact.png")), full_page=True)
 
     strip.locator(".anom-decision-toggle").evaluate("element => element.click()")
     assert strip.locator(".anom-detail-row").count() == 4

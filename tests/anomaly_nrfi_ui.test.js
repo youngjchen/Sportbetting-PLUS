@@ -202,6 +202,21 @@ test('結算時凍結警示條聯集 BetExplorer 與 Titan 的永久證據', () 
   assert.equal(fallback.evidenceSource, 'titan+playsport');
 });
 
+test('阪神對橫濱型態：BET365 與台彩都曾換邊且目前相反，固定歸入顛倒－雙方都對調', () => {
+  const snapshot = buildBet365TaiwanSnapshot(
+    { sw: 0, lsw: 1, ls: 'home', ll: 1.5 },
+    {
+      v: 'flip', side: 'away', line: 1.5,
+      be: { flipEver: true, struck: [{ side: 'home', line: 1.5 }] },
+    },
+  );
+
+  assert.equal(snapshot.relation, '顛倒');
+  assert.equal(snapshot.swapCombo, 'both');
+  assert.equal(snapshot.bet365Swapped, true);
+  assert.equal(snapshot.taiwanSwapped, true);
+});
+
 test('BetExplorer 未偵測到對調時仍保留 Titan 已鎖定的曾對調證據', () => {
   const snapshot = buildBet365TaiwanSnapshot(
     { sw: 6, lsw: 0, eo: true, is: 'home', il: 1.5, ls: 'home', ll: 1.5 },

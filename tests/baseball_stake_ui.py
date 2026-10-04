@@ -94,12 +94,18 @@ def main():
             raise
         trace("monitor visible")
         text = row.inner_text()
-        assert "Stake：阪神讓 1.5" in text, text
-        assert "大小 7.5" in text, text
+        assert "STAKE" in text, text
+        assert "讓分曾對調 1 次" in text, text
+        assert "大小 7.5" not in text, text
+        row.locator(".bstake-history-toggle").click()
+        detail = row.locator(".bstake-history").inner_text()
+        assert "讓 1.5" in detail, detail
+        assert "大小 7.5" in detail, detail
 
         page.locator(".bswap").click()
         page.locator(".bstake-monitor button", has_text="↻讓").wait_for(state="visible")
         page.locator('.basis input[type="number"]').fill("8.5")
+        page.evaluate("render()")
         page.locator(".bstake-monitor button", has_text="↻大").wait_for(state="visible")
         trace("manual locks verified")
 

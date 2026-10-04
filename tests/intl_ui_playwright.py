@@ -71,10 +71,12 @@ class IntlStripUiTests(unittest.TestCase):
                 }""",
                 [board, intl],
             )
-            strip = page.locator(".intl-strip").filter(has_text="bet365 未開盤").first
+            strip = page.locator(".intl-strip").first
             strip.wait_for(state="visible", timeout=10000)
-            self.assertIn("bet365 未開盤", strip.inner_text())
-            self.assertIn("台彩 富邦悍將讓1.5", strip.inner_text())
+            strip_text = strip.inner_text()
+            self.assertIn("BET365", strip_text)
+            self.assertIn("未開盤", strip_text)
+            self.assertIn("台彩 富邦悍將讓1.5", strip_text)
             expanded = strip.evaluate(
                 """element => {
                     element.click();

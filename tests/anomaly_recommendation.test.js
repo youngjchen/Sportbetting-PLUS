@@ -11,8 +11,8 @@ function feature(name) {
   return anomaly[name];
 }
 
-function bucket({ fw = 65, fwN = 100, cov = 35, covN = 100, ov = 35, ovN = 100, nr = 65, nrN = 100 } = {}) {
-  return { n: 100, fw, fwN, cov, covN, ov, ovN, nr, nrN, games: [] };
+function bucket({ n = 100, fw = 65, fwN = 100, cov = 35, covN = 100, ov = 35, ovN = 100, nr = 65, nrN = 100 } = {}) {
+  return { n, fw, fwN, cov, covN, ov, ovN, nr, nrN, games: [] };
 }
 
 function game(overrides = {}) {
@@ -47,7 +47,7 @@ test('兩套異常統計同方向時，四個市場會轉成實際下注選項',
   assert.equal(markets.nrfi.status, 'direction');
 });
 
-test('正式建議以保守機率加 5% 安全邊際計算最低賠率，並一律向上取到小數第二位', () => {
+test('正式建議以歷史命中率加 3% 安全邊際計算最低賠率，避免 Wilson 下界把門檻墊得過高', () => {
   const build = feature('buildAnomalyRecommendation');
   const decision = build({
     game: game({ moneyline: { away: 1.80, home: 2.05 } }),
@@ -55,9 +55,25 @@ test('正式建議以保守機率加 5% 安全邊際計算最低賠率，並一�
   });
   const ml = decision.markets.find((market) => market.market === 'ml');
 
-  assert.equal(ml.minOdds, 1.73);
+  assert.equal(ml.estimatedRate, 0.65);
+  assert.equal(ml.minOdds, 1.59);
   assert.equal(ml.status, 'bet');
   assert.ok(ml.edgePct > 0);
+});
+
+test('39 勝 60 場的 65% 訊號門檻是 1.59，不再被重複保守化推到 1.76', () => {
+  const build = feature('buildAnomalyRecommendation');
+  const decision = build({
+    game: game({ moneyline: { away: 1.70, home: 2.20 } }),
+    sources: [{
+      id: 'stake-tw', label: '異常統計', category: '顛倒＋對調', leagueLabel: '日職',
+      bucket: bucket({ fw: 39, fwN: 60 }),
+    }],
+  });
+  const ml = decision.markets.find((market) => market.market === 'ml');
+
+  assert.equal(ml.estimatedRate, 0.65);
+  assert.equal(ml.minOdds, 1.59);
 });
 
 test('15 到 29 場即使目前賠率很高，也只能顯示觀察而不能標成可下', () => {
@@ -155,9 +171,9 @@ test('卡片只露出兩個最重要選項，展開後可核對四個市場與�
 
   assert.equal(element.querySelectorAll('.anom-pick').length, 2);
   assert.equal(element.querySelectorAll('.anom-detail-row').length, 4);
-  assert.match(element.textContent, /異常決策/);
-  assert.match(element.textContent, /兩套共識/);
-  assert.match(element.textContent, /保守\d+%/);
+  assert.match(element.textContent, /異常投注參考/);
+  assert.match(element.textContent, /兩套一致/);
+  assert.match(element.textContent, /計算\d+%/);
   assert.match(element.textContent, /NRFI/);
   assert.equal(element.querySelector('[data-market="nrfi"] .anom-price').textContent, '');
   assert.doesNotMatch(
@@ -172,4 +188,23 @@ test('卡片只露出兩個最重要選項，展開後可核對四個市場與�
   toggle.click();
   assert.equal(detail.hidden, false);
   assert.equal(toggle.getAttribute('aria-expanded'), 'true');
+});
+
+test('決策面板直接標示聯盟、分類與正確樣本數，七類日職五場不混入其他聯盟', () => {
+  const build = feature('buildAnomalyRecommendation');
+  const render = feature('renderAnomalyRecommendation');
+  const decision = build({
+    game: game(),
+    sources: [{
+      id: 'b365-tw', label: 'BET365 × 台彩七類', leagueLabel: '日職',
+      category: '顛倒－雙方都對調', bucket: bucket({ n: 5, fw: 3, fwN: 5, cov: 3, covN: 5, ov: 2, ovN: 5, nr: 4, nrN: 5 }),
+    }],
+  });
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const element = render(decision, dom.window.document);
+
+  assert.match(element.querySelector('.anom-context').textContent, /BET365 × 台彩七類/);
+  assert.match(element.querySelector('.anom-context').textContent, /日職/);
+  assert.match(element.querySelector('.anom-context').textContent, /顛倒－雙方都對調/);
+  assert.match(element.querySelector('.anom-context').textContent, /5 場/);
 });

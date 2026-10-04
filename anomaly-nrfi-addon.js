@@ -185,7 +185,7 @@
     const rows = unionRows(history, settledGames);
     let total = 0;
     rows.forEach((game) => {
-      if (leagueFilter && leagueFilter !== 'all' && game.league !== leagueFilter) return;
+      if (leagueFilter && leagueFilter !== 'all' && String(game.league || '').toLowerCase() !== String(leagueFilter).toLowerCase()) return;
       const rel = relationKey(game.relation);
       if (!rel || !Object.prototype.hasOwnProperty.call(groups[rel], game.swapCombo)) return;
       total += 1;
@@ -290,8 +290,11 @@
       sample: total,
       hit: hits,
       rawRate: hits / total,
-      conservativeRate: wilsonLower(hits, total),
+      // 樣本可靠度已由 15/30/60 場分級處理；價格直接用歷史命中率，避免再做一次保守折減。
+      estimatedRate: hits / total,
       tier: total >= 60 ? 'stable' : total >= 30 ? 'ready' : 'observe',
+      category: item.category || '',
+      leagueLabel: item.leagueLabel || '',
     };
   }
 
@@ -299,7 +302,7 @@
     return {
       market: definition.market, marketLabel: definition.label, status: 'no_data',
       pickKey: null, pickLabel: '樣本不足', currentOdds: null, minOdds: null,
-      edgePct: null, conservativeRate: null, sample: 0, sourceMode: 'none', evidence: [],
+      edgePct: null, estimatedRate: null, sample: 0, sourceMode: 'none', evidence: [],
     };
   }
 
@@ -317,13 +320,13 @@
     }
     const direction = selected[0].direction;
     const presentation = marketPresentation(game, definition.market, direction);
-    const conservativeRate = Math.min(...selected.map((signal) => signal.conservativeRate));
-    const minOdds = conservativeRate > 0 ? roundUpHundredth((1 + margin) / conservativeRate) : null;
+    const estimatedRate = Math.min(...selected.map((signal) => signal.estimatedRate));
+    const minOdds = estimatedRate > 0 ? roundUpHundredth((1 + margin) / estimatedRate) : null;
     const observationOnly = !ready.length;
     let status = observationOnly ? 'observe' : 'direction';
     let edgePct = null;
     if (!observationOnly && presentation.currentOdds != null && minOdds != null) {
-      edgePct = (presentation.currentOdds * conservativeRate - 1) * 100;
+      edgePct = (presentation.currentOdds * estimatedRate - 1) * 100;
       status = presentation.currentOdds >= minOdds ? 'bet' : 'wait';
     }
     return {
@@ -335,7 +338,7 @@
       currentOdds: presentation.currentOdds,
       minOdds,
       edgePct,
-      conservativeRate,
+      estimatedRate,
       sample: Math.min(...selected.map((signal) => signal.sample)),
       sourceMode: selected.length > 1 ? 'consensus' : 'single',
       status,
@@ -345,7 +348,7 @@
 
   function buildAnomalyRecommendation(options) {
     const opts = options || {};
-    const margin = Number.isFinite(Number(opts.margin)) ? Number(opts.margin) : 0.05;
+    const margin = Number.isFinite(Number(opts.margin)) ? Number(opts.margin) : 0.03;
     const markets = RECOMMENDATION_MARKETS.map((definition) => (
       buildMarketRecommendation(opts.game || {}, opts.sources || [], definition, margin)
     ));
@@ -357,7 +360,18 @@
     }).slice(0, 2);
     const hasConsensus = markets.some((market) => market.sourceMode === 'consensus');
     const hasConflict = markets.some((market) => market.status === 'conflict');
-    return { markets, summary, hasConsensus, hasConflict, margin };
+    const contexts = (Array.isArray(opts.sources) ? opts.sources : []).map((source) => {
+      const data = source && source.bucket || {};
+      const sample = Number(data.n) || Math.max(
+        Number(data.fwN) || 0, Number(data.covN) || 0,
+        Number(data.ovN) || 0, Number(data.nrN) || 0,
+      );
+      return {
+        id: source.id || '', label: source.label || source.id || '異常統計',
+        leagueLabel: source.leagueLabel || '', category: source.category || '', sample,
+      };
+    });
+    return { markets, summary, hasConsensus, hasConflict, margin, contexts };
   }
 
   function fixedOdds(value) {
@@ -365,7 +379,7 @@
   }
 
   function verdictText(market) {
-    if (market.status === 'bet') return `可下 ${market.edgePct >= 0 ? '+' : ''}${market.edgePct.toFixed(1)}%`;
+    if (market.status === 'bet') return '已到價';
     if (market.status === 'wait') return '未到價';
     if (market.status === 'direction') return '只看方向';
     if (market.status === 'observe') return '樣本觀察';
@@ -407,15 +421,31 @@
     toggle.title = '展開四個市場與兩套異常統計證據';
     const title = documentRef.createElement('span');
     title.className = 'anom-decision-title';
-    title.textContent = '異常決策';
+    title.textContent = '異常投注參考';
     const mode = documentRef.createElement('span');
     mode.className = 'anom-decision-mode';
-    mode.textContent = decision.hasConflict ? '含分歧' : decision.hasConsensus ? '兩套共識' : '單一系統';
+    mode.textContent = decision.hasConflict ? '方向分歧' : decision.hasConsensus ? '兩套一致' : '單一系統';
     const caret = documentRef.createElement('span');
     caret.className = 'anom-decision-caret';
     caret.textContent = '⌄';
     toggle.append(title, mode, caret);
     root.appendChild(toggle);
+
+    const context = documentRef.createElement('div');
+    context.className = 'anom-context';
+    (decision.contexts || []).forEach((item) => {
+      const line = documentRef.createElement('div');
+      line.className = 'anom-context-row';
+      const source = documentRef.createElement('span');
+      source.className = 'anom-context-source';
+      source.textContent = item.label;
+      const value = documentRef.createElement('span');
+      value.className = 'anom-context-value';
+      value.textContent = [item.leagueLabel, item.category].filter(Boolean).join('・') + (item.sample ? `・${item.sample} 場` : '');
+      line.append(source, value);
+      context.appendChild(line);
+    });
+    if (context.childNodes.length) root.appendChild(context);
 
     const summary = documentRef.createElement('div');
     summary.className = 'anom-picks';
@@ -436,7 +466,7 @@
       if (market.evidence.length) {
         const evidence = documentRef.createElement('small');
         evidence.className = 'anom-evidence';
-        evidence.textContent = `${market.conservativeRate == null ? '' : `保守${Math.round(market.conservativeRate * 100)}%｜`}${market.evidence.map((item) => (
+        evidence.textContent = `${market.estimatedRate == null ? '' : `計算${Math.round(market.estimatedRate * 100)}%｜`}${market.evidence.map((item) => (
           `${item.label} ${Math.round(item.rawRate * 100)}%（${item.hit}/${item.sample}）`
         )).join('｜')}`;
         row.appendChild(evidence);

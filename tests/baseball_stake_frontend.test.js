@@ -171,7 +171,8 @@ test('card row shows only whether Stake flipped and keeps market data inside det
   });
   const row = renderCardStatus(blankCard(), monitored, NOW, dom.window.document);
   assert.equal(row.classList.contains('bstake-monitor'), true);
-  assert.equal(row.querySelector('.bstake-monitor-text').textContent, 'Stake：曾對調讓分 1 次');
+  assert.equal(row.querySelector('.bstake-source').textContent, 'STAKE');
+  assert.equal(row.querySelector('.bstake-monitor-text').textContent, '讓分曾對調 1 次');
   assert.doesNotMatch(row.querySelector('.bstake-monitor-text').textContent, /獨贏|大小|正常|部分缺漏/);
   assert.equal(row.title, '展開查看 Stake 盤口明細');
   row.querySelector('.bstake-history-toggle').click();
@@ -189,7 +190,14 @@ test('card row shows only whether Stake flipped and keeps market data inside det
 test('card row says the Stake favorite never flipped when transition history is empty', () => {
   const dom = new JSDOM('<!doctype html><body></body>');
   const row = renderCardStatus(blankCard(), game({ favoriteFlipCount: 0, favoriteTransitions: [] }), NOW, dom.window.document);
-  assert.equal(row.querySelector('.bstake-monitor-text').textContent, 'Stake：讓分方未對調');
+  assert.equal(row.querySelector('.bstake-monitor-text').textContent, '讓分未對調');
+});
+
+test('歷史序列有換邊但舊資料缺 favoriteFlipCount 時，文字與狀態點仍一致顯示曾對調', () => {
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const row = renderCardStatus(blankCard(), game({ favoriteFlipCount: null }), NOW, dom.window.document);
+  assert.equal(row.querySelector('.bstake-monitor-text').textContent, '讓分曾對調 1 次');
+  assert.equal(row.querySelector('.bstake-status-dot').classList.contains('flipped'), true);
 });
 
 test('CPBL 官方零場時卡片仍顯示 STAKE 未開盤而不是整列消失', () => {
@@ -198,7 +206,7 @@ test('CPBL 官方零場時卡片仍顯示 STAKE 未開盤而不是整列消失',
   const feed = { matches: {}, leagues: { CPBL: { status: 'ok', health: { discovered: 0, matched: 0 } } } };
   const row = renderCardStatus(card, null, NOW, dom.window.document, feed);
   assert.ok(row);
-  assert.match(row.textContent, /Stake：官方目前未開盤（持續監控）/);
+  assert.match(row.textContent, /STAKE官方目前未開盤（持續監控）/);
 });
 
 test('index hooks both favorite swap and total input, and loads versioned integration add-on', () => {

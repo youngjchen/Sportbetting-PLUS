@@ -19,13 +19,15 @@ function loadCollectCrossTab(doc, lookupStakeNrfi) {
   return sandbox.collectCrossTab;
 }
 
-function loadBAnomInfo(intlState, crossTab) {
+function loadBAnomInfo(intlState, crossTab, league = 'npb') {
   const start = indexSource.indexOf('function bAnomInfo(it){');
   const end = indexSource.indexOf('// 獨贏 ⓘ：STAKE 賠率評語', start);
   assert.ok(start >= 0 && end > start, '找不到 bAnomInfo 原始函式');
   const sandbox = {
     intlFor: () => intlState,
-    crossTabCached: () => crossTab,
+    crossTabCached: typeof crossTab === 'function' ? crossTab : () => crossTab,
+    leagueOf: () => league,
+    bLeagueMeta: () => ({ league, label: { mlb: 'MLB', npb: '日職', kbo: '韓職', cpbl: '中職' }[league] }),
   };
   vm.runInNewContext(`${indexSource.slice(start, end)}\nthis.bAnomInfo = bAnomInfo;`, sandbox);
   return sandbox.bAnomInfo;
@@ -39,6 +41,8 @@ function loadBAnomRecommendation(overrides = {}) {
     bAnomInfo: () => ({ bucket: { n: 40, fw: 25, fwN: 40 }, lbl: '顛倒' }),
     intlFor: () => ({ ls: 'home' }),
     intlVerdict: () => ({ v: 'flip', side: 'away' }),
+    leagueOf: () => 'npb',
+    bLeagueMeta: () => ({ league: 'npb', label: '日職' }),
     doc: { games: [] },
     window: {
       buildBet365TaiwanSnapshot: () => ({ relation: '顛倒', swapCombo: 'neither' }),
@@ -206,6 +210,49 @@ test('異常卡片把兩套對應分類與 Stake 即時三市場賠率交給決�
   assert.equal(result.game.moneyline.away, 1.70);
   assert.equal(result.game.handicapOdds.home, 1.62);
   assert.equal(result.game.total.under, 1.80);
+});
+
+test('阪神對橫濱只讀日職分類，BET365 與台彩都對調時落在顛倒－雙方都對調五場', () => {
+  const requestedLeagues = [];
+  const recommend = loadBAnomRecommendation({
+    bAnomInfo: () => ({
+      bucket: { n: 7, fw: 4, fwN: 7 }, lbl: '顛倒＋對調', leagueLabel: '日職', league: 'npb',
+    }),
+    intlFor: () => ({ ls: 'home', lsw: 1 }),
+    intlVerdict: () => ({ v: 'flip', side: 'away', be: { flipEver: true, struck: [{ side: 'home' }] } }),
+    window: {
+      buildBet365TaiwanSnapshot: () => ({ relation: '顛倒', swapCombo: 'both' }),
+      collectBet365Taiwan: (league) => {
+        requestedLeagues.push(league);
+        return { groups: { inverted: { both: { n: league === 'npb' ? 5 : 61, fw: 3, fwN: 5 } } } };
+      },
+      __baseballStakeIntegration: { gameFor: () => null },
+      buildAnomalyRecommendation: (input) => input,
+    },
+  });
+  const result = recommend({ league: 'npb', away: '阪神', home: '橫濱', hdFav: 'home', hdVal: 1.5, totVal: 7.5 });
+
+  assert.deepEqual(requestedLeagues, ['npb']);
+  assert.equal(result.sources[1].bucket.n, 5);
+  assert.equal(result.sources[1].category, '顛倒－雙方都對調');
+  assert.equal(result.sources[1].leagueLabel, '日職');
+});
+
+test('第一套異常統計也只讀卡片所屬聯盟，不再硬抓四聯盟合計', () => {
+  const requestedLeagues = [];
+  const info = loadBAnomInfo(
+    { ls: 'away' },
+    (league) => { requestedLeagues.push(league); return crossTabFixture(); },
+    'npb',
+  )({
+    league: 'npb', hdFav: 'home', platformFlip: false, flipVanished: false, preGameSwap: false,
+    closeOddsAway: 1.9, closeOddsHome: 1.9,
+  });
+
+  assert.ok(info);
+  assert.deepEqual(requestedLeagues, ['npb']);
+  assert.equal(info.league, 'npb');
+  assert.equal(info.leagueLabel, '日職');
 });
 
 test('未結算異常卡片直接掛上決策條，已結算卡片不再顯示即時下注判定', () => {

@@ -135,10 +135,10 @@
   }
 
   function statusText(game, now) {
-    if (!game) return 'Stake：無資料';
+    if (!game) return '無資料';
     const transitions = Array.isArray(game.favoriteTransitions) ? game.favoriteTransitions : [];
     const count = Number(game.favoriteFlipCount) || transitions.length;
-    return count > 0 ? `Stake：曾對調讓分 ${count} 次` : 'Stake：讓分方未對調';
+    return count > 0 ? `讓分曾對調 ${count} 次` : '讓分未對調';
   }
 
   function marketDetailText(game, snapshot, prefix) {
@@ -164,10 +164,10 @@
     const wantedLeague = cardLeague(card);
     const state = feed && feed.leagues && feed.leagues[wantedLeague];
     if (state && state.status === 'ok' && state.health && Number(state.health.discovered) === 0) {
-      return 'Stake：官方目前未開盤（持續監控）';
+      return '官方目前未開盤（持續監控）';
     }
-    if (state && state.status && state.status !== 'ok') return 'Stake：管線異常（持續重試）';
-    return 'Stake：本場尚未配對（持續監控）';
+    if (state && state.status && state.status !== 'ok') return '管線異常（持續重試）';
+    return '本場尚未配對（持續監控）';
   }
 
   function renderCardStatus(card, game, now, documentRef, feed) {
@@ -175,10 +175,18 @@
     const row = documentRef.createElement('div');
     row.className = 'bstake-monitor ok';
     row.title = game ? '展開查看 Stake 盤口明細' : 'Stake 官方盤口會每五分鐘持續重試';
+    const flipped = !!(game && ((Number(game.favoriteFlipCount) || 0) > 0 ||
+      (Array.isArray(game.favoriteTransitions) && game.favoriteTransitions.length > 0)));
+    const dot = documentRef.createElement('span');
+    dot.className = `bstake-status-dot${flipped ? ' flipped' : ''}`;
+    dot.setAttribute('aria-hidden', 'true');
+    const source = documentRef.createElement('strong');
+    source.className = 'bstake-source';
+    source.textContent = 'STAKE';
     const text = documentRef.createElement('span');
     text.className = 'bstake-monitor-text';
     text.textContent = game ? statusText(game, now) : noGameText(feed, card);
-    row.appendChild(text);
+    row.append(dot, source, text);
 
     if (!game) return row;
 
@@ -203,7 +211,8 @@
     const toggle = documentRef.createElement('button');
     toggle.type = 'button';
     toggle.className = 'bstake-history-toggle';
-    toggle.textContent = '▾';
+    toggle.textContent = '⌄';
+    toggle.setAttribute('aria-expanded', 'false');
     toggle.title = '展開 Stake 盤口歷史明細';
     toggle.onclick = function (event) {
       event.stopPropagation();
@@ -229,7 +238,8 @@
         row.appendChild(history);
       }
       history.hidden = !history.hidden;
-      toggle.textContent = history.hidden ? '▾' : '▴';
+      toggle.textContent = history.hidden ? '⌄' : '⌃';
+      toggle.setAttribute('aria-expanded', history.hidden ? 'false' : 'true');
     };
     row.appendChild(toggle);
     return row;
