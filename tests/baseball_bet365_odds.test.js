@@ -101,3 +101,64 @@ test('collector matches CPBL official odds without requiring a BetExplorer row',
   assert.equal(game.markets.hd.provider, 'bet365-official');
   assert.equal(game.markets.total.line, 7.5);
 });
+
+test('collector imports BetExplorer Bet365 flip evidence even when only the active line is sampled', async () => {
+  const officialId = 'NPB_20261004_Tigers@DeNA_1700';
+  const output = await collectBaseballBet365Odds({
+    now: Date.parse('2026-10-04T08:00:00.000Z'),
+    officialRows: [{
+      league: 'NPB',
+      officialId,
+      date: '2026-10-04',
+      time: '17:00',
+      awayTeam: '阪神',
+      homeTeam: '橫濱',
+      status: 'upcoming',
+    }],
+    previous: { matches: {}, leagues: {} },
+    betExplorer: {
+      games: {
+        target: {
+          eventId: '27mgd74D',
+          league: 'npb',
+          date: '2026-10-04',
+          startTime: '17:00',
+          startISO: '2026-10-04T17:00:00+08:00',
+          awayTeam: '阪神',
+          homeTeam: '橫濱',
+          bet365: {
+            side: 'away',
+            line: 1.5,
+            at: '2026-10-04T11:16:00+08:00',
+            flipEver: true,
+            struck: [{ side: 'home', line: -1.5, at: '2026-08-22T11:53:00+08:00' }],
+          },
+          markets: {
+            hd: {
+              active: {
+                at: '2026-10-04T15:30:05+08:00',
+                away: 2.55,
+                home: 1.43,
+                line: 1.5,
+                favorite: 'away',
+              },
+            },
+          },
+        },
+      },
+    },
+    fetchPages: async () => [],
+  });
+
+  const game = output.matches[officialId];
+  assert.equal(game.favoriteFlipCount, 1);
+  assert.deepEqual(game.events, [{
+    at: '2026-10-04T03:16:00.000Z',
+    type: 'favorite-flip',
+    provider: 'betexplorer',
+    from: 'home',
+    to: 'away',
+    line: 1.5,
+    evidenceId: 'betexplorer:27mgd74D:bet365-favorite-flip:home:away',
+  }]);
+});

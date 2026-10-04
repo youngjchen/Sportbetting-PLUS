@@ -76,6 +76,8 @@ function mergeProviderObservation(previous, observation) {
   const prior = previous && typeof previous === 'object' ? clone(previous) : null;
   const next = observation && typeof observation === 'object' ? clone(observation) : null;
   if (!next) return prior;
+  const evidenceEvents = Array.isArray(next.evidenceEvents) ? next.evidenceEvents.slice() : [];
+  delete next.evidenceEvents;
   if (!isPregameObservation(next.scheduledStart, next.observedAt)) {
     if (!prior) return null;
     const cutoff = Date.parse(next.scheduledStart) - PRE_START_CUTOFF_MS;
@@ -125,6 +127,16 @@ function mergeProviderObservation(previous, observation) {
       : [];
     sourceHistory.push(snapshot);
     providerHistories[snapshot.provider] = sourceHistory.slice(-HISTORY_LIMIT);
+  }
+
+  for (const evidence of evidenceEvents) {
+    if (!evidence || evidence.type !== 'favorite-flip') continue;
+    if (!['away', 'home'].includes(evidence.from) || !['away', 'home'].includes(evidence.to) || evidence.from === evidence.to) continue;
+    const duplicate = events.some((event) => event && (
+      (evidence.evidenceId && event.evidenceId === evidence.evidenceId) ||
+      (event.type === 'favorite-flip' && event.provider === evidence.provider && event.from === evidence.from && event.to === evidence.to)
+    ));
+    if (!duplicate) events.push(clone(evidence));
   }
 
   return {

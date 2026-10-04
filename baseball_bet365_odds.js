@@ -147,7 +147,7 @@ function betExplorerObservation(game) {
   const selectedTimes = [ml, hd, total].map((market) => market && Date.parse(market.at)).filter(Number.isFinite);
   if (!selectedTimes.length) return null;
   const observedAt = new Date(Math.max(...selectedTimes)).toISOString();
-  return normalizeMarketObservation({
+  const observation = normalizeMarketObservation({
     provider: 'betexplorer',
     observedAt,
     scheduledStart: new Date(Date.parse(startTime)).toISOString(),
@@ -155,6 +155,22 @@ function betExplorerObservation(game) {
     hd: hd && { favorite: hd.favorite || (game.bet365 && game.bet365.side), line: hd.line, away: hd.away, home: hd.home },
     total: total && { line: total.line, over: total.over, under: total.under },
   });
+  const activeSide = observation.favorite;
+  const struck = Array.isArray(game.bet365 && game.bet365.struck) ? game.bet365.struck : [];
+  const priorSide = struck.find((entry) => entry && (entry.side === 'away' || entry.side === 'home') && entry.side !== activeSide);
+  if (game.bet365 && game.bet365.flipEver && activeSide && priorSide) {
+    const changedAt = Date.parse(game.bet365.at || game.bet365.observedAt || observedAt);
+    observation.evidenceEvents = [{
+      at: Number.isFinite(changedAt) ? new Date(changedAt).toISOString() : observedAt,
+      type: 'favorite-flip',
+      provider: 'betexplorer',
+      from: priorSide.side,
+      to: activeSide,
+      line: observation.markets.hd && observation.markets.hd.line,
+      evidenceId: `betexplorer:${game.eventId || `${game.date}|${game.awayTeam}|${game.homeTeam}`}:bet365-favorite-flip:${priorSide.side}:${activeSide}`,
+    }];
+  }
+  return observation;
 }
 
 function resolveBaseballGame(official, fallback, frozenOfficial) {
@@ -273,6 +289,10 @@ async function collectBaseballBet365Odds(options = {}) {
       favorite: resolved.favorite,
       markets: resolved.markets,
       mixedSources: resolved.mixedSources,
+      evidenceEvents: [
+        ...(Array.isArray(direct && direct.evidenceEvents) ? direct.evidenceEvents : []),
+        ...(Array.isArray(fallback && fallback.evidenceEvents) ? fallback.evidenceEvents : []),
+      ],
     };
     const merged = mergeProviderObservation(matches[official.officialId], observation);
     if (merged) matches[official.officialId] = merged;
