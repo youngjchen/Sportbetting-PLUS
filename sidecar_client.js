@@ -56,7 +56,14 @@ function startSidecar() {
         const p = pending.get(msg.id);
         if (!p) continue;
         pending.delete(msg.id);
-        if (msg.status >= 200 && msg.status < 400 && msg.b64) p.resolve(Buffer.from(msg.b64, 'base64').toString('utf8'));
+        if (msg.status >= 200 && msg.status < 400 && msg.b64) {
+          const body = Buffer.from(msg.b64, 'base64').toString('utf8');
+          p.resolve(msg.rendered ? {
+            html: body,
+            finalUrl: String(msg.finalUrl || ''),
+            captured: Array.isArray(msg.captured) ? msg.captured : [],
+          } : body);
+        }
         else p.reject(new Error(msg.err || `Request failed with status code ${msg.status}`));
       }
     });
@@ -71,11 +78,21 @@ function startSidecar() {
   return ready;
 }
 
-function makeSidecarRequest(id, url, headers, timeoutMs) {
-  return { id, url, headers: Object.assign({}, headers || {}), timeoutMs };
+function makeSidecarRequest(id, url, headers, timeoutMs, options) {
+  const request = { id, url, headers: Object.assign({}, headers || {}), timeoutMs };
+  const opts = options && typeof options === 'object' ? options : null;
+  if (opts && opts.rendered) {
+    request.rendered = true;
+    request.waitMs = Math.max(0, Math.min(20000, Number(opts.waitMs) || 0));
+    if (opts.waitSelector) request.waitSelector = String(opts.waitSelector).slice(0, 240);
+    if (Array.isArray(opts.capturePatterns)) {
+      request.capturePatterns = opts.capturePatterns.map((value) => String(value).slice(0, 240)).slice(0, 12);
+    }
+  }
+  return request;
 }
 
-async function sidecarGet(url, headers, timeoutMs) {
+async function sidecarGet(url, headers, timeoutMs, options) {
   await startSidecar();
   const id = ++seq;
   return new Promise((resolve, reject) => {
@@ -84,9 +101,16 @@ async function sidecarGet(url, headers, timeoutMs) {
       resolve: (v) => { clearTimeout(timer); resolve(v); },
       reject: (e) => { clearTimeout(timer); reject(e); },
     });
-    try { proc.stdin.write(JSON.stringify(makeSidecarRequest(id, url, headers, timeoutMs)) + '\n'); }
+    try { proc.stdin.write(JSON.stringify(makeSidecarRequest(id, url, headers, timeoutMs, options)) + '\n'); }
     catch (e) { clearTimeout(timer); pending.delete(id); reject(e); }
   });
+}
+
+async function fetchRendered(url, options, timeoutMs) {
+  const opts = options && typeof options === 'object' ? options : {};
+  const headers = opts.headers && typeof opts.headers === 'object' ? opts.headers : {};
+  const limit = Number(timeoutMs) || 90000;
+  return sidecarGet(url, headers, limit, { ...opts, rendered: true });
 }
 
 // 挑戰頁辨識（2026-07-29 稽核吞單案：挑戰頁回 HTTP 200、內容空殼，被當成功頁 → 高手被誤判撤單）
@@ -149,4 +173,4 @@ function shutdown() {
   stopSidecarProcess(proc);
 }
 
-module.exports = { fetchText, shutdown, stopSidecarProcess, makeSidecarRequest, shouldUseBrowserFallback, usingSidecar: () => curlBlocked };
+module.exports = { fetchText, fetchRendered, shutdown, stopSidecarProcess, makeSidecarRequest, shouldUseBrowserFallback, usingSidecar: () => curlBlocked };

@@ -255,6 +255,66 @@ async def async_main():
         raw = getattr(page, 'html_content', None)
         return status, raw if raw is not None else str(page)
 
+    async def rendered_fetch(url, headers, timeout_ms, req):
+        holder = {'final_url': url, 'captured': []}
+        patterns = [
+            str(value).lower() for value in (req.get('capturePatterns') or [])
+            if str(value).strip()
+        ][:12]
+        wait_ms = min(20000, max(0, int(req.get('waitMs') or 0)))
+        wait_selector = str(req.get('waitSelector') or '')[:240]
+
+        async def act(page):
+            capture_tasks = []
+
+            async def capture(response):
+                if len(holder['captured']) >= 12:
+                    return
+                response_url = str(getattr(response, 'url', '') or '')
+                if not response_url or not any(pattern in response_url.lower() for pattern in patterns):
+                    return
+                try:
+                    body = await response.text()
+                except Exception:
+                    body = ''
+                holder['captured'].append({
+                    'url': response_url,
+                    'status': int(getattr(response, 'status', 0) or 0),
+                    'body': body[:2 * 1024 * 1024],
+                })
+
+            def queue_capture(response):
+                if patterns:
+                    capture_tasks.append(asyncio.create_task(capture(response)))
+
+            page.on('response', queue_capture)
+            try:
+                await page.reload(wait_until='domcontentloaded')
+            except Exception:
+                pass
+            if wait_selector:
+                try:
+                    await page.wait_for_selector(wait_selector, timeout=min(timeout_ms, 20000))
+                except Exception:
+                    pass
+            if wait_ms:
+                await page.wait_for_timeout(wait_ms)
+            if capture_tasks:
+                await asyncio.gather(*capture_tasks, return_exceptions=True)
+            holder['final_url'] = str(getattr(page, 'url', '') or url)
+            return page
+
+        page = await session.fetch(
+            url,
+            extra_headers=headers,
+            page_action=act,
+            google_search=False,
+            timeout=timeout_ms,
+        )
+        status = int(getattr(page, 'status', 200) or 200)
+        raw = getattr(page, 'html_content', None)
+        return status, raw if raw is not None else str(page), holder
+
     print(json.dumps({"ready": True}), flush=True)
 
     try:
@@ -278,17 +338,29 @@ async def async_main():
             }
             timeout_ms = max(1000, int(req.get('timeoutMs') or 30000))
             try:
-                status, body, layer = await async_fetch_with_fallback(
-                    url=url,
-                    headers=headers,
-                    timeout_ms=timeout_ms,
-                    http_get=http_get,
-                    browser_fetch=browser_fetch,
-                    xhr_fetch=page_xhr_json,
-                    solve_fetch=solve_fetch,
-                )
-                out = {"id": rid, "status": status, "layer": layer,
-                       "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii')}
+                if req.get('rendered'):
+                    status, body, rendered = await rendered_fetch(url, headers, timeout_ms, req)
+                    out = {
+                        "id": rid,
+                        "status": status,
+                        "layer": "rendered-browser",
+                        "rendered": True,
+                        "finalUrl": rendered.get('final_url') or url,
+                        "captured": rendered.get('captured') or [],
+                        "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii'),
+                    }
+                else:
+                    status, body, layer = await async_fetch_with_fallback(
+                        url=url,
+                        headers=headers,
+                        timeout_ms=timeout_ms,
+                        http_get=http_get,
+                        browser_fetch=browser_fetch,
+                        xhr_fetch=page_xhr_json,
+                        solve_fetch=solve_fetch,
+                    )
+                    out = {"id": rid, "status": status, "layer": layer,
+                           "b64": base64.b64encode(body.encode('utf-8', 'replace')).decode('ascii')}
             except Exception as e:
                 out = {"id": rid, "status": 0, "err": f"{type(e).__name__}: {e}"}
             print(json.dumps(out), flush=True)
