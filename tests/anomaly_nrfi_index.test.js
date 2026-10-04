@@ -33,7 +33,7 @@ function loadBAnomInfo(intlState, crossTab) {
 
 function loadIntlFor(intlState, pregameData) {
   const start = indexSource.indexOf('function intlFor(it,dateKey)');
-  const end = indexSource.indexOf('// BE 為主的國際軸裁決', start);
+  const end = indexSource.indexOf('function intlVerdictColor', start);
   assert.ok(start >= 0 && end > start, '找不到 intlFor 原始函式');
   const sandbox = {
     __intl: intlState,
