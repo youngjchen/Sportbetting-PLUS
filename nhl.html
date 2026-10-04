@@ -511,8 +511,8 @@
   </div>
 
 <script src="./storage-pressure.js?v=20260924idb1"></script>
-<script src="./nhl_stake_core.js?v=20261003history1"></script>
-<script src="./nhl_bet365_core.js?v=20260930b3651"></script>
+<script src="./nhl_stake_core.js?v=20261004total2"></script>
+<script src="./nhl_bet365_core.js?v=20261004total2"></script>
 <script>
 "use strict";
 // ===== 文檔（與棒球板完全隔離的命名空間）=====
@@ -861,6 +861,7 @@ function bet365OddsFor(g){
   const fmtOut=(m)=>((m&&m.outcomes)||[]).map(x=>`${x.side==="away"?g.away:g.home} ${Number(x.odds).toFixed(2)}`).join(" / ");
   return { ...match,
     hdLine:match.hd&&match.hd.line, hdOpen:match.open&&match.open.hd&&match.open.hd.line,
+    totalLine:match.total&&match.total.line, totalOpen:match.openTotal&&match.openTotal.line,
     hdOdds:fmtOut(match.hd), mlOdds:fmtOut(match.ml),
     events:Array.isArray(match.game.events)?match.game.events:[], updated:oddsCache.updated||null
   };
@@ -1926,7 +1927,8 @@ function renderCardW(model){
         return Number(so.line)===Number(roleLine) ? `${role} · STAKE ${Number(so.odds).toFixed(2)}` : `${role}↔${official} ${Number(so.odds).toFixed(2)}`; }
       const bo=bet365&&window.NhlBet365.marketOutcome(bet365.hd,side); if(!bo) return signed(roleLine);
       const official=signed(bo.line), role=signed(roleLine); return Number(bo.line)===Number(roleLine) ? `${role} · BET365 ${Number(bo.odds).toFixed(2)}` : `${role}↔${official} ${Number(bo.odds).toFixed(2)}`; };
-    const ouHv=(side,line)=>{ const so=stake&&window.NhlStake.marketOutcome(stake.ou,side); return so?`${line} · STAKE ${Number(so.odds).toFixed(2)}`:String(line); };
+    const ouHv=(side,line)=>{ const so=stake&&window.NhlStake.marketOutcome(stake.ou,side); if(so) return `${line} · STAKE ${Number(so.odds).toFixed(2)}`;
+      const bo=bet365&&window.NhlBet365.marketOutcome(bet365.total,side); return bo?`${line} · BET365 ${Number(bo.odds).toFixed(2)}`:String(line); };
     function pctsEl(side){
       if(_mpA==null) return null;
       const imp = side==="away" ? Math.round(_mpA*100) : Math.round((1-_mpA)*100);
@@ -2020,6 +2022,10 @@ function renderCardW(model){
       if(stake && stake.ou && stake.ou.line!=null){
         const open=stake.open&&stake.open.ou, moved=open&&Number(open.line)!==Number(stake.ou.line);
         return { html:`<span class="l">STAKE</span><span class="tm">${moved?`基準 ${open.line}→${stake.ou.line}`:`基準 ${stake.ou.line}`}</span>`, strong:!!moved };
+      }
+      if(bet365 && bet365.total && bet365.total.line!=null){
+        const moved=bet365.openTotal&&Number(bet365.openTotal.line)!==Number(bet365.total.line);
+        return { html:`<span class="l">BET365</span><span class="tm">${moved?`基準 ${bet365.openTotal.line}→${bet365.total.line}`:`基準 ${bet365.total.line}`}</span>`, strong:!!moved };
       }
       if(!intl || !intl.ouMove) return null;
       const m = intl.ouMove;

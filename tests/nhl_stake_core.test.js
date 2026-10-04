@@ -45,6 +45,10 @@ function bet365Match() {
       ],
     },
     ml: { outcomes: [{ side: 'away', odds: 2.25 }, { side: 'home', odds: 1.65 }] },
+    total: {
+      line: 7.0,
+      outcomes: [{ side: 'over', line: 7.0, odds: 1.91 }, { side: 'under', line: 7.0, odds: 1.91 }],
+    },
   };
 }
 
@@ -124,6 +128,15 @@ test('Bet365 supplies only the missing Stake handicap market', () => {
   assert.equal(applied.hdVal, 2.5);
   assert.equal(applied.hdSrc, 'BET365');
   assert.equal(applied.totLine, 6.5);
+});
+
+test('Bet365 official total fills the card when Stake has no total market', () => {
+  const applied = applyOddsToPregame(
+    { hdFav: null, hdVal: null, totLine: null, hdSrc: '運彩' }, {}, null, bet365Match(), 'home',
+  );
+
+  assert.equal(applied.totLine, 7);
+  assert.equal(applied.totSrc, 'BET365');
 });
 
 test('keeps the 6.5 default path available when neither feed has a total', () => {

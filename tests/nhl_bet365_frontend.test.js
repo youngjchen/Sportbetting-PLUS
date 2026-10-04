@@ -29,7 +29,7 @@ function waitFor(check, timeoutMs = 3000) {
   });
 }
 
-test('renders Bet365 prices, official favorite, manual swap, and a 6.5 total', async (t) => {
+test('renders Bet365 prices, official favorite, manual swap, and the official total', async (t) => {
   const pregame = {
     updated: '2026-09-30T12:00:00.000Z',
     games: [{
@@ -51,8 +51,12 @@ test('renders Bet365 prices, official favorite, manual swap, and a 6.5 total', a
       { name: 'FLA Panthers', side: 'away', line: 1.5, odds: 1.4 },
       { name: 'CAR Hurricanes', side: 'home', line: -1.5, odds: 2.85 },
     ] },
+    total: { market: 'Game Totals', line: 7, outcomes: [
+      { name: 'Over', side: 'over', line: 7, odds: 1.91 },
+      { name: 'Under', side: 'under', line: 7, odds: 1.91 },
+    ] },
   };
-  game.history = [{ at: '2026-09-30T12:00:00.000Z', ml: game.ml, hd: game.hd }];
+  game.history = [{ at: '2026-09-30T12:00:00.000Z', ml: game.ml, hd: game.hd, total: game.total }];
   game.events = [];
   const odds = {
     provider: 'bet365-official', updated: '2026-09-30T12:00:00.000Z',
@@ -112,7 +116,12 @@ test('renders Bet365 prices, official favorite, manual swap, and a 6.5 total', a
   const handicapRows = [...handicap.querySelectorAll('.bmkt-row .bnm')].map((node) => node.textContent);
   assert.match(handicapRows[0], /颶風.*-1\.5.*BET365 2\.85/);
   assert.match(handicapRows[1], /佛羅里.*\+1\.5.*BET365 1\.40/);
-  assert.equal(card.querySelector('.basis input').value, '6.5');
+  assert.equal(card.querySelector('.basis input').value, '7');
+  const totalRows = [...card.querySelectorAll('.bmkt')]
+    .find((section) => section.querySelector('.mname')?.textContent === '大小')
+    .querySelectorAll('.bmkt-row .bnm');
+  assert.match(totalRows[0].textContent, /7 · BET365 1\.91/);
+  assert.match(totalRows[1].textContent, /7 · BET365 1\.91/);
 
   card.querySelector('.bswap').click();
   const swapped = await waitFor(() => {

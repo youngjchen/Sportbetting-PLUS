@@ -79,6 +79,13 @@ test('三方盤口列顯示獨贏、讓分、大小與雙邊賠率', () => {
   assert.equal(sourceText('BET365', null, model), 'BET365：未開盤');
 });
 
+test('BET365 列依實際市場來源標示官網或 BetExplorer 備援', () => {
+  const official = { ...stake, provider: 'bet365-official' };
+  const fallback = { ...stake, provider: 'betexplorer' };
+  assert.match(sourceText('BET365', official, model), /^BET365 官網：/);
+  assert.match(sourceText('BET365', fallback, model), /^BetExplorer 備援：/);
+});
+
 test('卡片監控區同時呈現三方，並可展開 STAKE 歷史', () => {
   const dom = new JSDOM('<!doctype html><body></body>');
   const row = renderMonitor(model, {}, { stake, bet365: null }, NOW, dom.window.document);

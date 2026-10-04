@@ -98,7 +98,20 @@
 
   function sourceText(label, source, model) {
     const data = marketShape(source, model);
-    if (!data) return `${label}：未開盤`;
+    let displayLabel = label;
+    if (label === 'BET365' && source) {
+      const providers = new Set();
+      if (source.provider) providers.add(source.provider);
+      if (source.markets) Object.values(source.markets).forEach((market) => {
+        if (market && market.provider) providers.add(market.provider);
+      });
+      const official = providers.has('bet365-official');
+      const fallback = providers.has('betexplorer');
+      if (official && fallback) displayLabel = 'BET365 官網＋BetExplorer 備援';
+      else if (official) displayLabel = 'BET365 官網';
+      else if (fallback) displayLabel = 'BetExplorer 備援';
+    }
+    if (!data) return `${displayLabel}：未開盤`;
     const away = model && model.away || data.away || '客隊';
     const home = model && model.home || data.home || '主隊';
     const parts = [];
@@ -114,7 +127,7 @@
     if (data.total && data.total.line != null) {
       parts.push(`大 ${data.total.line} ${odds(data.total.over)}／小 ${data.total.line} ${odds(data.total.under)}`);
     }
-    return parts.length ? `${label}：${parts.join('｜')}` : `${label}：未開盤`;
+    return parts.length ? `${displayLabel}：${parts.join('｜')}` : `${displayLabel}：未開盤`;
   }
 
   function timeText(value) {

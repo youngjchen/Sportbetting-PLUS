@@ -204,13 +204,17 @@
 
     const sourceLine = numberOrNaN(source.hdVal);
     const activeTotal = numberOrNaN(stakeMatch && stakeMatch.ou && stakeMatch.ou.line);
+    const betTotal = numberOrNaN(bet365Match && bet365Match.total && bet365Match.total.line);
     const sourceTotal = numberOrNaN(source.totLine);
     return {
       hdFav,
       hdVal: hasStakeHd ? Math.abs(stakeLine) :
         (hasBetHd ? Math.abs(betLine) : (Number.isFinite(sourceLine) ? Math.abs(sourceLine) : source.hdVal)),
       totLine: Number.isFinite(activeTotal) ? Math.abs(activeTotal) :
-        (Number.isFinite(sourceTotal) ? Math.abs(sourceTotal) : null),
+        (Number.isFinite(betTotal) ? Math.abs(betTotal) :
+          (Number.isFinite(sourceTotal) ? Math.abs(sourceTotal) : null)),
+      totSrc: Number.isFinite(activeTotal) ? 'STAKE' :
+        (Number.isFinite(betTotal) ? 'BET365' : source.totSrc),
       hdSrc: hasStakeHd ? 'STAKE' : (hasBetHd ? 'BET365' : source.hdSrc),
       stake: stakeMatch || null,
       bet365: bet365Match || null,
