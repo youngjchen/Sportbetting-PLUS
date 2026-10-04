@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-04T04:03:23.713Z",
+  "generatedAt": "2026-10-04T04:08:14.275Z",
   "officialScheduleCount": 23,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-04T04:03:23.713Z",
-      "lastAttemptAt": "2026-10-04T04:03:23.713Z",
+      "lastSuccessAt": "2026-10-04T04:08:14.275Z",
+      "lastAttemptAt": "2026-10-04T04:08:14.275Z",
       "error": null,
       "matched": 1,
       "health": {
-        "discovered": 4,
+        "discovered": 3,
         "matched": 1,
         "unmatched": 2,
         "failed": 0,
@@ -19,8 +19,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-04T04:03:23.713Z",
-      "lastAttemptAt": "2026-10-04T04:03:23.713Z",
+      "lastSuccessAt": "2026-10-04T04:08:14.275Z",
+      "lastAttemptAt": "2026-10-04T04:08:14.275Z",
       "error": null,
       "matched": 3,
       "health": {
@@ -33,8 +33,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-04T04:03:23.713Z",
-      "lastAttemptAt": "2026-10-04T04:03:23.713Z",
+      "lastSuccessAt": "2026-10-04T04:08:14.275Z",
+      "lastAttemptAt": "2026-10-04T04:08:14.275Z",
       "error": null,
       "matched": 5,
       "health": {
@@ -47,8 +47,8 @@
     },
     "CPBL": {
       "status": "partial",
-      "lastSuccessAt": "2026-10-04T04:03:23.713Z",
-      "lastAttemptAt": "2026-10-04T04:03:23.713Z",
+      "lastSuccessAt": "2026-10-04T04:08:14.275Z",
+      "lastAttemptAt": "2026-10-04T04:08:14.275Z",
       "error": null,
       "matched": 3,
       "health": {
@@ -93,7 +93,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:01.244Z",
+      "observedAt": "2026-10-04T04:08:01.738Z",
       "frozenAt": null,
       "favoriteFlipCount": 1,
       "favoriteTransitions": [
@@ -372,7 +372,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:01.395Z",
+      "observedAt": "2026-10-04T04:08:01.887Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -593,7 +593,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:01.933Z",
+      "observedAt": "2026-10-04T04:08:02.421Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -739,21 +739,21 @@
       "fixtureId": "24dbdf26-27d5-4452-8e8b-f0611f9c93d0",
       "slug": "46863557-samsung-lions-doosan-bears",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46863557-samsung-lions-doosan-bears",
-      "favorite": "home",
+      "favorite": "away",
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 1.52,
-        "home": 2.44
+        "away": 2.46,
+        "home": 1.51
       },
       "moneyline": {
-        "away": 2.03,
-        "home": 1.8
+        "away": 1.93,
+        "home": 1.88
       },
       "total": {
         "line": 9.5,
-        "over": 2,
-        "under": 1.76
+        "over": 1.98,
+        "under": 1.77
       },
       "sources": {
         "direction": "stake-official",
@@ -762,10 +762,16 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:02.256Z",
+      "observedAt": "2026-10-04T04:08:02.747Z",
       "frozenAt": null,
-      "favoriteFlipCount": 0,
-      "favoriteTransitions": [],
+      "favoriteFlipCount": 1,
+      "favoriteTransitions": [
+        {
+          "at": "2026-10-04T04:08:02.747Z",
+          "from": "home",
+          "to": "away"
+        }
+      ],
       "history": [
         {
           "observedAt": "2026-10-03T14:22:25.737Z",
@@ -974,6 +980,32 @@
             "moneyline": "stake-official"
           },
           "partial": false
+        },
+        {
+          "observedAt": "2026-10-04T04:08:02.747Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.46,
+            "home": 1.51
+          },
+          "moneyline": {
+            "away": 1.93,
+            "home": 1.88
+          },
+          "total": {
+            "line": 9.5,
+            "over": 1.98,
+            "under": 1.77
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -1009,7 +1041,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:02.408Z",
+      "observedAt": "2026-10-04T04:08:02.901Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -1178,7 +1210,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:03.116Z",
+      "observedAt": "2026-10-04T04:08:03.665Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -1295,7 +1327,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:03.266Z",
+      "observedAt": "2026-10-04T04:08:03.822Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -1412,7 +1444,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:03.421Z",
+      "observedAt": "2026-10-04T04:08:03.972Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -2328,7 +2360,7 @@
         "moneyline": "stake-official"
       },
       "partial": true,
-      "observedAt": "2026-10-04T04:03:23.041Z",
+      "observedAt": "2026-10-04T04:08:14.013Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -2424,7 +2456,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:00.622Z",
+      "observedAt": "2026-10-04T04:08:00.529Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -2593,7 +2625,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:03.741Z",
+      "observedAt": "2026-10-04T04:08:04.296Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -2658,7 +2690,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-04T04:03:23.713Z",
+      "observedAt": "2026-10-04T04:08:14.275Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
