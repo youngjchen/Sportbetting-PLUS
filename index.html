@@ -2178,6 +2178,28 @@ window.__installCloudBoardBootstrap = function(payload){
     throw error;
   }
 };
+// 雲端聯集救援：本機不是空盤也能補回雲端獨有的歷史／日期，但只有在
+// 呼叫端讀到的 localStorage 版本仍完全相同、且沒有尚未落地的畫面變更時才安裝。
+// 同場衝突已由 github-sync 的 mergeDocs 保證「本機優先」，這裡只負責原子寫入。
+window.__installCloudBoardUnion = function(payload, expectedStored){
+  window.__boardCloudUnionRetryNeeded = false;
+  if(_loadBlocked || window.__boardSaveOK===false || window.__boardCloudRestorePending) return false;
+  if(_persistJSON!=null || _saveTimer!=null){ window.__boardCloudUnionRetryNeeded = true; return false; }
+  let current;
+  try{ current = localStorage.getItem(LS_KEY); }catch(_){ return false; }
+  if(current !== expectedStored){ window.__boardCloudUnionRetryNeeded = true; return false; }
+  window.__boardCloudRestorePending = true;
+  if(_persistTimer){ clearTimeout(_persistTimer); _persistTimer=null; }
+  _persistSeq++;
+  try{
+    if(window.__storagePressure) window.__storagePressure.setCritical(localStorage,LS_KEY,payload);
+    else localStorage.setItem(LS_KEY,payload);
+    return true;
+  }catch(error){
+    window.__boardCloudRestorePending = false;
+    throw error;
+  }
+};
 function save(){
   if(_loadBlocked || window.__boardCloudRestorePending) return;
   syncStateToDoc();
@@ -2240,7 +2262,10 @@ document.addEventListener("visibilitychange", ()=>{
   if(_persistTimer){ clearTimeout(_persistTimer); _persistTimer = null; }
   persistFlush();
 });
-function saveSoon(){ if(_saveTimer) clearTimeout(_saveTimer); _saveTimer=setTimeout(save, 250); }
+function saveSoon(){
+  if(_saveTimer) clearTimeout(_saveTimer);
+  _saveTimer=setTimeout(()=>{ _saveTimer=null; save(); }, 250);
+}
 let _loadErr = null;                                  // 讀取失敗的原因（要講給使用者聽，不能吞掉）
 function loadDocFromString(str){
   try{
@@ -8166,6 +8191,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261005restore1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261005union1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

@@ -155,3 +155,97 @@ test('an in-flight compressed save cannot overwrite a completed cloud bootstrap'
     dom.window.close();
   }
 });
+
+test('cloud union install accepts an unchanged persisted board even when it already has cards', async () => {
+  const today = new Date().toLocaleDateString('sv-SE');
+  const initialDoc = {
+    version: 2,
+    activeDate: today,
+    boards: { [today]: { items: [{ type: 'match', away: 'Local', home: 'Card' }] } },
+    games: [],
+  };
+  let html = fs.readFileSync('index.html', 'utf8');
+  html = html.replace(/<script\s+src=[^>]*><\/script>/g, '');
+  const dom = new JSDOM(html, {
+    url: 'https://x.test/',
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole: new VirtualConsole(),
+    beforeParse(win) {
+      win.localStorage.setItem('sportbetting_plus_doc_v2', JSON.stringify(initialDoc));
+      win.CompressionStream = undefined;
+      win.DecompressionStream = undefined;
+      win.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
+      win.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+      win.HTMLCanvasElement.prototype.getContext = () => null;
+      win.fetch = () => Promise.reject(new Error('offline-test'));
+      win.scrollTo = () => {};
+      win.alert = () => {};
+      win.confirm = () => false;
+      win.prompt = () => null;
+      Object.defineProperty(win, 'innerWidth', { value: 1300, configurable: true });
+    },
+  });
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 350));
+    const expected = dom.window.localStorage.getItem('sportbetting_plus_doc_v2');
+    assert.equal(typeof dom.window.__installCloudBoardUnion, 'function');
+    assert.equal(dom.window.__installCloudBoardUnion('must-not-win', expected + '-stale'), false);
+    assert.equal(dom.window.localStorage.getItem('sportbetting_plus_doc_v2'), expected);
+    assert.equal(dom.window.__installCloudBoardUnion('merged-cloud-and-local', expected), true);
+    assert.equal(dom.window.localStorage.getItem('sportbetting_plus_doc_v2'), 'merged-cloud-and-local');
+  } finally {
+    dom.window.close();
+  }
+});
+
+test('saveSoon releases its timer latch so a later cloud union can install', async () => {
+  const today = new Date().toLocaleDateString('sv-SE');
+  const initialDoc = {
+    version: 2,
+    activeDate: today,
+    boards: { [today]: { items: [{ type: 'match', away: 'Local', home: 'Card' }] } },
+    games: [],
+  };
+  let html = fs.readFileSync('index.html', 'utf8');
+  html = html.replace(/<script\s+src=[^>]*><\/script>/g, '');
+  const dom = new JSDOM(html, {
+    url: 'https://x.test/',
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole: new VirtualConsole(),
+    beforeParse(win) {
+      win.localStorage.setItem('sportbetting_plus_doc_v2', JSON.stringify(initialDoc));
+      win.CompressionStream = undefined;
+      win.DecompressionStream = undefined;
+      win.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
+      win.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+      win.HTMLCanvasElement.prototype.getContext = () => null;
+      win.fetch = () => Promise.reject(new Error('offline-test'));
+      win.scrollTo = () => {};
+      win.alert = () => {};
+      win.confirm = () => false;
+      win.prompt = () => null;
+      Object.defineProperty(win, 'innerWidth', { value: 1300, configurable: true });
+    },
+  });
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 350));
+    dom.window.saveSoon();
+    const whileBusy = dom.window.localStorage.getItem('sportbetting_plus_doc_v2');
+    assert.equal(dom.window.__installCloudBoardUnion('too-early', whileBusy), false);
+    assert.equal(dom.window.__boardCloudUnionRetryNeeded, true);
+    let installed = false;
+    for (let attempt = 0; attempt < 20 && !installed; attempt++) {
+      await new Promise(resolve => setTimeout(resolve, 100));
+      const afterSave = dom.window.localStorage.getItem('sportbetting_plus_doc_v2');
+      installed = dom.window.__installCloudBoardUnion('merged-after-save', afterSave);
+    }
+    assert.equal(installed, true);
+    assert.equal(dom.window.localStorage.getItem('sportbetting_plus_doc_v2'), 'merged-after-save');
+  } finally {
+    dom.window.close();
+  }
+});

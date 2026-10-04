@@ -50,11 +50,17 @@
       try{ alert('⚠ 手動卦儲存失敗，請不要關閉頁面；先按「☁ 上傳卜卦紀錄」或匯出備份。'); }catch(_){}
     });
   }
+  async function _readDvStorage(){
+    if(window.__largeStorage) return await window.__largeStorage.readJSON(STORE_KEY,LS_KEY);
+    const raw=localStorage.getItem(LS_KEY)||'[]';
+    if(raw.slice(0,3)==='gz:') return JSON.parse(await _dvUnGz(raw.slice(3)))||[];
+    return JSON.parse(raw)||[];
+  }
   _dvReady=(async () => {   // 開機：先驗證搬入 IndexedDB；成功才由共用層移除舊 localStorage
     try{
       if(window.__largeStorage){
         await window.__largeStorage.migrate(STORE_KEY,LS_KEY);
-        _dvCache=await window.__largeStorage.readJSON(STORE_KEY,LS_KEY);
+        _dvCache=await _readDvStorage();
         return;
       }
       const raw = localStorage.getItem(LS_KEY) || '';
@@ -63,8 +69,21 @@
     }catch(e){ console.warn('[卜卦快取] 解壓失敗，保留原樣不動：', e); }
   })();
   window.addEventListener('sbplus-casts-updated',async e=>{
-    if(e.detail?.storeKey!==STORE_KEY||!window.__largeStorage) return;
-    _dvCache=await window.__largeStorage.readJSON(STORE_KEY,LS_KEY); renderHist();
+    if(e.detail?.storeKey!==STORE_KEY) return;
+    // 串在既有 migration／前一輪 refresh 後面；一次暫時性讀取失敗不可讓 _dvReady
+    // 永久停在 rejected，否則後續 render 與新起卦保存都會一起失效。
+    const prior=_dvReady;
+    let refreshed=false;
+    _dvReady=prior.catch(()=>{}).then(async()=>{
+      _dvCache=await _readDvStorage();
+      refreshed=true;
+    }).catch(error=>{ console.warn('[卜卦快取] 同步後重讀失敗：',error); });
+    await _dvReady;
+    if(!refreshed) return;
+    const histBox=document.getElementById('dv-p-hist');
+    if(histBox&&histBox.style.display!=='none') renderHist();
+    const statsBox=document.getElementById('dv-p-stats');
+    if(statsBox&&statsBox.style.display!=='none') renderStats();
   });
 
   function loadScript(src) { return new Promise((ok, no) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = ok; s.onerror = () => no(new Error('load fail ' + src)); document.head.appendChild(s); }); }
@@ -576,6 +595,7 @@
 
   async function renderStats() {
     const box = document.getElementById('dv-p-stats'); box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">計算中（即時對 MLB 官方結果結算）…</div></div>';
+    await _dvReady;
     const list = dvLoad().slice();
     const res = await resolveOutcomes(list);
     const liu = list.filter(e => e.method === '六爻'), mei = list.filter(e => e.method === '梅花'), qiu = list.filter(e => e.method === '求籤'), xlr = list.filter(e => e.method === '小六壬');
@@ -622,6 +642,7 @@
   async function renderHist() {
     const box = document.getElementById('dv-p-hist');
     box.innerHTML = '<div class="dvp-wrap"><div class="dv-empty">整理中…</div></div>';
+    await _dvReady;
     const list = dvLoad().slice();   // unshift 序：越前越新
     const res = await resolveOutcomes(list);
     const latest = {}, counts = {};

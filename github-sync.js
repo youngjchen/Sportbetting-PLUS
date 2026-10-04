@@ -185,6 +185,42 @@
     M.gamesVersion = (M.gamesVersion || 0) + 1;
     return { doc: M, addedG: addedG, addedC: addedC };
   }
+  // 開機緊急修復專用：歷史賽事做 union，但盤面只補「整個日期 key 都不存在」的日期。
+  // 已存在日期即使 items=[] 也可能是使用者刻意清空；不可像跨裝置手動下載那樣補單卡，
+  // 否則使用者刪掉的卡會在每次重新整理後被雲端復活。
+  function mergeMissingDatesAndGames(giver, keeper) {
+    if (!keeper || !keeper.boards) return { doc: giver, addedG: 0, addedC: 0 };
+    if (!giver || !giver.boards) return { doc: keeper, addedG: 0, addedC: 0 };
+    var M = JSON.parse(JSON.stringify(keeper));
+    M.games = (keeper.games || []).slice();
+    var sids = {}, keys = {}, addedG = 0, addedC = 0;
+    M.games.forEach(function (g) {
+      if (g.sid) sids[g.sid] = 1;
+      keys[gkeyOf(g)] = 1; keys[gfallbackOf(g)] = 1;
+    });
+    (giver.games || []).forEach(function (g) {
+      if ((g.sid && sids[g.sid]) || keys[gkeyOf(g)] || keys[gfallbackOf(g)]) return;
+      M.games.push(g);
+      if (g.sid) sids[g.sid] = 1;
+      keys[gkeyOf(g)] = 1; keys[gfallbackOf(g)] = 1; addedG++;
+    });
+    M.games.sort(function (a, b) { return a.date < b.date ? -1 : a.date > b.date ? 1 : 0; });
+
+    var purged = {};
+    ((keeper.purgedDates) || []).forEach(function (d) { purged[d] = 1; });
+    Object.keys(giver.boards || {}).forEach(function (d) {
+      if (Object.prototype.hasOwnProperty.call(keeper.boards, d) || purged[d]) return;
+      var board = giver.boards[d];
+      if (!board || !Array.isArray(board.items)) return;
+      M.boards[d] = JSON.parse(JSON.stringify(board));
+      addedC += board.items.filter(function (item) { return item && item.type === 'match'; }).length;
+    });
+    var tomb = {};
+    ((keeper.purgedDates) || []).concat((giver.purgedDates) || []).forEach(function (d) { tomb[d] = 1; });
+    M.purgedDates = Object.keys(tomb);
+    if (addedG) M.gamesVersion = (M.gamesVersion || 0) + 1;
+    return { doc: M, addedG: addedG, addedC: addedC };
+  }
   // 讀雲端現況（公開 repo 免權杖）。回傳 null＝雲端還沒有檔案；throw＝讀取失敗（呼叫端要當回事）
   async function fetchCloudDoc(pat) {
     return await fetchCloudState(API, PATH, pat, null);
@@ -243,12 +279,56 @@
     catch (error) { window.__boardCloudRestorePending = false; throw error; }
     return true;
   }
-  async function autoRestoreEmptyBoard() {
+  async function mergeMissingBoardDataFromCloud() {
+    if (window.__boardSaveOK === false) return false;
+    var expectedRaw = '';
+    try { expectedRaw = localStorage.getItem(DOC_KEY) || ''; } catch (_) { return false; }
+    var local;
+    try { local = await readLocalBoardForBootstrap(); } catch (_) { return false; }
+    if (!local || !local.boards) return false;
+
+    var cloud = await fetchCloudDoc('');
+    if (!boardHasMeaningfulData(cloud)) return false;
+    var merged = mergeMissingDatesAndGames(cloud, local); // keeper=本機；只補歷史與整個遺失日期
+    if (!merged.addedG && !merged.addedC) return false;
+
+    // fetch／壓縮期間若本機已存出更新版，重新以最新版為 keeper 合併一次。
+    var latestRaw = '';
+    try { latestRaw = localStorage.getItem(DOC_KEY) || ''; } catch (_) { return false; }
+    if (latestRaw !== expectedRaw) {
+      expectedRaw = latestRaw;
+      try { local = await readLocalBoardForBootstrap(); } catch (_) { return false; }
+      if (!local || !local.boards) return false;
+      merged = mergeMissingDatesAndGames(cloud, local);
+      if (!merged.addedG && !merged.addedC) return false;
+    }
+    var payload = await docToStore(JSON.stringify(merged.doc));
+    if (typeof window.__installCloudBoardUnion === 'function') {
+      return !!window.__installCloudBoardUnion(payload, expectedRaw);
+    }
+    // 舊版頁面沒有原子安裝鉤子時，只允許原本的空盤路徑處理，絕不覆蓋有內容的記憶體。
+    if (boardMemoryHasMeaningfulData()) return false;
+    if ((localStorage.getItem(DOC_KEY) || '') !== expectedRaw) return false;
+    window.__boardCloudRestorePending = true;
+    try { storeCritical(DOC_KEY, payload); }
+    catch (error) { window.__boardCloudRestorePending = false; throw error; }
+    return true;
+  }
+  var _autoBoardRestoreAttempt = 0;
+  async function autoRestoreBoard() {
+    _autoBoardRestoreAttempt++;
+    window.__boardCloudUnionRetryNeeded = false;
     try {
-      if (!await restoreEmptyBoardFromCloud()) return;
-      location.reload();
+      if (await restoreEmptyBoardFromCloud()) { location.reload(); return; }
+      if (await mergeMissingBoardDataFromCloud()) location.reload();
     } catch (error) {
       console.warn('[盤面自動還原]', error);
+    } finally {
+      // 壓縮存檔或本機版本剛好變動時，原子安裝會要求重試；最多 4 次，避免無限抓檔。
+      if (window.__boardCloudUnionRetryNeeded && _autoBoardRestoreAttempt < 4) {
+        window.__boardCloudUnionRetryNeeded = false;
+        setTimeout(autoRestoreBoard, 2000 * _autoBoardRestoreAttempt);
+      }
     }
   }
 
@@ -502,7 +582,8 @@
 
   // 供測試
   window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, localDocPlain: localDocPlain,
-    upload: upload, download: download, mergeDocs: mergeDocs, fetchCloudDoc: fetchCloudDoc,
-    boardHasMeaningfulData: boardHasMeaningfulData, restoreEmptyBoardFromCloud: restoreEmptyBoardFromCloud };
-  setTimeout(autoRestoreEmptyBoard, 1200);
+    upload: upload, download: download, mergeDocs: mergeDocs, mergeMissingDatesAndGames: mergeMissingDatesAndGames, fetchCloudDoc: fetchCloudDoc,
+    boardHasMeaningfulData: boardHasMeaningfulData, restoreEmptyBoardFromCloud: restoreEmptyBoardFromCloud,
+    mergeMissingBoardDataFromCloud: mergeMissingBoardDataFromCloud };
+  setTimeout(autoRestoreBoard, 1200);
 })();

@@ -27,7 +27,7 @@ function statusResponse(status) {
   };
 }
 
-function loadSync({ localDoc = null, casts = [], fetchImpl }) {
+function loadSync({ localDoc = null, casts = [], fetchImpl, scheduledTimers = null }) {
   const dom = new JSDOM('<!doctype html><body></body>', {
     url: 'https://youngjchen.github.io/Sportbetting-PLUS/',
     runScripts: 'outside-only',
@@ -38,7 +38,9 @@ function loadSync({ localDoc = null, casts = [], fetchImpl }) {
   win.CompressionStream = undefined;
   win.DecompressionStream = undefined;
   win.fetch = fetchImpl;
-  win.setTimeout = () => 0;
+  win.setTimeout = scheduledTimers
+    ? (fn, ms) => { scheduledTimers.push({ fn, ms }); return scheduledTimers.length; }
+    : () => 0;
   win.clearTimeout = () => {};
   win.alert = () => {};
   win.confirm = () => false;
@@ -219,6 +221,115 @@ test('automatic board restore rechecks memory after the cloud fetch finishes', a
     resolveFetch();
     assert.equal(await restoring, false);
     assert.equal(ctx.win.__boardCloudRestorePending, undefined);
+  } finally {
+    ctx.dom.window.close();
+  }
+});
+
+test('automatic board union repairs missing history and dates without replacing local cards', async () => {
+  const localDoc = {
+    version: 2,
+    activeDate: '2026-10-05',
+    boards: {
+      '2026-10-05': { items: [{ type: 'match', away: 'Local', home: 'Only', gameTime: '12:00' }] },
+    },
+    games: [],
+  };
+  const cloudDoc = {
+    version: 2,
+    activeDate: '2026-10-04',
+    boards: {
+      '2026-10-04': { items: [{ type: 'match', away: 'Cloud', home: 'Recovered', gameTime: '08:00' }] },
+    },
+    games: [{ sid: 'cloud-history', date: '2026-10-04', awayTeam: 'Cloud', homeTeam: 'Recovered', gameTime: '08:00' }],
+  };
+  const ctx = loadSync({
+    localDoc,
+    fetchImpl: async () => bytesResponse(cloudDoc),
+  });
+  ctx.win.__boardMemoryHasMeaningfulData = () => true;
+  ctx.win.__installCloudBoardUnion = (payload, expectedRaw) => {
+    assert.equal(ctx.win.localStorage.getItem(DOC_KEY), expectedRaw);
+    ctx.win.localStorage.setItem(DOC_KEY, payload);
+    return true;
+  };
+
+  try {
+    assert.equal(typeof ctx.win.__ghSync.mergeMissingBoardDataFromCloud, 'function');
+    assert.equal(await ctx.win.__ghSync.mergeMissingBoardDataFromCloud(), true);
+    const restored = JSON.parse(ctx.win.localStorage.getItem(DOC_KEY));
+    assert.equal(restored.games.length, 1);
+    assert.equal(restored.games[0].sid, 'cloud-history');
+    assert.equal(restored.boards['2026-10-04'].items[0].away, 'Cloud');
+    assert.equal(restored.boards['2026-10-05'].items[0].away, 'Local');
+  } finally {
+    ctx.dom.window.close();
+  }
+});
+
+test('automatic board union never resurrects cards deleted from an existing local date', async () => {
+  const localDoc = {
+    version: 2,
+    activeDate: '2026-10-05',
+    boards: {
+      '2026-10-04': { items: [] },
+      '2026-10-05': { items: [{ type: 'match', away: 'Local', home: 'Card', gameTime: '12:00' }] },
+    },
+    games: [],
+  };
+  const cloudDoc = {
+    version: 2,
+    activeDate: '2026-10-04',
+    boards: {
+      '2026-10-04': { items: [{ type: 'match', away: 'Deleted', home: 'Must Stay Deleted', gameTime: '08:00' }] },
+    },
+    games: [{ sid: 'history-still-restored', date: '2026-10-04', awayTeam: 'Deleted', homeTeam: 'Must Stay Deleted', gameTime: '08:00' }],
+  };
+  const ctx = loadSync({ localDoc, fetchImpl: async () => bytesResponse(cloudDoc) });
+  ctx.win.__boardMemoryHasMeaningfulData = () => true;
+  ctx.win.__installCloudBoardUnion = (payload) => {
+    ctx.win.localStorage.setItem(DOC_KEY, payload);
+    return true;
+  };
+
+  try {
+    assert.equal(await ctx.win.__ghSync.mergeMissingBoardDataFromCloud(), true);
+    const restored = JSON.parse(ctx.win.localStorage.getItem(DOC_KEY));
+    assert.equal(restored.games.length, 1);
+    assert.deepEqual(restored.boards['2026-10-04'].items, []);
+  } finally {
+    ctx.dom.window.close();
+  }
+});
+
+test('automatic board restore schedules a bounded retry after an atomic install race', async () => {
+  const scheduled = [];
+  const localDoc = {
+    version: 2,
+    activeDate: '2026-10-05',
+    boards: { '2026-10-05': { items: [{ type: 'match', away: 'Local', home: 'Card', gameTime: '12:00' }] } },
+    games: [],
+  };
+  const cloudDoc = {
+    version: 2,
+    activeDate: '2026-10-04',
+    boards: { '2026-10-04': { items: [{ type: 'match', away: 'Cloud', home: 'Recovered', gameTime: '08:00' }] } },
+    games: [],
+  };
+  const ctx = loadSync({ localDoc, fetchImpl: async () => bytesResponse(cloudDoc), scheduledTimers: scheduled });
+  ctx.win.__boardMemoryHasMeaningfulData = () => true;
+  ctx.win.__installCloudBoardUnion = () => {
+    ctx.win.__boardCloudUnionRetryNeeded = true;
+    return false;
+  };
+
+  try {
+    const initial = scheduled.find(timer => timer.ms === 1200);
+    assert.ok(initial, 'initial board auto-restore timer should exist');
+    const beforeRetry = scheduled.length;
+    await initial.fn();
+    assert.equal(scheduled.length, beforeRetry + 1);
+    assert.equal(scheduled.at(-1).ms, 2000);
   } finally {
     ctx.dom.window.close();
   }
