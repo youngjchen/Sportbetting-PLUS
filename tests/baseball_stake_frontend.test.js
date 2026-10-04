@@ -208,3 +208,9 @@ test('index hooks both favorite swap and total input, and loads versioned integr
   assert.match(html, /baseball-stake-integration\.js\?v=\d+/);
   assert.match(html, /renderCardStatus\(it/);
 });
+
+test('legacy OddsPortal Stake switch evidence no longer creates a duplicate card alert', () => {
+  const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
+  assert.doesNotMatch(html, /_opGame\.handicapSwitch/);
+  assert.doesNotMatch(html, /OddsPortal 的 Stake 讓分方曾換邊/);
+});
