@@ -96,3 +96,62 @@ test('pagehide saves the newest oversized board in a synchronously readable comp
     dom.window.close();
   }
 });
+
+test('an in-flight compressed save cannot overwrite a completed cloud bootstrap', async () => {
+  const today = new Date().toLocaleDateString('sv-SE');
+  const initialDoc = {
+    version: 2,
+    activeDate: today,
+    boards: { [today]: { items: [] } },
+    games: [],
+    testRevision: 'empty-shell',
+  };
+  let html = fs.readFileSync('index.html', 'utf8');
+  html = html.replace(/<script\s+src=[^>]*><\/script>/g, '');
+  const dom = new JSDOM(html, {
+    url: 'https://x.test/',
+    runScripts: 'dangerously',
+    pretendToBeVisual: true,
+    virtualConsole: new VirtualConsole(),
+    beforeParse(win) {
+      win.localStorage.setItem('sportbetting_plus_doc_v2', JSON.stringify(initialDoc));
+      win.CompressionStream = undefined;
+      win.DecompressionStream = undefined;
+      win.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {}, addEventListener() {}, removeEventListener() {} });
+      win.ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+      win.HTMLCanvasElement.prototype.getContext = () => null;
+      win.fetch = () => Promise.reject(new Error('offline-test'));
+      win.scrollTo = () => {};
+      win.alert = () => {};
+      win.confirm = () => false;
+      win.prompt = () => null;
+      Object.defineProperty(win, 'innerWidth', { value: 1300, configurable: true });
+    },
+  });
+
+  try {
+    await new Promise(resolve => setTimeout(resolve, 350));
+    dom.window.eval(`
+      CompressionStream = function CompressionStream() {};
+      window.__releaseDelayedBoardSave = null;
+      gzToB64 = function () {
+        return new Promise(resolve => { window.__releaseDelayedBoardSave = () => resolve('delayed-old-board'); });
+      };
+      doc.testRevision = 'unsaved-local-change';
+      save();
+    `);
+
+    for (let i = 0; i < 20 && !dom.window.__releaseDelayedBoardSave; i++) {
+      await new Promise(resolve => setTimeout(resolve, 20));
+    }
+    assert.equal(typeof dom.window.__releaseDelayedBoardSave, 'function');
+    dom.window.__boardCloudRestorePending = true;
+    dom.window.localStorage.setItem('sportbetting_plus_doc_v2', 'cloud-bootstrap-won');
+    dom.window.__releaseDelayedBoardSave();
+    await new Promise(resolve => setTimeout(resolve, 50));
+
+    assert.equal(dom.window.localStorage.getItem('sportbetting_plus_doc_v2'), 'cloud-bootstrap-won');
+  } finally {
+    dom.window.close();
+  }
+});

@@ -23,6 +23,7 @@
   var DOC_KEY = 'sportbetting_plus_doc_v2';
   var PAT_KEY = 'gh_sync_pat';
   var API = 'https://api.github.com/repos/' + REPO + '/contents/' + PATH;
+  var RAW_ROOT = 'https://raw.githubusercontent.com/' + REPO + '/' + BRANCH + '/';
 
   function getPAT() { try { return localStorage.getItem(PAT_KEY) || ''; } catch (e) { return ''; } }
   function setPAT(t) { try { if (t) localStorage.setItem(PAT_KEY, t); else localStorage.removeItem(PAT_KEY); } catch (e) {} }
@@ -50,6 +51,50 @@
     if (!isGz) return new TextDecoder().decode(bytes);          // 沒壓縮的舊檔也能讀
     var stream = new Response(bytes).body.pipeThrough(new DecompressionStream('gzip'));
     return new TextDecoder().decode(await new Response(stream).arrayBuffer());
+  }
+  async function decodeStateResponse(response) {
+    return JSON.parse(await gunzipBytes(new Uint8Array(await response.arrayBuffer())));
+  }
+  function publicStateUrls(statePath) {
+    var relative;
+    try { relative = new URL('./' + statePath.replace(/^\/+/, ''), window.location.href).href; }
+    catch (_) { relative = './' + statePath.replace(/^\/+/, ''); }
+    return [relative, RAW_ROOT + statePath.replace(/^\/+/, '')];
+  }
+  async function fetchPublicState(statePath, missingValue) {
+    var urls = publicStateUrls(statePath), lastError = null;
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var r = await fetch(urls[i] + (urls[i].indexOf('?') >= 0 ? '&' : '?') + 't=' + Date.now(),
+          { cache: 'no-store' });
+        if (r.status === 404) continue;
+        if (!r.ok) { lastError = new Error('HTTP ' + r.status); continue; }
+        return await decodeStateResponse(r);
+      } catch (error) { lastError = error; }
+    }
+    if (lastError) throw lastError;
+    return missingValue;
+  }
+  async function fetchAuthenticatedState(apiUrl, pat, missingValue) {
+    if (!pat) throw new Error('缺少 GitHub 權杖，無法確認最新雲端版本');
+    var headers = { 'Accept': 'application/vnd.github.raw', 'Authorization': 'Bearer ' + pat };
+    var r = await fetch(apiUrl + '?ref=' + BRANCH + '&t=' + Date.now(), { headers: headers });
+    if (r.status === 404) return missingValue;
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    return await decodeStateResponse(r);
+  }
+  async function fetchCloudState(apiUrl, statePath, pat, missingValue) {
+    // 有 PAT 時先讀 Contents API，確保上傳前看到最新 SHA 對應內容；公開讀取則直接走
+    // Pages／raw，避開未登入 API 每 IP 每小時 60 次的共用限流。
+    if (pat) {
+      try {
+        return await fetchAuthenticatedState(apiUrl, pat, missingValue);
+      } catch (error) {
+        // 權杖失效、限流或 GitHub API 暫時失常時，純讀取仍可從 Pages/raw 安全復原。
+        console.warn('[GitHub同步] Contents API 讀取失敗，改走公開 state：', error);
+      }
+    }
+    return await fetchPublicState(statePath, missingValue);
   }
   function b64encode(bytes) { var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }
   // 本機主檔自 2026-07-13 起以 "gz:"+base64(gzip) 存放（省 localStorage 配額）。
@@ -142,12 +187,69 @@
   }
   // 讀雲端現況（公開 repo 免權杖）。回傳 null＝雲端還沒有檔案；throw＝讀取失敗（呼叫端要當回事）
   async function fetchCloudDoc(pat) {
-    var headers = { 'Accept': 'application/vnd.github.raw' };
-    if (pat) headers['Authorization'] = 'Bearer ' + pat;
-    var r = await fetch(API + '?ref=' + BRANCH + '&t=' + Date.now(), { headers: headers });
-    if (r.status === 404) return null;
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return JSON.parse(await gunzipBytes(new Uint8Array(await r.arrayBuffer())));
+    return await fetchCloudState(API, PATH, pat, null);
+  }
+  async function fetchCurrentCloudDoc(pat) {
+    return await fetchAuthenticatedState(API, pat, null);
+  }
+
+  function boardHasMeaningfulData(value) {
+    if (!value || !value.boards) return false;
+    if (Array.isArray(value.games) && value.games.length) return true;
+    if (Array.isArray(value.recent) && value.recent.length) return true;
+    if (value.stats && Object.keys(value.stats).length) return true;
+    return Object.keys(value.boards).some(function (date) {
+      var board = value.boards[date];
+      return !!(board && Array.isArray(board.items) && board.items.length);
+    });
+  }
+  async function readLocalBoardForBootstrap() {
+    var raw = await localDocPlain();
+    if (!raw) return null;
+    return JSON.parse(raw);
+  }
+  function boardMemoryHasMeaningfulData() {
+    try {
+      return typeof window.__boardMemoryHasMeaningfulData === 'function' &&
+        window.__boardMemoryHasMeaningfulData();
+    } catch (_) { return true; }                       // 無法確認時採保守策略，絕不覆蓋
+  }
+  async function restoreEmptyBoardFromCloud() {
+    // 壞掉但仍存在的本機原始資料由 index.html 的 load 閂鎖保護，絕不可拿雲端直接蓋。
+    if (window.__boardSaveOK === false || boardMemoryHasMeaningfulData()) return false;
+    var local;
+    try { local = await readLocalBoardForBootstrap(); }
+    catch (_) { return false; }
+    if (boardHasMeaningfulData(local)) return false;
+
+    var cloud = await fetchCloudDoc('');
+    if (!boardHasMeaningfulData(cloud)) return false;
+
+    // 網路等待期間使用者可能已建立卡片；寫入前再檢查一次，避免競態覆蓋。
+    if (window.__boardSaveOK === false || boardMemoryHasMeaningfulData()) return false;
+    try { local = await readLocalBoardForBootstrap(); }
+    catch (_) { return false; }
+    if (boardHasMeaningfulData(local)) return false;
+    // 從這一刻到 reload 前，舊頁記憶體裡仍是空盤；暫停 index.html 的延遲存檔，
+    // 否則它會在雲端檔寫入後又把空盤蓋回去，形成永遠還原不成功的 reload 迴圈。
+    var payload = await docToStore(JSON.stringify(cloud));
+    // 壓縮期間也可能出現使用者操作；正式頁面由 persistence owner 做最後一次原子裁決。
+    if (window.__boardSaveOK === false || boardMemoryHasMeaningfulData()) return false;
+    if (typeof window.__installCloudBoardBootstrap === 'function') {
+      return !!window.__installCloudBoardBootstrap(payload);
+    }
+    window.__boardCloudRestorePending = true;
+    try { storeCritical(DOC_KEY, payload); }
+    catch (error) { window.__boardCloudRestorePending = false; throw error; }
+    return true;
+  }
+  async function autoRestoreEmptyBoard() {
+    try {
+      if (!await restoreEmptyBoardFromCloud()) return;
+      location.reload();
+    } catch (error) {
+      console.warn('[盤面自動還原]', error);
+    }
   }
 
   /* ── 手動卦紀錄雲端備份（2026-07-27 新增）─────────────────────────────
@@ -177,12 +279,16 @@
     } catch (e) { return []; }
   }
   async function writeLocalCasts(list) {
-    if (window.__largeStorage) return await window.__largeStorage.writeJSON('baseball-casts', list, CASTS_KEY);
-    try {
-      var buf = new Uint8Array(await new Response(new Blob([JSON.stringify(list)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
-      var bin = ''; for (var i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
-      localStorage.setItem(CASTS_KEY, 'gz:' + btoa(bin));
-    } catch (e) { try { localStorage.setItem(CASTS_KEY, JSON.stringify(list)); } catch (_) {} }
+    if (window.__largeStorage) await window.__largeStorage.writeJSON('baseball-casts', list, CASTS_KEY);
+    else {
+      try {
+        var buf = new Uint8Array(await new Response(new Blob([JSON.stringify(list)]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer());
+        var bin = ''; for (var i = 0; i < buf.length; i += 0x8000) bin += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+        localStorage.setItem(CASTS_KEY, 'gz:' + btoa(bin));
+      } catch (e) { localStorage.setItem(CASTS_KEY, JSON.stringify(list)); }
+    }
+    window.dispatchEvent(new CustomEvent('sbplus-casts-updated', { detail: { storeKey: 'baseball-casts' } }));
+    return true;
   }
   function mergeCasts(a, b) {
     var m = {}, out = [];
@@ -192,19 +298,18 @@
     return out;
   }
   async function fetchCloudCasts(pat) {
-    var headers = { 'Accept': 'application/vnd.github.raw' };
-    if (pat) headers['Authorization'] = 'Bearer ' + pat;
-    var r = await fetch(CASTS_API + '?ref=' + BRANCH + '&t=' + Date.now(), { headers: headers });
-    if (r.status === 404) return [];                       // 還沒建檔
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    return JSON.parse(await gunzipBytes(new Uint8Array(await r.arrayBuffer())));
+    return await fetchCloudState(CASTS_API, CASTS_PATH, pat, []);
+  }
+  async function fetchCurrentCloudCasts(pat) {
+    return await fetchAuthenticatedState(CASTS_API, pat, []);
   }
   // 回傳 {ok, added, total}；silent=true 時不彈窗（自動備份用）
   async function pushCasts(silent) {
     var pat = getPAT(); if (!pat) { if (!silent) alert('尚未設定 GitHub 權杖，無法備份卜卦紀錄。'); return { ok: false }; }
     var local = await readLocalCasts();
     try {
-      var cloud = await fetchCloudCasts(pat);
+      // 上傳前必須讀到 API 的最新版本；公開 Pages/raw 可能落後數分鐘，不能拿來做寫前合併。
+      var cloud = await fetchCurrentCloudCasts(pat);
       var merged = mergeCasts(cloud, local);
       var addedFromCloud = merged.length - local.length;
       var content = b64encode(await gzipStr(JSON.stringify(merged)));
@@ -254,7 +359,7 @@
     _dvTimer = setTimeout(function () { pushCasts(true); }, 90000);
   }
   window.__dvSync = { push: pushCasts, pull: pullCasts, schedule: scheduleCastBackup, merge: mergeCasts, key: castKey,
-    read: readLocalCasts, write: writeLocalCasts };
+    read: readLocalCasts, write: writeLocalCasts, fetchCloudCasts: fetchCloudCasts };
   // 開板即拉一次雲端（把另一台/上次備份的卦補回來），失敗安靜略過
   setTimeout(function () { try { pullCasts(true); } catch (e) {} }, 4000);
 
@@ -285,7 +390,8 @@
       // 先把雲端那份合併進來，再寫回去。直接覆蓋會吃掉另一台裝置的結算成果（見 mergeDocs 註解）。
       var localDoc = JSON.parse(doc), merged = null;
       try {
-        var cloudDoc = await fetchCloudDoc(pat);
+        // 寫前合併只接受 Contents API 的最新版本；讀不到就中止／由使用者明確決定是否覆蓋。
+        var cloudDoc = await fetchCurrentCloudDoc(pat);
         merged = mergeDocs(cloudDoc, localDoc);
       } catch (e) {
         if (!confirm('讀不到雲端現況（' + e.message + '），沒辦法合併。\n\n' +
@@ -395,5 +501,8 @@
   else injectButtons();
 
   // 供測試
-  window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, localDocPlain: localDocPlain, upload: upload, download: download, mergeDocs: mergeDocs };
+  window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, localDocPlain: localDocPlain,
+    upload: upload, download: download, mergeDocs: mergeDocs, fetchCloudDoc: fetchCloudDoc,
+    boardHasMeaningfulData: boardHasMeaningfulData, restoreEmptyBoardFromCloud: restoreEmptyBoardFromCloud };
+  setTimeout(autoRestoreEmptyBoard, 1200);
 })();

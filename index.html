@@ -2153,8 +2153,33 @@ let _persistJSON = null, _persistTimer = null, _persistSeq = 0;
    空盤面把「其實還躺在 localStorage、還救得回來」的資料整包蓋掉。
    ＝把一次可回復的讀取失敗，升級成不可回復的資料毀滅。寧可不存，也不要蓋。 */
 let _loadBlocked = false;
+function boardMemoryHasMeaningfulData(){
+  if((doc.games||[]).length || (doc.recent||[]).length) return true;
+  if(doc.stats && Object.keys(doc.stats).length) return true;
+  if((state.items||[]).length) return true;
+  return Object.keys(doc.boards||{}).some(d=>{
+    const b=doc.boards[d]; return !!(b && Array.isArray(b.items) && b.items.length);
+  });
+}
+window.__boardMemoryHasMeaningfulData = boardMemoryHasMeaningfulData;
+window.__installCloudBoardBootstrap = function(payload){
+  // 最後寫入由盤面持久化層原子裁決：有任何本機內容或尚未落地的變更就拒絕還原。
+  if(_loadBlocked || window.__boardSaveOK===false || window.__boardCloudRestorePending ||
+     _persistJSON!=null || boardMemoryHasMeaningfulData()) return false;
+  window.__boardCloudRestorePending = true;
+  if(_persistTimer){ clearTimeout(_persistTimer); _persistTimer=null; }
+  _persistSeq++;                                      // 使已開始壓縮的舊存檔失效
+  try{
+    if(window.__storagePressure) window.__storagePressure.setCritical(localStorage,LS_KEY,payload);
+    else localStorage.setItem(LS_KEY,payload);
+    return true;
+  }catch(error){
+    window.__boardCloudRestorePending = false;
+    throw error;
+  }
+};
 function save(){
-  if(_loadBlocked) return;
+  if(_loadBlocked || window.__boardCloudRestorePending) return;
   syncStateToDoc();
   doc.layoutCols = layoutCols;
   doc.pctWindow = pctWindow;
@@ -2169,6 +2194,7 @@ function save(){
 }
 async function persistFlush(){
   _persistTimer = null;
+  if(window.__boardCloudRestorePending) return;
   const json = _persistJSON, seq = _persistSeq; if(json == null) return;
   let ok = true;
   try{
@@ -2177,7 +2203,7 @@ async function persistFlush(){
       try{ payload = "gz:" + await gzToB64(json); }catch(_){ payload = json; }
     }
     // 壓縮期間又有新變更，或 pagehide 已保住最新版：舊任務不可回頭覆蓋。
-    if(seq !== _persistSeq) return;
+    if(window.__boardCloudRestorePending || seq !== _persistSeq) return;
     if(window.__storagePressure){
       const wr = window.__storagePressure.setCritical(localStorage, LS_KEY, payload);
       if(wr.removed.length) console.warn("[儲存] 配額不足：已移除可重建備份以保住主檔：", wr.removed.join(", "));
@@ -2187,7 +2213,7 @@ async function persistFlush(){
   updateSaveBadge(ok);
 }
 function persistEmergency(){                          // 同步壓縮：關頁前保命
-  if(_loadBlocked || _persistJSON == null) return;
+  if(_loadBlocked || window.__boardCloudRestorePending || _persistJSON == null) return;
   const json = _persistJSON;
   _persistSeq++;                                      // 使尚在跑的舊 gzip 任務失效
   try{
@@ -8140,6 +8166,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20260924idb1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261005restore1"></script><script src="./divination-addon.js?v=20260924idb1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
