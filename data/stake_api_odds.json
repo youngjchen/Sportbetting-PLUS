@@ -1,20 +1,25 @@
 {
  "provider": "stake-official",
  "mode": "official-page",
- "updated": "2026-10-04T01:41:45.451Z",
+ "updated": "2026-10-04T01:46:45.491Z",
  "source": {
   "schedule": "/schedule/sport/ice-hockey/usa/tournament/nhl",
   "odds": "/odds/{fixtureSlug}",
   "page": "https://stake.com/sports/ice-hockey/usa/nhl/{fixtureSlug}"
  },
  "health": {
-  "discovered": 17,
+  "discovered": 13,
   "targeted": 7,
-  "succeeded": 7,
+  "succeeded": 6,
   "apiSucceeded": 0,
-  "pageSucceeded": 7,
-  "failed": 0,
-  "failures": []
+  "pageSucceeded": 6,
+  "failed": 1,
+  "failures": [
+   {
+    "slug": "46925318-seattle-kraken-calgary-flames",
+    "error": "STAKE 官方賽事頁沒有可辨識的全場賽前盤"
+   }
+  ]
  },
  "games": {
   "recovered-20261001-kings-avalanche": {
@@ -10455,7 +10460,7 @@
    "homeTeam": "加人",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925421-vancouver-canucks-calgary-flames",
-   "lastPregameAt": "2026-10-04T01:41:45.451Z",
+   "lastPregameAt": "2026-10-04T01:46:45.491Z",
    "markets": {
     "ml": {
      "open": {
@@ -10464,7 +10469,7 @@
       "home": 1.85
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "away": 1.91,
       "home": 1.9
      }
@@ -10478,7 +10483,7 @@
       "home": 3
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.37,
@@ -10493,7 +10498,7 @@
       "under": 1.96
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 6,
       "over": 1.87,
       "under": 1.94
@@ -10517,12 +10522,12 @@
      {
       "name": "Los Angeles Kings",
       "side": "away",
-      "odds": 1.92
+      "odds": 1.9
      },
      {
       "name": "San Jose Sharks",
       "side": "home",
-      "odds": 1.89
+      "odds": 1.91
      }
     ]
    },
@@ -10565,6 +10570,42 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-04T01:46:45.491Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Los Angeles Kings",
+        "side": "away",
+        "odds": 1.9
+       },
+       {
+        "name": "San Jose Sharks",
+        "side": "home",
+        "odds": 1.91
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6,
+        "odds": 1.82
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6,
+        "odds": 2
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-04T01:06:45.130Z",
      "ml": {
@@ -10906,7 +10947,7 @@
    "homeTeam": "鯊魚",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925312-san-jose-sharks-los-angeles-kings",
-   "lastPregameAt": "2026-10-04T01:41:45.451Z",
+   "lastPregameAt": "2026-10-04T01:46:45.491Z",
    "markets": {
     "ml": {
      "open": {
@@ -10915,9 +10956,9 @@
       "home": 1.82
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
-      "away": 1.92,
-      "home": 1.89
+      "at": "2026-10-04T01:46:45.491Z",
+      "away": 1.9,
+      "home": 1.91
      }
     },
     "hd": {
@@ -10929,7 +10970,7 @@
       "home": 2.9
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.38,
@@ -10944,7 +10985,7 @@
       "under": 1.94
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 6,
       "over": 1.82,
       "under": 2
@@ -12578,7 +12619,7 @@
    "homeTeam": "巨鴨",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925061-anaheim-ducks-florida-panthers",
-   "lastPregameAt": "2026-10-04T01:41:45.451Z",
+   "lastPregameAt": "2026-10-04T01:46:45.491Z",
    "markets": {
     "ml": {
      "open": {
@@ -12587,7 +12628,7 @@
       "home": 1.97
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "away": 1.71,
       "home": 2.07
      }
@@ -12601,7 +12642,7 @@
       "home": 1.42
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2.6,
@@ -12616,7 +12657,7 @@
       "under": 2.03
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 6.5,
       "over": 1.81,
       "under": 1.94
@@ -13323,7 +13364,7 @@
    "homeTeam": "紅翼",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925114-detroit-red-wings-winnipeg-jets",
-   "lastPregameAt": "2026-10-04T01:41:45.451Z",
+   "lastPregameAt": "2026-10-04T01:46:45.491Z",
    "markets": {
     "ml": {
      "open": {
@@ -13332,7 +13373,7 @@
       "home": 1.78
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "away": 1.87,
       "home": 1.87
      }
@@ -13346,7 +13387,7 @@
       "home": 2.85
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 1.5,
       "favorite": "away",
       "away": 3.05,
@@ -13361,7 +13402,7 @@
       "under": 2
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 5.5,
       "over": 1.79,
       "under": 1.96
@@ -13939,7 +13980,7 @@
    "homeTeam": "遊騎兵",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925286-new-york-rangers-utah-mammoth",
-   "lastPregameAt": "2026-10-04T01:41:45.451Z",
+   "lastPregameAt": "2026-10-04T01:46:45.491Z",
    "markets": {
     "ml": {
      "open": {
@@ -13948,7 +13989,7 @@
       "home": 1.73
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "away": 2.08,
       "home": 1.7
      }
@@ -13962,7 +14003,7 @@
       "home": 2.75
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.44,
@@ -13977,7 +14018,7 @@
       "under": 2.07
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 5.5,
       "over": 1.76,
       "under": 2
@@ -14390,7 +14431,7 @@
    "homeTeam": "加人",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925423-vancouver-canucks-vegas-golden-knights",
-   "lastPregameAt": "2026-10-04T01:41:45.451Z",
+   "lastPregameAt": "2026-10-04T01:46:45.491Z",
    "markets": {
     "ml": {
      "open": {
@@ -14399,7 +14440,7 @@
       "home": 2.6
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "away": 1.42,
       "home": 2.75
      }
@@ -14413,7 +14454,7 @@
       "home": 1.69
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2,
@@ -14428,7 +14469,7 @@
       "under": 1.81
      },
      "active": {
-      "at": "2026-10-04T01:41:45.451Z",
+      "at": "2026-10-04T01:46:45.491Z",
       "line": 6.5,
       "over": 1.91,
       "under": 1.83
