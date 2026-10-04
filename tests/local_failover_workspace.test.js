@@ -25,6 +25,12 @@ function loadWorkspaceModule() {
   }
 }
 
+test('hidden failover launcher waits so Task Scheduler can block overlapping runs', () => {
+  const launcher = fs.readFileSync(path.join(__dirname, '..', 'failover_task_hidden.vbs'), 'utf8');
+  assert.match(launcher, /shell\.Run\s+.*?,\s*0,\s*True\s*$/mi);
+  assert.doesNotMatch(launcher, /shell\.Run\s+.*?,\s*0,\s*False\s*$/mi);
+});
+
 test('local failover defaults to a sibling clone beside the moved source repository', () => {
   const { resolveFailoverWorkspace } = loadWorkspaceModule();
   assert.equal(typeof resolveFailoverWorkspace, 'function');
