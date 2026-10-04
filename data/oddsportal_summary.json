@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-04T08:35:20+08:00",
+  "updatedAt": "2026-10-04T08:40:06+08:00",
   "health": {
-    "discovered": 22,
-    "succeeded": 9,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 9,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -172688,7 +172688,7 @@
         "at": "2026-10-03T23:07:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-10-04T08:35:20+08:00"
+        "observedAt": "2026-10-04T08:40:06+08:00"
       },
       "eventId": "Y3ORmYkA",
       "league": "mlb",
@@ -172698,7 +172698,7 @@
       "awayTeam": "教士",
       "homeTeam": "釀酒人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/milwaukee-brewers-san-diego-padres/Y3ORmYkA/",
-      "observedAt": "2026-10-04T08:35:20+08:00",
+      "observedAt": "2026-10-04T08:40:06+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -172708,9 +172708,15 @@
             "away": 2.8
           },
           "active": {
-            "at": "2026-10-04T07:00:10+08:00",
-            "home": 1.46,
-            "away": 2.75
+            "at": "2026-10-04T08:40:06+08:00",
+            "home": 1.47,
+            "away": 2.8
+          },
+          "close": {
+            "at": "2026-10-04T07:31:00+08:00",
+            "home": 1.47,
+            "away": 2.8,
+            "final": true
           }
         },
         "hd": {
@@ -172722,11 +172728,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-04T07:00:10+08:00",
-            "home": 1.96,
-            "away": 1.85,
-            "line": 1.5,
+            "at": "2026-10-04T08:40:06+08:00",
+            "home": 1.63,
+            "away": 2.29,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-04T08:16:00+08:00",
+            "home": 1.63,
+            "away": 2.29,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -172737,10 +172751,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-10-04T07:00:10+08:00",
-            "over": 1.6,
-            "under": 2.36,
-            "line": 6.0
+            "at": "2026-10-04T08:40:06+08:00",
+            "over": 1.5,
+            "under": 2.55,
+            "line": 5.5
+          },
+          "close": {
+            "at": "2026-10-04T08:29:00+08:00",
+            "over": 1.5,
+            "under": 2.55,
+            "line": 5.5,
+            "final": true
           }
         }
       },
@@ -172750,17 +172771,29 @@
           "away",
           "home"
         ],
-        "struckSide": [],
+        "struckSide": [
+          "home"
+        ],
         "lines": [
           {
             "line": -4.5,
-            "active": true,
+            "active": false,
             "created": "03,10,2026,21,34"
+          },
+          {
+            "line": -4.0,
+            "active": true,
+            "created": "04,10,2026,01,16"
           },
           {
             "line": -3.5,
             "active": true,
-            "created": "03,10,2026,21,34"
+            "created": "04,10,2026,01,16"
+          },
+          {
+            "line": -3.0,
+            "active": true,
+            "created": "04,10,2026,01,29"
           },
           {
             "line": -2.5,
@@ -172768,14 +172801,29 @@
             "created": "03,10,2026,21,34"
           },
           {
+            "line": -2.0,
+            "active": true,
+            "created": "04,10,2026,01,29"
+          },
+          {
             "line": -1.5,
             "active": true,
-            "created": "03,10,2026,21,34"
+            "created": "04,10,2026,01,29"
+          },
+          {
+            "line": -1.0,
+            "active": true,
+            "created": "04,10,2026,01,16"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "04,10,2026,01,16"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "03,10,2026,21,34"
+            "created": "04,10,2026,01,16"
           }
         ]
       }
