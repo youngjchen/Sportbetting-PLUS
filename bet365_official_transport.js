@@ -48,4 +48,3 @@ module.exports = {
   isBet365Unavailable,
   fetchBet365Page,
 };
-

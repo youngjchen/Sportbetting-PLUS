@@ -103,13 +103,16 @@ function mergeProviderObservation(previous, observation) {
           events.push({
             at: snapshot.observedAt,
             type: 'favorite-flip',
+            provider: snapshot.provider,
             from: beforeHd.favorite,
             to: afterHd.favorite,
+            line: finite(afterHd.line),
           });
         } else if (beforeHd && afterHd && finite(beforeHd.line) !== finite(afterHd.line)) {
           events.push({
             at: snapshot.observedAt,
             type: 'handicap-line',
+            provider: snapshot.provider,
             from: finite(beforeHd.line),
             to: finite(afterHd.line),
           });
@@ -167,4 +170,3 @@ module.exports = {
   resolveMarket,
   resolveGameSources,
 };
-

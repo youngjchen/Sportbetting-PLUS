@@ -345,4 +345,3 @@ if (require.main === module) main().catch((error) => {
   console.error(`Bet365 棒球收集失敗：${String(error && error.message || error)}`);
   process.exitCode = 1;
 });
-

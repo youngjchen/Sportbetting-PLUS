@@ -68,4 +68,3 @@ test('official page transport returns rendered event content and captures', asyn
 
   assert.deepEqual(result, page);
 });
-

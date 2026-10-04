@@ -82,7 +82,7 @@
     if (handicap.favorite !== 'away' && handicap.favorite !== 'home') return null;
     const provider = handicap.provider || game.provider || '';
     const flips = (Array.isArray(game.events) ? game.events : []).filter(function (event) {
-      return event && event.type === 'favorite-flip';
+      return event && event.type === 'favorite-flip' && (!event.provider || event.provider === provider);
     });
     return {
       side: handicap.favorite,
@@ -91,7 +91,8 @@
       provider,
       flipEver: flips.length > 0,
       struck: flips.map(function (event) {
-        return { side: event.from, line: handicap.line == null ? null : Number(handicap.line), at: event.at || null };
+        const line = event.line == null ? handicap.line : event.line;
+        return { side: event.from, line: line == null ? null : Number(line), at: event.at || null };
       }),
       game,
     };

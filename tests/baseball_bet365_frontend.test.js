@@ -71,6 +71,26 @@ test('same-provider favorite changes remain visible as Bet365 flip history', () 
   ]);
 });
 
+test('a fallback-only favorite flip is not reported as an official Bet365 flip after source recovery', () => {
+  const game = officialGame({
+    events: [
+      {
+        at: '2026-10-04T08:15:00.000Z', type: 'favorite-flip',
+        provider: 'betexplorer', from: 'away', to: 'home', line: 1.5,
+      },
+      {
+        at: '2026-10-04T08:25:00.000Z', type: 'source-change',
+        from: 'betexplorer', to: 'bet365-official',
+      },
+    ],
+  });
+
+  const verdict = verdictFor(game);
+  assert.equal(verdict.provider, 'bet365-official');
+  assert.equal(verdict.flipEver, false);
+  assert.deepEqual(verdict.struck, []);
+});
+
 test('fallback handicap is explicitly labeled BetExplorer backup', () => {
   const game = officialGame({
     provider: 'betexplorer',

@@ -101,4 +101,3 @@ test('collector matches CPBL official odds without requiring a BetExplorer row',
   assert.equal(game.markets.hd.provider, 'bet365-official');
   assert.equal(game.markets.total.line, 7.5);
 });
-

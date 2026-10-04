@@ -63,6 +63,7 @@ test('same provider line movement does not count as a favorite flip', () => {
 
   assert.equal(second.favoriteFlipCount, 0);
   assert.equal(second.events[0].type, 'handicap-line');
+  assert.equal(second.events[0].provider, 'bet365-official');
   assert.equal(second.events[0].from, 4.5);
   assert.equal(second.events[0].to, 1.5);
 });
@@ -79,6 +80,8 @@ test('same provider favorite change counts as one real flip', () => {
 
   assert.equal(second.favoriteFlipCount, 1);
   assert.equal(second.events[0].type, 'favorite-flip');
+  assert.equal(second.events[0].provider, 'bet365-official');
+  assert.equal(second.events[0].line, 1.5);
   assert.equal(second.events[0].from, 'away');
   assert.equal(second.events[0].to, 'home');
 });
@@ -136,4 +139,3 @@ test('frozen official snapshot is stale and ranks below fresh fallback', () => {
     stale: true,
   });
 });
-
