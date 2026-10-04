@@ -1,12 +1,168 @@
 {
- "schemaVersion": 1,
- "provider": "bet365-via-titan-company-8",
- "updated": "2026-10-04T07:11:18.077Z",
+ "schemaVersion": 2,
+ "provider": "bet365-official-first",
+ "updated": "2026-10-04T07:16:18.135Z",
+ "source": "https://www.bet365.com/",
  "health": {
-  "status": "ok",
-  "discovered": 0,
-  "succeeded": 0,
-  "failures": []
+  "status": "partial",
+  "errors": [
+   "Bet365 official content unavailable"
+  ]
  },
- "matches": {}
+ "leagues": {
+  "NBA": {
+   "status": "error",
+   "scheduled": 2,
+   "officialMatched": 0,
+   "fallbackMatched": 0,
+   "matched": 0,
+   "lastAttemptAt": "2026-10-04T07:16:18.135Z",
+   "lastSuccessAt": null,
+   "errors": [
+    "Bet365 official content unavailable"
+   ]
+  },
+  "WNBA": {
+   "status": "ok",
+   "scheduled": 2,
+   "officialMatched": 2,
+   "fallbackMatched": 0,
+   "matched": 2,
+   "lastAttemptAt": "2026-10-04T07:16:18.135Z",
+   "lastSuccessAt": "2026-10-04T07:16:18.135Z",
+   "errors": [
+    "Bet365 official content unavailable"
+   ]
+  }
+ },
+ "matches": {
+  "WNBA_20261005_自由_美夢_0200": {
+   "officialId": "WNBA_20261005_自由_美夢_0200",
+   "league": "WNBA",
+   "scheduledStart": "2026-10-04T18:00:00.000Z",
+   "away": "自由",
+   "home": "美夢",
+   "provider": "bet365-official",
+   "observedAt": "2026-10-04T07:16:18.135Z",
+   "favorite": null,
+   "line": null,
+   "moneyline": {
+    "away": 2.35,
+    "home": 1.56
+   },
+   "handicapOdds": null,
+   "total": null,
+   "markets": {
+    "ml": {
+     "away": 2.35,
+     "home": 1.56,
+     "provider": "bet365-official",
+     "observedAt": "2026-10-04T07:16:18.135Z",
+     "stale": false
+    }
+   },
+   "mixedSources": false,
+   "frozenAt": null,
+   "history": [
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-10-04T07:16:18.135Z",
+     "favorite": null,
+     "markets": {
+      "ml": {
+       "away": 2.35,
+       "home": 1.56,
+       "provider": "bet365-official",
+       "observedAt": "2026-10-04T07:16:18.135Z",
+       "stale": false
+      }
+     }
+    }
+   ],
+   "providerHistories": {
+    "bet365-official": [
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-10-04T07:16:18.135Z",
+      "favorite": null,
+      "markets": {
+       "ml": {
+        "away": 2.35,
+        "home": 1.56,
+        "provider": "bet365-official",
+        "observedAt": "2026-10-04T07:16:18.135Z",
+        "stale": false
+       }
+      }
+     }
+    ]
+   },
+   "events": [],
+   "favoriteFlipCount": 0
+  },
+  "WNBA_20261005_王牌_金州_0400": {
+   "officialId": "WNBA_20261005_王牌_金州_0400",
+   "league": "WNBA",
+   "scheduledStart": "2026-10-04T20:00:00.000Z",
+   "away": "王牌",
+   "home": "金州",
+   "provider": "bet365-official",
+   "observedAt": "2026-10-04T07:16:18.135Z",
+   "favorite": null,
+   "line": null,
+   "moneyline": {
+    "away": 1.86,
+    "home": 1.86
+   },
+   "handicapOdds": null,
+   "total": null,
+   "markets": {
+    "ml": {
+     "away": 1.86,
+     "home": 1.86,
+     "provider": "bet365-official",
+     "observedAt": "2026-10-04T07:16:18.135Z",
+     "stale": false
+    }
+   },
+   "mixedSources": false,
+   "frozenAt": null,
+   "history": [
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-10-04T07:16:18.135Z",
+     "favorite": null,
+     "markets": {
+      "ml": {
+       "away": 1.86,
+       "home": 1.86,
+       "provider": "bet365-official",
+       "observedAt": "2026-10-04T07:16:18.135Z",
+       "stale": false
+      }
+     }
+    }
+   ],
+   "providerHistories": {
+    "bet365-official": [
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-10-04T07:16:18.135Z",
+      "favorite": null,
+      "markets": {
+       "ml": {
+        "away": 1.86,
+        "home": 1.86,
+        "provider": "bet365-official",
+        "observedAt": "2026-10-04T07:16:18.135Z",
+        "stale": false
+       }
+      }
+     }
+    ]
+   },
+   "events": [],
+   "favoriteFlipCount": 0
+  }
+ }
 }
