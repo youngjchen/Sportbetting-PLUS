@@ -154,6 +154,43 @@ test('local failover runs from an independent clone and fast-forwards it without
   }
 });
 
+test('local failover does not mkdir an existing drive-level parent', { skip: process.platform !== 'win32' }, () => {
+  const { ensureFailoverWorkspace } = loadWorkspaceModule();
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'failover-existing-parent-'));
+  const origin = path.join(root, 'origin.git');
+  const seed = path.join(root, 'seed');
+  const workspace = path.join(root, 'workspace');
+  const originalMkdirSync = fs.mkdirSync;
+  try {
+    git(['init', '--bare', origin], root);
+    git(['init', '-b', 'main', seed], root);
+    git(['config', 'user.email', 'test@example.invalid'], seed);
+    git(['config', 'user.name', 'Test'], seed);
+    fs.writeFileSync(path.join(seed, 'tracked.txt'), 'seed\n');
+    git(['add', 'tracked.txt'], seed);
+    git(['commit', '-m', 'seed'], seed);
+    git(['remote', 'add', 'origin', origin], seed);
+    git(['push', '-u', 'origin', 'main'], seed);
+    git(['clone', '--branch', 'main', '--single-branch', origin, workspace], root);
+
+    fs.mkdirSync = (target, options) => {
+      if (path.resolve(target) === path.resolve(root)) {
+        const error = new Error(`EPERM: operation not permitted, mkdir '${root}'`);
+        error.code = 'EPERM';
+        throw error;
+      }
+      return originalMkdirSync(target, options);
+    };
+
+    assert.doesNotThrow(
+      () => ensureFailoverWorkspace({ originUrl: origin, workspaceDir: workspace })
+    );
+  } finally {
+    fs.mkdirSync = originalMkdirSync;
+    fs.rmSync(root, { recursive: true, force: true });
+  }
+});
+
 // ══ 2026-08-04 自癒收殮：自家產出殘留不再把備援卡死（8/1 卡死 3.5 天事故）══
 
 test('classifyFailoverDirt separates failover-owned outputs from foreign files', () => {

@@ -96,7 +96,9 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
     throw new Error('workspaceDir must be an absolute path');
   }
   const parent = path.dirname(workspaceDir);
-  fs.mkdirSync(parent, { recursive: true });
+  // Windows 某些磁碟根目錄（例如 D:\\）雖然已存在，再呼叫
+  // mkdir({ recursive: true }) 仍可能回 EPERM。只在上層真的不存在時建立。
+  if (!fs.existsSync(parent)) fs.mkdirSync(parent, { recursive: true });
 
   if (!fs.existsSync(workspaceDir)) {
     git(['clone', '--branch', 'main', '--single-branch', originUrl, workspaceDir], parent);
