@@ -1,12 +1,12 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-05T18:00:18.204Z",
+ "updated": "2026-10-05T18:05:24.144Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
-  "gameCount": 4,
-  "marketCount": 8,
+  "gameCount": 5,
+  "marketCount": 10,
   "totalCount": 0
  },
  "games": {
@@ -899,6 +899,97 @@
         "side": "home",
         "line": -1.5,
         "odds": 2.4
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1791328020000|NSH Predators|TOR Maple Leafs": {
+   "startTime": 1791328020000,
+   "away": "NSH Predators",
+   "home": "TOR Maple Leafs",
+   "awayZh": "掠奪者",
+   "homeZh": "楓葉",
+   "fixtureIds": {
+    "ml": "202364296",
+    "hd": "202364294"
+   },
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "NSH Predators",
+      "side": "away",
+      "odds": 2.25
+     },
+     {
+      "name": "TOR Maple Leafs",
+      "side": "home",
+      "odds": 1.6
+     }
+    ]
+   },
+   "sourceUrls": {
+    "ml": "https://www.va.bet365.com/dl/sportsbookredirect/?bs=202364296-0~0&bet=1",
+    "hd": "https://www.va.bet365.com/dl/sportsbookredirect/?bs=202364294-0~0&bet=1"
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "home",
+    "outcomes": [
+     {
+      "name": "NSH Predators",
+      "side": "away",
+      "line": 1.5,
+      "odds": 1.51
+     },
+     {
+      "name": "TOR Maple Leafs",
+      "side": "home",
+      "line": -1.5,
+      "odds": 2.45
+     }
+    ]
+   },
+   "provider": "bet365-official",
+   "history": [
+    {
+     "at": "2026-10-05T18:05:24.144Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "NSH Predators",
+        "side": "away",
+        "odds": 2.25
+       },
+       {
+        "name": "TOR Maple Leafs",
+        "side": "home",
+        "odds": 1.6
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "NSH Predators",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.51
+       },
+       {
+        "name": "TOR Maple Leafs",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.45
        }
       ]
      }
