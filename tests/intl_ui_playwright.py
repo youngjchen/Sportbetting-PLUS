@@ -60,27 +60,43 @@ class IntlStripUiTests(unittest.TestCase):
                     body=json.dumps(intl, ensure_ascii=False),
                 ),
             )
-            page.goto(BASE_URL, wait_until="networkidle")
+            page.goto(BASE_URL, wait_until="domcontentloaded")
             page.wait_for_function("typeof loadActiveBoard === 'function'", timeout=10000)
             page.evaluate(
                 """([board, intl]) => {
                     doc = board;
                     loadActiveBoard();
                     __intl = intl;
+                    window.__expertPicks = {
+                        hdSwapFor: () => {
+                            window.__hdSwapProbeCalls = (window.__hdSwapProbeCalls || 0) + 1;
+                            return { '味全龍': 1, '富邦悍將': 1 };
+                        }
+                    };
                     render();
                 }""",
                 [board, intl],
             )
-            strip = page.locator(".intl-strip").first
+            self.assertEqual(
+                page.evaluate("window.__expertPicks.hdSwapFor({})"),
+                {"味全龍": 1, "富邦悍將": 1},
+            )
+            self.assertGreater(page.evaluate("window.__hdSwapProbeCalls || 0"), 1)
+            strip = page.locator(".market-monitor").first
             strip.wait_for(state="visible", timeout=10000)
-            strip_text = strip.inner_text()
+            strip_text = strip.locator(".market-monitor-head").inner_text()
+            self.assertIn("changed", strip.locator(".market-platform.taiwan").get_attribute("class"))
             self.assertIn("BET365", strip_text)
-            self.assertIn("未開盤", strip_text)
-            self.assertIn("台彩 富邦悍將讓1.5", strip_text)
-            expanded = strip.evaluate(
+            self.assertIn("待資料", strip_text)
+            self.assertIn("富邦悍將讓1.5", strip_text)
+            self.assertEqual(
+                strip.locator(".market-platform.taiwan .market-state").inner_text(),
+                "曾對調",
+            )
+            expanded = strip.locator(".market-monitor-head").evaluate(
                 """element => {
                     element.click();
-                    const details = element.nextElementSibling;
+                    const details = element.parentElement.querySelector('.market-monitor-details');
                     return {
                         text: details.innerText,
                         display: getComputedStyle(details).display,
@@ -88,7 +104,10 @@ class IntlStripUiTests(unittest.TestCase):
                 }"""
             )
             self.assertNotEqual(expanded["display"], "none")
-            self.assertIn("台彩側＝玩運彩盤中序列（現況）", expanded["text"])
+            self.assertIn("玩運彩盤中序列", expanded["text"])
+            self.assertIn("明牌指紋", expanded["text"])
+            self.assertNotIn("唯讀", expanded["text"])
+            self.assertNotIn("不會改卡片", expanded["text"])
             browser.close()
 
 

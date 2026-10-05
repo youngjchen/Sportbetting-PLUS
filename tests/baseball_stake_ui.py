@@ -1,11 +1,16 @@
 import json
+import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from playwright.sync_api import sync_playwright
 
 
 TODAY = "2026-10-03"
 GAME_DATE = "2026-10-04"
+BASE_URL = os.environ.get("TEST_BASE_URL", "http://127.0.0.1:8766/index.html")
+_URL = urlsplit(BASE_URL)
+LOCAL_PREFIX = f"{_URL.scheme}://{_URL.netloc}/"
 CARD = {
     "id": 9001,
     "type": "match",
@@ -51,7 +56,7 @@ def main():
         page.route(
             "**/*",
             lambda route: route.continue_()
-            if route.request.url.startswith("http://127.0.0.1:8766/")
+            if route.request.url.startswith(LOCAL_PREFIX)
             else route.fulfill(status=404, body=""),
         )
         init_args = json.dumps(
@@ -62,7 +67,7 @@ def main():
             f"(([key, value]) => {{ window.__stakeUiSeeded = true; localStorage.setItem(key, value); }})({init_args})"
         )
         trace("navigate")
-        page.goto("http://127.0.0.1:8766/index.html", wait_until="networkidle")
+        page.goto(BASE_URL, wait_until="domcontentloaded")
         trace("switch board")
         page.evaluate(
             """() => {
@@ -71,7 +76,7 @@ def main():
               render();
             }"""
         )
-        row = page.locator(".bstake-monitor")
+        row = page.locator(".market-monitor")
         try:
             row.wait_for(state="visible", timeout=15_000)
         except Exception:
@@ -95,18 +100,20 @@ def main():
         trace("monitor visible")
         text = row.inner_text()
         assert "STAKE" in text, text
-        assert "讓分曾對調 1 次" in text, text
+        assert "曾對調" in text, text
         assert "大小 7.5" not in text, text
-        row.locator(".bstake-history-toggle").click()
-        detail = row.locator(".bstake-history").inner_text()
-        assert "讓 1.5" in detail, detail
+        row.locator(".market-monitor-head").click()
+        detail = row.locator(".market-monitor-details").inner_text()
+        assert "讓1.5" in detail, detail
         assert "大小 7.5" in detail, detail
 
         page.locator(".bswap").click()
-        page.locator(".bstake-monitor button", has_text="↻讓").wait_for(state="visible")
+        page.locator(".market-monitor-head").click()
+        page.locator(".market-auto-controls button", has_text="恢復自動讓分").wait_for(state="visible")
         page.locator('.basis input[type="number"]').fill("8.5")
         page.evaluate("render()")
-        page.locator(".bstake-monitor button", has_text="↻大").wait_for(state="visible")
+        page.locator(".market-monitor-head").click()
+        page.locator(".market-auto-controls button", has_text="恢復自動大小").wait_for(state="visible")
         trace("manual locks verified")
 
         locked = page.evaluate("({hd:state.items[0].stakeAutoHandicap,total:state.items[0].stakeAutoTotal})")

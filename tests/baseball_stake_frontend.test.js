@@ -209,12 +209,13 @@ test('CPBL 官方零場時卡片仍顯示 STAKE 未開盤而不是整列消失',
   assert.match(row.textContent, /STAKE官方目前未開盤（持續監控）/);
 });
 
-test('index hooks both favorite swap and total input, and loads versioned integration add-on', () => {
+test('index hooks both favorite swap and total input, and loads the unified monitor add-on', () => {
   const html = fs.readFileSync(path.join(ROOT, 'index.html'), 'utf8');
   assert.match(html, /stakeAutoHandicap\s*=\s*false/g);
   assert.match(html, /stakeAutoTotal\s*=\s*false/);
   assert.match(html, /baseball-stake-integration\.js\?v=\d+/);
-  assert.match(html, /renderCardStatus\(it/);
+  assert.match(html, /baseball-market-monitor\.js\?v=\d+/);
+  assert.match(html, /renderMonitor\(/);
 });
 
 test('legacy OddsPortal Stake switch evidence no longer creates a duplicate card alert', () => {
