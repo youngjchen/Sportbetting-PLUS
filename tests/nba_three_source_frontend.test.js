@@ -57,8 +57,10 @@ test('STAKE 自動填入讓分方、讓分與大小基準線', () => {
 test('手動換讓分方或改大小後不被下一輪 STAKE 覆蓋，恢復按鈕可重新接管', () => {
   const item = {};
   applyStakeToItem(item, model, stake, NOW);
+  item.hdSwap = true;
   markManual(item, 'handicap', 'away');
   markManual(item, 'total');
+  assert.equal(item.hdSwap, undefined);
   item.totVal = 231.5;
   applyStakeToItem(item, model, { ...stake, favorite: 'home', line: 5.5, total: { line: 227.5, over: 1.9, under: 1.8 } }, NOW);
   assert.equal(item.hdFavOverride, 'away');
@@ -86,14 +88,37 @@ test('BET365 列依實際市場來源標示官網或 BetExplorer 備援', () => 
   assert.match(sourceText('BET365', fallback, model), /^BetExplorer 備援：/);
 });
 
-test('卡片監控區同時呈現三方，並可展開 STAKE 歷史', () => {
+test('卡片監控區同時呈現三方，收合只留方向與對調狀態', () => {
   const dom = new JSDOM('<!doctype html><body></body>');
-  const row = renderMonitor(model, {}, { stake, bet365: null }, NOW, dom.window.document);
-  assert.match(row.textContent, /STAKE：/);
-  assert.match(row.textContent, /BET365：未開盤/);
-  assert.match(row.textContent, /台彩：/);
-  row.querySelector('.nba-odds-history-toggle').click();
-  assert.match(row.querySelector('.nba-odds-history').textContent, /23:57/);
+  const changedStake = { ...stake, history: [{ ...stake.history[0], favorite: 'away', line: 2.5 }] };
+  const row = renderMonitor(model, {}, { stake: changedStake, bet365: null }, NOW, dom.window.document);
+  const head = row.querySelector('.market-monitor-head');
+  assert.match(head.textContent, /STAKE暴龍讓3\.5曾對調/);
+  assert.match(head.textContent, /BET365未取得方向待資料/);
+  assert.match(head.textContent, /台彩暴龍讓3\.5未對調/);
+  assert.doesNotMatch(head.textContent, /23:57|2\.25|官網|備援/);
+  head.click();
+  assert.match(row.querySelector('.market-monitor-details').textContent, /23:57/);
+  assert.match(row.querySelector('.market-monitor-details').textContent, /獨贏.*熱火 2\.25/);
+});
+
+test('WNBA 沿用同一列，舊 Bet365 軸只作缺盤備援且台彩換邊只顯示一次', () => {
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const wnba = { ...model, league: 'WNBA', away: '自由', home: '美夢', hdFav: 'away', hdVal: 2.5, taiwan: null };
+  const row = renderMonitor(wnba, {}, { stake: null, bet365: null }, NOW, dom.window.document, {
+    bet365Fallback: { favorite: 'home', line: 1.5, provider: 'betexplorer' },
+    bet365FlipCount: 1,
+    taiwanFavorite: 'away', taiwanFlipCount: 1,
+    taiwanEvents: [{ displayTime: '', kind: 'favorite', text: '台彩讓分方曾對調 1 次' }],
+  });
+  const head = row.querySelector('.market-monitor-head');
+  assert.match(head.textContent, /STAKE未取得方向待資料/);
+  assert.match(head.textContent, /BET365美夢讓1\.5曾對調/);
+  assert.match(head.textContent, /台彩自由讓2\.5曾對調/);
+  assert.doesNotMatch(head.textContent, /BetExplorer|唯讀/);
+  head.click();
+  assert.match(row.querySelector('.market-detail-section.bet365').textContent, /BetExplorer 備援/);
+  assert.equal((row.textContent.match(/台彩讓分方曾對調 1 次/g) || []).length, 1);
 });
 
 test('nba.html 不再把 NBA 分支鎖成空白，並載入版本化三方監控', () => {
@@ -101,5 +126,8 @@ test('nba.html 不再把 NBA 分支鎖成空白，並載入版本化三方監控
   assert.doesNotMatch(html, /if\(doc\.activeLeague!=="WNBA"\) return \[\]/);
   assert.match(html, /g\.league===doc\.activeLeague/);
   assert.match(html, /nba-odds-integration\.js\?v=\d+/);
+  assert.match(html, /sports-market-monitor\.js\?v=\d+/);
+  assert.match(html, /sports-market-monitor\.css\?v=\d+/);
+  assert.doesNotMatch(html, /const strip=document\.createElement\("div"\); strip\.className="intl-strip"/);
   assert.match(html, /data\/nba_pregame\.json/);
 });

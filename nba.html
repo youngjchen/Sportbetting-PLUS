@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="sports-market-monitor.css?v=2026100501">
 <style>
   :root{
     /* 棒球板同款調色盤（bcard CSS 原樣移植的前提） */
@@ -1754,38 +1755,28 @@ function renderCardW(model){
   head.addEventListener("contextmenu", (e)=>{ e.preventDefault(); openSettleModal(model); });
   el.appendChild(head);
 
-  /* ---------- 橫幅（顛倒家族;優先序同棒球:顛倒>曾對調） ---------- */
-  // 顛倒家族優先序（棒球同款）：使用者在結算視窗手選的狀態 > 管線自動判定
+  /* ---------- 異常框色（文字結論統一交給三平台監控列） ---------- */
   const intlFlip = intl && hasLine && ((intl.fav==="away") !== (favSide==="away"));
   if(it.platformFlip){
     el.classList.add("flip");
-    const bn=document.createElement("div"); bn.className="bflipbanner";
-    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：台彩與 bet365 讓分方相反";
-    el.appendChild(bn);
   } else if(it.flipVanished){
     el.classList.add("flip-was");
-    const bn=document.createElement("div"); bn.className="bflipbanner was";
-    bn.innerHTML="<span class='ic'>⇄</span>平台曾顛倒：收盤前已收斂一致";
-    el.appendChild(bn);
   } else if(it.preGameSwap){
     el.classList.add("flip-swap");
-    const bn=document.createElement("div"); bn.className="bflipbanner swap";
-    bn.innerHTML="<span class='ic'>⇆</span>賽前讓分方曾對調（與顛倒/曾顛倒是不同訊號）";
-    el.appendChild(bn);
   } else if(intlFlip){
     el.classList.add("flip");
-    const bn=document.createElement("div"); bn.className="bflipbanner";
-    bn.innerHTML="<span class='ic'>⇅</span>平台顛倒：台彩與 bet365 讓分方相反";
-    el.appendChild(bn);
   } else if(lsw>0 || (intl && intl.flips>0)){
     el.classList.add("flip-swap");
-    const bn=document.createElement("div"); bn.className="bflipbanner swap";
-    bn.innerHTML=`<span class='ic'>⇆</span>賽前讓分方曾對調（台彩換邊 ${lsw} 次${intl&&intl.flips?`・bet365 換邊 ${intl.flips} 次`:""}）`;
-    el.appendChild(bn);
   }
 
-  if(model.league==="NBA"&&window.__nbaOddsIntegration){
-    const monitor=window.__nbaOddsIntegration.renderMonitor(model,it);
+  if(window.__nbaOddsIntegration){
+    const monitor=window.__nbaOddsIntegration.renderMonitor(model,it,{
+      bet365FlipCount:intl&&intl.flips||0,
+      bet365Fallback:intl?{favorite:intl.fav,line:intl.il,provider:"betexplorer"}:null,
+      taiwanFavorite:model._officialHdFav||model.hdFav,
+      taiwanFlipCount:lsw,
+      taiwanEvents:lsw?[{displayTime:"",kind:"favorite",text:`台彩讓分方曾對調 ${lsw} 次`}]:[]
+    });
     if(monitor) el.appendChild(monitor);
   }
 
@@ -1919,7 +1910,7 @@ function renderCardW(model){
     const hdWrap=wrapDiv();
     const swap=document.createElement("span"); swap.className="bswap"; swap.textContent="⇄"; swap.title="切換讓分方（燈跟隊走）";
     swap.onclick=()=>{ snapshot();
-      if(model.league==="NBA"&&window.__nbaOddsIntegration){ window.__nbaOddsIntegration.markManual(it,"handicap",favSide==="away"?"home":"away"); }
+      if(window.__nbaOddsIntegration){ window.__nbaOddsIntegration.markManual(it,"handicap",favSide==="away"?"home":"away"); }
       else it.hdSwap=!it.hdSwap;
       const t=it.hdGive; it.hdGive=it.hdRecv; it.hdRecv=t; saveDoc(doc); render(); };
     // 使用者在結算視窗填的盤口優先；沒填才用賽程管線的台彩盤口
@@ -1929,25 +1920,10 @@ function renderCardW(model){
     let anomChip=null;
     try{ const ai=bAnomInfo(model, it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], hdTrend()),
+    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], null),
       mktRow("讓","give", favName, hv?("−"+hv):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
       mktRow("受讓","recv", undName, hv?("+"+hv):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
     ana.appendChild(hdWrap);
-
-    // 國際軸藍帶（bet365＋台彩;棒球同構;唯讀）
-    if(model.league==="WNBA"&&(intl || hasLine)){
-      const dotc = intlFlip ? "#e08020" : ((lsw>0||(intl&&intl.flips>0)) ? "#2bbfa0" : "#5b6b80");
-      const strip=document.createElement("div"); strip.className="intl-strip";
-      strip.innerHTML = `<span style="width:9px;height:9px;border-radius:50%;background:${dotc};flex:0 0 auto;"></span>`+
-        `<span>🌐 <b style="color:#3aa0ff">${intl?("bet365 "+esc(intl.fav==="away"?model.away:model.home)+"讓"+intl.il):"bet365 未開盤"}</b>・`+
-        `<b style="color:#ffd08a">${hasLine?("台彩 "+esc(favName)+"讓"+model.hdVal):"台彩未開盤"}</b></span>`;
-      const more=document.createElement("div"); more.className="intl-more";
-      more.innerHTML = (intl?((intl.flips?`⇄${intl.flips}＝bet365 讓分方今天換邊 ${intl.flips} 次`: `bet365 讓分方今天未換邊`)+`・初盤 ${intl.open.line} → 現時 ${intl.latest.line}（線移 ${intl.move.toFixed(1)} 分）`):"bet365 尚未開盤")+
-        (lsw?`<br>台彩換邊 ⇄${lsw}（序列偵測）`:"")+
-        `<br>此帶唯讀（國際軸），不會改卡片任何欄位。`;
-      strip.onclick=(e)=>{ e.stopPropagation(); strip.classList.toggle("open"); };
-      ana.appendChild(strip); ana.appendChild(more);
-    }
 
     // 大小（基準=可編輯,預設帶台彩線;棒球同款）
     const totWrap=wrapDiv();
@@ -1956,7 +1932,7 @@ function renderCardW(model){
     basis.innerHTML="基準 ";
     const tinp=document.createElement("input"); tinp.type="number"; tinp.step="1"; tinp.min="0.5"; tinp.inputMode="decimal"; tinp.value=tv;
     tinp.onclick=(e)=>e.stopPropagation();
-    tinp.oninput=()=>{ it.totVal = tinp.value.trim(); if(model.league==="NBA"&&window.__nbaOddsIntegration) window.__nbaOddsIntegration.markManual(it,"total"); saveDoc(doc); };
+    tinp.oninput=()=>{ it.totVal = tinp.value.trim(); if(window.__nbaOddsIntegration) window.__nbaOddsIntegration.markManual(it,"total"); saveDoc(doc); };
     basis.appendChild(tinp);
     const aT=pctInfo(model.league,season,model.away,"tot","away"), hT=pctInfo(model.league,season,model.home,"tot","home");
     let overPct=null, lowS=false, samp=0;
@@ -1968,7 +1944,7 @@ function renderCardW(model){
       const ss = lowS ? `<span class="ss">(${samp})</span>` : "";
       return `<span class="bcover ${cls}">${Math.round(pn*100)}%${ss}</span>`;
     }
-    totWrap.append(mktSecHead("大小", totConflict, [basis], ouTrend()),
+    totWrap.append(mktSecHead("大小", totConflict, [basis], null),
       mktRow("大","", "大", tv, it.over, totCover(true), totConflict),
       mktRow("小","", "小", tv, it.under, totCover(false), totConflict));
     ana.appendChild(totWrap);
@@ -2010,11 +1986,11 @@ function tvOf(it,model){ const v=(it.totVal!=null&&it.totVal!=="")?it.totVal:(mo
 function modelFromPregame(g){
   const it = ensureItem(g.date, g.officialId);
   let base=g;
-  if(g.league==="NBA"&&window.__nbaOddsIntegration) base=window.__nbaOddsIntegration.composeModel(g,it);
+  if(window.__nbaOddsIntegration) base=window.__nbaOddsIntegration.composeModel(g,it);
   let hdFav = base.hdFav;
   if(g.league!=="NBA"&&it.hdSwap && hdFav) hdFav = hdFav==="away"?"home":"away";
   // id/type/gameTime＝棒球 item 介面（wnba-picks-addon 沿用棒球比對邏輯,需要這三個欄位）
-  return { ...base, id: g.officialId, type: 'match', gameTime: g.time, hdFav, _item: it,
+  return { ...base, id: g.officialId, type: 'match', gameTime: g.time, hdFav, _officialHdFav:base.hdFav, _item: it,
     get settled(){ return it.settled; }, get expertApplied(){ return it.expertApplied; } };
 }
 
@@ -2421,6 +2397,7 @@ loadPregame();
 <script src="wnba-picks-addon.js?v=20260803wnba1"></script>
 <script src="wnba-divination-addon.js?v=20260924idb1"></script>
 <script src="oddsportal-integration.js?v=20260902dedupe2"></script>
-<script src="nba-odds-integration.js?v=20261004official2"></script>
+<script src="sports-market-monitor.js?v=2026100501"></script>
+<script src="nba-odds-integration.js?v=2026100501"></script>
 </body>
 </html>

@@ -110,6 +110,10 @@ test('renders Bet365 prices, official favorite, manual swap, and the official to
   assert.match(card.textContent, /BET365 ✓/);
   assert.match(card.textContent, /BET365 2\.05/);
   assert.match(card.textContent, /BET365 1\.72/);
+  const monitor = card.querySelector('.market-monitor');
+  assert.ok(monitor.classList.contains('source-count-2'));
+  assert.match(monitor.querySelector('.market-monitor-head').textContent, /BET365颶風讓1\.5未對調/);
+  assert.doesNotMatch(monitor.querySelector('.market-monitor-head').textContent, /2\.05|1\.72|官網/);
 
   const handicap = [...card.querySelectorAll('.bmkt')]
     .find((section) => section.querySelector('.mname')?.textContent === '讓分');

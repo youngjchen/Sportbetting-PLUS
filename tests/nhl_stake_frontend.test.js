@@ -147,12 +147,17 @@ test('renders Stake official ML/HD/OU as primary and never requests an NHL aggre
     const current = dom.window.document.querySelector('.card.bcard');
     return current && /STAKE ✓/.test(current.textContent) ? current : null;
   });
-  assert.match(card.textContent, /STAKE 2\.05/);
-  assert.match(card.textContent, /STAKE 1\.82/);
-  assert.match(card.textContent, /BET365 參考/);
+  const monitor = card.querySelector('.market-monitor');
+  const monitorHead = monitor.querySelector('.market-monitor-head');
+  assert.match(monitorHead.textContent, /STAKE企鵝讓1\.5曾對調/);
+  assert.match(monitorHead.textContent, /BET365飛人讓1\.5曾對調/);
+  assert.doesNotMatch(monitorHead.textContent, /2\.05|1\.82|08:30|官網|參考/);
+  assert.equal(monitor.querySelector('.market-monitor-details').hidden, true);
+  monitorHead.click();
+  assert.equal(monitor.querySelector('.market-monitor-details').hidden, false);
+  assert.match(monitor.querySelector('.market-monitor-details').textContent, /客 企鵝 2\.05／主 飛人 1\.82/);
+  assert.match(monitor.querySelector('.market-monitor-details').textContent, /08:30飛人 → 企鵝/);
   assert.match(dom.window.document.querySelector('#stamp').textContent, /STAKE 1 場/);
-  assert.match(card.textContent, /STAKE 換邊 1 次/);
-  assert.match(card.textContent, /BET365 換邊 1 次/);
   assert.match(card.textContent, /企鵝 -1\.5/);
 
   const sections = [...card.querySelectorAll('.bmkt')];
@@ -291,7 +296,9 @@ test('stale Stake odds are marked stopped and Bet365 becomes the live fallback',
     const current = dom.window.document.querySelector('.card.bcard');
     return current && /BET365 ✓/.test(current.textContent) ? current : null;
   });
-  assert.match(card.textContent, /STAKE 停更/);
+  const monitorHead = card.querySelector('.market-monitor-head');
+  assert.match(monitorHead.textContent, /STAKE停更・颶風讓1\.5/);
+  assert.match(monitorHead.textContent, /BET365飛人讓2\.5/);
   const handicap = [...card.querySelectorAll('.bmkt')]
     .find((section) => section.querySelector('.mname')?.textContent === '讓分');
   assert.match(handicap.querySelector('.bmkt-row .bnm').textContent, /飛人.*-2\.5.*BET365 2\.50/);

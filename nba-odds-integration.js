@@ -65,7 +65,10 @@
     if (!item) return;
     if (field === 'handicap') {
       item.stakeAutoHandicap = false;
-      if (favorite === 'away' || favorite === 'home') item.hdFavOverride = favorite;
+      if (favorite === 'away' || favorite === 'home') {
+        item.hdFavOverride = favorite;
+        delete item.hdSwap;
+      }
     }
     if (field === 'total') item.stakeAutoTotal = false;
   }
@@ -135,59 +138,158 @@
     return Number.isFinite(stamp) ? new Date(stamp + 8 * 3600000).toISOString().slice(11, 16) : '—';
   }
 
-  function renderMonitor(model, item, sources, now, documentRef) {
-    if (!model || !documentRef) return null;
-    const box = documentRef.createElement('div');
-    box.className = 'nba-odds-monitor';
-    const values = [
-      ['STAKE', sources && sources.stake],
-      ['BET365', sources && sources.bet365],
-      ['台彩', model.taiwan || null],
-    ];
-    for (const [label, source] of values) {
-      const row = documentRef.createElement('div');
-      row.className = `nba-odds-row nba-odds-${label.toLowerCase()}`;
-      row.textContent = sourceText(label, source, model);
-      box.appendChild(row);
+  function monitorApi(documentRef) {
+    const view = documentRef && documentRef.defaultView;
+    if (view && view.__sportsMarketMonitor) return view.__sportsMarketMonitor;
+    if (typeof require === 'function') {
+      try { return require('./sports-market-monitor.js'); } catch (_) {}
     }
+    return null;
+  }
+
+  function sideName(model, side) {
+    return side === 'away' ? model.away : side === 'home' ? model.home : '—';
+  }
+
+  function numberText(value) {
+    if (value == null || value === '') return '—';
+    const number = Number(value);
+    return Number.isFinite(number) ? String(number) : String(value);
+  }
+
+  function sourceLabel(label, source) {
+    if (label !== 'BET365' || !source) return label === 'STAKE' ? 'Stake 官網' : label;
+    const providers = new Set();
+    if (source.provider) providers.add(source.provider);
+    if (source.markets) Object.values(source.markets).forEach((market) => {
+      if (market && market.provider) providers.add(market.provider);
+    });
+    if (providers.has('bet365-official') && providers.has('betexplorer')) return 'BET365 官網；缺項由 BetExplorer 備援';
+    if (providers.has('bet365-official')) return 'BET365 官網';
+    if (providers.has('betexplorer')) return 'BetExplorer 備援';
+    return 'BET365';
+  }
+
+  function currentLabel(model, source) {
+    const data = marketShape(source, model);
+    if (!data || (data.favorite !== 'away' && data.favorite !== 'home') || data.line == null) return '未取得方向';
+    return `${sideName(model, data.favorite)}讓${numberText(Math.abs(Number(data.line)))}`;
+  }
+
+  function marketDetails(source, model) {
+    const data = marketShape(source, model);
+    if (!data) return [];
+    const rows = [];
+    const away = model.away || data.away || '客隊';
+    const home = model.home || data.home || '主隊';
+    if (data.moneyline) rows.push(['獨贏', `客 ${away} ${odds(data.moneyline.away)}／主 ${home} ${odds(data.moneyline.home)}`]);
+    if ((data.favorite === 'away' || data.favorite === 'home') && data.line != null) {
+      const dog = data.favorite === 'away' ? 'home' : 'away';
+      rows.push(['讓分', `${sideName(model, data.favorite)} -${numberText(Math.abs(Number(data.line)))} ${odds(data.handicapOdds && data.handicapOdds[data.favorite])}／${sideName(model, dog)} +${numberText(Math.abs(Number(data.line)))} ${odds(data.handicapOdds && data.handicapOdds[dog])}`]);
+    }
+    if (data.total && data.total.line != null) rows.push(['大小', `大 ${numberText(data.total.line)} ${odds(data.total.over)}／小 ${numberText(data.total.line)} ${odds(data.total.under)}`]);
+    return rows;
+  }
+
+  function sameNumber(left, right) {
+    if (left == null && right == null) return true;
+    return Number(left) === Number(right);
+  }
+
+  function meaningfulEvents(source, model) {
+    if (!source) return [];
+    const events = [];
+    const seen = new Set();
+    const push = (event) => {
+      const key = `${event.at || ''}|${event.kind || ''}|${event.text}`;
+      if (!seen.has(key)) { seen.add(key); events.push(event); }
+    };
+    for (const event of Array.isArray(source.events) ? source.events : []) {
+      if (!event) continue;
+      if (event.type === 'favorite-flip' && event.from !== event.to) push({ at: event.at, kind: 'favorite', text: `${sideName(model, event.from)} → ${sideName(model, event.to)}` });
+      else if (event.type === 'handicap-line' || event.type === 'line-change') push({ at: event.at, kind: 'handicap-line', text: `讓分線 ${numberText(event.from)} → ${numberText(event.to)}` });
+      else if (event.type === 'total-line' || event.type === 'total-change') push({ at: event.at, kind: 'total-line', text: `大小 ${numberText(event.from)} → ${numberText(event.to)}` });
+    }
+    const snapshots = (Array.isArray(source.history) ? source.history : []).filter(Boolean).slice()
+      .sort((left, right) => Date.parse(left.observedAt || left.at || '') - Date.parse(right.observedAt || right.at || ''));
+    if (snapshots.length) {
+      const rows = snapshots.concat([{ ...source, observedAt: source.observedAt || source.frozenAt }]);
+      for (let index = 1; index < rows.length; index++) {
+        const before = marketShape(rows[index - 1], model) || {};
+        const after = marketShape(rows[index], model) || {};
+        const at = rows[index].observedAt || rows[index].at || null;
+        if ((before.favorite === 'away' || before.favorite === 'home') && (after.favorite === 'away' || after.favorite === 'home') && before.favorite !== after.favorite) {
+          push({ at, kind: 'favorite', text: `${sideName(model, before.favorite)} → ${sideName(model, after.favorite)}` });
+        }
+        if (!sameNumber(before.line, after.line)) push({ at, kind: 'handicap-line', text: `讓分線 ${numberText(before.line)} → ${numberText(after.line)}` });
+        const beforeTotal = before.total && before.total.line;
+        const afterTotal = after.total && after.total.line;
+        if (!sameNumber(beforeTotal, afterTotal)) push({ at, kind: 'total-line', text: `大小 ${numberText(beforeTotal)} → ${numberText(afterTotal)}` });
+      }
+    }
+    return events.sort((left, right) => Date.parse(left.at || '') - Date.parse(right.at || ''));
+  }
+
+  function renderMonitor(model, item, sources, now, documentRef, evidence) {
+    if (!model || !documentRef) return null;
+    const api = monitorApi(documentRef);
+    if (!api || typeof api.renderPlatformMonitor !== 'function') return null;
     const stake = sources && sources.stake;
+    const bet365 = sources && sources.bet365 || evidence && evidence.bet365Fallback || null;
+    const taiwanFavorite = evidence && evidence.taiwanFavorite || model.hdFav;
+    const taiwan = model.taiwan || ((taiwanFavorite === 'away' || taiwanFavorite === 'home') ? {
+      favorite: taiwanFavorite, line: model.hdVal,
+      total: model.totLine == null ? null : { line: model.totLine },
+    } : null);
+    const stakeEvents = meaningfulEvents(stake, model);
+    const bet365Events = meaningfulEvents(bet365, model);
+    const stakeMarket = marketShape(stake, model);
+    const bet365Market = marketShape(bet365, model);
+    const taiwanMarket = marketShape(taiwan, model);
+    const taiwanEvents = evidence && Array.isArray(evidence.taiwanEvents) ? evidence.taiwanEvents : [];
+    const controls = [];
     if (item && item.stakeAutoHandicap === false) {
-      const button = documentRef.createElement('button');
-      button.type = 'button'; button.className = 'nba-odds-auto'; button.textContent = '↻ 讓分自動';
-      button.onclick = function (event) {
-        event.stopPropagation(); restoreAuto(item, 'handicap', stake, model, Date.now());
+      controls.push({ label: '↻ 恢復自動讓分', onClick() {
+        restoreAuto(item, 'handicap', stake, model, Date.now());
         const view = documentRef.defaultView;
         try { if (view && typeof view.save === 'function') view.save(); } catch (_) {}
         try { if (view && typeof view.render === 'function') view.render(); } catch (_) {}
-      };
-      box.appendChild(button);
+      } });
     }
     if (item && item.stakeAutoTotal === false) {
-      const button = documentRef.createElement('button');
-      button.type = 'button'; button.className = 'nba-odds-auto'; button.textContent = '↻ 大小自動';
-      button.onclick = function (event) {
-        event.stopPropagation(); restoreAuto(item, 'total', stake, model, Date.now());
+      controls.push({ label: '↻ 恢復自動大小', onClick() {
+        restoreAuto(item, 'total', stake, model, Date.now());
         const view = documentRef.defaultView;
         try { if (view && typeof view.save === 'function') view.save(); } catch (_) {}
         try { if (view && typeof view.render === 'function') view.render(); } catch (_) {}
-      };
-      box.appendChild(button);
+      } });
     }
-    const history = stake && Array.isArray(stake.history) ? stake.history : [];
-    if (history.length) {
-      const toggle = documentRef.createElement('button');
-      toggle.type = 'button'; toggle.className = 'nba-odds-history-toggle'; toggle.textContent = '▾ STAKE 歷史';
-      const detail = documentRef.createElement('div');
-      detail.className = 'nba-odds-history'; detail.hidden = true;
-      for (const snap of history) {
-        const line = documentRef.createElement('div');
-        line.textContent = `${timeText(snap.observedAt)} ${sourceText('STAKE', snap, model).replace(/^STAKE：/, '')}`;
-        detail.appendChild(line);
-      }
-      toggle.onclick = function (event) { event.stopPropagation(); detail.hidden = !detail.hidden; toggle.textContent = detail.hidden ? '▾ STAKE 歷史' : '▴ STAKE 歷史'; };
-      box.append(toggle, detail);
-    }
-    return box;
+    const taiwanChanged = !!((evidence && Number(evidence.taiwanFlipCount)) || taiwanEvents.some((event) => event && event.kind === 'favorite'));
+    return api.renderPlatformMonitor({
+      documentRef,
+      sources: [
+        {
+          key: 'stake', label: 'STAKE', side: stakeMarket && stakeMarket.favorite,
+          current: currentLabel(model, stake), available: !!stake,
+          changed: stakeEvents.some((event) => event.kind === 'favorite'),
+          details: marketDetails(stake, model), events: stakeEvents,
+          sourceLabel: stake ? 'Stake 官網' : null, controls,
+        },
+        {
+          key: 'bet365', label: 'BET365', side: bet365Market && bet365Market.favorite,
+          current: currentLabel(model, bet365), available: !!bet365,
+          changed: bet365Events.some((event) => event.kind === 'favorite') || !!(evidence && Number(evidence.bet365FlipCount)),
+          details: marketDetails(bet365, model), events: bet365Events,
+          sourceLabel: bet365 ? sourceLabel('BET365', bet365) : null,
+        },
+        {
+          key: 'taiwan', label: '台彩', side: taiwanMarket && taiwanMarket.favorite,
+          current: currentLabel(model, taiwan), available: !!taiwan,
+          changed: taiwanChanged, details: marketDetails(taiwan, model), events: taiwanEvents,
+          sourceLabel: taiwan ? '玩運彩開盤' : null,
+        },
+      ],
+    });
   }
 
   function install(global) {
@@ -229,8 +331,8 @@
       },
       markManual,
       restoreAuto(item, field, model) { return restoreAuto(item, field, findMatch(feeds.stake, model), model, Date.now()); },
-      renderMonitor(model, item) {
-        return renderMonitor(model, item, { stake: findMatch(feeds.stake, model), bet365: findMatch(feeds.bet365, model) }, Date.now(), global.document);
+      renderMonitor(model, item, evidence) {
+        return renderMonitor(model, item, { stake: findMatch(feeds.stake, model), bet365: findMatch(feeds.bet365, model) }, Date.now(), global.document, evidence);
       },
       _setFeeds(value) { if (value && value.stake) feeds.stake = value.stake; if (value && value.bet365) feeds.bet365 = value.bet365; },
       _getFeeds() { return feeds; },
