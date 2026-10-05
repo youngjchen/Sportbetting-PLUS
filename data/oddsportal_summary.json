@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-05T17:10:10+08:00",
+  "updatedAt": "2026-10-05T20:20:31+08:00",
   "health": {
-    "discovered": 4,
-    "succeeded": 4,
+    "discovered": 3,
+    "succeeded": 3,
     "failed": 0,
     "added": 0,
-    "updated": 4,
+    "updated": 3,
     "errors": []
   },
   "games": {
@@ -38076,7 +38076,7 @@
       "awayTeam": "富邦",
       "homeTeam": "樂天",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/rakuten-monkeys-fubon-guardians/n5Tvf6iT/",
-      "observedAt": "2026-08-19T03:00:07+08:00",
+      "observedAt": "2026-10-05T20:20:31+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -38086,17 +38086,55 @@
             "away": 1.76
           },
           "active": {
-            "at": "2026-08-19T03:00:07+08:00",
-            "home": 1.94,
-            "away": 1.77
+            "at": "2026-10-05T20:20:31+08:00",
+            "home": 2.16,
+            "away": 1.62
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-10-05T17:06:00+08:00",
+            "home": 1.67,
+            "away": 2.08,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-10-05T20:20:31+08:00",
+            "home": 1.67,
+            "away": 2.08,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-10-05T17:06:00+08:00",
+            "over": 1.78,
+            "under": 1.93,
+            "line": 7.5
+          },
+          "active": {
+            "at": "2026-10-05T20:20:31+08:00",
+            "over": 1.78,
+            "under": 1.93,
+            "line": 7.5
           }
         }
       },
       "stakeSwap": {
         "ever": false,
         "activeSide": [],
-        "struckSide": [],
-        "lines": []
+        "struckSide": [
+          "away"
+        ],
+        "lines": [
+          {
+            "line": 1.5,
+            "active": false,
+            "created": "05,10,2026,10,06"
+          }
+        ]
       }
     },
     "mlb|2026-08-20|老虎|海盜|00:35|fZRua8IO": {
@@ -175206,7 +175244,7 @@
       "awayTeam": "富邦",
       "homeTeam": "樂天",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/rakuten-monkeys-fubon-guardians/n5Tvf6iT/",
-      "observedAt": "2026-10-05T10:40:07+08:00",
+      "observedAt": "2026-10-05T20:20:31+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -175216,9 +175254,15 @@
             "away": 1.61
           },
           "active": {
-            "at": "2026-10-05T10:40:07+08:00",
-            "home": 1.96,
-            "away": 1.75
+            "at": "2026-10-05T20:20:31+08:00",
+            "home": 2.16,
+            "away": 1.62
+          },
+          "close": {
+            "at": "2026-10-05T17:07:00+08:00",
+            "home": 2.16,
+            "away": 1.62,
+            "final": true
           }
         },
         "hd": {
@@ -175230,11 +175274,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-05T10:40:07+08:00",
-            "home": 1.55,
-            "away": 2.29,
+            "at": "2026-10-05T20:20:31+08:00",
+            "home": 1.67,
+            "away": 2.08,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-10-05T17:06:00+08:00",
+            "home": 1.67,
+            "away": 2.08,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -175245,24 +175297,31 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-10-05T10:40:07+08:00",
-            "over": 1.75,
-            "under": 1.97,
+            "at": "2026-10-05T20:20:31+08:00",
+            "over": 1.78,
+            "under": 1.93,
             "line": 7.5
+          },
+          "close": {
+            "at": "2026-10-05T17:06:00+08:00",
+            "over": 1.78,
+            "under": 1.93,
+            "line": 7.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
+        "activeSide": [],
+        "struckSide": [
           "away"
         ],
-        "struckSide": [],
         "lines": [
           {
             "line": 1.5,
-            "active": true,
-            "created": "04,10,2026,20,03"
+            "active": false,
+            "created": "05,10,2026,10,06"
           }
         ]
       }
@@ -176151,7 +176210,7 @@
       "awayTeam": "統一",
       "homeTeam": "兄弟",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/chinatrust-brothers-uni-lions/d4hqV3kl/",
-      "observedAt": "2026-10-05T10:40:07+08:00",
+      "observedAt": "2026-10-05T20:20:31+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -176161,9 +176220,15 @@
             "away": 1.79
           },
           "active": {
-            "at": "2026-10-05T10:40:07+08:00",
-            "home": 1.82,
-            "away": 1.88
+            "at": "2026-10-05T20:20:31+08:00",
+            "home": 1.88,
+            "away": 1.82
+          },
+          "close": {
+            "at": "2026-10-05T18:29:00+08:00",
+            "home": 1.88,
+            "away": 1.82,
+            "final": true
           }
         },
         "hd": {
@@ -176175,11 +176240,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-05T10:40:07+08:00",
-            "home": 1.48,
-            "away": 2.47,
+            "at": "2026-10-05T20:20:31+08:00",
+            "home": 1.52,
+            "away": 2.38,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-10-05T18:29:00+08:00",
+            "home": 1.52,
+            "away": 2.38,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -176190,10 +176263,17 @@
             "line": 8.5
           },
           "active": {
-            "at": "2026-10-05T10:40:07+08:00",
-            "over": 1.99,
-            "under": 1.73,
+            "at": "2026-10-05T20:20:31+08:00",
+            "over": 1.95,
+            "under": 1.76,
             "line": 8.5
+          },
+          "close": {
+            "at": "2026-10-05T18:29:00+08:00",
+            "over": 1.95,
+            "under": 1.76,
+            "line": 8.5,
+            "final": true
           }
         }
       },
@@ -176207,7 +176287,7 @@
           {
             "line": 1.5,
             "active": true,
-            "created": "04,10,2026,17,56"
+            "created": "05,10,2026,11,29"
           }
         ]
       }
