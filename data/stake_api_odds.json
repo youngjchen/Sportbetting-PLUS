@@ -1,7 +1,7 @@
 {
  "provider": "stake-official",
  "mode": "official-page",
- "updated": "2026-10-05T14:08:19.279Z",
+ "updated": "2026-10-05T14:14:25.445Z",
  "source": {
   "schedule": "/schedule/sport/ice-hockey/usa/tournament/nhl",
   "odds": "/odds/{fixtureSlug}",
@@ -10,11 +10,16 @@
  "health": {
   "discovered": 8,
   "targeted": 8,
-  "succeeded": 8,
+  "succeeded": 7,
   "apiSucceeded": 0,
-  "pageSucceeded": 8,
-  "failed": 0,
-  "failures": []
+  "pageSucceeded": 7,
+  "failed": 1,
+  "failures": [
+   {
+    "slug": "46925131-los-angeles-kings-florida-panthers",
+    "error": "STAKE 官方賽事頁沒有可辨識的全場賽前盤"
+   }
+  ]
  },
  "games": {
   "46728046-detroit-red-wings-new-york-rangers": {
@@ -16660,12 +16665,12 @@
      {
       "name": "Carolina Hurricanes",
       "side": "away",
-      "odds": 1.81
+      "odds": 1.83
      },
      {
       "name": "Montreal Canadiens",
       "side": "home",
-      "odds": 1.93
+      "odds": 1.91
      }
     ]
    },
@@ -16678,13 +16683,13 @@
       "name": "Carolina Hurricanes",
       "side": "away",
       "line": -1.5,
-      "odds": 2.85
+      "odds": 2.9
      },
      {
       "name": "Montreal Canadiens",
       "side": "home",
       "line": 1.5,
-      "odds": 1.39
+      "odds": 1.38
      }
     ]
    },
@@ -16708,6 +16713,61 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-05T14:14:25.445Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Carolina Hurricanes",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "Montreal Canadiens",
+        "side": "home",
+        "odds": 1.91
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Carolina Hurricanes",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.9
+       },
+       {
+        "name": "Montreal Canadiens",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.38
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.91
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.83
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-05T06:02:19.495Z",
      "ml": {
@@ -16884,7 +16944,7 @@
    "homeTeam": "加拿大",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925146-montreal-canadiens-carolina-hurricanes",
-   "lastPregameAt": "2026-10-05T14:08:19.279Z",
+   "lastPregameAt": "2026-10-05T14:14:25.445Z",
    "markets": {
     "ml": {
      "open": {
@@ -16893,9 +16953,9 @@
       "home": 1.89
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
-      "away": 1.81,
-      "home": 1.93
+      "at": "2026-10-05T14:14:25.445Z",
+      "away": 1.83,
+      "home": 1.91
      }
     },
     "hd": {
@@ -16907,11 +16967,11 @@
       "home": 1.36
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 1.5,
       "favorite": "away",
-      "away": 2.85,
-      "home": 1.39
+      "away": 2.9,
+      "home": 1.38
      }
     },
     "ou": {
@@ -16922,7 +16982,7 @@
       "under": 1.79
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 6.5,
       "over": 1.91,
       "under": 1.83
@@ -17170,7 +17230,7 @@
    "homeTeam": "黑鷹",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925088-chicago-blackhawks-st-louis-blues",
-   "lastPregameAt": "2026-10-05T14:08:19.279Z",
+   "lastPregameAt": "2026-10-05T14:14:25.445Z",
    "markets": {
     "ml": {
      "open": {
@@ -17179,7 +17239,7 @@
       "home": 1.91
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "away": 1.83,
       "home": 1.91
      }
@@ -17193,7 +17253,7 @@
       "home": 1.35
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 1.5,
       "favorite": "away",
       "away": 3.05,
@@ -17208,7 +17268,7 @@
       "under": 1.8
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 5.5,
       "over": 1.92,
       "under": 1.82
@@ -17518,12 +17578,12 @@
      {
       "name": "Philadelphia Flyers",
       "side": "away",
-      "odds": 2.6
+      "odds": 2.7
      },
      {
       "name": "Tampa Bay Lightning",
       "side": "home",
-      "odds": 1.46
+      "odds": 1.43
      }
     ]
    },
@@ -17536,13 +17596,13 @@
       "name": "Philadelphia Flyers",
       "side": "away",
       "line": 1.5,
-      "odds": 1.67
+      "odds": 1.7
      },
      {
       "name": "Tampa Bay Lightning",
       "side": "home",
       "line": -1.5,
-      "odds": 2.13
+      "odds": 2.08
      }
     ]
    },
@@ -17560,12 +17620,67 @@
       "name": "Under",
       "side": "under",
       "line": 6,
-      "odds": 1.79
+      "odds": 1.78
      }
     ]
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-05T14:14:25.445Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Philadelphia Flyers",
+        "side": "away",
+        "odds": 2.7
+       },
+       {
+        "name": "Tampa Bay Lightning",
+        "side": "home",
+        "odds": 1.43
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Philadelphia Flyers",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.7
+       },
+       {
+        "name": "Tampa Bay Lightning",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.08
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6,
+        "odds": 1.96
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6,
+        "odds": 1.78
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-05T13:43:18.803Z",
      "ml": {
@@ -18347,7 +18462,7 @@
    "homeTeam": "閃電",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925331-tampa-bay-lightning-philadelphia-flyers",
-   "lastPregameAt": "2026-10-05T14:08:19.279Z",
+   "lastPregameAt": "2026-10-05T14:14:25.445Z",
    "markets": {
     "ml": {
      "open": {
@@ -18356,9 +18471,9 @@
       "home": 1.57
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
-      "away": 2.6,
-      "home": 1.46
+      "at": "2026-10-05T14:14:25.445Z",
+      "away": 2.7,
+      "home": 1.43
      }
     },
     "hd": {
@@ -18370,11 +18485,11 @@
       "home": 2.4
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 1.5,
       "favorite": "home",
-      "away": 1.67,
-      "home": 2.13
+      "away": 1.7,
+      "home": 2.08
      }
     },
     "ou": {
@@ -18385,10 +18500,10 @@
       "under": 2
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 6,
       "over": 1.96,
-      "under": 1.79
+      "under": 1.78
      }
     }
    }
@@ -18409,7 +18524,7 @@
      {
       "name": "Ottawa Senators",
       "side": "away",
-      "odds": 1.82
+      "odds": 1.81
      },
      {
       "name": "Boston Bruins",
@@ -18457,6 +18572,61 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-05T14:14:25.445Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "odds": 1.81
+       },
+       {
+        "name": "Boston Bruins",
+        "side": "home",
+        "odds": 1.93
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.95
+       },
+       {
+        "name": "Boston Bruins",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.37
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6,
+        "odds": 1.95
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6,
+        "odds": 1.8
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-05T13:58:18.417Z",
      "ml": {
@@ -19520,7 +19690,7 @@
    "homeTeam": "棕熊",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925068-boston-bruins-ottawa-senators",
-   "lastPregameAt": "2026-10-05T14:08:19.279Z",
+   "lastPregameAt": "2026-10-05T14:14:25.445Z",
    "markets": {
     "ml": {
      "open": {
@@ -19529,8 +19699,8 @@
       "home": 1.75
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
-      "away": 1.82,
+      "at": "2026-10-05T14:14:25.445Z",
+      "away": 1.81,
       "home": 1.93
      }
     },
@@ -19543,7 +19713,7 @@
       "home": 2.8
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2.95,
@@ -19558,7 +19728,7 @@
       "under": 2.02
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 6,
       "over": 1.95,
       "under": 1.8
@@ -20466,7 +20636,7 @@
    "homeTeam": "企鵝",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925307-pittsburgh-penguins-winnipeg-jets",
-   "lastPregameAt": "2026-10-05T14:08:19.279Z",
+   "lastPregameAt": "2026-10-05T14:14:25.445Z",
    "markets": {
     "ml": {
      "open": {
@@ -20475,7 +20645,7 @@
       "home": 1.63
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "away": 2.37,
       "home": 1.54
      }
@@ -20489,7 +20659,7 @@
       "home": 2.47
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.59,
@@ -20504,7 +20674,7 @@
       "under": 1.81
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 6.5,
       "over": 1.93,
       "under": 1.82
@@ -21412,7 +21582,7 @@
    "homeTeam": "達拉斯",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925109-dallas-stars-san-jose-sharks",
-   "lastPregameAt": "2026-10-05T14:08:19.279Z",
+   "lastPregameAt": "2026-10-05T14:14:25.445Z",
    "markets": {
     "ml": {
      "open": {
@@ -21421,7 +21591,7 @@
       "home": 1.57
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "away": 2.31,
       "home": 1.57
      }
@@ -21435,7 +21605,7 @@
       "home": 2.37
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.56,
@@ -21450,7 +21620,7 @@
       "under": 1.72
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 6.5,
       "over": 1.95,
       "under": 1.79
@@ -21474,12 +21644,12 @@
      {
       "name": "Pittsburgh Penguins",
       "side": "away",
-      "odds": 2.27
+      "odds": 2.29
      },
      {
       "name": "Washington Capitals",
       "side": "home",
-      "odds": 1.59
+      "odds": 1.58
      }
     ]
    },
@@ -21492,13 +21662,13 @@
       "name": "Pittsburgh Penguins",
       "side": "away",
       "line": 1.5,
-      "odds": 1.53
+      "odds": 1.54
      },
      {
       "name": "Washington Capitals",
       "side": "home",
       "line": -1.5,
-      "odds": 2.41
+      "odds": 2.38
      }
     ]
    },
@@ -21522,6 +21692,61 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-05T14:14:25.445Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Pittsburgh Penguins",
+        "side": "away",
+        "odds": 2.29
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "odds": 1.58
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Pittsburgh Penguins",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.54
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.38
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.05
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.72
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-05T11:43:18.540Z",
      "ml": {
@@ -21588,7 +21813,7 @@
    "homeTeam": "首都",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925435-washington-capitals-pittsburgh-penguins",
-   "lastPregameAt": "2026-10-05T14:08:19.279Z",
+   "lastPregameAt": "2026-10-05T14:14:25.445Z",
    "markets": {
     "ml": {
      "open": {
@@ -21597,9 +21822,9 @@
       "home": 1.59
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
-      "away": 2.27,
-      "home": 1.59
+      "at": "2026-10-05T14:14:25.445Z",
+      "away": 2.29,
+      "home": 1.58
      }
     },
     "hd": {
@@ -21611,11 +21836,11 @@
       "home": 2.41
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 1.5,
       "favorite": "home",
-      "away": 1.53,
-      "home": 2.41
+      "away": 1.54,
+      "home": 2.38
      }
     },
     "ou": {
@@ -21626,7 +21851,7 @@
       "under": 1.72
      },
      "active": {
-      "at": "2026-10-05T14:08:19.279Z",
+      "at": "2026-10-05T14:14:25.445Z",
       "line": 6.5,
       "over": 2.05,
       "under": 1.72
