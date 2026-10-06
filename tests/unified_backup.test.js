@@ -112,3 +112,102 @@ test('an invalid current document blocks downloading an empty-looking backup', a
     /目前頁面的盤面資料格式不符/
   );
 });
+
+test('persistImport restores all present sports and unions every ledger', async () => {
+  const oldBasketball = boardDoc('old-basketball');
+  const storage = memoryStorage({ sportbetting_nba_doc_v1: JSON.stringify(oldBasketball) });
+  const oldBaseballCast = { ts: '2026-10-05T01:00:00Z', officialId: 'A', market: 'ml', method: 'coin', old: true };
+  const replacementCast = { ts: '2026-10-05T01:00:00Z', officialId: 'A', market: 'ml', method: 'coin', restored: true };
+  const secondCast = { ts: '2026-10-06T01:00:00Z', officialId: 'B', market: 'spread', method: 'coin' };
+  const largeStorage = fakeLargeStorage({
+    'baseball-casts': [oldBaseballCast],
+    'wnba-casts': [],
+    'nhl-casts': []
+  });
+  const api = createUnifiedBackup({ storage, storagePressure, largeStorage });
+  const payload = {
+    __envelope: 'sbplus-all-sports-backup-v3',
+    documents: {
+      baseball: boardDoc('restored-baseball'),
+      basketball: boardDoc('restored-basketball'),
+      hockey: boardDoc('restored-hockey')
+    },
+    ledgers: {
+      baseball: [replacementCast, secondCast],
+      wnba: [{ ts: '2026-10-06T02:00:00Z', officialId: 'W', market: 'total', method: 'coin' }],
+      nhl: [{ ts: '2026-10-06T03:00:00Z', officialId: 'H', market: 'ml', method: 'coin' }]
+    }
+  };
+  let liveBaseball = null;
+
+  const parsed = api.parseImport(JSON.stringify(payload), 'baseball');
+  const report = await api.persistImport(parsed, {
+    currentSport: 'baseball',
+    setCurrentDoc(value) { liveBaseball = value; }
+  });
+
+  assert.deepEqual(liveBaseball, payload.documents.baseball);
+  assert.deepEqual(JSON.parse(storage.getItem('sportbetting_nba_doc_v1')), payload.documents.basketball);
+  assert.deepEqual(JSON.parse(storage.getItem('sportbetting_nhl_doc_v1')), payload.documents.hockey);
+  assert.equal(report.ledgerCounts.baseball, 2);
+  assert.equal(largeStorage.value('baseball-casts')[0].restored, undefined);
+  assert.equal(largeStorage.value('baseball-casts')[1].restored, true);
+  assert.equal(largeStorage.value('wnba-casts').length, 1);
+  assert.equal(largeStorage.value('nhl-casts').length, 1);
+});
+
+test('legacy single-sport backups restore only their own sport', async () => {
+  const cases = [
+    {
+      currentSport: 'baseball',
+      payload: { __envelope: 'sbplus-backup-v2', doc: boardDoc('legacy-baseball'), dvManualCasts: [] },
+      expected: 'legacy-baseball'
+    },
+    {
+      currentSport: 'basketball',
+      payload: { __envelope: 'sbplus-nba-backup-v2', nbaDoc: boardDoc('legacy-basketball'), dvManualCastsWnba: [] },
+      expected: 'legacy-basketball'
+    },
+    {
+      currentSport: 'hockey',
+      payload: { __envelope: 'sbplus-nhl-backup-v1', nhlDoc: boardDoc('legacy-hockey'), dvManualCastsNhl: [] },
+      expected: 'legacy-hockey'
+    },
+    {
+      currentSport: 'baseball',
+      payload: boardDoc('plain-baseball'),
+      expected: 'plain-baseball'
+    }
+  ];
+
+  for (const entry of cases) {
+    const basketballBefore = boardDoc('basketball-before');
+    const hockeyBefore = boardDoc('hockey-before');
+    const storage = memoryStorage({
+      sportbetting_nba_doc_v1: JSON.stringify(basketballBefore),
+      sportbetting_nhl_doc_v1: JSON.stringify(hockeyBefore)
+    });
+    const api = createUnifiedBackup({ storage, storagePressure, largeStorage: fakeLargeStorage() });
+    let liveDoc = null;
+    const parsed = api.parseImport(JSON.stringify(entry.payload), entry.currentSport);
+    await api.persistImport(parsed, { currentSport: entry.currentSport, setCurrentDoc(value) { liveDoc = value; } });
+    assert.equal(liveDoc.boards['2026-10-06'].label, entry.expected);
+    if (entry.currentSport !== 'basketball') {
+      assert.deepEqual(JSON.parse(storage.getItem('sportbetting_nba_doc_v1')), basketballBefore);
+    }
+    if (entry.currentSport !== 'hockey') {
+      assert.deepEqual(JSON.parse(storage.getItem('sportbetting_nhl_doc_v1')), hockeyBefore);
+    }
+  }
+});
+
+test('parseImport rejects a v3 file before writing when any supplied document is invalid', async () => {
+  const storage = memoryStorage({ sportbetting_nba_doc_v1: JSON.stringify(boardDoc('untouched')) });
+  const api = createUnifiedBackup({ storage, storagePressure, largeStorage: fakeLargeStorage() });
+  assert.throws(() => api.parseImport(JSON.stringify({
+    __envelope: 'sbplus-all-sports-backup-v3',
+    documents: { baseball: boardDoc('valid'), basketball: { games: [] } },
+    ledgers: {}
+  }), 'baseball'), /basketball.*格式不符/);
+  assert.equal(JSON.parse(storage.getItem('sportbetting_nba_doc_v1')).boards['2026-10-06'].label, 'untouched');
+});

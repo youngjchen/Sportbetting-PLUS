@@ -183,12 +183,155 @@
     return result;
   }
 
+  function parseJson(rawText) {
+    try { return JSON.parse(String(rawText)); }
+    catch (_) { throw new Error('備份檔不是有效的 JSON'); }
+  }
+
+  function validateNormalizedImport(normalized) {
+    var validDocuments = 0;
+    Object.keys(normalized.documents).forEach(function (sportId) {
+      var value = normalized.documents[sportId];
+      if (value == null) return;
+      var definition = sports.get(sportId);
+      if (!definition) return;
+      if (!definition.validateDocument(value)) throw new Error(sportId + ' 盤面格式不符');
+      validDocuments += 1;
+    });
+    if (!validDocuments) throw new Error('備份檔沒有可還原的有效盤面');
+    Object.keys(normalized.ledgers).forEach(function (ledgerId) {
+      if (!Array.isArray(normalized.ledgers[ledgerId])) throw new Error(ledgerId + ' 紀錄格式不符');
+    });
+    return normalized;
+  }
+
+  function parseImport(rawText, currentSport) {
+    var outer = parseJson(rawText);
+    var normalized = { format: '', documents: {}, ledgers: {} };
+    if (outer && outer.__envelope === 'sbplus-all-sports-backup-v3') {
+      normalized.format = outer.__envelope;
+      normalized.documents = Object.assign({}, outer.documents || {});
+      normalized.ledgers = Object.assign({}, outer.ledgers || {});
+      return validateNormalizedImport(normalized);
+    }
+    if (outer && (outer.__envelope === 'sbplus-backup-v1' || outer.__envelope === 'sbplus-backup-v2')) {
+      normalized.format = outer.__envelope;
+      normalized.documents.baseball = outer.doc;
+      if (Array.isArray(outer.dvManualCasts)) normalized.ledgers.baseball = outer.dvManualCasts;
+      if (Array.isArray(outer.dvManualCastsWnba)) normalized.ledgers.wnba = outer.dvManualCastsWnba;
+      return validateNormalizedImport(normalized);
+    }
+    if (outer && (outer.__envelope === 'sbplus-nba-backup-v1' || outer.__envelope === 'sbplus-nba-backup-v2')) {
+      normalized.format = outer.__envelope;
+      normalized.documents.basketball = outer.nbaDoc;
+      if (Array.isArray(outer.dvManualCastsWnba)) normalized.ledgers.wnba = outer.dvManualCastsWnba;
+      return validateNormalizedImport(normalized);
+    }
+    if (outer && outer.__envelope === 'sbplus-nhl-backup-v1') {
+      normalized.format = outer.__envelope;
+      normalized.documents.hockey = outer.nhlDoc;
+      if (Array.isArray(outer.dvManualCastsNhl)) normalized.ledgers.nhl = outer.dvManualCastsNhl;
+      return validateNormalizedImport(normalized);
+    }
+    normalized.format = 'plain-document';
+    normalized.documents[currentSport] = outer;
+    return validateNormalizedImport(normalized);
+  }
+
+  function mergeLedgersForRestore(current, incoming) {
+    current = Array.isArray(current) ? current : [];
+    incoming = Array.isArray(incoming) ? incoming : [];
+    var keyed = new Map(), unkeyed = [];
+    function add(entry) {
+      if (!entry || typeof entry !== 'object' || !entry.ts) { unkeyed.push(entry); return; }
+      var key = (entry.ts || '') + '|' + (entry.officialId || '') + '|' + (entry.market || '') + '|' + (entry.method || '');
+      keyed.set(key, entry);
+    }
+    current.forEach(add);
+    incoming.forEach(add); // 還原檔是使用者指定的版本，同鍵覆蓋瀏覽器舊值。
+    var merged = Array.from(keyed.values()).concat(unkeyed);
+    merged.sort(function (a, b) {
+      var at = a && a.ts || '', bt = b && b.ts || '';
+      return at < bt ? 1 : (at > bt ? -1 : 0);
+    });
+    return merged;
+  }
+
+  async function writeDocument(definition, value) {
+    var text = JSON.stringify(value);
+    if (storagePressure && typeof storagePressure.setCritical === 'function') {
+      storagePressure.setCritical(storage, definition.docKey, text);
+    } else {
+      storage.setItem(definition.docKey, text);
+    }
+  }
+
+  async function writeLedger(definition, value) {
+    if (largeStorage && typeof largeStorage.writeJSON === 'function') {
+      await largeStorage.writeJSON(definition.storeKey, value, definition.legacyKey);
+      return;
+    }
+    if (!storage || !definition.legacyKey) throw new Error('沒有可用的紀錄儲存空間');
+    var encoded = storagePressure && typeof storagePressure.encodeLegacyPayload === 'function'
+      ? await storagePressure.encodeLegacyPayload(value)
+      : JSON.stringify(value);
+    if (storagePressure && typeof storagePressure.setCritical === 'function') {
+      storagePressure.setCritical(storage, definition.legacyKey, encoded);
+    } else {
+      storage.setItem(definition.legacyKey, encoded);
+    }
+  }
+
+  async function persistImport(parsed, options) {
+    options = options || {};
+    validateNormalizedImport(parsed);
+    var report = { documents: {}, ledgerCounts: {}, warnings: [] };
+    for (var entry of Object.entries(parsed.documents)) {
+      var sportId = entry[0], value = entry[1], definition = sports.get(sportId);
+      if (!definition || value == null) continue;
+      if (sportId === options.currentSport) {
+        if (typeof options.setCurrentDoc !== 'function') throw new Error('目前頁面缺少盤面更新函式');
+        await options.setCurrentDoc(value);
+        report.documents[sportId] = 'live';
+        continue;
+      }
+      try {
+        await writeDocument(definition, value);
+        report.documents[sportId] = 'local';
+      } catch (error) {
+        report.documents[sportId] = 'failed';
+        report.warnings.push(sportId + ' 盤面寫入失敗，原資料未清除。 ' + (error && error.message || error));
+      }
+    }
+
+    var ledgerDefinitions = new Map(uniqueLedgers().map(function (ledger) { return [ledger.id, ledger]; }));
+    for (var ledgerEntry of Object.entries(parsed.ledgers)) {
+      var ledgerId = ledgerEntry[0], incoming = ledgerEntry[1], ledger = ledgerDefinitions.get(ledgerId);
+      if (!ledger || !Array.isArray(incoming)) continue;
+      try {
+        var current = await readLedger(ledger);
+        var merged = mergeLedgersForRestore(current, incoming);
+        await writeLedger(ledger, merged);
+        report.ledgerCounts[ledgerId] = merged.length;
+        if (typeof globalThis !== 'undefined' && typeof globalThis.dispatchEvent === 'function' && typeof globalThis.CustomEvent === 'function') {
+          globalThis.dispatchEvent(new globalThis.CustomEvent('sbplus-casts-updated', { detail: { storeKey: ledger.storeKey } }));
+        }
+      } catch (error) {
+        report.ledgerCounts[ledgerId] = null;
+        report.warnings.push((ledger.label || ledgerId) + '寫入失敗，原資料未清除。 ' + (error && error.message || error));
+      }
+    }
+    return report;
+  }
+
   var api = {
     registerSport: registerSport,
     listSports: listSports,
     collectPayload: collectPayload,
     downloadPayload: downloadPayload,
-    exportAll: exportAll
+    exportAll: exportAll,
+    parseImport: parseImport,
+    persistImport: persistImport
   };
 
   registerSport({
