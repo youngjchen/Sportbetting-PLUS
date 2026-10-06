@@ -20,15 +20,17 @@ def main():
         )
         page.wait_for_timeout(20000)
 
-        assert len(downloads) == 1, downloads
+        phase = page.evaluate("window.__rescueBackupPhase || null")
+        assert len(downloads) == 1, (downloads, phase)
         download = downloads[0]
-        assert download.suggested_filename.startswith("排盤備份_")
-        assert download.suggested_filename.endswith("_救援.json")
+        assert download.suggested_filename.startswith("全運動排盤備份_")
+        assert download.suggested_filename.endswith(".json")
         with open(download.path(), "r", encoding="utf-8") as backup_file:
             payload = json.load(backup_file)
 
-        assert payload["__envelope"] == "sbplus-backup-v2"
-        assert payload["doc"]["boards"] is not None
+        assert payload["__envelope"] == "sbplus-all-sports-backup-v3"
+        assert payload["documents"]["baseball"]["boards"] is not None
+        assert payload["ledgers"] == {"baseball": [], "wnba": [], "nhl": []}
         browser.close()
 
     print("rescue query downloads a validated backup")
