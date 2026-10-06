@@ -1605,7 +1605,7 @@
 </style>
 
 <script src="./logo-map.js?v=2"></script>
-<script src="./storage-pressure.js?v=20261006idbretry1"></script>
+<script src="./storage-pressure.js?v=20261006salvage1"></script>
 <script src="./keyboard-navigation.js?v=20261006kbd1"></script>
 <script src="./game-record-utils.js?v=20260924dh1"></script>
 <script>
@@ -4836,15 +4836,33 @@ async function exportData(){
   // 匯出＝完整快照：盤面主檔＋手動卜卦紀錄（2026-07-27 修）。
   // 舊版只存 doc，卜卦紀錄不在裡面 → 使用者以為「有備份」，實際上卦全裸奔（實際損失過）。
   // 包成信封格式並保留舊格式相容：載入端看到 __envelope 就拆，看不到就當成純 doc（舊備份照樣讀得回）。
-  const casts = await readBackupLedger("baseball-casts","dvManualCasts");
-  const wnbaCasts = await readBackupLedger("wnba-casts","dvManualCastsWnba");
-  const payload = { __envelope:"sbplus-backup-v2", doc, dvManualCasts:casts, dvManualCastsWnba:wnbaCasts };
+  const salvage=window.__storagePressure?.salvageLedger;
+  const localLedger=(storeKey,legacyKey)=>readBackupLedger(storeKey,legacyKey);
+  const baseball = salvage ? await salvage({
+    label:"棒球卦",
+    readLocal:()=>localLedger("baseball-casts","dvManualCasts"),
+    readCloud:window.__dvSync?.fetchCloudCasts ? ()=>window.__dvSync.fetchCloudCasts() : null
+  }) : {data:await localLedger("baseball-casts","dvManualCasts"),source:"local",complete:true,warning:""};
+  const wnba = salvage ? await salvage({
+    label:"WNBA 卦",
+    readLocal:()=>localLedger("wnba-casts","dvManualCastsWnba")
+  }) : {data:await localLedger("wnba-casts","dvManualCastsWnba"),source:"local",complete:true,warning:""};
+  const warnings=[baseball.warning,wnba.warning].filter(Boolean);
+  const payload = {
+    __envelope:"sbplus-backup-v2",
+    __backupWarnings:warnings,
+    __backupSources:{baseballCasts:baseball.source,wnbaCasts:wnba.source},
+    doc,
+    dvManualCasts:baseball.data,
+    dvManualCastsWnba:wnba.data
+  };
   const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
   a.download=`排盤備份_${todayStr()}.json`; a.click();
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   // remember when the user last took a real (file) backup
   try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); }catch(_){}
+  if(warnings.length) alert("備份已下載 ✓\n\n"+warnings.join("\n"));
   }catch(e){
     alert("備份失敗：無法讀取完整資料。原始資料沒有被刪除，請先不要清除瀏覽器資料。\n\n"+(e&&e.message||e));
   }

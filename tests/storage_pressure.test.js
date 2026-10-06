@@ -232,3 +232,32 @@ test('corrupt IndexedDB data without a legacy copy fails loudly so backup cannot
 
   await assert.rejects(() => store.readJSON('baseball-casts', 'dvManualCasts'), /驗證失敗/);
 });
+
+test('backup salvage uses the cloud ledger when local IndexedDB stays broken', async () => {
+  const cloud = [{ ts: '2026-10-06T08:00:00Z', officialId: 'cloud-copy' }];
+  const localError = new Error('Internal error.');
+
+  const result = await pressure.salvageLedger({
+    label: '棒球卦',
+    readLocal: async () => { throw localError; },
+    readCloud: async () => cloud,
+  });
+
+  assert.deepEqual(result.data, cloud);
+  assert.equal(result.source, 'cloud');
+  assert.equal(result.complete, false);
+  assert.match(result.warning, /棒球卦/);
+  assert.match(result.warning, /雲端/);
+});
+
+test('backup salvage never blocks the board download when an optional ledger is unavailable', async () => {
+  const result = await pressure.salvageLedger({
+    label: 'WNBA 卦',
+    readLocal: async () => { throw new Error('Internal error.'); },
+  });
+
+  assert.deepEqual(result.data, []);
+  assert.equal(result.source, 'unavailable');
+  assert.equal(result.complete, false);
+  assert.match(result.warning, /WNBA 卦/);
+});

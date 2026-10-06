@@ -520,7 +520,7 @@
     <div class="stats-body" id="statsBody"></div>
   </div>
 
-<script src="./storage-pressure.js?v=20261006idbretry1"></script>
+<script src="./storage-pressure.js?v=20261006salvage1"></script>
 <script src="./keyboard-navigation.js?v=20261006kbd1"></script>
 <script>
 "use strict";
@@ -2239,11 +2239,23 @@ function updateStorageGauge(){
 }
 $("#exportDataBtn").onclick=async()=>{
   try{
-    const wnbaCasts=window.__largeStorage ? await window.__largeStorage.readJSON('wnba-casts','dvManualCastsWnba') : [];
-    const payload={__envelope:'sbplus-nba-backup-v2',nbaDoc:doc,dvManualCastsWnba:wnbaCasts};
+    const salvage=window.__storagePressure?.salvageLedger;
+    const wnba=salvage ? await salvage({
+      label:'WNBA 卦',
+      readLocal:async()=>window.__largeStorage ? await window.__largeStorage.readJSON('wnba-casts','dvManualCastsWnba') : []
+    }) : {data:window.__largeStorage ? await window.__largeStorage.readJSON('wnba-casts','dvManualCastsWnba') : [],source:'local',complete:true,warning:''};
+    const warnings=[wnba.warning].filter(Boolean);
+    const payload={
+      __envelope:'sbplus-nba-backup-v2',
+      __backupWarnings:warnings,
+      __backupSources:{wnbaCasts:wnba.source},
+      nbaDoc:doc,
+      dvManualCastsWnba:wnba.data
+    };
     const blob=new Blob([JSON.stringify(payload)],{type:"application/json"});
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
     a.download=`籃球排盤備份_${twOffset(0)}.json`; a.click(); URL.revokeObjectURL(a.href); closeMore();
+    if(warnings.length) alert("備份已下載 ✓\n\n"+warnings.join("\n"));
   }catch(e){ alert("備份失敗：無法讀取完整資料。原始資料沒有被刪除。\n\n"+(e&&e.message||e)); }
 };
 $("#importDataBtn").onclick=()=>{ $("#importFile").click(); };

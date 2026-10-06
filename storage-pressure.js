@@ -210,6 +210,39 @@
     return merged;
   }
 
+  async function salvageLedger(options) {
+    options = options || {};
+    var label = options.label || '附屬紀錄';
+    var localError = null, cloudError = null;
+    try {
+      var local = await options.readLocal();
+      if (!Array.isArray(local)) throw new Error(label + '格式不是陣列');
+      return { data: local, source: 'local', complete: true, warning: '' };
+    } catch (error) { localError = error; }
+
+    if (typeof options.readCloud === 'function') {
+      try {
+        var cloud = await options.readCloud();
+        if (!Array.isArray(cloud)) throw new Error(label + '雲端格式不是陣列');
+        return {
+          data: cloud,
+          source: 'cloud',
+          complete: false,
+          warning: label + '的本機大型資料庫無法讀取，備份已改用 GitHub 雲端紀錄（' + cloud.length + ' 筆）。'
+        };
+      } catch (error) { cloudError = error; }
+    }
+
+    return {
+      data: [],
+      source: 'unavailable',
+      complete: false,
+      warning: label + '目前無法讀取，已保留盤面備份；沒有刪除原始資料。' +
+        (localError && localError.message ? ' 本機錯誤：' + localError.message : '') +
+        (cloudError && cloudError.message ? ' 雲端錯誤：' + cloudError.message : '')
+    };
+  }
+
   function createIndexedDbAdapter(indexedDB) {
     if (!indexedDB || typeof indexedDB.open !== 'function') return null;
     var opened = null;
@@ -372,6 +405,7 @@
     decodeEmergency: decodeEmergency,
     decodeLegacyPayload: decodeLegacyPayload,
     encodeLegacyPayload: encodeLegacyPayload,
+    salvageLedger: salvageLedger,
     createIndexedDbAdapter: createIndexedDbAdapter,
     createLargeJsonStore: createLargeJsonStore,
     mergeCastLedgers: mergeCastLedgers

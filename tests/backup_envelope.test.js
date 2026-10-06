@@ -19,10 +19,23 @@ test('baseball backup v2 contains both manual-cast ledgers and reads them throug
   assert.match(indexSource, /castImportErrors/);
 });
 
+test('baseball backup still downloads the board when persistent IndexedDB errors break a ledger', () => {
+  assert.match(indexSource, /salvageLedger/);
+  assert.match(indexSource, /fetchCloudCasts/);
+  assert.match(indexSource, /__backupWarnings/);
+  assert.match(indexSource, /備份已下載/);
+});
+
 test('basketball backup includes WNBA casts while accepting its old plain document format', () => {
   assert.match(nbaSource, /sbplus-nba-backup-v2/);
   assert.match(nbaSource, /wnba-casts/);
   assert.match(nbaSource, /j\.nbaDoc \|\| j/);
+});
+
+test('basketball board backup also survives persistent IndexedDB errors', () => {
+  assert.match(nbaSource, /salvageLedger/);
+  assert.match(nbaSource, /__backupWarnings/);
+  assert.match(nbaSource, /備份已下載/);
 });
 
 test('all cast writers use the same verified large-data store', () => {
