@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-06T00:52:26.787Z",
+  "generatedAt": "2026-10-06T00:57:38.391Z",
   "officialScheduleCount": 17,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T00:52:26.787Z",
-      "lastAttemptAt": "2026-10-06T00:52:26.787Z",
+      "lastSuccessAt": "2026-10-06T00:57:38.391Z",
+      "lastAttemptAt": "2026-10-06T00:57:38.391Z",
       "error": null,
       "matched": 2,
       "health": {
@@ -19,22 +19,27 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T00:52:26.787Z",
-      "lastAttemptAt": "2026-10-06T00:52:26.787Z",
+      "lastSuccessAt": "2026-10-06T00:57:38.391Z",
+      "lastAttemptAt": "2026-10-06T00:57:38.391Z",
       "error": null,
       "matched": 2,
       "health": {
-        "discovered": 2,
+        "discovered": 3,
         "matched": 2,
         "unmatched": 0,
-        "failed": 0,
-        "failures": []
+        "failed": 1,
+        "failures": [
+          {
+            "slug": "46937489-hanshin-tigers-hiroshima-toyo-carp",
+            "error": "Stake 官方棒球賽事頁沒有可辨識的全場盤"
+          }
+        ]
       }
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T00:52:26.787Z",
-      "lastAttemptAt": "2026-10-06T00:52:26.787Z",
+      "lastSuccessAt": "2026-10-06T00:57:38.391Z",
+      "lastAttemptAt": "2026-10-06T00:57:38.391Z",
       "error": null,
       "matched": 5,
       "health": {
@@ -47,8 +52,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T00:52:26.787Z",
-      "lastAttemptAt": "2026-10-06T00:52:26.787Z",
+      "lastSuccessAt": "2026-10-06T00:57:38.391Z",
+      "lastAttemptAt": "2026-10-06T00:57:38.391Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -8921,7 +8926,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:25.939Z",
+      "observedAt": "2026-10-06T00:57:36.986Z",
       "frozenAt": null,
       "favoriteFlipCount": 1,
       "favoriteTransitions": [
@@ -9557,7 +9562,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:26.103Z",
+      "observedAt": "2026-10-06T00:57:37.565Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -9693,7 +9698,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:26.269Z",
+      "observedAt": "2026-10-06T00:57:37.730Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -9933,7 +9938,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:26.602Z",
+      "observedAt": "2026-10-06T00:57:38.196Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -10095,7 +10100,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:25.423Z",
+      "observedAt": "2026-10-06T00:57:24.459Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -10186,7 +10191,7 @@
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 2.35,
+        "away": 2.33,
         "home": 1.51
       },
       "moneyline": {
@@ -10195,8 +10200,8 @@
       },
       "total": {
         "line": 6.5,
-        "over": 1.83,
-        "under": 1.84
+        "over": 1.79,
+        "under": 1.88
       },
       "sources": {
         "direction": "stake-official",
@@ -10205,7 +10210,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:25.586Z",
+      "observedAt": "2026-10-06T00:57:25.007Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -10339,6 +10344,32 @@
             "moneyline": "stake-official"
           },
           "partial": false
+        },
+        {
+          "observedAt": "2026-10-06T00:57:25.007Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.33,
+            "home": 1.51
+          },
+          "moneyline": {
+            "away": 1.75,
+            "home": 2
+          },
+          "total": {
+            "line": 6.5,
+            "over": 1.79,
+            "under": 1.88
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -10374,7 +10405,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:26.436Z",
+      "observedAt": "2026-10-06T00:57:38.029Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -10536,7 +10567,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:24.729Z",
+      "observedAt": "2026-10-06T00:57:23.767Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -10653,7 +10684,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T00:52:24.899Z",
+      "observedAt": "2026-10-06T00:57:23.936Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
