@@ -4829,24 +4829,31 @@ async function importBackupLedger(storeKey,legacyKey,incoming){
   try{ window.dispatchEvent(new CustomEvent("sbplus-casts-updated",{detail:{storeKey}})); }catch(_){}
   return merged.length;
 }
-async function exportData(){
+async function exportData(options){
   closeMore();
   syncStateToDoc();
   try{
+  const rescueMode=!!(options&&options.rescue);
+  if(rescueMode) window.__rescueBackupPhase="start";
   // 匯出＝完整快照：盤面主檔＋手動卜卦紀錄（2026-07-27 修）。
   // 舊版只存 doc，卜卦紀錄不在裡面 → 使用者以為「有備份」，實際上卦全裸奔（實際損失過）。
   // 包成信封格式並保留舊格式相容：載入端看到 __envelope 就拆，看不到就當成純 doc（舊備份照樣讀得回）。
   const salvage=window.__storagePressure?.salvageLedger;
   const localLedger=(storeKey,legacyKey)=>readBackupLedger(storeKey,legacyKey);
-  const baseball = salvage ? await salvage({
-    label:"棒球卦",
-    readLocal:()=>localLedger("baseball-casts","dvManualCasts"),
-    readCloud:window.__dvSync?.fetchCloudCasts ? ()=>window.__dvSync.fetchCloudCasts() : null
-  }) : {data:await localLedger("baseball-casts","dvManualCasts"),source:"local",complete:true,warning:""};
-  const wnba = salvage ? await salvage({
-    label:"WNBA 卦",
-    readLocal:()=>localLedger("wnba-casts","dvManualCastsWnba")
-  }) : {data:await localLedger("wnba-casts","dvManualCastsWnba"),source:"local",complete:true,warning:""};
+  const baseball = rescueMode
+    ? {data:[],source:"skipped",complete:false,warning:"救援檔先保住盤面主檔；棒球卦稍後由雲端副本補入。"}
+    : salvage ? await salvage({
+      label:"棒球卦",
+      readLocal:()=>localLedger("baseball-casts","dvManualCasts"),
+      readCloud:window.__dvSync?.fetchCloudCasts ? ()=>window.__dvSync.fetchCloudCasts() : null
+    }) : {data:await localLedger("baseball-casts","dvManualCasts"),source:"local",complete:true,warning:""};
+  const wnba = rescueMode
+    ? {data:[],source:"skipped",complete:false,warning:"救援模式未讀取 WNBA 卦；盤面主檔仍已備份。"}
+    : salvage ? await salvage({
+        label:"WNBA 卦",
+        readLocal:()=>localLedger("wnba-casts","dvManualCastsWnba")
+      }) : {data:await localLedger("wnba-casts","dvManualCastsWnba"),source:"local",complete:true,warning:""};
+  if(rescueMode) window.__rescueBackupPhase="ledgers-ready";
   const warnings=[baseball.warning,wnba.warning].filter(Boolean);
   const payload = {
     __envelope:"sbplus-backup-v2",
@@ -4858,12 +4865,15 @@ async function exportData(){
   };
   const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
   const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download=`排盤備份_${todayStr()}.json`; a.click();
+  a.download=`排盤備份_${todayStr()}${rescueMode?"_救援":""}.json`;
+  document.body.appendChild(a); a.click(); a.remove();
+  if(rescueMode) window.__rescueBackupPhase="download-clicked";
   setTimeout(()=>URL.revokeObjectURL(a.href),1000);
   // remember when the user last took a real (file) backup
   try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); }catch(_){}
   if(warnings.length) alert("備份已下載 ✓\n\n"+warnings.join("\n"));
   }catch(e){
+    if(options&&options.rescue) window.__rescueBackupPhase="failed:"+(e&&e.message||e);
     alert("備份失敗：無法讀取完整資料。原始資料沒有被刪除，請先不要清除瀏覽器資料。\n\n"+(e&&e.message||e));
   }
 }
@@ -8129,6 +8139,15 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
 
 /* ---------------- init ---------------- */
 (async()=>{
+  const rescueBackupMode=new URLSearchParams(location.search).get("rescueBackup")==="1";
+  if(rescueBackupMode){
+    // 先排入救援工作，避免後續任何初始化例外阻斷備份；保留時間讓主檔與同步資料完成載入。
+    window.__rescueBackupScheduled=true;
+    setTimeout(()=>{
+      window.__rescueBackupTriggered=true;
+      exportData({rescue:true});
+    }, 6000);
+  }
   await load();
   // localStorage 到 85% 時先釋放兩份可重建副本，保住盤面主檔與手動卦。
   try{ if(window.__storagePressure) window.__storagePressure.cleanup(localStorage, false); }catch(_){}
@@ -8147,7 +8166,9 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
   // backup safety net: snapshot to in-browser slot now + every 5 min, and remind if overdue
   autoBackupSnapshot();
   setInterval(autoBackupSnapshot, 5*60*1000);
-  setTimeout(checkBackupReminder, 1200);
+  if(!rescueBackupMode){
+    setTimeout(checkBackupReminder, 1200);
+  }
   // 全域：數字欄位一律禁用滑鼠滾輪改值（避免捲動畫面時誤觸；涵蓋結算卡、比賽卡、及所有 number 欄位，含 add-on 動態產生的）
   document.addEventListener("wheel", (e)=>{
     const el = document.activeElement;
