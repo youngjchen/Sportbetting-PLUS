@@ -115,12 +115,48 @@ def assert_unified_import(browser):
         os.unlink(import_path)
 
 
+def assert_baseball_import_recovers_corrupt_primary(browser):
+    payload = {
+        "__envelope": "sbplus-all-sports-backup-v3",
+        "documents": {"baseball": board_doc("recovered-after-corruption")},
+        "ledgers": {},
+    }
+    with tempfile.NamedTemporaryFile("w", suffix=".json", encoding="utf-8", delete=False) as handle:
+        json.dump(payload, handle, ensure_ascii=False)
+        import_path = handle.name
+    try:
+        context = browser.new_context()
+        page = context.new_page()
+        page.on("dialog", lambda dialog: dialog.dismiss())
+        page.goto(f"{BASE_URL}/index.html", wait_until="domcontentloaded")
+        page.evaluate("localStorage.setItem('sportbetting_plus_doc_v2', '{broken')")
+        page.reload(wait_until="domcontentloaded")
+        page.wait_for_selector("#importDataBtn", state="attached")
+        with page.expect_file_chooser() as chooser_info:
+            page.locator("#importDataBtn").evaluate("element => element.click()")
+        chooser_info.value.set_files(import_path)
+        page.wait_for_timeout(800)
+        restored = page.evaluate(
+            """async () => {
+              const raw=localStorage.getItem('sportbetting_plus_doc_v2');
+              try { return await window.__storagePressure.decodeLegacyPayload(raw); }
+              catch (_) { return null; }
+            }"""
+        )
+        assert restored is not None
+        assert restored["boards"][DATE]["label"] == "recovered-after-corruption"
+        context.close()
+    finally:
+        os.unlink(import_path)
+
+
 def main():
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
         for page_name in ("index.html", "nba.html", "nhl.html"):
             assert_unified_download(browser, page_name)
         assert_unified_import(browser)
+        assert_baseball_import_recovers_corrupt_primary(browser)
         browser.close()
     print("all sports pages export and import one unified backup")
 

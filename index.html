@@ -4919,6 +4919,10 @@ function importData(){
           currentSport:"baseball",
           setCurrentDoc(value){
             if(!loadDocFromString(JSON.stringify(value))) throw new Error(_loadErr||"棒球盤面格式不符");
+            // 使用者匯入的是已驗證備份；解除啟動時的讀取保護閂鎖，否則 save() 會拒絕落地，
+            // 畫面看似還原、重新整理後卻仍回到毀損主檔。
+            _loadBlocked=false;
+            window.__boardSaveOK=true;
           }
         });
         loadActiveBoard(); save(); render(); buildDateBar(); applyView(); fitView();
