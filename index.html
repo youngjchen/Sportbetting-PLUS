@@ -1606,6 +1606,7 @@
 
 <script src="./logo-map.js?v=2"></script>
 <script src="./storage-pressure.js?v=20261006salvage1"></script>
+<script src="./unified-backup.js?v=20261006ub1"></script>
 <script src="./keyboard-navigation.js?v=20261006kbd1"></script>
 <script src="./game-record-utils.js?v=20260924dh1"></script>
 <script>
@@ -4806,72 +4807,22 @@ function wrapForeign(node, W, H){
 }
 
 /* ---------------- data backup (export / import a file) ---------------- */
-async function readBackupLedger(storeKey, legacyKey){
-  if(window.__largeStorage) return await window.__largeStorage.readJSON(storeKey, legacyKey);
-  try{
-    const raw=localStorage.getItem(legacyKey)||"[]";
-    if(window.__storagePressure?.decodeLegacyPayload) return await window.__storagePressure.decodeLegacyPayload(raw);
-    return JSON.parse(raw)||[];
-  }catch(_){ return []; }
-}
-function mergeBackupLedger(incoming,current){
-  if(window.__dvSync?.merge) return window.__dvSync.merge(incoming,current);
-  const m={}, key=e=>(e.ts||"")+"|"+(e.officialId||"")+"|"+(e.market||"")+"|"+(e.method||"");
-  (current||[]).concat(incoming||[]).forEach(e=>{ if(e&&e.ts) m[key(e)]=e; });
-  return Object.keys(m).map(k=>m[k]).sort((a,b)=>a.ts<b.ts?1:(a.ts>b.ts?-1:0));
-}
-async function importBackupLedger(storeKey,legacyKey,incoming){
-  if(!Array.isArray(incoming)) return 0;
-  const current=await readBackupLedger(storeKey,legacyKey);
-  const merged=mergeBackupLedger(incoming,current);
-  if(window.__largeStorage) await window.__largeStorage.writeJSON(storeKey,merged,legacyKey);
-  else localStorage.setItem(legacyKey,JSON.stringify(merged));
-  try{ window.dispatchEvent(new CustomEvent("sbplus-casts-updated",{detail:{storeKey}})); }catch(_){}
-  return merged.length;
-}
 async function exportData(options){
   closeMore();
   syncStateToDoc();
   try{
-  const rescueMode=!!(options&&options.rescue);
-  if(rescueMode) window.__rescueBackupPhase="start";
-  // 匯出＝完整快照：盤面主檔＋手動卜卦紀錄（2026-07-27 修）。
-  // 舊版只存 doc，卜卦紀錄不在裡面 → 使用者以為「有備份」，實際上卦全裸奔（實際損失過）。
-  // 包成信封格式並保留舊格式相容：載入端看到 __envelope 就拆，看不到就當成純 doc（舊備份照樣讀得回）。
-  const salvage=window.__storagePressure?.salvageLedger;
-  const localLedger=(storeKey,legacyKey)=>readBackupLedger(storeKey,legacyKey);
-  const baseball = rescueMode
-    ? {data:[],source:"skipped",complete:false,warning:"救援檔先保住盤面主檔；棒球卦稍後由雲端副本補入。"}
-    : salvage ? await salvage({
-      label:"棒球卦",
-      readLocal:()=>localLedger("baseball-casts","dvManualCasts"),
-      readCloud:window.__dvSync?.fetchCloudCasts ? ()=>window.__dvSync.fetchCloudCasts() : null
-    }) : {data:await localLedger("baseball-casts","dvManualCasts"),source:"local",complete:true,warning:""};
-  const wnba = rescueMode
-    ? {data:[],source:"skipped",complete:false,warning:"救援模式未讀取 WNBA 卦；盤面主檔仍已備份。"}
-    : salvage ? await salvage({
-        label:"WNBA 卦",
-        readLocal:()=>localLedger("wnba-casts","dvManualCastsWnba")
-      }) : {data:await localLedger("wnba-casts","dvManualCastsWnba"),source:"local",complete:true,warning:""};
-  if(rescueMode) window.__rescueBackupPhase="ledgers-ready";
-  const warnings=[baseball.warning,wnba.warning].filter(Boolean);
-  const payload = {
-    __envelope:"sbplus-backup-v2",
-    __backupWarnings:warnings,
-    __backupSources:{baseballCasts:baseball.source,wnbaCasts:wnba.source},
-    doc,
-    dvManualCasts:baseball.data,
-    dvManualCastsWnba:wnba.data
-  };
-  const blob = new Blob([JSON.stringify(payload)], {type:"application/json"});
-  const a=document.createElement("a"); a.href=URL.createObjectURL(blob);
-  a.download=`排盤備份_${todayStr()}${rescueMode?"_救援":""}.json`;
-  document.body.appendChild(a); a.click(); a.remove();
-  if(rescueMode) window.__rescueBackupPhase="download-clicked";
-  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
-  // remember when the user last took a real (file) backup
-  try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); }catch(_){}
-  if(warnings.length) alert("備份已下載 ✓\n\n"+warnings.join("\n"));
+    const rescueMode=!!(options&&options.rescue);
+    if(rescueMode) window.__rescueBackupPhase="start";
+    const result=await window.__unifiedBackup.exportAll({
+      currentSport:"baseball",
+      currentDoc:doc,
+      dateLabel:todayStr(),
+      rescue:rescueMode,
+      baseballCloudReader:window.__dvSync?.fetchCloudCasts ? ()=>window.__dvSync.fetchCloudCasts() : null
+    });
+    if(rescueMode) window.__rescueBackupPhase="download-clicked";
+    try{ localStorage.setItem(LS_LAST_BACKUP, String(Date.now())); }catch(_){}
+    if(result.warnings.length) alert("備份已下載 ✓\n\n"+result.warnings.join("\n"));
   }catch(e){
     if(options&&options.rescue) window.__rescueBackupPhase="failed:"+(e&&e.message||e);
     alert("備份失敗：無法讀取完整資料。原始資料沒有被刪除，請先不要清除瀏覽器資料。\n\n"+(e&&e.message||e));
@@ -4961,28 +4912,22 @@ function importData(){
     const f=inp.files&&inp.files[0]; if(!f) return;
     const rd=new FileReader();
     rd.onload=async()=>{
-      snapshot();
-      // v2 含棒球＋WNBA 卦；v1 與舊純 doc 仍相容。
-      let raw = String(rd.result), casts = null, wnbaCasts = null;
       try{
-        const outer = JSON.parse(raw);
-        if(outer && (outer.__envelope === "sbplus-backup-v1" || outer.__envelope === "sbplus-backup-v2")){
-          raw = JSON.stringify(outer.doc);
-          if(Array.isArray(outer.dvManualCasts)) casts = outer.dvManualCasts;
-          if(Array.isArray(outer.dvManualCastsWnba)) wnbaCasts = outer.dvManualCastsWnba;
-        }
-      }catch(_){}
-      if(loadDocFromString(raw)){
-        let baseballTotal=0,wnbaTotal=0,castImportErrors=[];
-        try{ baseballTotal=await importBackupLedger("baseball-casts","dvManualCasts",casts); }catch(e){ castImportErrors.push("棒球卦："+(e&&e.message||e)); }
-        try{ wnbaTotal=await importBackupLedger("wnba-casts","dvManualCastsWnba",wnbaCasts); }catch(e){ castImportErrors.push("WNBA 卦："+(e&&e.message||e)); }
+        const parsed=window.__unifiedBackup.parseImport(String(rd.result),"baseball");
+        snapshot();
+        const report=await window.__unifiedBackup.persistImport(parsed,{
+          currentSport:"baseball",
+          setCurrentDoc(value){
+            if(!loadDocFromString(JSON.stringify(value))) throw new Error(_loadErr||"棒球盤面格式不符");
+          }
+        });
         loadActiveBoard(); save(); render(); buildDateBar(); applyView(); fitView();
         recoverMissingSettledGames();
         setTimeout(backfillRecentBet365TaiwanSnapshots,0);
-        alert("已匯入盤面備份 ✓" + ((casts||wnbaCasts) ? `（棒球卦 ${baseballTotal} 筆、WNBA 卦 ${wnbaTotal} 筆）` : "") +
-          (castImportErrors.length ? "\n\n⚠ 部分占卜紀錄匯入失敗：\n"+castImportErrors.join("\n") : ""));
-      }else{
-        alert("這個檔案讀不出來，請確認是本程式匯出的備份檔。");
+        const counts=Object.entries(report.ledgerCounts).filter(([,n])=>Number.isFinite(n)).map(([k,n])=>`${k} ${n} 筆`).join("、");
+        alert("已匯入全運動備份 ✓"+(counts?`（${counts}）`:"")+(report.warnings.length?"\n\n⚠ "+report.warnings.join("\n"):""));
+      }catch(error){
+        alert("這個檔案讀不出來，請確認是本程式匯出的備份檔。\n\n"+(error&&error.message||error));
       }
     };
     rd.readAsText(f);

@@ -36,9 +36,12 @@ def main():
         with open(path, "r", encoding="utf-8") as backup_file:
             payload = json.load(backup_file)
 
-        assert payload["dvManualCasts"][0]["officialId"] == "cloud-rescue"
-        assert payload["dvManualCastsWnba"] == []
-        assert len(payload["__backupWarnings"]) >= 1
+        assert payload["__envelope"] == "sbplus-all-sports-backup-v3"
+        assert payload["documents"]["baseball"]["boards"] is not None
+        assert payload["ledgers"]["baseball"][0]["officialId"] == "cloud-rescue"
+        assert payload["ledgers"]["wnba"] == []
+        assert payload["ledgers"]["nhl"] == []
+        assert len(payload["warnings"]) >= 1
         assert any("備份已下載" in message for message in dialogs), dialogs
         assert not any("備份失敗" in message for message in dialogs), dialogs
         page.close()
@@ -63,9 +66,10 @@ def main():
         download = download_info.value
         with open(download.path(), "r", encoding="utf-8") as backup_file:
             payload = json.load(backup_file)
-        assert payload["nbaDoc"]["boards"] is not None
-        assert payload["dvManualCastsWnba"] == []
-        assert len(payload["__backupWarnings"]) == 1
+        assert payload["__envelope"] == "sbplus-all-sports-backup-v3"
+        assert payload["documents"]["basketball"]["boards"] is not None
+        assert payload["ledgers"]["wnba"] == []
+        assert len(payload["warnings"]) >= 1
         assert any("備份已下載" in message for message in dialogs), dialogs
         assert not any("備份失敗" in message for message in dialogs), dialogs
         browser.close()
