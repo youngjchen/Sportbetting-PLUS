@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-06T13:00:27.643Z",
+  "generatedAt": "2026-10-06T13:05:36.932Z",
   "officialScheduleCount": 9,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T13:00:27.643Z",
-      "lastAttemptAt": "2026-10-06T13:00:27.643Z",
+      "lastSuccessAt": "2026-10-06T13:05:36.932Z",
+      "lastAttemptAt": "2026-10-06T13:05:36.932Z",
       "error": null,
       "matched": 2,
       "health": {
@@ -19,8 +19,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T13:00:27.643Z",
-      "lastAttemptAt": "2026-10-06T13:00:27.643Z",
+      "lastSuccessAt": "2026-10-06T13:05:36.932Z",
+      "lastAttemptAt": "2026-10-06T13:05:36.932Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -33,13 +33,13 @@
     },
     "KBO": {
       "status": "partial",
-      "lastSuccessAt": "2026-10-06T13:00:27.643Z",
-      "lastAttemptAt": "2026-10-06T13:00:27.643Z",
+      "lastSuccessAt": "2026-10-06T13:05:36.932Z",
+      "lastAttemptAt": "2026-10-06T13:05:36.932Z",
       "error": null,
-      "matched": 2,
+      "matched": 5,
       "health": {
-        "discovered": 2,
-        "matched": 2,
+        "discovered": 5,
+        "matched": 5,
         "unmatched": 0,
         "failed": 0,
         "failures": []
@@ -47,8 +47,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T13:00:27.643Z",
-      "lastAttemptAt": "2026-10-06T13:00:27.643Z",
+      "lastSuccessAt": "2026-10-06T13:05:36.932Z",
+      "lastAttemptAt": "2026-10-06T13:05:36.932Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -12824,7 +12824,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T13:00:06.850Z",
+      "observedAt": "2026-10-06T13:05:07.949Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13071,7 +13071,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T13:00:07.049Z",
+      "observedAt": "2026-10-06T13:05:08.251Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13662,7 +13662,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T13:00:07.879Z",
+      "observedAt": "2026-10-06T13:05:10.127Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13756,23 +13756,30 @@
       "fixtureId": "1dffdac2-51f4-4cba-8e1f-86e3d0d56f18",
       "slug": "46863588-ssg-landers-nc-dinos",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46863588-ssg-landers-nc-dinos",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
-      "moneyline": {
-        "away": 1.93,
-        "home": 1.81
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.47,
+        "home": 2.44
       },
-      "total": null,
+      "moneyline": {
+        "away": 1.95,
+        "home": 1.79
+      },
+      "total": {
+        "line": 9.5,
+        "over": 1.76,
+        "under": 1.91
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-06T13:00:18.891Z",
+      "partial": false,
+      "observedAt": "2026-10-06T13:05:10.917Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13795,6 +13802,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-06T13:05:10.917Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.47,
+            "home": 2.44
+          },
+          "moneyline": {
+            "away": 1.95,
+            "home": 1.79
+          },
+          "total": {
+            "line": 9.5,
+            "over": 1.76,
+            "under": 1.91
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -13807,23 +13840,30 @@
       "fixtureId": "937d18b1-6662-44e1-ae97-e86688724a4f",
       "slug": "46863587-lotte-giants-kia-tigers",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46863587-lotte-giants-kia-tigers",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.96,
+        "home": 1.72
+      },
       "moneyline": {
         "away": 1.63,
         "home": 2.19
       },
-      "total": null,
+      "total": {
+        "line": 10.5,
+        "over": 1.76,
+        "under": 1.92
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-06T13:00:27.349Z",
+      "partial": false,
+      "observedAt": "2026-10-06T13:05:36.748Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13837,6 +13877,185 @@
           "moneyline": {
             "away": 1.63,
             "home": 2.19
+          },
+          "total": null,
+          "sources": {
+            "direction": null,
+            "handicapOdds": null,
+            "total": null,
+            "moneyline": "stake-official"
+          },
+          "partial": true
+        },
+        {
+          "observedAt": "2026-10-06T13:05:36.748Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.96,
+            "home": 1.72
+          },
+          "moneyline": {
+            "away": 1.63,
+            "home": 2.19
+          },
+          "total": {
+            "line": 10.5,
+            "over": 1.76,
+            "under": 1.92
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        }
+      ]
+    },
+    "KBO_20261007_SAMSUNG@KT_1730": {
+      "league": "KBO",
+      "officialId": "KBO_20261007_SAMSUNG@KT_1730",
+      "scheduledStart": "2026-10-07T09:30:00.000Z",
+      "away": "三星獅",
+      "home": "巫師",
+      "fixtureId": "288010d0-bc40-4af7-a0fe-7ecc6f120f72",
+      "slug": "46863589-kt-wiz-samsung-lions",
+      "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46863589-kt-wiz-samsung-lions",
+      "favorite": null,
+      "rawLine": null,
+      "canonicalLine": null,
+      "handicapOdds": null,
+      "moneyline": {
+        "away": 1.8,
+        "home": 1.94
+      },
+      "total": null,
+      "sources": {
+        "direction": null,
+        "handicapOdds": null,
+        "total": null,
+        "moneyline": "stake-official"
+      },
+      "partial": true,
+      "observedAt": "2026-10-06T13:05:20.537Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-06T13:05:20.537Z",
+          "favorite": null,
+          "rawLine": null,
+          "canonicalLine": null,
+          "handicapOdds": null,
+          "moneyline": {
+            "away": 1.8,
+            "home": 1.94
+          },
+          "total": null,
+          "sources": {
+            "direction": null,
+            "handicapOdds": null,
+            "total": null,
+            "moneyline": "stake-official"
+          },
+          "partial": true
+        }
+      ]
+    },
+    "KBO_20261007_DOOSAN@LG_1730": {
+      "league": "KBO",
+      "officialId": "KBO_20261007_DOOSAN@LG_1730",
+      "scheduledStart": "2026-10-07T09:30:00.000Z",
+      "away": "斗山熊",
+      "home": "雙子",
+      "fixtureId": "82c21e07-5c83-4914-a366-a970fc556ecb",
+      "slug": "46863585-lg-twins-doosan-bears",
+      "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46863585-lg-twins-doosan-bears",
+      "favorite": null,
+      "rawLine": null,
+      "canonicalLine": null,
+      "handicapOdds": null,
+      "moneyline": {
+        "away": 2.13,
+        "home": 1.66
+      },
+      "total": null,
+      "sources": {
+        "direction": null,
+        "handicapOdds": null,
+        "total": null,
+        "moneyline": "stake-official"
+      },
+      "partial": true,
+      "observedAt": "2026-10-06T13:05:29.130Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-06T13:05:29.130Z",
+          "favorite": null,
+          "rawLine": null,
+          "canonicalLine": null,
+          "handicapOdds": null,
+          "moneyline": {
+            "away": 2.13,
+            "home": 1.66
+          },
+          "total": null,
+          "sources": {
+            "direction": null,
+            "handicapOdds": null,
+            "total": null,
+            "moneyline": "stake-official"
+          },
+          "partial": true
+        }
+      ]
+    },
+    "KBO_20261007_HANWHA@NEXEN_1730": {
+      "league": "KBO",
+      "officialId": "KBO_20261007_HANWHA@NEXEN_1730",
+      "scheduledStart": "2026-10-07T09:30:00.000Z",
+      "away": "華老鷹",
+      "home": "培證",
+      "fixtureId": "92ec4b8d-af30-42f1-974e-b580925069c4",
+      "slug": "46863590-kiwoom-heroes-hanwha-eagles",
+      "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46863590-kiwoom-heroes-hanwha-eagles",
+      "favorite": null,
+      "rawLine": null,
+      "canonicalLine": null,
+      "handicapOdds": null,
+      "moneyline": {
+        "away": 1.57,
+        "home": 2.3
+      },
+      "total": null,
+      "sources": {
+        "direction": null,
+        "handicapOdds": null,
+        "total": null,
+        "moneyline": "stake-official"
+      },
+      "partial": true,
+      "observedAt": "2026-10-06T13:05:36.464Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-06T13:05:36.464Z",
+          "favorite": null,
+          "rawLine": null,
+          "canonicalLine": null,
+          "handicapOdds": null,
+          "moneyline": {
+            "away": 1.57,
+            "home": 2.3
           },
           "total": null,
           "sources": {
