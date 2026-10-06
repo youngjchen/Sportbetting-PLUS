@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-06T08:59:25.902Z",
+  "generatedAt": "2026-10-06T09:04:03.773Z",
   "officialScheduleCount": 16,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T08:59:25.902Z",
-      "lastAttemptAt": "2026-10-06T08:59:25.902Z",
+      "lastSuccessAt": "2026-10-06T09:04:03.773Z",
+      "lastAttemptAt": "2026-10-06T09:04:03.773Z",
       "error": null,
       "matched": 2,
       "health": {
@@ -19,32 +19,27 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T08:59:25.902Z",
-      "lastAttemptAt": "2026-10-06T08:59:25.902Z",
+      "lastSuccessAt": "2026-10-06T09:04:03.773Z",
+      "lastAttemptAt": "2026-10-06T09:04:03.773Z",
       "error": null,
-      "matched": 2,
+      "matched": 1,
       "health": {
         "discovered": 3,
-        "matched": 2,
+        "matched": 1,
         "unmatched": 0,
-        "failed": 1,
-        "failures": [
-          {
-            "slug": "46937489-hanshin-tigers-hiroshima-toyo-carp",
-            "error": "Stake 官方棒球賽事頁沒有可辨識的全場盤"
-          }
-        ]
+        "failed": 0,
+        "failures": []
       }
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T08:59:25.902Z",
-      "lastAttemptAt": "2026-10-06T08:59:25.902Z",
+      "lastSuccessAt": "2026-10-06T09:04:03.773Z",
+      "lastAttemptAt": "2026-10-06T09:04:03.773Z",
       "error": null,
-      "matched": 5,
+      "matched": 0,
       "health": {
         "discovered": 5,
-        "matched": 5,
+        "matched": 0,
         "unmatched": 0,
         "failed": 0,
         "failures": []
@@ -52,8 +47,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-06T08:59:25.902Z",
-      "lastAttemptAt": "2026-10-06T08:59:25.902Z",
+      "lastSuccessAt": "2026-10-06T09:04:03.773Z",
+      "lastAttemptAt": "2026-10-06T09:04:03.773Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -11531,7 +11526,7 @@
       },
       "partial": false,
       "observedAt": "2026-10-06T08:59:03.725Z",
-      "frozenAt": null,
+      "frozenAt": "2026-10-06T08:59:30.000Z",
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
       "history": [
@@ -12031,7 +12026,7 @@
       },
       "partial": false,
       "observedAt": "2026-10-06T08:59:04.025Z",
-      "frozenAt": null,
+      "frozenAt": "2026-10-06T08:59:30.000Z",
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
       "history": [
@@ -12829,7 +12824,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T08:59:02.256Z",
+      "observedAt": "2026-10-06T09:04:01.714Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13024,7 +13019,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T08:59:02.429Z",
+      "observedAt": "2026-10-06T09:04:01.909Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13219,7 +13214,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-06T08:59:25.902Z",
+      "observedAt": "2026-10-06T09:04:03.773Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -13494,6 +13489,71 @@
             "line": 7.5,
             "over": 1.89,
             "under": 1.81
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        }
+      ]
+    },
+    "NPB_20261007_Carp@Tigers_1700": {
+      "league": "NPB",
+      "officialId": "NPB_20261007_Carp@Tigers_1700",
+      "scheduledStart": "2026-10-07T09:00:00.000Z",
+      "away": "廣島",
+      "home": "阪神",
+      "fixtureId": "61263faf-2ddc-4905-a09f-80f5c6aff9cd",
+      "slug": "46937489-hanshin-tigers-hiroshima-toyo-carp",
+      "sourceUrl": "https://stake.com/sports/baseball/japan/npb/46937489-hanshin-tigers-hiroshima-toyo-carp",
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.56,
+        "home": 2.23
+      },
+      "moneyline": {
+        "away": 2.35,
+        "home": 1.55
+      },
+      "total": {
+        "line": 5.5,
+        "over": 1.75,
+        "under": 1.92
+      },
+      "sources": {
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
+        "moneyline": "stake-official"
+      },
+      "partial": false,
+      "observedAt": "2026-10-06T09:04:03.210Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-06T09:04:03.210Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.56,
+            "home": 2.23
+          },
+          "moneyline": {
+            "away": 2.35,
+            "home": 1.55
+          },
+          "total": {
+            "line": 5.5,
+            "over": 1.75,
+            "under": 1.92
           },
           "sources": {
             "direction": "stake-official",
