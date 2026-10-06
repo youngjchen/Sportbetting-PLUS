@@ -4,10 +4,11 @@ rem 註冊（系統管理不需要，一般使用者權限即可）：
 rem   schtasks /Create /F /SC MINUTE /MO 5 /TN "BB-ScrapeFailover" /TR "wscript.exe \"D:\Sportbetting-PLUS\failover_task_hidden.vbs\""
 rem 移除：
 rem   schtasks /Delete /F /TN "BB-ScrapeFailover"
-rem 檢視 log：type "D:\Sportbetting-PLUS-runtime\bb_failover.log"
+rem 檢視 log：type "D:\Sportbetting-PLUS\.runtime\bb_failover.log"
 cd /d %~dp0
-set "BB_FAILOVER_WORKSPACE=D:\Sportbetting-PLUS-failover"
-if not exist "D:\Sportbetting-PLUS-runtime\tmp" mkdir "D:\Sportbetting-PLUS-runtime\tmp"
-set "TEMP=D:\Sportbetting-PLUS-runtime\tmp"
-set "TMP=D:\Sportbetting-PLUS-runtime\tmp"
-node local_failover_workspace.js >> "D:\Sportbetting-PLUS-runtime\bb_failover.log" 2>&1
+set "SBP_RUNTIME=%~dp0.runtime"
+set "BB_FAILOVER_WORKSPACE=%SBP_RUNTIME%\failover-workspace"
+if not exist "%SBP_RUNTIME%\tmp" mkdir "%SBP_RUNTIME%\tmp"
+set "TEMP=%SBP_RUNTIME%\tmp"
+set "TMP=%SBP_RUNTIME%\tmp"
+node local_failover_workspace.js >> "%SBP_RUNTIME%\bb_failover.log" 2>&1

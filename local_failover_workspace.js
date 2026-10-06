@@ -26,7 +26,7 @@ function normalizedRemote(value) {
 function resolveFailoverWorkspace({ sourceRepo, env = process.env }) {
   return path.resolve(
     env.BB_FAILOVER_WORKSPACE
-      || path.join(path.dirname(sourceRepo), 'Sportbetting-PLUS-failover')
+      || path.join(sourceRepo, '.runtime', 'failover-workspace')
   );
 }
 

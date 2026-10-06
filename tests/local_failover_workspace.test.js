@@ -31,13 +31,13 @@ test('hidden failover launcher waits so Task Scheduler can block overlapping run
   assert.doesNotMatch(launcher, /shell\.Run\s+.*?,\s*0,\s*False\s*$/mi);
 });
 
-test('local failover defaults to a sibling clone beside the moved source repository', () => {
+test('local failover defaults inside the single project folder runtime area', () => {
   const { resolveFailoverWorkspace } = loadWorkspaceModule();
   assert.equal(typeof resolveFailoverWorkspace, 'function');
 
   assert.equal(
     resolveFailoverWorkspace({ sourceRepo: 'D:\\Sportbetting-PLUS', env: {} }),
-    path.resolve('D:\\Sportbetting-PLUS-failover')
+    path.resolve('D:\\Sportbetting-PLUS\\.runtime\\failover-workspace')
   );
   assert.equal(
     resolveFailoverWorkspace({
