@@ -21,6 +21,8 @@
 
 新增 `unified-backup.js` 作為唯一的備份核心，掛載為 `window.__unifiedBackup`。三個頁面只負責提供「目前頁面的即時 `doc`」及匯入後如何刷新當前畫面；跨頁文件讀取、附屬紀錄讀取、統一格式、下載與其他運動文件的持久化都由共用模組處理。
 
+備份核心以運動註冊表驅動，不把棒球、籃球、冰球寫死在匯出迴圈。`unified-backup.js` 內建現有三項運動；未來新增運動時，只需新增一筆註冊資料（識別碼、主檔鍵、驗證器及可選的 ledger 定義），所有已載入共用模組的頁面便會自動把該運動納入匯出與匯入，不必逐頁修改備份函式。
+
 三個 HTML 都載入同一版本的 `unified-backup.js`。修改該檔時，三頁的 `?v=` 必須同步更新，避免其中一頁吃到舊快取。
 
 ### 公開介面
@@ -32,6 +34,18 @@ window.__unifiedBackup.exportAll({
   dateLabel: 'YYYY-MM-DD',
   baseballCloudReader?: () => Promise<Array>
 }) => Promise<{ payload, filename, warnings }>
+
+window.__unifiedBackup.registerSport({
+  id: String,
+  docKey: String,
+  validateDocument: (value) => Boolean,
+  ledgers?: Array<{
+    id: String,
+    storeKey: String,
+    legacyKey: String,
+    cloudReader?: () => Promise<Array>
+  }>
+})
 
 window.__unifiedBackup.parseImport(rawText) => {
   format: 'unified-v3' | 'legacy-baseball' | 'legacy-basketball' | 'legacy-hockey' | 'legacy-doc',
@@ -90,6 +104,8 @@ window.__unifiedBackup.persistImport(parsed, {
 - 三種卜卦紀錄分別讀取，單一 IndexedDB 失敗不得阻止整份備份。
 - 棒球卜卦可使用既有 GitHub 雲端讀取器作備援；WNBA 與 NHL 沒有雲端備援時標記缺失。
 - `warnings` 必須存進檔案；頁面只在有警告時以簡短訊息提醒，細節保留在備份內容。
+- `documents` 與 `ledgers` 都是可擴充字典；匯出與匯入必須遍歷註冊表，不得以固定三項的條件分支決定內容。
+- 新運動完成註冊後，既有棒球、籃球與冰球頁不需修改即可在下一版共用模組中備份該運動。
 
 ## 匯入與相容性
 
@@ -141,6 +157,7 @@ window.__unifiedBackup.persistImport(parsed, {
 ### 單元測試
 
 - 從棒球、籃球、NHL 三種 `currentSport` 建立 payload，均含三份文件與三種 ledger。
+- 登記第四個測試運動後，三種既有頁面的 payload 都自動出現第四份文件與其 ledger。
 - 當前頁文件一定優先於 localStorage 同名舊資料。
 - 純 JSON、`gz:`、`lz16:` 棒球主檔均能讀取。
 - 任一非當前運動或 ledger 讀取失敗時仍產生 v3 payload，且警告、來源正確。
@@ -160,6 +177,7 @@ window.__unifiedBackup.persistImport(parsed, {
 
 - 三頁備份按鈕均下載 `sbplus-all-sports-backup-v3`。
 - 從任一頁下載的檔案都包含所有可讀取的運動文件與附屬紀錄。
+- 新增一筆運動註冊資料後，不修改三頁匯出函式也會自動納入該運動。
 - 從任一頁匯入 v3 可還原全部運動，且舊備份仍相容。
 - 自動化測試涵蓋三頁匯出、三頁匯入、舊格式與局部讀取失敗。
 - `index.html`、`nba.html`、`nhl.html` 對 `unified-backup.js` 的版本參數一致。
