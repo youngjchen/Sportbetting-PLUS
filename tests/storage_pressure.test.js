@@ -114,6 +114,65 @@ function memoryAdapter(options = {}) {
   };
 }
 
+function flakyIndexedDB(value) {
+  let opens = 0;
+  const databases = [];
+  return {
+    get opens() { return opens; },
+    get databases() { return databases; },
+    open() {
+      const openRequest = {};
+      const attempt = opens++;
+      const database = {
+        closed: false,
+        objectStoreNames: { contains() { return true; } },
+        close() { this.closed = true; },
+        transaction() {
+          return {
+            objectStore() {
+              return {
+                get() {
+                  const request = {};
+                  setImmediate(() => {
+                    if (attempt === 0) {
+                      const error = new Error('Internal error.');
+                      error.name = 'UnknownError';
+                      request.error = error;
+                      request.onerror();
+                    } else {
+                      request.result = value;
+                      request.onsuccess();
+                    }
+                  });
+                  return request;
+                },
+              };
+            },
+          };
+        },
+      };
+      databases.push(database);
+      setImmediate(() => {
+        openRequest.result = database;
+        openRequest.onsuccess();
+      });
+      return openRequest;
+    },
+  };
+}
+
+test('IndexedDB transient Internal error reopens the database and retries once', async () => {
+  const expected = { version: 1, data: [{ ts: 'recover-me' }] };
+  const indexedDB = flakyIndexedDB(expected);
+  const adapter = pressure.createIndexedDbAdapter(indexedDB);
+
+  const actual = await adapter.get('baseball-casts');
+
+  assert.deepEqual(actual, expected);
+  assert.equal(indexedDB.opens, 2, '失效連線後應重新 open 一次');
+  assert.equal(indexedDB.databases[0].closed, true, '重試前應關閉舊連線');
+});
+
 test('large JSON migration removes legacy localStorage only after verified IndexedDB round-trip', async () => {
   assert.equal(typeof pressure.createLargeJsonStore, 'function', '尚未提供 IndexedDB 大型資料層');
   const storage = fakeStorage(5 * MB, { dvManualCasts: JSON.stringify([{ ts: '2026-09-24T01:00:00Z' }]) });

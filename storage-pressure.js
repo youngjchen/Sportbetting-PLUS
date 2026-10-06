@@ -215,25 +215,62 @@
     var opened = null;
     function db() {
       if (opened) return opened;
-      opened = new Promise(function (resolve, reject) {
+      var opening = new Promise(function (resolve, reject) {
         var request = indexedDB.open('sportbetting_plus_large_v1', 1);
         request.onupgradeneeded = function () {
           if (!request.result.objectStoreNames.contains('payloads')) request.result.createObjectStore('payloads');
         };
-        request.onsuccess = function () { resolve(request.result); };
-        request.onerror = function () { reject(request.error || new Error('IndexedDB 開啟失敗')); };
+        request.onsuccess = function () {
+          var database = request.result;
+          database.onversionchange = function () {
+            try { database.close(); } catch (_) {}
+            if (opened === opening) opened = null;
+          };
+          database.onclose = function () { if (opened === opening) opened = null; };
+          resolve(database);
+        };
+        request.onerror = function () {
+          if (opened === opening) opened = null;
+          reject(request.error || new Error('IndexedDB 開啟失敗'));
+        };
       });
+      opened = opening;
       return opened;
     }
-    function request(mode, action) {
+    function reset(database) {
+      try { if (database && typeof database.close === 'function') database.close(); } catch (_) {}
+      opened = null;
+    }
+    function request(mode, action, retried) {
       return db().then(function (database) {
         return new Promise(function (resolve, reject) {
-          var tx = database.transaction('payloads', mode);
-          var store = tx.objectStore('payloads');
-          var req = action(store);
-          req.onsuccess = function () { resolve(req.result == null ? null : req.result); };
-          req.onerror = function () { reject(req.error || new Error('IndexedDB 操作失敗')); };
+          var settled = false, tx, req;
+          function fail(error) {
+            if (settled) return;
+            settled = true;
+            reject(error || new Error('IndexedDB 操作失敗'));
+          }
+          try {
+            tx = database.transaction('payloads', mode);
+            tx.onabort = function () { fail(tx.error || new Error('IndexedDB 交易中止')); };
+            tx.onerror = function () { fail(tx.error || new Error('IndexedDB 交易失敗')); };
+            req = action(tx.objectStore('payloads'));
+            req.onsuccess = function () {
+              if (settled) return;
+              settled = true;
+              resolve(req.result == null ? null : req.result);
+            };
+            req.onerror = function () { fail(req.error || new Error('IndexedDB 操作失敗')); };
+          } catch (error) { fail(error); }
+        }).catch(function (error) {
+          if (retried) throw error;
+          reset(database);
+          return request(mode, action, true);
         });
+      }, function (error) {
+        if (retried) throw error;
+        opened = null;
+        return request(mode, action, true);
       });
     }
     return {

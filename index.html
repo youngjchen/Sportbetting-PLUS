@@ -1605,7 +1605,8 @@
 </style>
 
 <script src="./logo-map.js?v=2"></script>
-<script src="./storage-pressure.js?v=20260924idb1"></script>
+<script src="./storage-pressure.js?v=20261006idbretry1"></script>
+<script src="./keyboard-navigation.js?v=20261006kbd1"></script>
 <script src="./game-record-utils.js?v=20260924dh1"></script>
 <script>
 const LEAGUES = {
@@ -4997,49 +4998,6 @@ function updateSaveBadge(ok, mode){
 /* ---------------- toolbar & new UI wiring ---------------- */
 $("#undoBtn").onclick = ()=>{ undo(); };
 document.addEventListener("keydown", e=>{ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==="z"){ e.preventDefault(); undo(); } });
-
-/* ── 快捷導航（2026-08-13 使用者拍板）──
-   ↑/↓＝上一張/下一張卡片；←/→＝前一天/後一天；滑鼠滾輪一格＝跳一張卡片。 */
-let _navIdx = -1;
-function _navCards(){ return Array.from(document.querySelectorAll("#canvas .card[data-id]")); }
-function _navModalOpen(){
-  return !!document.querySelector(".modal.show, #settleModal.show, #histEdit.show, #flipBackfill.show, #moreMenu.show");
-}
-function gotoCard(step){
-  const cards = _navCards(); if(!cards.length) return;
-  // 錨定＝視野中央最近的那張卡（不信任上次索引：使用者可能已用標籤列/拖曳捲到別處，
-  // 沿用舊索引會「先跳回原地再動」＝2026-08-13 回報的 BUG）。
-  const mid = window.innerHeight / 2;
-  let anchor = -1, best = Infinity;
-  cards.forEach((c, idx) => {
-    const r = c.getBoundingClientRect();
-    if(r.bottom < -window.innerHeight || r.top > window.innerHeight * 2) return;
-    const d = Math.abs((r.top + r.bottom) / 2 - mid);
-    if(d < best){ best = d; anchor = idx; }
-  });
-  if(anchor < 0) anchor = (step > 0 ? -1 : cards.length);   // 視野內沒卡＝從頭/尾進場
-  _navIdx = Math.max(0, Math.min(cards.length-1, anchor + step));
-  const el = cards[_navIdx];
-  el.scrollIntoView({ block:"center", behavior:"smooth" });
-  cards.forEach(c=>c.classList.remove("kbd-focus"));
-  el.classList.add("kbd-focus");
-  clearTimeout(gotoCard._t); gotoCard._t = setTimeout(()=>el.classList.remove("kbd-focus"), 1200);
-}
-function gotoDate(step){
-  const dates = Object.keys(doc.boards||{}).sort();
-  const i = dates.indexOf(doc.activeDate);
-  const next = dates[i+step];
-  if(next){ _navIdx = -1; switchDate(next); }
-}
-document.addEventListener("keydown", e=>{
-  if(_navModalOpen()) return;
-  const t = e.target;
-  if(t && (t.tagName==="INPUT" || t.tagName==="TEXTAREA" || t.tagName==="SELECT" || t.isContentEditable)) return;
-  if(e.key==="ArrowDown"){ e.preventDefault(); gotoCard(+1); }
-  else if(e.key==="ArrowUp"){ e.preventDefault(); gotoCard(-1); }
-  else if(e.key==="ArrowRight"){ e.preventDefault(); gotoDate(+1); }
-  else if(e.key==="ArrowLeft"){ e.preventDefault(); gotoDate(-1); }
-});
 
 $("#clearAll") && ($("#clearAll").onclick = ()=>{ closeMore(); if(confirm("確定清空這天的所有對戰？")){ snapshot(); state.items.length=0; save(); render(); } });
 $("#clearOldDates") && ($("#clearOldDates").onclick = ()=>{
