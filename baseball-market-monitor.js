@@ -81,6 +81,25 @@
     return events.sort((left, right) => Date.parse(left.at || '') - Date.parse(right.at || ''));
   }
 
+  function meaningfulTaiwanEvents(taiwan) {
+    if (!taiwan) return [];
+    if (Array.isArray(taiwan.events) && taiwan.events.length) {
+      return taiwan.events.filter(Boolean).map((event) => ({
+        at: event.at || null,
+        displayTime: event.displayTime,
+        text: event.text || '',
+      }));
+    }
+    const transitionText = String(taiwan.transitionText || '').trim();
+    if (!transitionText) return [];
+    const parsed = transitionText.split(/\s*→\s*/).map((part) => {
+      const match = part.trim().match(/^(\d{1,2}:\d{2})\s+(.+)$/);
+      return match ? { displayTime: match[1].padStart(5, '0'), text: match[2].trim() } : null;
+    });
+    if (parsed.length > 1 && parsed.every(Boolean)) return parsed;
+    return [{ displayTime: '', text: transitionText }];
+  }
+
   function currentLabel(card, source) {
     if (!source || (source.side !== 'away' && source.side !== 'home')) return '未取得方向';
     return `${sideName(card, source.side)}讓${numberText(source.line)}`;
@@ -236,8 +255,7 @@
     const taiwanSection = section(documentRef, '台彩', 'taiwan');
     if (taiwan && (taiwan.side === 'away' || taiwan.side === 'home')) {
       addDetailLine(taiwanSection, '目前', currentLabel(card, taiwan));
-      const events = taiwan.transitionText ? [{ displayTime: '', text: taiwan.transitionText }] : [];
-      addEvents(taiwanSection, events);
+      addEvents(taiwanSection, meaningfulTaiwanEvents(taiwan));
       addDetailLine(taiwanSection, '來源', taiwan.live ? '玩運彩盤中序列' : '玩運彩開盤');
     } else addDetailLine(taiwanSection, '狀態', '尚未取得盤口');
     details.appendChild(taiwanSection);
@@ -252,5 +270,5 @@
     return root;
   }
 
-  return { meaningfulStakeEvents, renderMonitor, timeText };
+  return { meaningfulStakeEvents, meaningfulTaiwanEvents, renderMonitor, timeText };
 });

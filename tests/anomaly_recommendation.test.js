@@ -208,3 +208,29 @@ test('決策面板直接標示聯盟、分類與正確樣本數，七類日職�
   assert.match(element.querySelector('.anom-context').textContent, /顛倒－雙方都對調/);
   assert.match(element.querySelector('.anom-context').textContent, /5 場/);
 });
+
+test('未適用的七類系統會顯示原因，但不參與方向與門檻計算', () => {
+  const build = feature('buildAnomalyRecommendation');
+  const render = feature('renderAnomalyRecommendation');
+  const decision = build({
+    game: game(),
+    sources: [
+      { id: 'stake-tw', label: '異常統計', bucket: bucket() },
+      {
+        id: 'b365-tw', label: 'BET365 × 台彩七類', leagueLabel: '日職',
+        category: '本場不屬七類，未納入', bucket: null, excluded: true,
+      },
+    ],
+  });
+
+  const ml = decision.markets.find((market) => market.market === 'ml');
+  assert.deepEqual(ml.evidence.map((item) => item.label), ['異常統計']);
+  assert.equal(decision.contexts[1].excluded, true);
+
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const element = render(decision, dom.window.document);
+  const excluded = element.querySelector('.anom-context-row.excluded');
+  assert.ok(excluded);
+  assert.match(excluded.textContent, /BET365 × 台彩七類/);
+  assert.match(excluded.textContent, /本場不屬七類，未納入/);
+});

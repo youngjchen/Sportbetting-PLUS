@@ -212,6 +212,38 @@ test('異常卡片把兩套對應分類與 Stake 即時三市場賠率交給決�
   assert.equal(result.game.total.under, 1.80);
 });
 
+test('本場不屬 Bet365 × 台彩七類時仍顯示未納入原因，但不把它當成推薦證據', () => {
+  const recommend = loadBAnomRecommendation({
+    window: {
+      buildBet365TaiwanSnapshot: () => null,
+      collectBet365Taiwan: () => { throw new Error('未分類時不應讀取七類統計'); },
+      __baseballStakeIntegration: { gameFor: () => null },
+      buildAnomalyRecommendation: (input) => input,
+    },
+  });
+  const result = recommend({ away: '阪神', home: '橫濱', hdFav: 'away', hdVal: 1.5, totVal: 7.5 });
+
+  assert.deepEqual(Array.from(result.sources, (source) => source.label), ['異常統計', 'BET365 × 台彩七類']);
+  assert.equal(result.sources[1].excluded, true);
+  assert.match(result.sources[1].category, /本場不屬七類/);
+  assert.equal(result.sources[1].bucket, null);
+});
+
+test('本場可歸入七類但統計模組尚未載入時，不得誤標成不屬七類', () => {
+  const recommend = loadBAnomRecommendation({
+    window: {
+      buildBet365TaiwanSnapshot: () => ({ relation: '顛倒', swapCombo: 'both' }),
+      __baseballStakeIntegration: { gameFor: () => null },
+      buildAnomalyRecommendation: (input) => input,
+    },
+  });
+  const result = recommend({ away: '阪神', home: '橫濱', hdFav: 'away', hdVal: 1.5, totVal: 7.5 });
+
+  assert.equal(result.sources[1].excluded, true);
+  assert.match(result.sources[1].category, /尚未載入/);
+  assert.doesNotMatch(result.sources[1].category, /不屬七類/);
+});
+
 test('阪神對橫濱只讀日職分類，BET365 與台彩都對調時落在顛倒－雙方都對調五場', () => {
   const requestedLeagues = [];
   const recommend = loadBAnomRecommendation({

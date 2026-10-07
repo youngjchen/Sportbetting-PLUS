@@ -2990,6 +2990,7 @@ function bAnomRecommendationFor(it){
   if(!it || !window.buildAnomalyRecommendation) return null;
   const meta=bLeagueMeta(it);
   const sources=[];
+  let b365TaiwanStatus=null;
   try{
     const first=bAnomInfo(it);
     if(first && first.bucket) sources.push({id:"stake-tw",label:"異常統計",category:first.lbl,leagueLabel:first.leagueLabel||meta.label,bucket:first.bucket});
@@ -2997,16 +2998,21 @@ function bAnomRecommendationFor(it){
   try{
     const ist=(typeof intlFor==="function")?intlFor(it):null;
     const iv=(typeof intlVerdict==="function")?intlVerdict(it,ist):null;
-    const snap=(ist&&iv&&window.buildBet365TaiwanSnapshot)?window.buildBet365TaiwanSnapshot(ist,iv):null;
-    if(snap && window.collectBet365Taiwan){
-      const all=window.collectBet365Taiwan(meta.league,(typeof doc!=="undefined"&&Array.isArray(doc.games))?doc.games:[]);
-      const rel=snap.relation==="顛倒"?"inverted":snap.relation==="收斂"?"converged":null;
-      const B=rel&&all&&all.groups&&all.groups[rel]&&all.groups[rel][snap.swapCombo];
-      const comboLabel=({neither:"雙方都未對調",taiwan_only:"只有台彩對調",bet365_only:"只有 BET365 對調",both:"雙方都對調"})[snap.swapCombo]||snap.swapCombo;
-      if(B) sources.push({id:"b365-tw",label:"BET365 × 台彩七類",category:`${snap.relation}－${comboLabel}`,leagueLabel:meta.label,bucket:B});
-    }
-  }catch(_){}
+    const canClassify=!!(ist&&iv&&window.buildBet365TaiwanSnapshot);
+    const snap=canClassify?window.buildBet365TaiwanSnapshot(ist,iv):null;
+    if(snap){
+      if(window.collectBet365Taiwan){
+        const all=window.collectBet365Taiwan(meta.league,(typeof doc!=="undefined"&&Array.isArray(doc.games))?doc.games:[]);
+        const rel=snap.relation==="顛倒"?"inverted":snap.relation==="收斂"?"converged":null;
+        const B=rel&&all&&all.groups&&all.groups[rel]&&all.groups[rel][snap.swapCombo];
+        const comboLabel=({neither:"雙方都未對調",taiwan_only:"只有台彩對調",bet365_only:"只有 BET365 對調",both:"雙方都對調"})[snap.swapCombo]||snap.swapCombo;
+        if(B) sources.push({id:"b365-tw",label:"BET365 × 台彩七類",category:`${snap.relation}－${comboLabel}`,leagueLabel:meta.label,bucket:B});
+        else b365TaiwanStatus={id:"b365-tw",label:"BET365 × 台彩七類",category:"分類資料尚未載入，未納入",leagueLabel:meta.label,bucket:null,excluded:true};
+      }else b365TaiwanStatus={id:"b365-tw",label:"BET365 × 台彩七類",category:"七類統計尚未載入，未納入",leagueLabel:meta.label,bucket:null,excluded:true};
+    }else b365TaiwanStatus={id:"b365-tw",label:"BET365 × 台彩七類",category:canClassify?"本場不屬七類，未納入":"盤口資料不足，未納入",leagueLabel:meta.label,bucket:null,excluded:true};
+  }catch(_){ b365TaiwanStatus={id:"b365-tw",label:"BET365 × 台彩七類",category:"七類資料讀取失敗，未納入",leagueLabel:meta.label,bucket:null,excluded:true}; }
   if(!sources.length) return null;
+  if(b365TaiwanStatus) sources.push(b365TaiwanStatus);
   let stake=null;
   try{
     const api=window.__baseballStakeIntegration;

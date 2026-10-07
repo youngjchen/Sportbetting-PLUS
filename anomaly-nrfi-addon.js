@@ -369,6 +369,7 @@
       return {
         id: source.id || '', label: source.label || source.id || '異常統計',
         leagueLabel: source.leagueLabel || '', category: source.category || '', sample,
+        excluded: !!source.excluded,
       };
     });
     return { markets, summary, hasConsensus, hasConflict, margin, contexts };
@@ -435,7 +436,7 @@
     context.className = 'anom-context';
     (decision.contexts || []).forEach((item) => {
       const line = documentRef.createElement('div');
-      line.className = 'anom-context-row';
+      line.className = `anom-context-row${item.excluded ? ' excluded' : ''}`;
       const source = documentRef.createElement('span');
       source.className = 'anom-context-source';
       source.textContent = item.label;

@@ -65,7 +65,10 @@ test('三個平台共用單一警示條，收合層不顯示時間、展開層�
   assert.equal(details.hidden, false);
   assert.match(details.textContent, /11:43.*阪神 → 橫濱/);
   assert.match(details.textContent, /11:16.*橫濱 → 阪神/);
-  assert.match(details.textContent, /09:33 阪神 → 11:52 橫濱/);
+  const taiwanEvents = Array.from(details.querySelectorAll('.market-detail-section.taiwan .market-event'));
+  assert.equal(taiwanEvents.length, 2);
+  assert.deepEqual(taiwanEvents.map((row) => row.querySelector('.market-event-time').textContent), ['09:33', '11:52']);
+  assert.deepEqual(taiwanEvents.map((row) => row.querySelector('.market-event-text').textContent), ['阪神', '橫濱']);
   assert.doesNotMatch(details.textContent, /唯讀|不會改卡片|時間不明|2\.30|2\.33/);
 });
 
