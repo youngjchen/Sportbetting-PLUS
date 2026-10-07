@@ -1,6 +1,7 @@
 import json
 import os
 
+from playwright.sync_api import Error as PlaywrightError
 from playwright.sync_api import sync_playwright
 
 
@@ -28,21 +29,31 @@ def main():
         page.evaluate("([key, value]) => localStorage.setItem(key, value)", [DOC_KEY, json.dumps(stale)])
         page.reload(wait_until="domcontentloaded")
 
-        page.wait_for_function(
-            """async () => {
-              if (!window.__ghSync) return false;
-              const text = await window.__ghSync.localDocPlain();
-              const doc = JSON.parse(text || '{}');
-              return !!doc.boards?.['2026-10-05'] && !!doc.boards?.['2026-10-06'] &&
-                (doc.games || []).some(game => game.date === '2026-10-03') &&
-                (doc.games || []).some(game => game.date === '2026-10-04');
-            }""",
-            timeout=15000,
-        )
-        # The union installer reloads once after the atomic localStorage write.
-        # Wait for that navigation to settle, then inspect the persistent copy.
-        page.wait_for_timeout(2500)
-        recovered = json.loads(page.evaluate("async () => await window.__ghSync.localDocPlain()"))
+        recovered = None
+        for _ in range(6):
+            try:
+                page.wait_for_load_state("domcontentloaded")
+                page.wait_for_function(
+                    """async () => {
+                      if (!window.__ghSync) return false;
+                      const text = await window.__ghSync.localDocPlain();
+                      const doc = JSON.parse(text || '{}');
+                      return !!doc.boards?.['2026-10-05'] && !!doc.boards?.['2026-10-06'] &&
+                        (doc.games || []).some(game => game.date === '2026-10-03') &&
+                        (doc.games || []).some(game => game.date === '2026-10-04');
+                    }""",
+                    timeout=15000,
+                )
+                # The union installer reloads once after the atomic localStorage write.
+                page.wait_for_timeout(2000)
+                candidate = json.loads(page.evaluate("async () => await window.__ghSync.localDocPlain()"))
+                if candidate.get("boards", {}).get("2026-10-05") and candidate.get("boards", {}).get("2026-10-06"):
+                    recovered = candidate
+                    break
+            except PlaywrightError:
+                page.wait_for_timeout(1000)
+
+        assert recovered is not None, "the recovered state never became stable after navigation"
 
         assert len([item for item in recovered["boards"]["2026-10-05"]["items"] if item.get("type") == "match"]) == 10
         assert len([item for item in recovered["boards"]["2026-10-06"]["items"] if item.get("type") == "match"]) == 10
