@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-08T03:35:32+08:00",
+  "updatedAt": "2026-10-08T04:15:34+08:00",
   "health": {
-    "discovered": 8,
-    "succeeded": 5,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 5,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -177782,7 +177782,7 @@
             "at": "2026-10-07T21:13:00+08:00"
           }
         ],
-        "observedAt": "2026-10-08T03:35:32+08:00"
+        "observedAt": "2026-10-08T04:15:34+08:00"
       },
       "eventId": "Aifzzhn2",
       "league": "mlb",
@@ -177792,7 +177792,7 @@
       "awayTeam": "守護者",
       "homeTeam": "白襪",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/chicago-white-sox-cleveland-guardians/Aifzzhn2/",
-      "observedAt": "2026-10-08T03:35:32+08:00",
+      "observedAt": "2026-10-08T04:15:34+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -177802,9 +177802,15 @@
             "away": 2.06
           },
           "active": {
-            "at": "2026-10-08T02:05:28+08:00",
+            "at": "2026-10-08T04:15:34+08:00",
             "home": 1.78,
-            "away": 2.04
+            "away": 2.09
+          },
+          "close": {
+            "at": "2026-10-08T03:46:00+08:00",
+            "home": 1.78,
+            "away": 2.09,
+            "final": true
           }
         },
         "hd": {
@@ -177816,11 +177822,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-08T02:05:28+08:00",
-            "home": 2.55,
-            "away": 1.52,
-            "line": 1.5,
+            "at": "2026-10-08T04:15:34+08:00",
+            "home": 2.11,
+            "away": 1.74,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-08T03:59:00+08:00",
+            "home": 2.11,
+            "away": 1.74,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -177831,10 +177845,17 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-10-08T02:05:28+08:00",
-            "over": 1.61,
-            "under": 2.33,
-            "line": 7.0
+            "at": "2026-10-08T04:15:34+08:00",
+            "over": 1.4,
+            "under": 2.9,
+            "line": 6.0
+          },
+          "close": {
+            "at": "2026-10-08T03:54:00+08:00",
+            "over": 1.4,
+            "under": 2.9,
+            "line": 6.0,
+            "final": true
           }
         }
       },
@@ -177845,33 +177866,59 @@
           "home"
         ],
         "struckSide": [
-          "away"
+          "away",
+          "home"
         ],
         "lines": [
           {
             "line": -4.5,
-            "active": true,
+            "active": false,
             "created": "07,10,2026,17,54"
           },
           {
             "line": -3.5,
             "active": true,
-            "created": "07,10,2026,16,17"
+            "created": "07,10,2026,20,53"
+          },
+          {
+            "line": -3.0,
+            "active": true,
+            "created": "07,10,2026,20,53"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "07,10,2026,17,54"
+            "created": "07,10,2026,20,54"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "07,10,2026,20,54"
           },
           {
             "line": -1.5,
             "active": true,
-            "created": "07,10,2026,17,54"
+            "created": "07,10,2026,20,46"
+          },
+          {
+            "line": -1.0,
+            "active": true,
+            "created": "07,10,2026,20,59"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "07,10,2026,20,59"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "07,10,2026,17,54"
+            "created": "07,10,2026,20,59"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "07,10,2026,20,54"
           },
           {
             "line": 2.5,
