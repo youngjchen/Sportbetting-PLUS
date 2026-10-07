@@ -27,6 +27,19 @@ function statusResponse(status) {
   };
 }
 
+function jsonResponse(value, status = 200) {
+  return {
+    ok: status >= 200 && status < 300,
+    status,
+    async json() { return value; },
+    async text() { return JSON.stringify(value); },
+    async arrayBuffer() {
+      const bytes = Buffer.from(JSON.stringify(value));
+      return bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength);
+    },
+  };
+}
+
 function loadSync({ localDoc = null, casts = [], fetchImpl, scheduledTimers = null }) {
   const dom = new JSDOM('<!doctype html><body></body>', {
     url: 'https://youngjchen.github.io/Sportbetting-PLUS/',
@@ -330,6 +343,88 @@ test('automatic board restore schedules a bounded retry after an atomic install 
     await initial.fn();
     assert.equal(scheduled.length, beforeRetry + 1);
     assert.equal(scheduled.at(-1).ms, 2000);
+  } finally {
+    ctx.dom.window.close();
+  }
+});
+
+test('a successful local board save schedules a silent authenticated cloud union backup', async () => {
+  const scheduled = [];
+  const requests = [];
+  const localDoc = {
+    version: 2,
+    activeDate: '2026-10-06',
+    boards: {
+      '2026-10-06': { items: [{ type: 'match', away: 'Local', home: 'Saved', gameTime: '18:35' }] },
+    },
+    games: [{ sid: 'local-history', date: '2026-10-06', awayTeam: 'Local', homeTeam: 'Saved' }],
+  };
+  const cloudDoc = {
+    version: 2,
+    activeDate: '2026-10-05',
+    boards: {
+      '2026-10-05': { items: [{ type: 'match', away: 'Cloud', home: 'Kept', gameTime: '17:00' }] },
+    },
+    games: [{ sid: 'cloud-history', date: '2026-10-05', awayTeam: 'Cloud', homeTeam: 'Kept' }],
+  };
+  const ctx = loadSync({
+    localDoc,
+    scheduledTimers: scheduled,
+    fetchImpl: async (url, options = {}) => {
+      const request = { url: String(url), method: options.method || 'GET', options };
+      requests.push(request);
+      if (request.method === 'PUT') return statusResponse(200);
+      return jsonResponse({
+        sha: 'current-cloud-sha',
+        content: Buffer.from(JSON.stringify(cloudDoc)).toString('base64'),
+      });
+    },
+  });
+  ctx.win.localStorage.setItem('gh_sync_pat', 'test-token');
+
+  try {
+    assert.equal(typeof ctx.win.__ghSync.scheduleBoardBackup, 'function');
+    ctx.win.dispatchEvent(new ctx.win.CustomEvent('sbplus-board-saved'));
+    const backup = scheduled.find(timer => timer.ms === 120000);
+    assert.ok(backup, 'board save should schedule a two-minute debounced backup');
+
+    await backup.fn();
+
+    const put = requests.find(request => request.method === 'PUT');
+    assert.ok(put, 'automatic backup should PUT the recovered union to GitHub');
+    assert.equal(requests.filter(request => request.method === 'GET').length, 1,
+      'state and SHA must come from the same GitHub response to avoid overwriting a newer revision');
+    assert.equal(put.options.headers.Authorization, 'Bearer test-token');
+    const body = JSON.parse(put.options.body);
+    const uploaded = JSON.parse(Buffer.from(body.content, 'base64').toString('utf8'));
+    assert.equal(uploaded.games.length, 2);
+    assert.ok(uploaded.boards['2026-10-05']);
+    assert.ok(uploaded.boards['2026-10-06']);
+  } finally {
+    ctx.dom.window.close();
+  }
+});
+
+test('a transient automatic board backup failure schedules a bounded retry', async () => {
+  const scheduled = [];
+  const ctx = loadSync({
+    localDoc: {
+      version: 2,
+      boards: { '2026-10-06': { items: [{ type: 'match', away: 'Retry', home: 'Later' }] } },
+      games: [],
+    },
+    scheduledTimers: scheduled,
+    fetchImpl: async () => statusResponse(500),
+  });
+  ctx.win.localStorage.setItem('gh_sync_pat', 'test-token');
+
+  try {
+    ctx.win.dispatchEvent(new ctx.win.CustomEvent('sbplus-board-saved'));
+    const first = scheduled.find(timer => timer.ms === 120000);
+    assert.ok(first);
+    await first.fn();
+    assert.ok(scheduled.some(timer => timer.ms === 240000),
+      'the first failure should retry with backoff instead of leaving the cloud stale forever');
   } finally {
     ctx.dom.window.close();
   }

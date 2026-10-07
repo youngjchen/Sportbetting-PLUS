@@ -83,6 +83,20 @@
     if (!r.ok) throw new Error('HTTP ' + r.status);
     return await decodeStateResponse(r);
   }
+  async function fetchAuthenticatedStateWithSha(apiUrl, pat, missingValue) {
+    if (!pat) throw new Error('缺少 GitHub 權杖，無法確認最新雲端版本');
+    var r = await fetch(apiUrl + '?ref=' + BRANCH + '&t=' + Date.now(), {
+      headers: { 'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + pat }
+    });
+    if (r.status === 404) return { doc: missingValue, sha: null };
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    var metadata = await r.json();
+    if (!metadata || typeof metadata.content !== 'string') throw new Error('GitHub 回傳缺少檔案內容');
+    return {
+      doc: JSON.parse(await gunzipBytes(b64decode(metadata.content))),
+      sha: metadata.sha || null
+    };
+  }
   async function fetchCloudState(apiUrl, statePath, pat, missingValue) {
     // 有 PAT 時先讀 Contents API，確保上傳前看到最新 SHA 對應內容；公開讀取則直接走
     // Pages／raw，避開未登入 API 每 IP 每小時 60 次的共用限流。
@@ -97,6 +111,12 @@
     return await fetchPublicState(statePath, missingValue);
   }
   function b64encode(bytes) { var s = ''; for (var i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); return btoa(s); }
+  function b64decode(text) {
+    var bin = atob(String(text || '').replace(/\s/g, ''));
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
   // 本機主檔自 2026-07-13 起以 "gz:"+base64(gzip) 存放（省 localStorage 配額）。
   // 雲端格式維持「gzip(純 JSON)」不變 → 上傳前先還原成純 JSON，跨裝置與分析腳本都不受影響。
   async function localDocPlain() {
@@ -510,6 +530,84 @@
     } catch (err) { console.warn('[GitHub同步]', err); alert('上傳失敗：' + err.message); }
   }
 
+  /* ── 盤面自動雲端備份 ────────────────────────────────────────────────
+     本機主檔成功落盤後才排程。背景備份一律先讀 Contents API 最新版本做 union；
+     讀不到、權杖失效或本機存檔失敗時安靜中止，絕不拿舊資料直接覆蓋雲端。 */
+  var _boardBackupTimer = null;
+  var _boardBackupPending = false;
+  var _boardBackupRunning = false;
+  var _boardBackupRetry = 0;
+  function boardDocSignature(text) {
+    var hash = 2166136261;
+    for (var i = 0; i < text.length; i++) {
+      hash ^= text.charCodeAt(i);
+      hash = Math.imul(hash, 16777619);
+    }
+    return text.length + ':' + (hash >>> 0).toString(16);
+  }
+  async function pushBoardSilently() {
+    var pat = getPAT();
+    if (!pat || window.__boardSaveOK === false) return { ok: false };
+    var plain = '';
+    try { plain = await localDocPlain(); } catch (error) {
+      console.warn('[盤面自動備份] 讀取本機失敗', error); return { ok: false };
+    }
+    if (!plain) return { ok: false };
+    var signature = boardDocSignature(plain);
+    try {
+      if (localStorage.getItem('gh_board_last_uploaded_sig_v1') === signature) return { ok: true, unchanged: true };
+    } catch (_) {}
+    try {
+      var localDoc = JSON.parse(plain);
+      // 同一個 Contents API 回應同時取得檔案內容與 SHA，避免兩次 GET 之間有人更新，
+      // 卻拿新 SHA 覆蓋舊內容所造成的跨裝置資料遺失。
+      var current = await fetchAuthenticatedStateWithSha(API, pat, null);
+      var merged = mergeDocs(current.doc, localDoc);
+      var content = b64encode(await gzipStr(JSON.stringify(merged.doc)));
+      var body = { message: 'automatic board backup ' + new Date().toISOString(), content: content, branch: BRANCH };
+      if (current.sha) body.sha = current.sha;
+      var put = await fetch(API, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + pat, 'Accept': 'application/vnd.github+json' },
+        body: JSON.stringify(body)
+      });
+      if (!put.ok) throw new Error('HTTP ' + put.status);
+      try { localStorage.setItem('gh_board_last_uploaded_sig_v1', signature); } catch (_) {}
+      return { ok: true, addedG: merged.addedG, addedC: merged.addedC };
+    } catch (error) {
+      console.warn('[盤面自動備份]', error);
+      return { ok: false };
+    }
+  }
+  function armBoardBackupTimer() {
+    if (_boardBackupTimer || _boardBackupRunning || !_boardBackupPending || !getPAT()) return;
+    var delay = Math.min(120000 * Math.pow(2, _boardBackupRetry), 900000);
+    _boardBackupTimer = setTimeout(async function () {
+      _boardBackupTimer = null;
+      if (!_boardBackupPending || _boardBackupRunning) return;
+      _boardBackupPending = false;
+      _boardBackupRunning = true;
+      var result = { ok: false };
+      try { result = await pushBoardSilently(); }
+      finally {
+        if (result && result.ok) _boardBackupRetry = 0;
+        else if (getPAT() && _boardBackupRetry < 3) {
+          _boardBackupRetry++;
+          _boardBackupPending = true;
+        }
+        _boardBackupRunning = false;
+        if (_boardBackupPending) armBoardBackupTimer();
+      }
+    }, delay);
+  }
+  function scheduleBoardBackup() {
+    if (!getPAT() || window.__boardSaveOK === false) return;
+    _boardBackupRetry = 0;
+    _boardBackupPending = true;
+    armBoardBackupTimer();
+  }
+  window.addEventListener('sbplus-board-saved', scheduleBoardBackup);
+
   async function download() {
     if (window.closeMore) try { window.closeMore(); } catch (e) {}
     // 守門：儲存失敗時，畫面上的資料只活在記憶體、雲端是舊的 → 載入＝當天資料直接蒸發（使用者實際踩過）
@@ -558,6 +656,7 @@
     if (t === null) return;
     setPAT(t.trim());
     toast(t.trim() ? '已儲存權杖（僅本機）' : '已清除權杖');
+    if (t.trim()) scheduleBoardBackup();
   }
 
   function injectButtons() {
@@ -584,6 +683,7 @@
   window.__ghSync = { gzipStr: gzipStr, gunzipBytes: gunzipBytes, b64encode: b64encode, localDocPlain: localDocPlain,
     upload: upload, download: download, mergeDocs: mergeDocs, mergeMissingDatesAndGames: mergeMissingDatesAndGames, fetchCloudDoc: fetchCloudDoc,
     boardHasMeaningfulData: boardHasMeaningfulData, restoreEmptyBoardFromCloud: restoreEmptyBoardFromCloud,
-    mergeMissingBoardDataFromCloud: mergeMissingBoardDataFromCloud };
+    mergeMissingBoardDataFromCloud: mergeMissingBoardDataFromCloud,
+    pushBoardSilently: pushBoardSilently, scheduleBoardBackup: scheduleBoardBackup };
   setTimeout(autoRestoreBoard, 1200);
 })();

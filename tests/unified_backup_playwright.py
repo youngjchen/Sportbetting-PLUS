@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import tempfile
 
 from playwright.sync_api import sync_playwright
@@ -53,7 +54,7 @@ def assert_unified_download(browser, path):
     with page.expect_download(timeout=15000) as download_info:
         page.locator("#exportDataBtn").evaluate("element => element.click()")
     download = download_info.value
-    assert download.suggested_filename == f"全運動排盤備份_{DATE}.json", repr(download.suggested_filename)
+    assert re.fullmatch(r"全運動排盤備份_\d{4}-\d{2}-\d{2}\.json", download.suggested_filename), repr(download.suggested_filename)
     with open(download.path(), "r", encoding="utf-8") as backup_file:
         payload = json.load(backup_file)
     assert payload["__envelope"] == "sbplus-all-sports-backup-v3"

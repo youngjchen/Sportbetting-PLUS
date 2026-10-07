@@ -2240,7 +2240,7 @@ async function persistFlush(){
   _persistTimer = null;
   if(window.__boardCloudRestorePending) return;
   const json = _persistJSON, seq = _persistSeq; if(json == null) return;
-  let ok = true;
+  let ok = true, didWrite = false;
   try{
     let payload = json;
     if(typeof CompressionStream === "function"){
@@ -2252,9 +2252,13 @@ async function persistFlush(){
       const wr = window.__storagePressure.setCritical(localStorage, LS_KEY, payload);
       if(wr.removed.length) console.warn("[儲存] 配額不足：已移除可重建備份以保住主檔：", wr.removed.join(", "));
     }else localStorage.setItem(LS_KEY, payload);
+    didWrite = true;
     if(_persistJSON === json) _persistJSON = null;   // 期間又改過就留著等下一輪
   }catch(e){ ok = false; }
   updateSaveBadge(ok);
+  if(ok && didWrite){
+    try{ window.dispatchEvent(new CustomEvent("sbplus-board-saved")); }catch(_){}
+  }
 }
 function persistEmergency(){                          // 同步壓縮：關頁前保命
   if(_loadBlocked || window.__boardCloudRestorePending || _persistJSON == null) return;
@@ -8124,6 +8128,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261005mm1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261005union1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261005mm1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>
