@@ -1,26 +1,31 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-08T23:18:29.553Z",
+  "generatedAt": "2026-10-08T23:23:54.166Z",
   "officialScheduleCount": 11,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-08T23:18:29.553Z",
-      "lastAttemptAt": "2026-10-08T23:18:29.553Z",
+      "lastSuccessAt": "2026-10-08T23:23:54.166Z",
+      "lastAttemptAt": "2026-10-08T23:23:54.166Z",
       "error": null,
       "matched": 1,
       "health": {
         "discovered": 3,
         "matched": 1,
-        "unmatched": 2,
-        "failed": 0,
-        "failures": []
+        "unmatched": 1,
+        "failed": 1,
+        "failures": [
+          {
+            "slug": "46951963-nlcs-finalist-1-nlcs-finalist-2",
+            "error": "The operation was aborted due to timeout"
+          }
+        ]
       }
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-08T23:18:29.553Z",
-      "lastAttemptAt": "2026-10-08T23:18:29.553Z",
+      "lastSuccessAt": "2026-10-08T23:23:54.166Z",
+      "lastAttemptAt": "2026-10-08T23:23:54.166Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -33,8 +38,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-08T23:18:29.553Z",
-      "lastAttemptAt": "2026-10-08T23:18:29.553Z",
+      "lastSuccessAt": "2026-10-08T23:23:54.166Z",
+      "lastAttemptAt": "2026-10-08T23:23:54.166Z",
       "error": null,
       "matched": 3,
       "health": {
@@ -47,8 +52,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-08T23:18:29.553Z",
-      "lastAttemptAt": "2026-10-08T23:18:29.553Z",
+      "lastSuccessAt": "2026-10-08T23:23:54.166Z",
+      "lastAttemptAt": "2026-10-08T23:23:54.166Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -24279,7 +24284,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-08T23:18:26.596Z",
+      "observedAt": "2026-10-08T23:23:26.769Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -25150,7 +25155,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-08T23:18:28.616Z",
+      "observedAt": "2026-10-08T23:23:53.279Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -25416,7 +25421,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-08T23:18:28.791Z",
+      "observedAt": "2026-10-08T23:23:53.442Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -25611,7 +25616,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-08T23:18:29.553Z",
+      "observedAt": "2026-10-08T23:23:54.166Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -25766,8 +25771,8 @@
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 2.1,
-        "home": 1.63
+        "away": 2.08,
+        "home": 1.64
       },
       "moneyline": {
         "away": 1.67,
@@ -25775,8 +25780,8 @@
       },
       "total": {
         "line": 8.5,
-        "over": 1.84,
-        "under": 1.83
+        "over": 1.88,
+        "under": 1.79
       },
       "sources": {
         "direction": "stake-official",
@@ -25785,7 +25790,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-08T23:18:28.111Z",
+      "observedAt": "2026-10-08T23:23:53.087Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -25963,6 +25968,32 @@
             "line": 8.5,
             "over": 1.84,
             "under": 1.83
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        },
+        {
+          "observedAt": "2026-10-08T23:23:53.087Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.08,
+            "home": 1.64
+          },
+          "moneyline": {
+            "away": 1.67,
+            "home": 2.12
+          },
+          "total": {
+            "line": 8.5,
+            "over": 1.88,
+            "under": 1.79
           },
           "sources": {
             "direction": "stake-official",
