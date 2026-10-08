@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-08T09:55:11+08:00",
+  "updatedAt": "2026-10-08T10:30:32+08:00",
   "health": {
-    "discovered": 0,
-    "succeeded": 0,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 0,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -178948,7 +178948,7 @@
       "bet365": {
         "side": "away",
         "line": 1.5,
-        "at": "2026-10-08T09:49:00+08:00",
+        "at": "2026-10-08T09:56:00+08:00",
         "flipEver": true,
         "struck": [
           {
@@ -178957,7 +178957,7 @@
             "at": "2026-10-07T14:15:00+08:00"
           }
         ],
-        "observedAt": "2026-10-08T09:50:26+08:00"
+        "observedAt": "2026-10-08T10:30:32+08:00"
       },
       "eventId": "YsL1pU14",
       "league": "mlb",
@@ -178967,7 +178967,7 @@
       "awayTeam": "釀酒人",
       "homeTeam": "教士",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/san-diego-padres-milwaukee-brewers/YsL1pU14/",
-      "observedAt": "2026-10-08T09:50:26+08:00",
+      "observedAt": "2026-10-08T10:30:32+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -178977,9 +178977,15 @@
             "away": 1.92
           },
           "active": {
-            "at": "2026-10-08T07:25:19+08:00",
-            "home": 1.88,
-            "away": 1.93
+            "at": "2026-10-08T10:30:32+08:00",
+            "home": 1.9,
+            "away": 1.94
+          },
+          "close": {
+            "at": "2026-10-08T09:00:00+08:00",
+            "home": 1.9,
+            "away": 1.94,
+            "final": true
           }
         },
         "hd": {
@@ -178991,11 +178997,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-08T07:25:19+08:00",
-            "home": 2.8,
-            "away": 1.44,
-            "line": 1.5,
+            "at": "2026-10-08T10:30:32+08:00",
+            "home": 2.32,
+            "away": 1.57,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-08T09:00:00+08:00",
+            "home": 2.32,
+            "away": 1.57,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -179006,10 +179020,17 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-08T07:25:19+08:00",
-            "over": 1.36,
-            "under": 3.1,
-            "line": 5.5
+            "at": "2026-10-08T10:30:32+08:00",
+            "over": 1.41,
+            "under": 2.85,
+            "line": 6.0
+          },
+          "close": {
+            "at": "2026-10-08T09:00:00+08:00",
+            "over": 1.41,
+            "under": 2.85,
+            "line": 6.0,
+            "final": true
           }
         }
       },
@@ -179019,32 +179040,65 @@
           "away",
           "home"
         ],
-        "struckSide": [],
+        "struckSide": [
+          "away",
+          "home"
+        ],
         "lines": [
+          {
+            "line": -2.5,
+            "active": false,
+            "created": "08,10,2026,01,51"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "08,10,2026,02,00"
+          },
           {
             "line": -1.5,
             "active": true,
-            "created": "07,10,2026,19,21"
+            "created": "08,10,2026,01,51"
+          },
+          {
+            "line": -1.0,
+            "active": true,
+            "created": "08,10,2026,02,00"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "08,10,2026,02,00"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "07,10,2026,23,40"
+            "created": "08,10,2026,01,55"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "08,10,2026,02,00"
           },
           {
             "line": 2.5,
             "active": true,
-            "created": "07,10,2026,23,40"
+            "created": "08,10,2026,01,51"
+          },
+          {
+            "line": 3.0,
+            "active": true,
+            "created": "08,10,2026,02,00"
           },
           {
             "line": 3.5,
             "active": true,
-            "created": "07,10,2026,23,40"
+            "created": "08,10,2026,01,51"
           },
           {
             "line": 4.5,
-            "active": true,
-            "created": "07,10,2026,19,21"
+            "active": false,
+            "created": "08,10,2026,01,55"
           }
         ]
       }
