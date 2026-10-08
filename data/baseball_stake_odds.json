@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-08T06:23:58.428Z",
+  "generatedAt": "2026-10-08T06:28:48.254Z",
   "officialScheduleCount": 6,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-08T06:23:58.428Z",
-      "lastAttemptAt": "2026-10-08T06:23:58.428Z",
+      "lastSuccessAt": "2026-10-08T06:28:48.254Z",
+      "lastAttemptAt": "2026-10-08T06:28:48.254Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -19,8 +19,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-08T06:23:58.428Z",
-      "lastAttemptAt": "2026-10-08T06:23:58.428Z",
+      "lastSuccessAt": "2026-10-08T06:28:48.254Z",
+      "lastAttemptAt": "2026-10-08T06:28:48.254Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -32,9 +32,9 @@
       }
     },
     "KBO": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-08T06:23:58.428Z",
-      "lastAttemptAt": "2026-10-08T06:23:58.428Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-08T06:28:48.254Z",
+      "lastAttemptAt": "2026-10-08T06:28:48.254Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -47,8 +47,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-08T06:23:58.428Z",
-      "lastAttemptAt": "2026-10-08T06:23:58.428Z",
+      "lastSuccessAt": "2026-10-08T06:28:48.254Z",
+      "lastAttemptAt": "2026-10-08T06:28:48.254Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -23499,7 +23499,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-08T06:23:48.082Z",
+      "observedAt": "2026-10-08T06:28:47.657Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -24071,7 +24071,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-08T06:23:47.537Z",
+      "observedAt": "2026-10-08T06:28:47.101Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -24165,23 +24165,30 @@
       "fixtureId": "9a469ec3-06d5-4508-bed2-2815a4d3fdfd",
       "slug": "46955529-ssg-landers-samsung-lions",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46955529-ssg-landers-samsung-lions",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.99,
+        "home": 1.7
+      },
       "moneyline": {
         "away": 1.64,
         "home": 2.17
       },
-      "total": null,
+      "total": {
+        "line": 10.5,
+        "over": 1.86,
+        "under": 1.81
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-08T06:23:58.199Z",
+      "partial": false,
+      "observedAt": "2026-10-08T06:28:48.039Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -24204,6 +24211,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-08T06:28:48.039Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.99,
+            "home": 1.7
+          },
+          "moneyline": {
+            "away": 1.64,
+            "home": 2.17
+          },
+          "total": {
+            "line": 10.5,
+            "over": 1.86,
+            "under": 1.81
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
