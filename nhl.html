@@ -316,7 +316,22 @@
   .rv-table th,.rv-table td{ padding:11px 16px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
   .rv-table th{ color:var(--ink-dim); font-weight:600; font-size:13.5px; letter-spacing:.04em; text-transform:uppercase; }
   .rv-table td.lbl,.rv-table th.lbl{ text-align:left; font-weight:700; font-size:16px; }
-  .rv-table tr.rv-row.sub td{ color:var(--ink-dim); font-size:14px; padding-top:6px; padding-bottom:6px; }   /* 背離子列：低調一階 */
+  /* 統計列點擊展開明細（棒球同款） */
+  .rv-alert-mk{ font-size:12px; }
+  .drill{ margin:2px 0 10px; border-left:2px solid var(--line); padding-left:10px; max-height:280px; overflow:auto; }
+  .drill-row{ display:flex; align-items:center; gap:16px; padding:9px 4px; font-size:15.5px; border-bottom:1px solid rgba(255,255,255,.05); }
+  .drill-row:last-child{ border-bottom:none; }
+  .drill-row.drill-today{ background:rgba(255,176,46,.10); border-radius:6px; }
+  .drill-row .dr-date{ color:var(--ink-dim); font-family:"Oswald"; flex:0 0 auto; width:48px; font-size:15px; }
+  .drill-row .dr-match{ flex:0 1 auto; min-width:0; color:var(--ink); }
+  .drill-row .dr-match b{ font-family:"Oswald"; color:var(--lit); }
+  .drill-row .dr-role{ flex:0 0 auto; color:var(--ink); font-size:14.5px; }
+  .drill-row .dr-hit{ color:#28c76f; font-weight:700; }
+  .drill-row .dr-miss{ color:#ff3b5c; font-weight:700; }
+  .drill-toggle{ cursor:pointer; }
+  .drill-toggle td.lbl::after{ content:"▸"; display:inline-block; margin-left:6px; color:var(--ink-dim); font-size:10px; transition:transform .15s; }
+  .drill-toggle.drill-open td.lbl::after{ transform:rotate(90deg); }
+  @media (max-width:680px){ .drill-row{ flex-wrap:wrap; gap:4px 12px; font-size:14px; } .drill-row .dr-role{ flex:1 1 100%; font-size:13px; } }
   .rv-pct{ font-family:"Oswald"; font-weight:700; font-size:17px; min-width:50px; display:inline-block; text-align:right; }
   .rv-pct.hi{ color:#28c76f; } .rv-pct.lo{ color:var(--conflict); } .rv-pct.mid{ color:#aeb9c8; } .rv-pct.low-sample{ color:#5b6b80; }
   .rv-samp{ font-family:"Oswald"; font-size:15px; color:var(--ink-dim); }
@@ -1439,6 +1454,48 @@ function todayHitRate(models){
 // 每類再依「誰對調」細分（顛倒：都沒／Stake／BET365／雙方；收斂：Stake／BET365／雙方），
 // 另標「背離」＝獨贏熱門（獨贏賠率較低的那隊）不是讓分方。熱門勝率一律以獨贏熱門計。
 // 手標優先（顛倒鈕＝顛倒、手標收斂＝收斂）；已結算讀結算落印 anomSnap，未結算讀即時讓分歷史。
+// ===== 統計列點擊展開比賽明細（棒球 drillBlock／toggleDrillById 移植，2026-10-09）=====
+let _drillSeq = 0;
+function rvTodayTW(){ return new Date(Date.now()+8*3600e3).toISOString().slice(0,10); }
+function drillBlock(games, roleFn){
+  if(!games || !games.length) return { id:null, html:"" };
+  const id = "drill_"+(++_drillSeq), tdy = rvTodayTW();
+  let rows = "";
+  games.slice().sort((a,b)=> (a.date<b.date?1:-1)).forEach(g=>{
+    const sc = (g.aScore!=null && g.hScore!=null) ? `${g.aScore}-${g.hScore}` : "—";
+    const nw = g.date===tdy;
+    rows += `<div class="drill-row${nw?" drill-today":""}">${nw?'<span class="rv-alert-mk">❗</span>':''}<span class="dr-date">${(g.date||"").slice(5)}</span>`+
+            `<span class="dr-match">${esc(g.away)} <b>${sc}</b> ${esc(g.home)}</span>`+
+            `<span class="dr-role">${roleFn(g)}</span></div>`;
+  });
+  return { id, html:`<div class="drill" id="${id}" style="display:none">${rows}</div>` };
+}
+function toggleDrillById(id, triggerEl){
+  const d = document.getElementById(id); if(!d) return;
+  const open = d.style.display!=="none";
+  d.style.display = open ? "none" : "block";
+  if(triggerEl) triggerEl.classList.toggle("drill-open", !open);
+}
+window.toggleDrillById = toggleDrillById;
+// 統計列：有比賽才可點開明細；0 場淡色顯示（保留格子）。cols＝[[命中,分母],…]
+function rvDrillRow(lbl, c, roleFn, cols){
+  const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
+  if(!c || !c.n) return `<tr class="rv-row"><td class="lbl" style="color:var(--ink-dim)">${lbl}</td><td>0</td>${cols.map(()=>"<td>—</td>").join("")}</tr>`;
+  const det = drillBlock(c.games, roleFn);
+  const hasToday = c.games.some(g=>g.date===rvTodayTW());
+  let h = `<tr class="rv-row drill-toggle"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
+          `<td class="lbl">${lbl}${hasToday?' <span class="rv-alert-mk">❗</span>':''}</td><td>${c.n}</td>`+
+          cols.map(([x,n])=>`<td>${pc(x,n)} <span class="rv-samp">${x}/${n}</span></td>`).join("")+`</tr>`;
+  if(det.id) h += `<tr class="drill-tr"><td colspan="${2+cols.length}" style="padding:0">${det.html}</td></tr>`;
+  return h;
+}
+// 明細共用：熱門勝負、讓分、大小的文字
+function rvWinText(g){ const w = g.aScore===g.hScore ? null : (g.hScore>g.aScore ? "home" : "away");
+  return w===null ? "和" : (g.fv ? (w===g.fv ? "<b>熱門勝</b>" : "冷門勝") : "熱門不明"); }
+function rvHdText(r){ return r==="cover" ? `<span class="dr-hit">過盤</span>` : r==="nocover" ? `<span class="dr-miss">沒過</span>` : r==="push" ? "走盤" : "—"; }
+function rvTotText(r){ return r==="over" ? "大" : r==="under" ? "小" : r==="push" ? "走" : "—"; }
+function rvResultOf(margin, line){ if(line==null || !Number.isFinite(Number(line))) return null; const fm = margin - Number(line); return fm>0 ? "cover" : fm<0 ? "nocover" : "push"; }
+function rvTotalOf(total, line){ if(line==null || !Number.isFinite(Number(line))) return null; return total>line ? "over" : total<line ? "under" : "push"; }
 let __ctMemo=null, __ctMemoAt=0;
 const NHL_ANOM_COMBOS = { flip:["none","stake","bet365","both"], conv:["stake","bet365","both"] };
 const NHL_ANOM_COMBO_LABEL = { none:"都沒對調", stake:"Stake 對調", bet365:"BET365 對調", both:"雙方對調" };
@@ -1488,17 +1545,20 @@ function nhlAnomClassify(ev, it, hdFav){
     else if(manual==="converged_both"){ s=true; b=true; comboKnown=true; }
   }
   const combo = (s&&b) ? "both" : s ? "stake" : b ? "bet365" : "none";
+  const div = !!(ev && ev.mlFav && hdFav && ev.mlFav!==hdFav);                       // 背離＝獨贏熱門不是讓分方
   let kind = null;
   if(relation==="diverged") kind = "flip";
   else if(relation==="aligned" && (combo!=="none" || (manual && manual.startsWith("converged")))) kind = "conv";
-  if(!kind) return null;
-  const known = comboKnown && NHL_ANOM_COMBOS[kind].includes(combo);                   // 換邊未記（手標但無資料）：只進該類合計
-  return { kind, combo: known ? combo : null, div: !!(ev && ev.mlFav && hdFav && ev.mlFav!==hdFav) };
+  if(!kind) return div ? { kind:"other", combo:null, div:true } : null;                // 非顛倒非收斂但背離＝其他異常（棒球同）
+  const known = comboKnown && NHL_ANOM_COMBOS[kind].includes(combo);                   // 換邊未記（手標但無資料）
+  return { kind, combo: known ? combo : null, div };
 }
+// 列（與棒球相同的互斥分法）：沒背離的場依「誰對調」分列；背離的場一律進「＋背離」；加總＝該類總數。
 function collectCrossTab(leagueFilter){
   const cell=()=>({ n:0, cov:0, covN:0, fw:0, fwN:0, ov:0, ovN:0, games:[] });
   const grp={};
-  for(const k of ["flip","conv"]){ grp[k]={ all:cell() }; for(const c of NHL_ANOM_COMBOS[k]) grp[k][c]={ all:cell(), div:cell() }; }
+  for(const k of ["flip","conv"]){ grp[k]={ all:cell(), div:cell(), unknown:cell() }; for(const c of NHL_ANOM_COMBOS[k]) grp[k][c]=cell(); }
+  const other={ divOnly:cell() };
   let total=0;
   for(const d of Object.keys(doc.boards||{})){
     for(const it of ((doc.boards[d]||{}).items||[])){
@@ -1509,55 +1569,69 @@ function collectCrossTab(leagueFilter){
       const cls = nhlAnomClassify(ev, it, rec.hdFav); if(!cls) continue;
       total++;
       const margin=rec.homeScore-rec.awayScore, winner=margin>0?"home":margin<0?"away":null;
-      const o={ date:d, m:rec.awayTeam+"/"+rec.homeTeam, itId:it.id };
+      const favMargin = rec.hdFav ? (rec.hdFav==="home"?margin:-margin) : null;
+      const o={ date:d, away:rec.awayTeam, home:rec.homeTeam, aScore:rec.awayScore, hScore:rec.homeScore, itId:it.id,
+                fv: ev && ev.mlFav || null, combo:cls.combo, div:cls.div,
+                hd: (favMargin!=null && rec.hdVal!=null) ? rvResultOf(favMargin, rec.hdVal) : null,
+                tot: rvTotalOf(rec.awayScore+rec.homeScore, rec.totBasis) };
       const upd=(c)=>{
         c.n++; c.games.push(o);
-        if(ev && ev.mlFav && winner){ c.fwN++; if(winner===ev.mlFav) c.fw++; }                 // 熱門＝獨贏賠率較低的那隊
-        if(rec.hdFav && rec.hdVal!=null){ const fm=(rec.hdFav==="home"?margin:-margin)-rec.hdVal;
-          if(fm!==0){ c.covN++; if(fm>0) c.cov++; } }
-        if(rec.totBasis!=null){ const t=rec.awayScore+rec.homeScore;
-          if(t!==rec.totBasis){ c.ovN++; if(t>rec.totBasis) c.ov++; } }
+        if(o.fv && winner){ c.fwN++; if(winner===o.fv) c.fw++; }                        // 熱門＝獨贏賠率較低的那隊
+        if(o.hd==="cover"||o.hd==="nocover"){ c.covN++; if(o.hd==="cover") c.cov++; }
+        if(o.tot==="over"||o.tot==="under"){ c.ovN++; if(o.tot==="over") c.ov++; }
       };
+      if(cls.kind==="other"){ upd(other.divOnly); continue; }
       const G=grp[cls.kind]; upd(G.all);
-      const B=G[cls.combo]; if(B){ upd(B.all); if(cls.div) upd(B.div); }
+      upd(cls.div ? G.div : (cls.combo ? G[cls.combo] : G.unknown));
     }
   }
-  return { total, grp };
+  return { total, grp, other };
 }
 function renderAnomSection(leagueFilter){
   const ct = collectCrossTab(leagueFilter||"all");
   const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
-  let h=`<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">Stake × BET365 收盤讓分方：顛倒／收斂 × 誰對調（另列背離）・熱門＝獨贏賠率較低的那隊</span></div>`;
-  if(!ct.total){ return h+`<div class="rv-empty">還沒有已結算的異常場。讓分方相反或曾換邊的比賽結算後會自動進帳。</div></div>`; }
-  const row=(name,c,sub)=>`<tr class="rv-row${sub?" sub":""}"><td class="lbl">${name}</td><td>${c.n||"—"}</td><td>${pc(c.fw,c.fwN)}</td><td>${pc(c.cov,c.covN)}</td><td>${pc(c.ov,c.ovN)}</td></tr>`;
+  let h=`<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">Stake × BET365 收盤讓分方：顛倒／收斂／其他異常・熱門＝獨贏賠率較低的那隊・點列看明細</span></div>`;
+  if(!ct.total){ return h+`<div class="rv-empty">還沒有已結算的異常場。讓分方相反、曾換邊或背離的比賽結算後會自動進帳。</div></div>`; }
+  const roleFn = g=>{
+    const tags=[g.combo ? NHL_ANOM_COMBO_LABEL[g.combo] : "", g.div ? "背離" : ""].filter(Boolean).join("・");
+    return `${rvWinText(g)}・讓分${rvHdText(g.hd)}・開${rvTotText(g.tot)}${tags?`・<span style="color:var(--ink-dim)">${tags}</span>`:""}`;
+  };
+  const cols = c=>[[c.fw,c.fwN],[c.cov,c.covN],[c.ov,c.ovN]];
+  const ROW = (lbl,c)=> rvDrillRow(lbl, c, roleFn, c ? cols(c) : [[0,0],[0,0],[0,0]]);
+  const head = `<table class="rv-table"><thead><tr><th class="lbl">組合</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th></tr></thead><tbody>`;
   const grpBlock=(title,kind)=>{
-    const G=ct.grp[kind];
-    let x=`<div class="rv-head" style="font-size:14px;margin-top:14px">${title}　<span class="rv-sub">${G.all.n} 場　熱門勝 ${pc(G.all.fw,G.all.fwN)}・讓分過盤 ${pc(G.all.cov,G.all.covN)}・開大 ${pc(G.all.ov,G.all.ovN)}</span></div>`;
-    x+=`<table class="rv-table"><tr><th class="lbl">組合</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th></tr>`;
-    for(const c of NHL_ANOM_COMBOS[kind]) x+=row(NHL_ANOM_COMBO_LABEL[c], G[c].all)+row("└ 背離", G[c].div, true);
-    return x+`</table>`;
+    const G=ct.grp[kind], a=G.all;
+    let x=`<div class="rv-head" style="font-size:14px;margin-top:14px">${title}　<span class="rv-sub">${a.n} 場　熱門勝 ${pc(a.fw,a.fwN)}・讓分過盤 ${pc(a.cov,a.covN)}・開大 ${pc(a.ov,a.ovN)}</span></div>`+head;
+    for(const c of NHL_ANOM_COMBOS[kind]) x+=ROW(NHL_ANOM_COMBO_LABEL[c], G[c]);
+    x+=ROW("＋背離", G.div);
+    if(G.unknown.n) x+=ROW("換邊未記", G.unknown);
+    return x+`</tbody></table>`;
   };
   h+=grpBlock("顛倒（收盤 Stake 與 BET365 讓分方相反）","flip");
   h+=grpBlock("收斂（收盤同向，賽前曾換邊）","conv");
+  h+=`<div class="rv-head" style="font-size:14px;margin-top:14px">其他異常　<span class="rv-sub">非顛倒非收斂，但背離（獨贏熱門不是讓分方）</span></div>`+head+ROW("只背離", ct.other.divOnly)+`</tbody></table>`;
   return h+`</div>`;
 }
 function crossTabCached(){ const n=Date.now(); if(!__ctMemo||n-__ctMemoAt>800){ try{ __ctMemo=collectCrossTab("all"); }catch(_){ __ctMemo=null; } __ctMemoAt=n; } return __ctMemo; }
-// 卡面讓分區晶片：本場所屬那一格的歷史數據（熱門勝／讓分過盤／開大）
+// 卡面讓分區晶片：本場所屬那一列的歷史數據（熱門勝／讓分過盤／開大）
 function bAnomInfo(model, it){
   const cls = nhlAnomClassify(nhlAnomEvidence(model, it), it, model.hdFav);
   if(!cls) return null;
   const ct = crossTabCached(); if(!ct || !ct.total) return null;
-  const G = ct.grp[cls.kind], cell = G[cls.combo];
-  const B = cell ? (cls.div ? cell.div : cell.all) : G.all;
-  if(!B || !B.n) return null;
   const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
-  const groupName = cls.kind==="flip" ? "顛倒" : "收斂";
-  const lbl = groupName + (cell ? "·"+NHL_ANOM_COMBO_LABEL[cls.combo].replace(/\s/g,"") : "") + (cls.div ? "＋背離" : "");
+  let B, lbl, chipCls, groupAll=null, groupName="";
+  if(cls.kind==="other"){ B=ct.other.divOnly; lbl="背離"; chipCls="as"; }
+  else {
+    const G=ct.grp[cls.kind]; groupAll=G.all; groupName = cls.kind==="flip" ? "顛倒" : "收斂"; chipCls = cls.kind==="flip" ? "af" : "aw";
+    B = cls.div ? G.div : (cls.combo ? G[cls.combo] : G.unknown);
+    lbl = groupName + (cls.div ? "＋背離" : cls.combo ? "·"+NHL_ANOM_COMBO_LABEL[cls.combo].replace(/\s/g,"") : "");
+  }
+  if(!B || !B.n) return null;
   let tip=`${lbl}場歷史（NHL ${B.n} 場）
 熱門勝 ${pc(B.fw,B.fwN)}・讓分過盤 ${pc(B.cov,B.covN)}・開大 ${pc(B.ov,B.ovN)}`;
-  if(G.all.n) tip+=`
-${groupName}全部：熱門勝 ${pc(G.all.fw,G.all.fwN)}・讓過 ${pc(G.all.cov,G.all.covN)}（${G.all.n}場）`;
-  return { lbl, cls: cls.kind==="flip" ? "af" : "aw", covTxt:pc(B.cov,B.covN), n:B.n, tip };
+  if(groupAll && groupAll.n) tip+=`
+${groupName}全部：熱門勝 ${pc(groupAll.fw,groupAll.fwN)}・讓過 ${pc(groupAll.cov,groupAll.covN)}（${groupAll.n}場）`;
+  return { lbl, cls: chipCls, covTxt:pc(B.cov,B.covN), n:B.n, tip };
 }
 function jumpToCard(id){
   const card = document.querySelector('.card.bcard[data-id="'+CSS.escape(id)+'"]');

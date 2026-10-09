@@ -64,6 +64,10 @@ test('統計：熱門用獨贏熱門，讓分過盤用該平台收盤線，NBA�
   assert.deepEqual([deeper.cov, deeper.covN], [0, 1]);              // 讓 7.5 沒過
   assert.deepEqual([deeper.ov, deeper.ovN], [0, 1]);                // 207 < 210.5
   assert.equal(nba.out.taiwan.small.cov, 1);                        // 台彩收盤讓 6.5 → 過盤
+  const detail = deeper.games[0];                                   // 點列展開的明細
+  assert.equal(deeper.games.length, 1);
+  assert.equal(detail.move, '主讓5.5 → 主讓7.5');
+  assert.deepEqual([detail.hd, detail.tot, detail.fv], ['nocover', 'under', 'home']);
   const wnba = collectLineMoves('WNBA');
   assert.equal(wnba.total, 1);
   assert.equal(wnba.out.stake.small.fw, 1);

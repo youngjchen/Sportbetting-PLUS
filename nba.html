@@ -317,6 +317,22 @@
   .rv-table th,.rv-table td{ padding:11px 16px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
   .rv-table th{ color:var(--ink-dim); font-weight:600; font-size:13.5px; letter-spacing:.04em; text-transform:uppercase; }
   .rv-table td.lbl,.rv-table th.lbl{ text-align:left; font-weight:700; font-size:16px; }
+  /* 統計列點擊展開明細（棒球同款） */
+  .rv-alert-mk{ font-size:12px; }
+  .drill{ margin:2px 0 10px; border-left:2px solid var(--line); padding-left:10px; max-height:280px; overflow:auto; }
+  .drill-row{ display:flex; align-items:center; gap:16px; padding:9px 4px; font-size:15.5px; border-bottom:1px solid rgba(255,255,255,.05); }
+  .drill-row:last-child{ border-bottom:none; }
+  .drill-row.drill-today{ background:rgba(255,176,46,.10); border-radius:6px; }
+  .drill-row .dr-date{ color:var(--ink-dim); font-family:"Oswald"; flex:0 0 auto; width:48px; font-size:15px; }
+  .drill-row .dr-match{ flex:0 1 auto; min-width:0; color:var(--ink); }
+  .drill-row .dr-match b{ font-family:"Oswald"; color:var(--lit); }
+  .drill-row .dr-role{ flex:0 0 auto; color:var(--ink); font-size:14.5px; }
+  .drill-row .dr-hit{ color:#28c76f; font-weight:700; }
+  .drill-row .dr-miss{ color:#ff3b5c; font-weight:700; }
+  .drill-toggle{ cursor:pointer; }
+  .drill-toggle td.lbl::after{ content:"▸"; display:inline-block; margin-left:6px; color:var(--ink-dim); font-size:10px; transition:transform .15s; }
+  .drill-toggle.drill-open td.lbl::after{ transform:rotate(90deg); }
+  @media (max-width:680px){ .drill-row{ flex-wrap:wrap; gap:4px 12px; font-size:14px; } .drill-row .dr-role{ flex:1 1 100%; font-size:13px; } }
   .rv-table tr.rv-row.grp td{ background:rgba(255,255,255,.03); color:var(--ink); font-weight:800; padding-top:8px; padding-bottom:8px; }   /* 讓分級距：平台分段列 */
   .rv-table tr.rv-row.lm td.lbl{ padding-left:30px; font-weight:600; font-size:15px; }
   .rv-pct{ font-family:"Oswald"; font-weight:700; font-size:17px; min-width:50px; display:inline-block; text-align:right; }
@@ -1366,8 +1382,50 @@ function bbMoveGroup(p){
   const d = p.closeLine - p.openLine;
   return d>=2 ? "deeper" : d<=-2 ? "shallower" : "small";
 }
+// ===== 統計列點擊展開比賽明細（棒球 drillBlock／toggleDrillById 移植，2026-10-09）=====
+let _drillSeq = 0;
+function rvTodayTW(){ return new Date(Date.now()+8*3600e3).toISOString().slice(0,10); }
+function drillBlock(games, roleFn){
+  if(!games || !games.length) return { id:null, html:"" };
+  const id = "drill_"+(++_drillSeq), tdy = rvTodayTW();
+  let rows = "";
+  games.slice().sort((a,b)=> (a.date<b.date?1:-1)).forEach(g=>{
+    const sc = (g.aScore!=null && g.hScore!=null) ? `${g.aScore}-${g.hScore}` : "—";
+    const nw = g.date===tdy;
+    rows += `<div class="drill-row${nw?" drill-today":""}">${nw?'<span class="rv-alert-mk">❗</span>':''}<span class="dr-date">${(g.date||"").slice(5)}</span>`+
+            `<span class="dr-match">${esc(g.away)} <b>${sc}</b> ${esc(g.home)}</span>`+
+            `<span class="dr-role">${roleFn(g)}</span></div>`;
+  });
+  return { id, html:`<div class="drill" id="${id}" style="display:none">${rows}</div>` };
+}
+function toggleDrillById(id, triggerEl){
+  const d = document.getElementById(id); if(!d) return;
+  const open = d.style.display!=="none";
+  d.style.display = open ? "none" : "block";
+  if(triggerEl) triggerEl.classList.toggle("drill-open", !open);
+}
+window.toggleDrillById = toggleDrillById;
+// 統計列：有比賽才可點開明細；0 場淡色顯示（保留格子）。cols＝[[命中,分母],…]
+function rvDrillRow(lbl, c, roleFn, cols){
+  const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
+  if(!c || !c.n) return `<tr class="rv-row"><td class="lbl" style="color:var(--ink-dim)">${lbl}</td><td>0</td>${cols.map(()=>"<td>—</td>").join("")}</tr>`;
+  const det = drillBlock(c.games, roleFn);
+  const hasToday = c.games.some(g=>g.date===rvTodayTW());
+  let h = `<tr class="rv-row drill-toggle"${det.id?` onclick="toggleDrillById('${det.id}',this)" style="cursor:pointer"`:""}>`+
+          `<td class="lbl">${lbl}${hasToday?' <span class="rv-alert-mk">❗</span>':''}</td><td>${c.n}</td>`+
+          cols.map(([x,n])=>`<td>${pc(x,n)} <span class="rv-samp">${x}/${n}</span></td>`).join("")+`</tr>`;
+  if(det.id) h += `<tr class="drill-tr"><td colspan="${2+cols.length}" style="padding:0">${det.html}</td></tr>`;
+  return h;
+}
+// 明細共用：熱門勝負、讓分、大小的文字
+function rvWinText(g){ const w = g.aScore===g.hScore ? null : (g.hScore>g.aScore ? "home" : "away");
+  return w===null ? "和" : (g.fv ? (w===g.fv ? "<b>熱門勝</b>" : "冷門勝") : "熱門不明"); }
+function rvHdText(r){ return r==="cover" ? `<span class="dr-hit">過盤</span>` : r==="nocover" ? `<span class="dr-miss">沒過</span>` : r==="push" ? "走盤" : "—"; }
+function rvTotText(r){ return r==="over" ? "大" : r==="under" ? "小" : r==="push" ? "走" : "—"; }
+function rvResultOf(margin, line){ if(line==null || !Number.isFinite(Number(line))) return null; const fm = margin - Number(line); return fm>0 ? "cover" : fm<0 ? "nocover" : "push"; }
+function rvTotalOf(total, line){ if(line==null || !Number.isFinite(Number(line))) return null; return total>line ? "over" : total<line ? "under" : "push"; }
 function collectLineMoves(league){
-  const cell=()=>({ n:0, fw:0, fwN:0, cov:0, covN:0, ov:0, ovN:0 });
+  const cell=()=>({ n:0, fw:0, fwN:0, cov:0, covN:0, ov:0, ovN:0, games:[] });
   const out={}; for(const [p] of BB_PLATFORMS){ out[p]={}; for(const [g] of BB_GROUPS) out[p][g]=cell(); }
   let total=0;
   for(const d of Object.keys(doc.boards||{})){
@@ -1380,10 +1438,16 @@ function collectLineMoves(league){
         const L=it.lineSnap[p], g=bbMoveGroup(L); if(!g) continue;
         counted=true;
         const c=out[p][g]; c.n++;
-        if(it.lineSnap.mlFav && winner){ c.fwN++; if(winner===it.lineSnap.mlFav) c.fw++; }          // 熱門＝獨贏賠率較低的那隊
-        const fm=(L.closeFav==="home"?margin:-margin)-L.closeLine; if(fm!==0){ c.covN++; if(fm>0) c.cov++; }   // 各平台自己的收盤線
         const tl = L.closeTotal!=null ? L.closeTotal : rec.totBasis;
-        if(tl!=null){ const t=rec.awayScore+rec.homeScore; if(t!==tl){ c.ovN++; if(t>tl) c.ov++; } }
+        const side=(f)=> f==="home" ? "主" : "客";
+        const o={ date:d, away:rec.awayTeam, home:rec.homeTeam, aScore:rec.awayScore, hScore:rec.homeScore, fv:it.lineSnap.mlFav||null,
+                  move:`${side(L.openFav)}讓${L.openLine} → ${side(L.closeFav)}讓${L.closeLine}`,
+                  hd: rvResultOf(L.closeFav==="home"?margin:-margin, L.closeLine),            // 各平台自己的收盤線
+                  tot: rvTotalOf(rec.awayScore+rec.homeScore, tl) };
+        c.games.push(o);
+        if(o.fv && winner){ c.fwN++; if(winner===o.fv) c.fw++; }                              // 熱門＝獨贏賠率較低的那隊
+        if(o.hd==="cover"||o.hd==="nocover"){ c.covN++; if(o.hd==="cover") c.cov++; }
+        if(o.tot==="over"||o.tot==="under"){ c.ovN++; if(o.tot==="over") c.ov++; }
       }
       if(counted) total++;
     }
@@ -1393,16 +1457,17 @@ function collectLineMoves(league){
 function renderLineMoveSection(lgSel){
   const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
   const leagues = (lgSel && lgSel!=="all") ? [String(lgSel).toUpperCase()] : ["NBA","WNBA"];
-  let h=`<div class="rv-section"><div class="rv-head">◆ 讓分級距變化 <span class="rv-sub">開盤 → 收盤（賽前最後一筆）・熱門＝獨贏賠率較低的那隊・讓分過盤用各平台自己的收盤線</span></div>`;
+  let h=`<div class="rv-section"><div class="rv-head">◆ 讓分級距變化 <span class="rv-sub">開盤 → 收盤（賽前最後一筆）・熱門＝獨贏賠率較低的那隊・讓分過盤用各平台自己的收盤線・點列看明細</span></div>`;
   for(const lg of leagues){
     const r=collectLineMoves(lg);
     h+=`<div class="rv-head" style="font-size:14px;margin-top:14px">${lg}　<span class="rv-sub">${r.total} 場有開收盤紀錄</span></div>`;
     if(!r.total){ h+=`<div class="rv-empty">${lg==="WNBA"?"WNBA 下季開始累積。":"比賽結算後會自動累積。"}</div>`; continue; }
+    const roleFn = g=>`${g.move}・${rvWinText(g)}・讓分${rvHdText(g.hd)}・開${rvTotText(g.tot)}`;
     h+=`<table class="rv-table"><tr><th class="lbl">平台／變動</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th></tr>`;
     for(const [p,pl] of BB_PLATFORMS){
       h+=`<tr class="rv-row grp"><td class="lbl" colspan="5">${pl}</td></tr>`;
       for(const [g,gl] of BB_GROUPS){ const c=r.out[p][g];
-        h+=`<tr class="rv-row lm"><td class="lbl">${gl}</td><td>${c.n||"—"}</td><td>${pc(c.fw,c.fwN)}</td><td>${pc(c.cov,c.covN)}</td><td>${pc(c.ov,c.ovN)}</td></tr>`; }
+        h+=rvDrillRow(gl, c, roleFn, [[c.fw,c.fwN],[c.cov,c.covN],[c.ov,c.ovN]]).replace('<tr class="rv-row', '<tr class="rv-row lm'); }
     }
     h+=`</table>`;
   }
@@ -1427,7 +1492,9 @@ function collectCrossTab(leagueFilter){
       const sw = !!(it.preGameSwap || snap.lsw>0 || snap.bswaps>0);
       const dv = !!(snap.mlFav && rec.hdFav && snap.mlFav!==rec.hdFav);
       const margin=rec.homeScore-rec.awayScore;
-      const o={ date:d, m:rec.awayTeam+"/"+rec.homeTeam, itId:it.id };
+      const o={ date:d, m:rec.awayTeam+"/"+rec.homeTeam, itId:it.id, away:rec.awayTeam, home:rec.homeTeam, aScore:rec.awayScore, hScore:rec.homeScore,
+                fv:rec.hdFav||null, hd:(rec.hdFav&&rec.hdVal!=null)?rvResultOf(rec.hdFav==="home"?margin:-margin, rec.hdVal):null,
+                tot:rvTotalOf(rec.awayScore+rec.homeScore, rec.totBasis), sw, dv };
       const upd=(c)=>{
         c.n++; c.games.push(o); 
         if(rec.hdFav && rec.hdVal!=null){ const fm=(rec.hdFav==="home"?margin:-margin)-rec.hdVal;
@@ -1453,7 +1520,8 @@ function renderAnomSection(leagueFilter){
   const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
   let h=`<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">顛倒／收斂／其他異常 × 三市場（結算時落印,前瞻累積不回填）</span></div>`;
   if(!ct.total){ return h+`<div class="rv-empty">還沒有已結算的異常場。顛倒／曾對調的比賽結算後會自動進帳。</div></div>`; }
-  const row=(name,c)=> c.n? `<tr class="rv-row"><td class="lbl">${name}</td><td>${c.n}</td><td>${pc(c.cov,c.covN)}</td><td>${pc(c.fw,c.fwN)}</td><td>${pc(c.ov,c.ovN)}</td></tr>`:"";
+  const roleFn = g=>`${rvWinText(g)}・讓分${rvHdText(g.hd)}・開${rvTotText(g.tot)}${g.sw?"・<span style=\"color:var(--ink-dim)\">對調</span>":""}${g.dv?"・<span style=\"color:var(--ink-dim)\">背離</span>":""}`;
+  const row=(name,c)=> rvDrillRow(name, c, roleFn, [[c.cov,c.covN],[c.fw,c.fwN],[c.ov,c.ovN]]);   // 點列看明細（棒球同款）
   const grpBlock=(title,G)=>{
     if(!G.all.n) return "";
     let x=`<div class="rv-head" style="font-size:14px;margin-top:14px">${title}　<span class="rv-sub">${G.all.n} 場　讓分過盤 ${pc(G.all.cov,G.all.covN)}・熱門勝 ${pc(G.all.fw,G.all.fwN)}・開大 ${pc(G.all.ov,G.all.ovN)}</span></div>`;
