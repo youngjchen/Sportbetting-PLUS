@@ -803,7 +803,7 @@ function autoSettleFromPregame(){
   for(const g of pregameCache.games||[]){
     // 賽前／進行中：資料檔還有這場時先記即時快照（結算時資料常已滾出資料檔，或 Stake／BET365 尚未載入）
     { const b0=doc.boards[g.date], it0=b0&&b0.items&&b0.items.find(x=>x.id===g.officialId);
-      if(it0 && !it0.settled){ const live=nhlLiveSnap(g); if(live && JSON.stringify(it0.anomLive||null)!==JSON.stringify(live)){ it0.anomLive=live; changed=true; } } }
+      if(it0 && !it0.settled){ const live=nhlLiveSnap(g); if(live && nhlSnapScore(live)>=nhlSnapScore(it0.anomLive) && JSON.stringify(it0.anomLive||null)!==JSON.stringify(live)){ it0.anomLive=live; changed=true; } } }
     if(g.status!=="finished" || g.awayScore==null || g.homeScore==null) continue;
     const it = ensureItem(g.date, g.officialId);
     const model = modelFromPregame(g);
@@ -818,11 +818,12 @@ function autoSettleFromPregame(){
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
     // it.settled 同步（手動結算優先;卡片 pills／戰績／導覽全讀這份=棒球資料流）
     // 異常快照落印：Bet365 官方賠率與卡片盤口狀態一併保存，供結算後回看。
-    // 異常快照落印：只在「還沒有快照」或「舊快照是空的」時寫入；有資料的快照絕不被空資料覆蓋。
+    // 異常快照落印：還沒有快照或快照不完整（缺收盤關係）時，用更完整的來源補上；完整的快照絕不被覆蓋。
     // 來源優先：此刻資料檔（比賽仍在滾動窗內）→ 賽前即時快照 anomLive。（2026-10-09：60 場快照因載入時序全為空）
-    if(!nhlSnapHasData(it.anomSnap)){
-      const fresh = nhlLiveSnap(g) || (nhlSnapHasData(it.anomLive) ? it.anomLive : null);
-      if(fresh){ it.anomSnap = fresh; changed = true; }
+    if(nhlSnapScore(it.anomSnap) < 4){
+      const now = nhlLiveSnap(g), cands = [now, it.anomLive].filter(Boolean);
+      const fresh = cands.sort((a,b)=>nhlSnapScore(b)-nhlSnapScore(a))[0];
+      if(fresh && nhlSnapScore(fresh) > nhlSnapScore(it.anomSnap)){ it.anomSnap = fresh; changed = true; }
       else if(!it.anomSnap){ it.anomSnap = { flip:false, bswaps:0, lsw:0, stakeSwaps:0, bet365Swaps:0, flipState:"none", relation:null, mlFav:null }; }
     }
     if(!it.settled || !it.settled.manual){
@@ -1442,6 +1443,8 @@ let __ctMemo=null, __ctMemoAt=0;
 const NHL_ANOM_COMBOS = { flip:["none","stake","bet365","both"], conv:["stake","bet365","both"] };
 const NHL_ANOM_COMBO_LABEL = { none:"都沒對調", stake:"Stake 對調", bet365:"BET365 對調", both:"雙方對調" };
 function nhlSnapHasData(s){ return !!(s && (s.relation || s.mlFav || Number(s.stakeSwaps)>0 || Number(s.bet365Swaps)>0)); }
+// 完整度：收盤關係（Stake 與 BET365 都到齊）最重要；只有單一平台的快照不算完整，之後資料到齊要能補上。
+function nhlSnapScore(s){ if(!s) return 0; return (s.relation?4:0) + (s.mlFav?2:0) + ((Number(s.stakeSwaps)>0||Number(s.bet365Swaps)>0)?1:0); }
 function nhlEvidenceFromSnap(s){
   return { relation: s.relation!==undefined ? (s.relation||null) : (s.flip ? "diverged" : null),
            stakeSwaps: Number(s.stakeSwaps)||0, bet365Swaps: Number(s.bet365Swaps)||0, mlFav: s.mlFav||null };
@@ -1465,8 +1468,8 @@ function nhlLiveSnap(g){
 }
 function nhlAnomEvidence(model, it){
   const snap = it && it.anomSnap, live = it && it.anomLive;
-  if(snap && nhlSnapHasData(snap)) return nhlEvidenceFromSnap(snap);
-  if(live && nhlSnapHasData(live)) return nhlEvidenceFromSnap(live);                 // 結算時資料已過期：用賽前記下的即時快照
+  const best = nhlSnapScore(live) > nhlSnapScore(snap) ? live : snap;               // 結算時資料已過期／不完整：改用賽前記下的即時快照
+  if(best && nhlSnapHasData(best)) return nhlEvidenceFromSnap(best);
   if(model && model.league==="NHL" && !(it && it.settled)){ const now = nhlLiveSnap(model); if(now) return nhlEvidenceFromSnap(now); }
   return null;
 }
