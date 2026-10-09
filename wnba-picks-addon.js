@@ -160,6 +160,16 @@
     '.bbadge.ep-badge.ep-new::after{content:"";position:absolute;top:-3px;right:-3px;width:9px;height:9px;' +
       'border-radius:50%;background:#ffb02e;box-shadow:0 0 0 2px #10151c;animation:epPulse 2s infinite;}' +
     '@keyframes epPulse{0%,100%{opacity:1}50%{opacity:.45}}' +
+    // 手機：六欄總寬（約 401px）超過卡內寬度 → 勝率欄被擠出卡片外；縮小燈號／明牌欄、隊名改彈性寬（與冰球同，2026-10-09）
+    '@media (max-width:680px){' +
+      '.card .bmkt-row{grid-template-columns:24px minmax(58px,1fr) max-content 46px 24px 40px;column-gap:4px;}' +
+      '.card .blights{gap:4px;}' +
+      '.card .blights .lt{width:16px;height:16px;}' +
+      '.card .bmkt-row .bcover{font-size:13px;}' +
+      '.ep-cell{width:46px;}' +
+      '.ep-cell .ep-n{font-size:11.5px;padding:3px 6px;gap:3px;}' +
+      '.ep-cell .ep-n::before{width:8px;height:8px;}' +
+    '}' +
     '@media (prefers-reduced-motion: reduce){.bbadge.ep-badge.ep-new::after{animation:none;}}';
   document.head.appendChild(css);
 

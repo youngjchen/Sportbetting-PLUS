@@ -163,9 +163,10 @@
   .bpill.void{ color:#9fb0c4; }
   .bpill.sc{ color:var(--ink); border-color:var(--lit); background:rgba(255,176,46,.06); }
   @media (min-width:1180px){ .card.bcard{ max-width:672px; zoom:1.4; } }
+  @media (min-width:1180px) and (max-width:1439px){ .card.bcard{ zoom:1.2; } }   /* 中尺寸桌機：卡片略縮，騰出空間給導覽列＋面板（與棒球同步） */
   @media (min-width:900px) and (max-width:1179px){ .card.bcard{ zoom:1.2; } }
   @media (max-width:680px){
-    .bbody{ grid-template-columns:1fr; }
+    .bbody{ grid-template-columns:minmax(0,1fr); }   /* minmax(0,…)：欄寬不被內容撐超過卡片（手機右側溢出） */
     .bscore{ flex-direction:row; justify-content:space-between; border-right:none; border-bottom:1px solid rgba(255,255,255,.07); padding:12px 14px; }
     .bteam{ width:auto; }
   }
@@ -1762,11 +1763,13 @@ function layoutRightColumns(){
   const cardRight = firstCard ? Math.round(firstCard.getBoundingClientRect().right) : 900;
   const top = summaryTopPad();
   const NAVW = 256, GAP = 20, PGAP = 14, EDGE = 14, SUM_MIN = 300;
+  const zc = document.getElementById("zoomctl");
+  const zr = (zc && zc.offsetWidth) ? zc.offsetWidth + 10 : 0;     // 右下快捷鍵欄：面板右緣讓出這一欄，數字不再被按鈕蓋住
   const navShown = !!(nav && nav.style.display !== "none");
   const colLeft = cardRight + GAP;
   const avail = window.innerWidth - EDGE - colLeft;                  // 卡片右側可用總寬
   // 並排時面板寬 < 300px 會把「1 強訊號」擠成直排 → 導覽列與面板改成上下疊成同一欄、同寬（與棒球同步）
-  const stacked = navShown && (avail - NAVW - PGAP) < SUM_MIN;
+  const stacked = navShown && (avail - NAVW - PGAP - zr) < SUM_MIN;
   let panelLeft = cardRight + PGAP, panelTop = top;
   if(navShown){
     nav.style.left = colLeft + "px"; nav.style.right = "auto";
@@ -1784,7 +1787,7 @@ function layoutRightColumns(){
   }
   if(panel){
     panel.style.left = panelLeft + "px";
-    panel.style.right = EDGE + "px"; panel.style.width = "auto";
+    panel.style.right = (EDGE + zr) + "px"; panel.style.width = "auto";
     panel.style.top = panelTop + "px"; panel.style.bottom = EDGE + "px";
     panel.style.display = "flex"; panel.style.flexDirection = "column";
     const body = panel.querySelector(".sumbody");
@@ -2619,7 +2622,7 @@ render();
 loadSeedGames();
 loadPregame();
 </script>
-<script src="nhl-picks-addon.js?v=20260929nhl2"></script>
+<script src="nhl-picks-addon.js?v=20261009ui1"></script>
 <script src="nhl-divination-addon.js?v=20260929nhl2"></script>
 </body>
 </html>

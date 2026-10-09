@@ -1560,7 +1560,7 @@
 /* ---- 手機版 ---- */
 @media (max-width:680px){
   #world{ padding:10px 8px 150px; gap:10px; }
-  .bbody{ grid-template-columns:1fr; }
+  .bbody{ grid-template-columns:minmax(0,1fr); }   /* minmax(0,…)：欄寬不被內容撐超過卡片（手機右側溢出） */
   .bscore{ flex-direction:row; justify-content:space-between; align-items:center; gap:6px; border-right:none; border-bottom:1px solid rgba(255,255,255,.07); padding:14px 12px; }
   .bteam{ flex-direction:column; gap:4px; text-align:center; width:auto; flex:1 1 0; min-width:0; }
   .bteam-nm{ justify-content:center; font-size:17px; }
@@ -4052,11 +4052,13 @@ function layoutRightColumns(){
   const cardRight = firstCard ? Math.round(firstCard.getBoundingClientRect().right) : 900;
   const top = (typeof summaryTopPad==="function") ? summaryTopPad() : 120;
   const NAVW = 256, GAP = 20, PGAP = 14, EDGE = 14, SUM_MIN = 300;
+  const zc = document.getElementById("zoomctl");
+  const zr = (zc && zc.offsetWidth) ? zc.offsetWidth + 10 : 0;     // 右下快捷鍵欄：面板右緣讓出這一欄，數字不再被按鈕蓋住
   const navShown = !!(nav && nav.style.display !== "none");
   const colLeft = cardRight + GAP;
   const avail = window.innerWidth - EDGE - colLeft;                  // 卡片右側可用總寬
   // 並排時面板寬 < 300px 會把「1 強訊號」擠成直排 → 導覽列與面板改成上下疊成同一欄、同寬
-  const stacked = navShown && (avail - NAVW - PGAP) < SUM_MIN;
+  const stacked = navShown && (avail - NAVW - PGAP - zr) < SUM_MIN;
   let panelLeft = cardRight + PGAP, panelTop = top;
   if(navShown){
     nav.style.left = colLeft + "px"; nav.style.right = "auto"; nav.style.top = top + "px";
@@ -4074,7 +4076,7 @@ function layoutRightColumns(){
   if(panel){
     panel.style.transform = "none"; panel.style.zoom = "1";   // 取消 uiScale 縮放，改用實際大小（zoom 會破壞 left/right 定位）
     panel.style.left = panelLeft + "px";
-    panel.style.right = EDGE + "px"; panel.style.width = "auto";
+    panel.style.right = (EDGE + zr) + "px"; panel.style.width = "auto";
     panel.style.top = panelTop + "px"; panel.style.bottom = EDGE + "px";
     panel.style.display = "flex"; panel.style.flexDirection = "column";   // docking：讓 sumbody 內捲，不再撐出面板底部
     const body = panel.querySelector(".sumbody");
@@ -8202,6 +8204,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261009ui1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261009ui1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20261009ui1"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

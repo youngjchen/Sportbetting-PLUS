@@ -166,7 +166,8 @@
       'border-radius:50%;background:#ffb02e;box-shadow:0 0 0 2px #10151c;animation:epPulse 2s infinite;}' +
     '@keyframes epPulse{0%,100%{opacity:1}50%{opacity:.45}}' +
     '@media (max-width:680px){' +
-      '.card .bmkt-row{grid-template-columns:24px minmax(58px,1fr) max-content 46px 24px 36px;column-gap:4px;}' +
+      '.card .bmkt-row{grid-template-columns:24px minmax(58px,1fr) max-content 46px 24px 40px;column-gap:4px;}' +
+      '.card .bmkt-row .bcover{font-size:13px;}' +
       '.card .blights{gap:4px;}' +
       '.card .blights .lt{width:16px;height:16px;}' +
       '.ep-cell{width:46px;}' +

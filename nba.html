@@ -105,6 +105,7 @@
   .bqs{ border-collapse:collapse; font-size:11px; color:var(--ink-dim); margin-top:5px; font-family:"Oswald"; }
   .bqs th{ font-weight:400; color:#5c6678; padding:1px 5px; }
   .bqs td{ padding:1px 5px; text-align:center; }
+  @media (max-width:680px){ .bqs th, .bqs td{ padding:1px 3px; } }
   .bqs .side{ color:var(--ink-dim); font-size:10px; }
   .bqs .liveq{ color:#3ad6a0; font-weight:700; }
   .binfo{ display:inline-grid; place-items:center; width:18px; height:18px; border-radius:50%; border:1px solid var(--ink-dim); color:var(--ink-dim); font-size:11px; font-weight:700; font-family:Georgia,serif; font-style:italic; cursor:pointer; flex:0 0 auto; user-select:none; }
@@ -163,9 +164,10 @@
   .bpill.void{ color:#9fb0c4; }
   .bpill.sc{ color:var(--ink); border-color:var(--lit); background:rgba(255,176,46,.06); }
   @media (min-width:1180px){ .card.bcard{ max-width:672px; zoom:1.4; } }
+  @media (min-width:1180px) and (max-width:1439px){ .card.bcard{ zoom:1.2; } }   /* 中尺寸桌機：卡片略縮，騰出空間給導覽列＋面板（與棒球同步） */
   @media (min-width:900px) and (max-width:1179px){ .card.bcard{ zoom:1.2; } }
   @media (max-width:680px){
-    .bbody{ grid-template-columns:1fr; }
+    .bbody{ grid-template-columns:minmax(0,1fr); }   /* minmax(0,…)：欄寬不被內容撐超過卡片（手機右側溢出） */
     .bscore{ flex-direction:row; justify-content:space-between; border-right:none; border-bottom:1px solid rgba(255,255,255,.07); padding:12px 14px; }
     .bteam{ width:auto; }
   }
@@ -1622,11 +1624,13 @@ function layoutRightColumns(){
   const cardRight = firstCard ? Math.round(firstCard.getBoundingClientRect().right) : 900;
   const top = summaryTopPad();
   const NAVW = 256, GAP = 20, PGAP = 14, EDGE = 14, SUM_MIN = 300;
+  const zc = document.getElementById("zoomctl");
+  const zr = (zc && zc.offsetWidth) ? zc.offsetWidth + 10 : 0;     // 右下快捷鍵欄：面板右緣讓出這一欄，數字不再被按鈕蓋住
   const navShown = !!(nav && nav.style.display !== "none");
   const colLeft = cardRight + GAP;
   const avail = window.innerWidth - EDGE - colLeft;                  // 卡片右側可用總寬
   // 並排時面板寬 < 300px 會把「1 強訊號」擠成直排 → 導覽列與面板改成上下疊成同一欄、同寬（與棒球同步）
-  const stacked = navShown && (avail - NAVW - PGAP) < SUM_MIN;
+  const stacked = navShown && (avail - NAVW - PGAP - zr) < SUM_MIN;
   let panelLeft = cardRight + PGAP, panelTop = top;
   if(navShown){
     nav.style.left = colLeft + "px"; nav.style.right = "auto";
@@ -1644,7 +1648,7 @@ function layoutRightColumns(){
   }
   if(panel){
     panel.style.left = panelLeft + "px";
-    panel.style.right = EDGE + "px"; panel.style.width = "auto";
+    panel.style.right = (EDGE + zr) + "px"; panel.style.width = "auto";
     panel.style.top = panelTop + "px"; panel.style.bottom = EDGE + "px";
     panel.style.display = "flex"; panel.style.flexDirection = "column";
     const body = panel.querySelector(".sumbody");
@@ -1860,7 +1864,10 @@ function renderCardW(model){
     else { vsEl.className="bvs"; vsEl.textContent="VS"; }
     mid.appendChild(vsEl);
     if((model.qAway&&model.qAway.length)||(model.qHome&&model.qHome.length)){
-      const nQ = Math.max(4, (model.qAway||[]).length, (model.qHome||[]).length);
+      let nQ = Math.max(4, (model.qAway||[]).length, (model.qHome||[]).length);
+      // 資料固定補滿 4 個 OT 欄（沒打延長賽也是 0）→ 尾端雙方皆 0／空的 OT 欄不畫，否則手機記分區被撐出卡片
+      const otPlayed = (i)=> [model.qAway, model.qHome].some(a=> a && a[i]!=null && +a[i]>0);
+      while(nQ>4 && !otPlayed(nQ-1)) nQ--;
       let th="<tr><th></th>"; for(let i=1;i<=nQ;i++) th+=`<th>${i<=4?"Q"+i:"OT"}</th>`; th+="</tr>";
       const cells=(arr)=>{ let h=""; for(let i=0;i<nQ;i++){ const v=(arr||[])[i]; const liveq = live && i===(arr||[]).length-1; h+=`<td class="${liveq?"liveq":""}">${v==null?"–":v}</td>`; } return h; };
       const t=document.createElement("table"); t.className="bqs";
@@ -2434,7 +2441,7 @@ render();
 loadSeedGames();
 loadPregame();
 </script>
-<script src="wnba-picks-addon.js?v=20260803wnba1"></script>
+<script src="wnba-picks-addon.js?v=20261009ui1"></script>
 <script src="wnba-divination-addon.js?v=20260924idb1"></script>
 <script src="oddsportal-integration.js?v=20260902dedupe2"></script>
 <script src="sports-market-monitor.js?v=2026100901"></script>
