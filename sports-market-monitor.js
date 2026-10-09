@@ -103,7 +103,6 @@
     head.setAttribute('aria-expanded', 'false');
     head.title = '展開盤口變動明細';
     for (const source of sources) addSummary(head, source);
-    addText(head, 'market-monitor-caret', '⌄');
     root.appendChild(head);
 
     const details = documentRef.createElement('div');

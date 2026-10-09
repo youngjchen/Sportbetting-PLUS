@@ -1319,25 +1319,26 @@
 .bstake-auto:hover,.bstake-history-toggle:hover{background:rgba(255,255,255,.09);color:#d8e2eb;}
 .bstake-history{flex:1 0 100%;margin-top:3px;padding:8px 10px;border:1px solid rgba(255,255,255,.06);border-radius:7px;background:#0d151c;color:#8191a1;font-family:"Oswald";line-height:1.65;}
 .market-monitor{margin:0 16px;border-bottom:1px solid rgba(255,255,255,.07);color:#aab8c5;}
-.market-monitor-head{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) 20px;align-items:stretch;gap:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;}
+/* 三欄等寬、整條可點展開（不另設箭頭欄）；狀態圓點跟著平台名稱走，不再壓在欄間分隔線上 */
+.market-monitor-head{width:100%;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));align-items:stretch;gap:0;padding:0;border:0;background:transparent;color:inherit;text-align:left;cursor:pointer;}
 .market-monitor-head:focus-visible{outline:2px solid #71b9e8;outline-offset:2px;border-radius:6px;}
-.market-platform{position:relative;display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"source state" "current current";gap:2px 8px;min-width:0;padding:9px 12px;border-right:1px solid rgba(255,255,255,.06);}
-.market-platform::before{content:"";position:absolute;left:0;top:11px;width:6px;height:6px;border-radius:50%;background:#5f7080;box-shadow:0 0 0 3px rgba(95,112,128,.1);}
-.market-platform.changed::before{background:#e89d32;box-shadow:0 0 0 3px rgba(232,157,50,.12);}
-.market-platform.stake{padding-left:15px}.market-platform.stake .market-source{color:#9db8ca}.market-platform.bet365 .market-source{color:#58aaff}.market-platform.taiwan .market-source{color:#f1b65d}
-.market-source{grid-area:source;font-family:"Oswald";font-size:10px;font-weight:800;letter-spacing:.1em;white-space:nowrap;}
-.market-current{grid-area:current;overflow:hidden;color:#dbe5ed;font-size:11.5px;font-weight:720;white-space:nowrap;text-overflow:ellipsis;}
+.market-platform{display:grid;grid-template-columns:auto minmax(0,1fr);grid-template-areas:"source state" "current current";gap:3px 8px;min-width:0;padding:9px 14px 10px;border-right:1px solid rgba(255,255,255,.06);}
+.market-platform:last-child{border-right:0;}
+.market-platform.stake .market-source{color:#9db8ca}.market-platform.bet365 .market-source{color:#58aaff}.market-platform.taiwan .market-source{color:#f1b65d}
+.market-source{grid-area:source;display:inline-flex;align-items:center;gap:7px;font-family:"Oswald";font-size:10px;font-weight:800;letter-spacing:.1em;white-space:nowrap;}
+.market-source::before{content:"";flex:0 0 auto;width:6px;height:6px;border-radius:50%;background:#5f7080;box-shadow:0 0 0 3px rgba(95,112,128,.1);}
+.market-platform.changed .market-source::before{background:#e89d32;box-shadow:0 0 0 3px rgba(232,157,50,.12);}
+.market-current{grid-area:current;overflow:hidden;padding-left:13px;color:#dbe5ed;font-size:11.5px;font-weight:720;white-space:nowrap;text-overflow:ellipsis;}
 .market-state{grid-area:state;justify-self:end;color:#758697;font-size:10px;white-space:nowrap}.market-platform.changed .market-state{color:#e8a84f}
-.market-monitor-caret{align-self:center;justify-self:end;color:#68798a;font-size:13px;transition:transform .16s ease}.market-monitor-head.open .market-monitor-caret{transform:rotate(180deg)}
 .market-monitor.diverged{border-bottom-color:rgba(224,128,32,.25)}
 .market-monitor-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0 0 10px;border-top:1px solid rgba(255,255,255,.05);background:#0d151c;}
 .market-monitor-details[hidden]{display:none}
-.market-detail-section{min-width:0;padding:10px 12px;border-right:1px solid rgba(255,255,255,.06)}.market-detail-section:last-child{border-right:0}
+.market-detail-section{min-width:0;padding:10px 14px;border-right:1px solid rgba(255,255,255,.06)}.market-detail-section:last-child{border-right:0}
 .market-detail-section h4{margin:0 0 7px;color:#92a6b8;font-family:"Oswald";font-size:10px;letter-spacing:.12em}.market-detail-section.bet365 h4{color:#58aaff}.market-detail-section.taiwan h4{color:#f1b65d}
 .market-detail-line{display:grid;grid-template-columns:36px minmax(0,1fr);gap:7px;margin:3px 0;font-size:10.5px;line-height:1.5}.market-detail-key{color:#66798a}.market-detail-value{min-width:0;color:#aebdca;overflow-wrap:anywhere}
 .market-timeline{margin-top:7px;padding-top:6px;border-top:1px solid rgba(255,255,255,.05)}.market-event{display:grid;grid-template-columns:38px minmax(0,1fr);gap:6px;margin:3px 0;font-size:10.5px;line-height:1.45}.market-event.no-time{grid-template-columns:minmax(0,1fr)}.market-event-time{color:#71879a;font-family:"Oswald"}.market-event-text{color:#c1ced8}
 .market-auto-controls{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}.market-auto-controls button{border:1px solid rgba(113,185,232,.18);border-radius:5px;background:rgba(113,185,232,.06);color:#8cb6d1;padding:4px 7px;font-size:10px;cursor:pointer}
-@media(max-width:680px){.market-monitor{margin:0 12px}.market-monitor-head{grid-template-columns:1fr 20px}.market-platform{grid-column:1}.market-monitor-caret{grid-column:2;grid-row:1 / span 3}.market-monitor-details{grid-template-columns:1fr}.market-detail-section{border-right:0;border-bottom:1px solid rgba(255,255,255,.06)}.market-detail-section:last-child{border-bottom:0}}
+@media(max-width:680px){.market-monitor{margin:0 12px}.market-monitor-head{grid-template-columns:1fr}.market-platform{border-right:0;border-bottom:1px solid rgba(255,255,255,.05)}.market-platform:last-child{border-bottom:0}.market-monitor-details{grid-template-columns:1fr}.market-detail-section{border-right:0;border-bottom:1px solid rgba(255,255,255,.06)}.market-detail-section:last-child{border-bottom:0}}
 .bflipbanner .ic{font-size:13px;opacity:.8;}
 .card.bcard.flip{ border-color:rgba(160,90,255,.6); box-shadow:0 0 0 1px rgba(160,90,255,.3),0 10px 26px rgba(0,0,0,.5); }
 /* 曾經顛倒(收盤前已收斂一致)：靛藍/長春花橫幅＋卡框，與「仍顛倒」的鮮紫同家族、清楚區分 */
@@ -1377,6 +1378,8 @@
 .anom-pick.direction,.anom-detail-row.direction{--decision-state:#71b9e8;}
 .anom-pick.observe,.anom-detail-row.observe,.anom-pick.no_data,.anom-detail-row.no_data{--decision-state:#657789;}
 .anom-pick.conflict,.anom-detail-row.conflict{--decision-state:#ff7185;}
+/* 摘要區無建議時的提示是一句話，不套四欄格線（否則擠進 34px 首欄、一字一行） */
+.anom-picks > .anom-pick.no_data{grid-column:1/-1;display:block;padding:9px 0 1px;font-size:11px;line-height:1.5;color:#7d91a3;letter-spacing:.02em;}
 .anom-market{font-family:"Oswald";font-size:10px;letter-spacing:.06em;color:#77899b;}
 .anom-choice{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12.5px;color:#e7eef5;}
 .anom-price{font-family:"Oswald";font-size:11px;color:#91a3b2;white-space:nowrap;}
@@ -8134,6 +8137,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261005mm1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261009ui1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

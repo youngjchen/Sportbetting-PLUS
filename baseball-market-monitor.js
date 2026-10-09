@@ -210,7 +210,6 @@
     addSummary(head, 'STAKE', currentLabel(card, stake && { side: stake.favorite, line: stake.canonicalLine }), stakeChanged, 'stake');
     addSummary(head, 'BET365', currentLabel(card, bet365), betChanged, 'bet365');
     addSummary(head, '台彩', currentLabel(card, taiwan), taiwanChanged, 'taiwan');
-    addText(head, 'market-monitor-caret', '⌄');
     root.appendChild(head);
 
     const details = documentRef.createElement('div');
