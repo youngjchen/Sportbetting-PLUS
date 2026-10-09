@@ -161,13 +161,15 @@
     opacity:0;transform:translateY(6px);transition:.25s;
   }
   #saveBadge.show{opacity:1;transform:translateY(0);}
+  /* 備份提醒：嵌在標題列（賠率時間旁）的小膠囊，不再浮在卡片上、手機也不斷字 */
   #backupBadge{
-    position:fixed;left:50%;bottom:calc(16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);
-    z-index:5000;font-size:13px;color:#ffe3a0;background:rgba(40,32,12,.96);border:1px solid var(--lit);
-    border-radius:11px;padding:9px 14px;box-shadow:0 8px 24px rgba(0,0,0,.5);display:flex;align-items:center;gap:6px;
+    display:inline-flex;align-items:center;gap:6px;flex:0 0 auto;white-space:nowrap;
+    font-size:12px;color:#ffe3a0;background:rgba(40,32,12,.9);border:1px solid rgba(255,176,46,.55);
+    border-radius:999px;padding:3px 4px 3px 10px;
   }
-  #backupBadge .bk-do{color:#1a1205;background:var(--lit);font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer;}
-  #backupBadge .bk-x{color:var(--ink-dim);cursor:pointer;padding:2px 5px;font-weight:700;}
+  #backupBadge .bk-do{color:#1a1205;background:var(--lit);font-weight:700;padding:3px 9px;border-radius:999px;cursor:pointer;}
+  #backupBadge .bk-x{color:var(--ink-dim);cursor:pointer;padding:2px 6px 2px 2px;font-weight:700;}
+  @media (max-width:680px){ #backupBadge .bk-msg{display:none;} }   /* 手機：只留 💾 立即備份 ✕，標題列不被擠成多一行 */
   #backupBadge .bk-x:hover{color:var(--ink);}
 
   /* single token */
@@ -1301,7 +1303,7 @@
 .bbadge.on{ color:#1a1205; background:#ff9f43; border-color:#ff9f43; }
 .bbadge.done{ color:#2ee07f; background:rgba(40,199,111,.10); border-color:rgba(40,199,111,.5); }
 /* 曾經顛倒(收盤前變一致)徽章：靛藍/長春花色；非互動、僅標示 */
-.bbadge.was{ color:#c7cdff; background:rgba(127,139,245,.14); border-color:rgba(127,139,245,.55); cursor:default; }
+.bbadge.was{ color:#b3d1ff; background:rgba(64,142,255,.14); border-color:rgba(64,142,255,.55); cursor:default; }
 .bbadge.was:hover{ background:rgba(127,139,245,.22); }
 .bbadge.ppd{ color:#ffb0a6; background:rgba(255,107,107,.10); border-color:rgba(255,107,107,.45); cursor:default; }
 .bico{ width:26px; height:26px; display:grid; place-items:center; border-radius:7px; cursor:pointer; color:var(--ink-dim); font-size:14px; flex:0 0 auto; }
@@ -1342,8 +1344,8 @@
 .bflipbanner .ic{font-size:13px;opacity:.8;}
 .card.bcard.flip{ border-color:rgba(160,90,255,.6); box-shadow:0 0 0 1px rgba(160,90,255,.3),0 10px 26px rgba(0,0,0,.5); }
 /* 曾經顛倒(收盤前已收斂一致)：靛藍/長春花橫幅＋卡框，與「仍顛倒」的鮮紫同家族、清楚區分 */
-.bflipbanner.was{background:transparent;border-bottom-color:rgba(127,139,245,.22);color:#aeb6ef;}
-.card.bcard.flip-was{ border-color:rgba(127,139,245,.55); box-shadow:0 0 0 1px rgba(127,139,245,.28),0 10px 26px rgba(0,0,0,.5); }
+.bflipbanner.was{background:transparent;border-bottom-color:rgba(64,142,255,.22);color:#9cc4ff;}
+.card.bcard.flip-was{ border-color:rgba(64,142,255,.6); box-shadow:0 0 0 1px rgba(64,142,255,.3),0 10px 26px rgba(0,0,0,.5); }
 /* 賽前讓分方曾對調：青綠橫幅＋卡框，與顛倒(紫)/曾顛倒(靛藍)三類分色 */
 .bflipbanner.swap{background:transparent;border-bottom-color:rgba(43,191,160,.22);color:#75cdbb;}
 .card.bcard.flip-swap{ border-color:rgba(43,191,160,.5); box-shadow:0 0 0 1px rgba(43,191,160,.26),0 10px 26px rgba(0,0,0,.5); }
@@ -1362,8 +1364,6 @@
 .anom-decision-toggle:focus-visible{outline:2px solid #71b9e8;outline-offset:3px;border-radius:3px;}
 .anom-decision-title{font-family:"Oswald";font-size:10px;font-weight:700;letter-spacing:.13em;color:#b9c9d6;}
 .anom-decision-mode{font-size:10px;color:#6f899c;letter-spacing:.02em;}
-.anom-decision-caret{margin-left:auto;color:#6e8294;font-size:14px;line-height:1;transition:transform .16s ease;}
-.anom-decision.open .anom-decision-caret{transform:rotate(180deg);}
 .anom-context{display:grid;gap:4px;margin:8px 0 2px;padding:7px 0;border-top:1px solid rgba(255,255,255,.055);border-bottom:1px solid rgba(255,255,255,.055);}
 .anom-context-row{display:grid;grid-template-columns:minmax(105px,.8fr) minmax(0,1.5fr);gap:10px;align-items:baseline;font-size:10.5px;}
 .anom-context-source{color:#72889a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
@@ -1388,7 +1388,6 @@
 .anom-decision-detail[hidden]{display:none!important;}
 .anom-detail-row{grid-template-columns:38px minmax(90px,1fr) auto 68px;padding:8px 0;}
 .anom-evidence{grid-column:2/-1;color:#697d8e;font-size:10px;line-height:1.45;white-space:normal;}
-@media (prefers-reduced-motion:reduce){.anom-decision-caret{transition:none;}}
 
 .bbody{ display:grid; grid-template-columns:212px 1fr; align-items:stretch; }
 /* 左計分板：純隊名、直向置中。客隊比分在名字上、主隊比分在名字下，比分大、琥珀色 */
@@ -1504,6 +1503,13 @@
 }
 #summary{ position:fixed !important; }
 #zoomctl{ position:fixed !important; }   /* 快捷鍵隨螢幕固定，不隨內容捲走 */
+/* 手機：快捷鍵改成底部靠右一排（直排會一路壓住卡片右側的勝率欄）；#world 底部已留 150px，內容都能捲到按鈕上方 */
+@media (max-width:680px){
+  #zoomctl{ flex-direction:row; align-items:center; right:10px; bottom:calc(10px + env(safe-area-inset-bottom,0px)); }
+  #zoomctlBtns{ flex-direction:row; flex-wrap:wrap; justify-content:flex-end; align-items:center; max-width:calc(100vw - 80px); }
+  #zoomctl button{ width:44px; height:44px; }
+  #zoomctl button#batchSettleBtn,#zoomctl button#ps-launcher,#zoomctl button#sumLauncher{ width:auto; padding:0 12px; }
+}
 
 /* ① 對戰導覽列（固定欄、貼著卡片、滑鼠移過放大、點擊捲到該場卡片） */
 #matchnav{ display:none; position:fixed; z-index:140; flex-direction:column;
@@ -1529,9 +1535,9 @@
 #matchnav .nvtag .nvinn.pending{ color:#ffb24d; }   /* 未結算終場：琥珀「待結算」 */
 #matchnav .nvtag.st-full{ color:#5fd79e; border-color:rgba(40,199,111,.5); background:rgba(40,199,111,.12); }
 #matchnav .nvtag.st-flip{ color:#cda4ff; border-color:#b96bff; background:rgba(185,107,255,.18); }
-/* 曾經顛倒(收盤前變一致)：靛藍/長春花色，與仍顛倒紫色區分 */
-#matchnav .nvtag.st-flip-was{ color:#c7cdff; border-color:#7f8bf5; background:rgba(127,139,245,.18); }
-/* 賽前讓分方曾對調：青綠，與顛倒(紫)/曾顛倒(靛藍)三類分色 */
+/* 收斂(曾顛倒→現同向)：藍色，與顛倒紫色清楚區分（2026-10-09 使用者指定：顛倒紫、收斂藍） */
+#matchnav .nvtag.st-flip-was{ color:#b3d1ff; border-color:#408eff; background:rgba(64,142,255,.18); }
+/* 賽前讓分方曾對調：青綠，與顛倒(紫)/收斂(藍)三類分色 */
 #matchnav .nvtag.st-swap{ color:#7fe8d4; border-color:#2bbfa0; background:rgba(43,191,160,.16); }
 /* ◆ 交叉分層區塊 */
 .rv-section.rv-cross{ border:1px solid rgba(43,191,160,.28); border-radius:12px; padding:14px 16px; background:rgba(43,191,160,.05); }
@@ -3179,10 +3185,11 @@ function renderCardB(it){
     if(monitor) el.appendChild(monitor);
   }catch(_){}
 
-  // 異常狀態繼續保留卡框，但不再額外疊一條重複文字橫幅。
-  if(it.platformFlip) el.classList.add("flip");
-  else if(it.flipVanished) el.classList.add("flip-was");
-  else if(it.preGameSwap) el.classList.add("flip-swap");
+  // 異常狀態繼續保留卡框，但不再額外疊一條重複文字橫幅；手標優先，未手標用系統即時判定（與列表標籤同源）。
+  { const kind = bCardAnomKind(it);
+    if(kind==="flip") el.classList.add("flip");
+    else if(kind==="was") el.classList.add("flip-was");
+    else if(kind==="swap") el.classList.add("flip-swap"); }
 
   appendBAnomRecommendation(el,it);
 
@@ -3505,6 +3512,10 @@ function todayHitRate(){
   return r;
 }
 
+// 手機（≤680px）：重點面板是固定浮層，展開會蓋住卡片上半部 → 預設收進快捷鍵「總結」，點了才展開。
+// 只影響這次畫面，不寫回 doc.summaryMin（桌機的面板設定不變）。
+let _phoneSummaryOpen = false;
+function isPhoneWidth(){ return window.innerWidth <= 680; }
 function renderSummary(){
   try{ updateReviewAlert(); }catch(_){}
   const old = canvas.querySelector("#summary"); if(old) old.remove();
@@ -3517,7 +3528,7 @@ function renderSummary(){
   if(!hasZhan && !hasZhong && !wideFixed){ hideSummaryLauncher(); return; }
 
   // 最小化 → 不畫面板，只在快捷鍵留一顆「總結」鈕
-  if(doc.summaryMin){ showSummaryLauncher(strong.length); return; }
+  if(doc.summaryMin || (isPhoneWidth() && !_phoneSummaryOpen)){ showSummaryLauncher(strong.length); return; }
   hideSummaryLauncher();
 
   // 戰 / 重 分頁
@@ -3556,7 +3567,9 @@ function renderSummary(){
   head.append(dot, tabsWrap, cnt, mn);
   head.addEventListener("pointerdown", startSummaryDrag);
   mn.addEventListener("pointerdown", (e)=>{ e.stopPropagation(); });          // 別觸發拖曳
-  mn.addEventListener("click", (e)=>{ e.stopPropagation(); doc.summaryMin=true; save(); render(); });
+  mn.addEventListener("click", (e)=>{ e.stopPropagation();
+    if(isPhoneWidth()){ _phoneSummaryOpen=false; render(); return; }   // 手機只收起本次畫面
+    doc.summaryMin=true; save(); render(); });
   box.appendChild(head);
 
   /* ===== 戰：今日下注命中率 ===== */
@@ -3706,10 +3719,35 @@ window.__onLiveData = function(){
 let _navDrag=null;                                       // 拖曳中的標籤 it.id
 function gtMins(it){ const m=/(\d{1,2}):(\d{2})/.exec((it&&it.gameTime)||""); return m?(+m[1])*60+(+m[2]):1e9; }
 function cmpMatch(a,b){ return (gtMins(a)-gtMins(b)) || ((a.seq==null?1e9:a.seq)-(b.seq==null?1e9:b.seq)); }  // 組內：開球時間→手動 seq（時間優先，晚場不會排到早場前）
+// 系統即時判定 Stake × 台彩（與監控列同資料）：讓分方不同＝顛倒；同向且任一邊曾換邊＝收斂
+// （收斂需至少一邊換邊，與七類同口徑；兩邊都換到同一隊也算收斂——2026-10-09 使用者拍板）。
+function bStakeTaiwanAutoKind(it){
+  const ist = (typeof intlFor==="function") ? intlFor(it) : null;
+  const taiwanSide = ist && ist.ls;
+  if(taiwanSide!=="away" && taiwanSide!=="home") return null;
+  const stakeApi = window.__baseballStakeIntegration;
+  const sg = (stakeApi && stakeApi.gameFor) ? stakeApi.gameFor(it, doc.activeDate) : null;
+  const stakeSide = sg && sg.favorite;
+  if(stakeSide!=="away" && stakeSide!=="home") return null;   // Stake 尚未配對：不猜
+  if(stakeSide!==taiwanSide) return "flip";
+  const stakeSwapped = (Number(sg.favoriteFlipCount)||0)>0 || (Array.isArray(sg.favoriteTransitions) && sg.favoriteTransitions.length>0);
+  const taiwanSwapped = Number(ist.lsw||0)>0;
+  return (stakeSwapped || taiwanSwapped) ? "was" : null;
+}
+// 卡片框色／列表標籤色／異常置頂共用：flip＝顛倒(紫)、was＝收斂(藍)、swap＝只對調(青綠)。
+// 手動判斷優先（卡片顛倒鈕、結算時選的顛倒狀態）；尚未手標的場次才用系統即時判定。
+function bCardAnomKind(it){
+  if(!it) return null;
+  if(it.platformFlip) return "flip";
+  if(it.flipVanished) return "was";
+  if(!it.flipState){ const auto = bStakeTaiwanAutoKind(it); if(auto) return auto; }
+  return it.preGameSwap ? "swap" : null;
+}
 function navMatchState(it){
-  if(it.platformFlip) return "st-flip";                  // 仍顛倒(紫)：最高優先
-  if(it.flipVanished) return "st-flip-was";              // 曾經顛倒→開賽前變一致(靛藍)：優先於已結算，才不會被綠色蓋掉而無法辨認
-  if(it.preGameSwap) return "st-swap";                   // 賽前讓分方曾對調(青綠)：優先於已結算，才不被綠色蓋掉
+  const kind = bCardAnomKind(it);                        // 異常色優先於已結算，才不會被綠色蓋掉而無法辨認
+  if(kind==="flip") return "st-flip";
+  if(kind==="was") return "st-flip-was";
+  if(kind==="swap") return "st-swap";
   if(it.settled) return "st-full";                       // 已結算＝資料齊全(綠)
   // 黃色＝賠率填寫進度提醒(不再因燈號變色)：開盤/下注/收盤 三組,填幾組黃色就多深
   let c=0;
@@ -3871,11 +3909,11 @@ function renderMatchNav(){
   const prevBody = el.querySelector(".nvbody");           // 保存捲動位置(修：點標籤編輯後跳回頂部)
   const savedScroll = prevBody ? prevBody.scrollTop : 0;
   const flipTop = !!doc.navFlipTop;
-  const isFlip = it => !!it.platformFlip;
-  const isAnom = it => { if(isFlip(it)) return true;
+  const isFlip = it => bCardAnomKind(it)==="flip";          // 紫色顛倒（手標或系統即時判定）排最前
+  const isAnom = it => { const kind = bCardAnomKind(it); if(kind==="flip" || kind==="was") return true;
     const g = (typeof intlFor==="function") ? intlFor(it) : null;
     const vv = (typeof intlVerdict==="function") ? intlVerdict(it, g) : null;
-    return !!((vv && vv.v) || (g && g.lsw)); };   // 異常置頂＝手標異常＋國際軸異常（BE 為主裁決）＋台彩自身換邊
+    return !!((vv && vv.v) || (g && g.lsw)); };   // 異常置頂＝顛倒／收斂（手標或 Stake×台彩 即時判定）＋國際軸異常（BE 為主裁決）＋台彩自身換邊
   const LGO = ["mlb","npb","kbo","cpbl","zz"], LGL = { mlb:"MLB", npb:"日職", kbo:"韓職", cpbl:"中職", zz:"其他" };
   el.innerHTML = "";
   const head = document.createElement("div"); head.className="nvhead";
@@ -3999,22 +4037,35 @@ function renderMatchNav(){
 function layoutRightColumns(){
   const nav = document.getElementById("matchnav");
   const panel = document.getElementById("summary");
-  if(window.innerWidth < 1180){ return; }   // 窄螢幕：各自的預設定位
+  if(window.innerWidth < 1180){ if(nav) nav.style.width = ""; return; }   // 窄螢幕：各自的預設定位
   const firstCard = world && world.querySelector(".card.bcard");
   const cardRight = firstCard ? Math.round(firstCard.getBoundingClientRect().right) : 900;
   const top = (typeof summaryTopPad==="function") ? summaryTopPad() : 120;
-  const NAVW = 256, GAP = 20, PGAP = 14, EDGE = 14;
-  let navRightEdge = cardRight + GAP;
-  if(nav && nav.style.display !== "none"){
-    nav.style.left = (cardRight + GAP) + "px"; nav.style.right = "auto";
-    nav.style.top = top + "px"; nav.style.maxHeight = (window.innerHeight - top - 16) + "px";
-    navRightEdge = cardRight + GAP + (nav.offsetWidth || NAVW);
-  } else { navRightEdge = cardRight + GAP - GAP; }
+  const NAVW = 256, GAP = 20, PGAP = 14, EDGE = 14, SUM_MIN = 300;
+  const navShown = !!(nav && nav.style.display !== "none");
+  const colLeft = cardRight + GAP;
+  const avail = window.innerWidth - EDGE - colLeft;                  // 卡片右側可用總寬
+  // 並排時面板寬 < 300px 會把「1 強訊號」擠成直排 → 導覽列與面板改成上下疊成同一欄、同寬
+  const stacked = navShown && (avail - NAVW - PGAP) < SUM_MIN;
+  let panelLeft = cardRight + PGAP, panelTop = top;
+  if(navShown){
+    nav.style.left = colLeft + "px"; nav.style.right = "auto"; nav.style.top = top + "px";
+    if(stacked){
+      nav.style.width = Math.max(NAVW, avail) + "px";
+      nav.style.maxHeight = Math.max(160, window.innerHeight - top - EDGE - PGAP - 200) + "px";   // 列表盡量完整，面板至少留 200px
+      panelLeft = colLeft;
+      panelTop = top + nav.offsetHeight + PGAP;
+    } else {
+      nav.style.width = "";
+      nav.style.maxHeight = (window.innerHeight - top - 16) + "px";
+      panelLeft = colLeft + (nav.offsetWidth || NAVW) + PGAP;
+    }
+  }
   if(panel){
     panel.style.transform = "none"; panel.style.zoom = "1";   // 取消 uiScale 縮放，改用實際大小（zoom 會破壞 left/right 定位）
-    panel.style.left = (navRightEdge + PGAP) + "px";
+    panel.style.left = panelLeft + "px";
     panel.style.right = EDGE + "px"; panel.style.width = "auto";
-    panel.style.top = top + "px"; panel.style.bottom = EDGE + "px";
+    panel.style.top = panelTop + "px"; panel.style.bottom = EDGE + "px";
     panel.style.display = "flex"; panel.style.flexDirection = "column";   // docking：讓 sumbody 內捲，不再撐出面板底部
     const body = panel.querySelector(".sumbody");
     if(body){ body.style.maxHeight = "none"; body.style.flex = "1 1 auto"; body.style.minHeight = "0"; body.style.overflowY = "auto"; }
@@ -4028,7 +4079,10 @@ function ensureSummaryLauncher(){
   b = document.createElement("button");
   b.id="sumLauncher"; b.type="button"; b.className="fit"; b.title="展開重點總結"; b.innerHTML='總結<span class="usc" style="display:none"></span>';
   b.style.display="none";
-  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation(); doc.summaryMin=false; save(); render(); });
+  b.addEventListener("click",(e)=>{ e.preventDefault(); e.stopPropagation();
+    if(isPhoneWidth()) _phoneSummaryOpen = true;
+    if(doc.summaryMin){ doc.summaryMin=false; save(); }
+    render(); });
   const bar = document.getElementById("zoomctlBtns");
   if(bar) bar.insertBefore(b, bar.firstChild); else document.body.appendChild(b);
   return b;
@@ -4913,8 +4967,9 @@ function showBackupBadge(daysSince){
   if(document.getElementById("backupBadge")) return;
   const b = document.createElement("div");
   b.id = "backupBadge";
-  b.innerHTML = `💾 ${daysSince!=null?`已 ${daysSince} 天沒備份`:"建議備份一下"}　<span class="bk-do">立即備份</span> <span class="bk-x">✕</span>`;
-  document.body.appendChild(b);
+  b.innerHTML = `💾<span class="bk-msg">${daysSince!=null?`已 ${daysSince} 天沒備份`:"建議備份一下"}</span><span class="bk-do">立即備份</span><span class="bk-x">✕</span>`;
+  const stamp = document.getElementById("oddsStamp");                      // 放進標題列、賠率時間左邊
+  if(stamp && stamp.parentNode) stamp.parentNode.insertBefore(b, stamp); else document.body.appendChild(b);
   b.querySelector(".bk-do").onclick = ()=>{ exportData(); b.remove(); };
   b.querySelector(".bk-x").onclick = ()=>{ b.remove(); };
 }
@@ -8137,6 +8192,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261004rec2"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261009ui1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261009ui1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20260729ep20"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

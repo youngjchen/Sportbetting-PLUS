@@ -426,10 +426,7 @@
     const mode = documentRef.createElement('span');
     mode.className = 'anom-decision-mode';
     mode.textContent = decision.hasConflict ? '方向分歧' : decision.hasConsensus ? '兩套一致' : '單一系統';
-    const caret = documentRef.createElement('span');
-    caret.className = 'anom-decision-caret';
-    caret.textContent = '⌄';
-    toggle.append(title, mode, caret);
+    toggle.append(title, mode);
     root.appendChild(toggle);
 
     const context = documentRef.createElement('div');
