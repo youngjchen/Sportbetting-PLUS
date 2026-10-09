@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-09T18:21:26.855Z",
+ "updated": "2026-10-09T18:26:29.252Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -1985,18 +1985,56 @@
       "name": "VAN Canucks",
       "side": "away",
       "line": 1.5,
-      "odds": 1.82
+      "odds": 1.81
      },
      {
       "name": "NJ Devils",
       "side": "home",
       "line": -1.5,
-      "odds": 1.92
+      "odds": 1.93
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-09T18:26:29.252Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "VAN Canucks",
+        "side": "away",
+        "odds": 3.3
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "odds": 1.32
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "VAN Canucks",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.81
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "line": -1.5,
+        "odds": 1.93
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-09T18:16:30.815Z",
      "provider": "bet365-official",
@@ -3140,24 +3178,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "UTA Mammoth",
       "side": "away",
-      "line": -1.5,
-      "odds": 3.35
+      "line": 1.5,
+      "odds": 1.37
      },
      {
       "name": "BUF Sabres",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.31
+      "line": -1.5,
+      "odds": 3
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-09T18:26:29.252Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "UTA Mammoth",
+        "side": "away",
+        "odds": 1.86
+       },
+       {
+        "name": "BUF Sabres",
+        "side": "home",
+        "odds": 1.87
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "UTA Mammoth",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.37
+       },
+       {
+        "name": "BUF Sabres",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-09T18:01:31.588Z",
      "provider": "bet365-official",
@@ -3388,6 +3464,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-10-09T18:26:29.252Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    },
     {
      "at": "2026-10-09T18:01:31.588Z",
      "type": "favorite-flip",
