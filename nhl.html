@@ -751,7 +751,14 @@ async function loadSeedGames(){
     for(const g of j.games){
       const old = gameFind(g.sid, g.date, "NHL", g.awayTeam, g.homeTeam);
       if(old && old.manual) continue;                    // 手動覆蓋優先
-      gameUpsert(g);
+      // 管線種子（nhl_games.json）只有比分、沒有盤口線：本機已記到的讓分／大小要保留，不可被空值洗掉
+      // （2026-10-09：42 場的讓分就是這樣被洗掉的）
+      const rec = { ...g };
+      if(old){
+        if((rec.hdFav==null || rec.hdVal==null) && old.hdFav && old.hdVal!=null){ rec.hdFav=old.hdFav; rec.hdVal=old.hdVal; }
+        if(rec.totBasis==null && old.totBasis!=null) rec.totBasis=old.totBasis;
+      }
+      gameUpsert(rec);
     }
     bumpGamesVersion(); saveDoc(doc);
     const el = $("#stamp"); if(el && !/資料更新/.test(el.textContent)) el.textContent = `NHL 數據 ${j.count} 場 · ${String(j.builtAt||"").slice(0,10)}`;
@@ -831,6 +838,12 @@ function autoSettleFromPregame(){
       decidedBy:g.decidedBy||null };
     const old = gameFind(rec.sid, rec.date, "NHL", rec.awayTeam, rec.homeTeam);
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
+    // 盤口資料已滾出資料檔時（Stake／BET365 都沒有這場），保留先前記到的讓分與大小，不用空值或預設 6.5 覆蓋
+    if(old){
+      if(!useHd && old.hdFav && old.hdVal!=null){ rec.hdFav=old.hdFav; rec.hdVal=old.hdVal; }
+      const totManual = it && it.totVal!=null && it.totVal!=="";
+      if(model.totLine==null && !totManual && old.totBasis!=null) rec.totBasis=old.totBasis;
+    }
     // it.settled 同步（手動結算優先;卡片 pills／戰績／導覽全讀這份=棒球資料流）
     // 異常快照落印：Bet365 官方賠率與卡片盤口狀態一併保存，供結算後回看。
     // 異常快照落印：還沒有快照或快照不完整（缺收盤關係）時，用更完整的來源補上；完整的快照絕不被覆蓋。
