@@ -287,6 +287,55 @@ test('第一套異常統計也只讀卡片所屬聯盟，不再硬抓四聯盟�
   assert.equal(info.leagueLabel, '日職');
 });
 
+function loadBAnomInfoLive(intlState, stakeGame, league = 'mlb') {
+  const anomStart = indexSource.indexOf('function bAnomInfo(it){');
+  const anomEnd = indexSource.indexOf('// 獨贏 ⓘ：STAKE 賠率評語', anomStart);
+  const liveStart = indexSource.indexOf('function bStakeTaiwanLive(it){');
+  const liveEnd = indexSource.indexOf('// 卡片框色', liveStart);
+  assert.ok(anomStart >= 0 && anomEnd > anomStart && liveStart >= 0 && liveEnd > liveStart, '找不到異常判定原始函式');
+  const sandbox = {
+    intlFor: () => intlState,
+    crossTabCached: () => crossTabFixture(),
+    leagueOf: () => league,
+    bLeagueMeta: () => ({ league, label: 'MLB' }),
+    doc: { activeDate: '2026-10-09' },
+    window: { __baseballStakeIntegration: { gameFor: () => stakeGame } },
+  };
+  vm.runInNewContext(`${indexSource.slice(liveStart, liveEnd)}\n${indexSource.slice(anomStart, anomEnd)}\nthis.bAnomInfo = bAnomInfo;`, sandbox);
+  return sandbox.bAnomInfo;
+}
+
+const unmarked = (extra = {}) => ({
+  league: 'mlb', platformFlip: false, flipVanished: false, preGameSwap: false,
+  closeOddsAway: 1.9, closeOddsHome: 1.9, ...extra,
+});
+
+test('未手標：只有台彩換邊、兩邊同向＝收斂＋單獨（台彩換邊不算對調）', () => {
+  const info = loadBAnomInfoLive({ ls: 'away', lsw: 1 }, { favorite: 'away', favoriteFlipCount: 0 })(unmarked({ hdFav: 'away' }));
+  assert.equal(info.lbl, '收斂');
+});
+
+test('未手標：Stake 讓分方換過邊、兩邊同向＝收斂＋對調', () => {
+  const info = loadBAnomInfoLive({ ls: 'away', lsw: 1 }, { favorite: 'away', favoriteTransitions: [{ from: 'home', to: 'away' }] })(unmarked({ hdFav: 'away' }));
+  assert.equal(info.lbl, '收斂＋對調');
+});
+
+test('未手標：讓分方相反且 Stake 換過邊＝顛倒＋對調', () => {
+  const info = loadBAnomInfoLive({ ls: 'home', lsw: 0 }, { favorite: 'away', favoriteFlipCount: 1 })(unmarked({ hdFav: 'away' }));
+  assert.equal(info.lbl, '顛倒＋對調');
+});
+
+test('已手標的場次不被即時資料改寫', () => {
+  const load = () => loadBAnomInfoLive({ ls: 'away', lsw: 1 }, { favorite: 'away', favoriteFlipCount: 1 });
+  assert.equal(load()(unmarked({ hdFav: 'away', flipState: 'none' })), null);
+  assert.equal(load()(unmarked({ hdFav: 'away', flipState: 'converged_lottery', flipVanished: true })).lbl, '收斂');
+});
+
+test('Stake 尚未配對時不推測收斂', () => {
+  const info = loadBAnomInfoLive({ ls: 'away', lsw: 1 }, null)(unmarked({ hdFav: 'away' }));
+  assert.equal(info, null);
+});
+
 test('未結算異常卡片直接掛上決策條，已結算卡片不再顯示即時下注判定', () => {
   const { append, rendered } = loadAppendBAnomRecommendation();
   const root = { children: [], appendChild(child) { this.children.push(child); } };

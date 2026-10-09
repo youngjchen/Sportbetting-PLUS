@@ -2958,13 +2958,18 @@ function bAnomInfo(it){
   // 第一套晶片只比較 Stake（卡片 hdFav）× 台彩（intl ls）。
   // ist.v / ist.is 是 Bet365 × 台彩第二套系統，絕不可回填到這裡。
   const stakeTaiwanFlip = !!(ist && ist.ls && it.hdFav && it.hdFav!==ist.ls);
+  // 尚未手標（沒按顛倒鈕、未結算選狀態）的場次，收斂與對調改用即時資料（與卡片框色同一套判定）。
+  const manual = !!(it.platformFlip || it.flipVanished || it.flipState);
+  const live = (!manual && typeof bStakeTaiwanLive==="function") ? bStakeTaiwanLive(it) : null;
+  const autoWas = !!live && typeof bStakeTaiwanAutoKind==="function" && bStakeTaiwanAutoKind(it)==="was";
   const kind = it.platformFlip ? "flip" : it.flipVanished ? "was"
-             : stakeTaiwanFlip ? "flip" : it.preGameSwap ? "swap" : null;
+             : stakeTaiwanFlip ? "flip" : autoWas ? "was" : it.preGameSwap ? "swap" : null;
   if(!kind) return null;
   const meta=bLeagueMeta(it);
   const ct = crossTabCached(meta.league); if(!ct || !ct.total) return null;
   // 本場的組合成分（與統計同口徑）：對調=preGameSwap；背離=收盤(缺→下注)賠率低賠方≠讓分方
-  const sw = !!it.preGameSwap;
+  // 對調＝Stake 讓分方賽前換過邊（2026-10-09 使用者確認；只有台彩換邊＝收斂＋單獨）；未手標時以即時資料補上。
+  const sw = !!it.preGameSwap || !!(live && live.stakeSwapped);
   const dvLive = (()=>{
     let a,b;
     if(it.closeOddsAway!=null && it.closeOddsHome!=null){ a=it.closeOddsAway; b=it.closeOddsHome; }
@@ -3721,18 +3726,23 @@ function gtMins(it){ const m=/(\d{1,2}):(\d{2})/.exec((it&&it.gameTime)||""); re
 function cmpMatch(a,b){ return (gtMins(a)-gtMins(b)) || ((a.seq==null?1e9:a.seq)-(b.seq==null?1e9:b.seq)); }  // 組內：開球時間→手動 seq（時間優先，晚場不會排到早場前）
 // 系統即時判定 Stake × 台彩（與監控列同資料）：讓分方不同＝顛倒；同向且任一邊曾換邊＝收斂
 // （收斂需至少一邊換邊，與七類同口徑；兩邊都換到同一隊也算收斂——2026-10-09 使用者拍板）。
-function bStakeTaiwanAutoKind(it){
+function bStakeTaiwanLive(it){
   const ist = (typeof intlFor==="function") ? intlFor(it) : null;
-  const taiwanSide = ist && ist.ls;
-  if(taiwanSide!=="away" && taiwanSide!=="home") return null;
   const stakeApi = window.__baseballStakeIntegration;
   const sg = (stakeApi && stakeApi.gameFor) ? stakeApi.gameFor(it, doc.activeDate) : null;
-  const stakeSide = sg && sg.favorite;
-  if(stakeSide!=="away" && stakeSide!=="home") return null;   // Stake 尚未配對：不猜
-  if(stakeSide!==taiwanSide) return "flip";
-  const stakeSwapped = (Number(sg.favoriteFlipCount)||0)>0 || (Array.isArray(sg.favoriteTransitions) && sg.favoriteTransitions.length>0);
-  const taiwanSwapped = Number(ist.lsw||0)>0;
-  return (stakeSwapped || taiwanSwapped) ? "was" : null;
+  const side = v => (v==="away" || v==="home") ? v : null;
+  return {
+    taiwanSide: side(ist && ist.ls),
+    stakeSide: side(sg && sg.favorite),                      // Stake 尚未配對＝null：不猜
+    stakeSwapped: !!(sg && ((Number(sg.favoriteFlipCount)||0)>0 || (Array.isArray(sg.favoriteTransitions) && sg.favoriteTransitions.length>0))),
+    taiwanSwapped: !!(ist && Number(ist.lsw||0)>0)
+  };
+}
+function bStakeTaiwanAutoKind(it){
+  const L = bStakeTaiwanLive(it);
+  if(!L.taiwanSide || !L.stakeSide) return null;
+  if(L.stakeSide!==L.taiwanSide) return "flip";
+  return (L.stakeSwapped || L.taiwanSwapped) ? "was" : null;
 }
 // 卡片框色／列表標籤色／異常置頂共用：flip＝顛倒(紫)、was＝收斂(藍)、swap＝只對調(青綠)。
 // 手動判斷優先（卡片顛倒鈕、結算時選的顛倒狀態）；尚未手標的場次才用系統即時判定。
