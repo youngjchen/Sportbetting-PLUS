@@ -317,6 +317,8 @@
   .rv-table th,.rv-table td{ padding:11px 16px; border-bottom:1px solid var(--line); text-align:right; white-space:nowrap; }
   .rv-table th{ color:var(--ink-dim); font-weight:600; font-size:13.5px; letter-spacing:.04em; text-transform:uppercase; }
   .rv-table td.lbl,.rv-table th.lbl{ text-align:left; font-weight:700; font-size:16px; }
+  .rv-table tr.rv-row.grp td{ background:rgba(255,255,255,.03); color:var(--ink); font-weight:800; padding-top:8px; padding-bottom:8px; }   /* 讓分級距：平台分段列 */
+  .rv-table tr.rv-row.lm td.lbl{ padding-left:30px; font-weight:600; font-size:15px; }
   .rv-pct{ font-family:"Oswald"; font-weight:700; font-size:17px; min-width:50px; display:inline-block; text-align:right; }
   .rv-pct.hi{ color:#28c76f; } .rv-pct.lo{ color:var(--conflict); } .rv-pct.mid{ color:#aeb9c8; } .rv-pct.low-sample{ color:#5b6b80; }
   .rv-samp{ font-family:"Oswald"; font-size:15px; color:var(--ink-dim); }
@@ -752,6 +754,7 @@ let pregameCache = { updated:null, games:[] };
 let pregameFeeds = { WNBA:{ updated:null, games:[] }, NBA:{ updated:null, games:[] } };
 let oddsCache = { updated:null, games:{} };
 let seriesCache = {};
+let nbaSeriesCache = {};   // NBA 台彩讓分序列（讓分級距統計用）
 async function loadPregame(){
   const feeds = [["WNBA","data/wnba_pregame.json"],["NBA","data/nba_pregame.json"]];
   await Promise.all(feeds.map(async ([league,url])=>{
@@ -776,12 +779,21 @@ async function loadPregame(){
     const r3 = await fetch(`data/wnba_lottery_series.json?t=${Date.now()}`);
     if(r3.ok){ const j3 = await r3.json(); if(j3 && typeof j3==="object"){ seriesCache = j3; } }
   }catch(e){}
+  try{
+    const r4 = await fetch(`data/nba_lottery_series.json?t=${Date.now()}`);
+    if(r4.ok){ const j4 = await r4.json(); if(j4 && typeof j4==="object"){ nbaSeriesCache = j4; } }
+  }catch(e){}
+  autoSettleFromPregame();                              // 台彩序列到齊後補記讓分級距快照
+  setTimeout(autoSettleFromPregame, 8000);              // Stake／BET365 由三方整合非同步載入：稍後再補一次
 }
 setInterval(loadPregame, 5*60e3);
 document.addEventListener("visibilitychange", ()=>{ if(!document.hidden){ loadPregame(); loadSeedGames(); } });
 function autoSettleFromPregame(){
   let changed = false;
   for(const g of pregameCache.games||[]){
+    // 讓分級距：賽前／進行中先記即時快照（只對已有卡片的場次；完整度不倒退）
+    { const b0=doc.boards[g.date], it0=b0&&b0.items&&b0.items.find(x=>x.id===g.officialId);
+      if(it0 && !it0.settled){ const live=bbLineSnap(g); if(bbSnapScore(live)>0 && bbSnapScore(live)>=bbSnapScore(it0.lineLive) && JSON.stringify(it0.lineLive||null)!==JSON.stringify(live)){ it0.lineLive=live; changed=true; } } }
     if(g.status!=="finished" || g.awayScore==null || g.homeScore==null) continue;
     const league=g.league||(String(g.officialId||"").startsWith("NBA_")?"NBA":"WNBA");
     const it=ensureItem(g.date,g.officialId);
@@ -804,6 +816,9 @@ function autoSettleFromPregame(){
         mlFav: (_mlo && _mlo.curH && _mlo.curA) ? (_mlo.curA < _mlo.curH ? "away" : "home") : null
       };
     }
+    // 讓分級距快照：結算時固定；只用更完整的資料補（此刻資料檔仍有這場→最完整；否則用賽前即時快照）
+    { const now=bbLineSnap(g), best=[now, it.lineLive].filter(Boolean).sort((a,b)=>bbSnapScore(b)-bbSnapScore(a))[0];
+      if(best && bbSnapScore(best)>bbSnapScore(it.lineSnap)){ it.lineSnap=best; changed=true; } }
     if(!it.settled || !it.settled.manual){
       const auto = computeAutoSettled(settledModel);
       if(auto && JSON.stringify(it.settled||null)!==JSON.stringify(auto)){ it.settled = auto; changed = true; }
@@ -1306,6 +1321,93 @@ function todayHitRate(models){
 // ===== 異常組合統計（棒球 collectCrossTab 移植;分類=手標優先,無手標用結算落印的 anomSnap）=====
 // 2026-08-04 使用者拍板：燈號分析可簡,異常比賽統計規範必留。前瞻累積,不回填。
 let __ctMemo=null, __ctMemoAt=0;
+// ===== 讓分級距變化統計（2026-10-09 使用者規格；NBA／WNBA 分開，Stake／BET365／台彩 分開）=====
+// 每場記下各平台的開盤與收盤（賽前最後一筆）讓分方／讓分、收盤大小分，以及獨贏熱門（獨贏賠率較低的那隊）。
+// 分組：讓分方換邊；同一讓分方時 收盤−開盤 ≥2 分＝加深、≤−2 分＝縮小、其餘＝微調（含不變）。
+// 賽前資料還在時先記 lineLive；結算時固定成 lineSnap——只用更完整的資料補，完整度不倒退（冰球快照全空的教訓）。
+const BB_PLATFORMS = [["stake","Stake"],["bet365","BET365"],["taiwan","台彩"]];
+const BB_GROUPS = [["deeper","加深 ≥2 分"],["small","微調 ≤1.5 分"],["shallower","縮小 ≥2 分"],["swap","讓分方換邊"]];
+function bbSide(v){ return (v==="away"||v==="home") ? v : null; }
+function bbStartMs(g){ const ms=Date.parse(`${g.date}T${String(g.time||"").padStart(5,"0")}:00+08:00`); return Number.isFinite(ms) ? ms : Infinity; }
+function bbPlatformLine(rows){
+  const ok = rows.filter(r=>r.fav && Number.isFinite(r.line));
+  if(!ok.length) return null;
+  const o = ok[0], c = ok[ok.length-1], totals = rows.filter(r=>Number.isFinite(r.total));
+  return { openFav:o.fav, openLine:Math.abs(o.line), closeFav:c.fav, closeLine:Math.abs(c.line),
+           closeTotal: totals.length ? totals[totals.length-1].total : null, points: ok.length };
+}
+function bbLineSnap(model){
+  const api = window.__nbaOddsIntegration, start = bbStartMs(model);
+  const pre = (at)=>{ const ms=Date.parse(at||""); return !Number.isFinite(ms) || ms<=start; };   // 只取開賽前的盤口
+  const byTime = (a,b)=> (Date.parse(a.at||"")||0) - (Date.parse(b.at||"")||0);
+  const fromHistory = (m)=> (m && Array.isArray(m.history) ? m.history : []).filter(h=>pre(h.observedAt||h.at)).map(h=>{
+    const hd = h.markets && h.markets.hd, ou = h.markets && h.markets.ou;
+    return { at:h.observedAt||h.at, fav: bbSide(h.favorite) || (hd && bbSide(hd.favorite)),
+             line: Number(h.line!=null ? h.line : (hd && hd.line)),
+             total: Number(h.total && h.total.line!=null ? h.total.line : (ou && ou.line)) };
+  }).sort(byTime);
+  const sm = api && api.gameFor(model,"stake"), bm = api && api.gameFor(model,"bet365");
+  const series = ((model.league==="NBA" ? nbaSeriesCache : seriesCache) || {})[model.officialId] || [];
+  const tw = series.filter(r=>pre(r.t)).map(r=>({ at:r.t, fav:bbSide(r.hdFav), line:Number(r.hdVal), total:Number(r.totLine) })).sort(byTime);
+  const snap = { stake: bbPlatformLine(fromHistory(sm)), bet365: bbPlatformLine(fromHistory(bm)), taiwan: bbPlatformLine(tw), mlFav: null };
+  const lastMl = (m)=>{
+    const hs = (m && Array.isArray(m.history) ? m.history : []).filter(h=>pre(h.observedAt||h.at)).map(h=>h.moneyline || (h.markets && h.markets.ml))
+      .filter(x=>x && Number(x.away)>1 && Number(x.home)>1);
+    return hs.length ? hs[hs.length-1] : null;
+  };
+  const ml = lastMl(sm) || lastMl(bm);
+  if(ml) snap.mlFav = Number(ml.away) < Number(ml.home) ? "away" : "home";
+  return snap;
+}
+function bbSnapScore(s){ if(!s) return 0; return BB_PLATFORMS.reduce((n,[k])=>n+(s[k]?2:0),0) + (s.mlFav?1:0); }
+function bbMoveGroup(p){
+  if(!p) return null;
+  if(p.openFav!==p.closeFav) return "swap";
+  const d = p.closeLine - p.openLine;
+  return d>=2 ? "deeper" : d<=-2 ? "shallower" : "small";
+}
+function collectLineMoves(league){
+  const cell=()=>({ n:0, fw:0, fwN:0, cov:0, covN:0, ov:0, ovN:0 });
+  const out={}; for(const [p] of BB_PLATFORMS){ out[p]={}; for(const [g] of BB_GROUPS) out[p][g]=cell(); }
+  let total=0;
+  for(const d of Object.keys(doc.boards||{})){
+    for(const it of ((doc.boards[d]||{}).items||[])){
+      if(!it.settled || it.settled.awayScore==null || !it.lineSnap) continue;
+      const rec=(doc.games||[]).find(x=>x.sid===it.id); if(!rec || rec.league!==league) continue;
+      const margin=rec.homeScore-rec.awayScore, winner=margin>0?"home":margin<0?"away":null;
+      let counted=false;
+      for(const [p] of BB_PLATFORMS){
+        const L=it.lineSnap[p], g=bbMoveGroup(L); if(!g) continue;
+        counted=true;
+        const c=out[p][g]; c.n++;
+        if(it.lineSnap.mlFav && winner){ c.fwN++; if(winner===it.lineSnap.mlFav) c.fw++; }          // 熱門＝獨贏賠率較低的那隊
+        const fm=(L.closeFav==="home"?margin:-margin)-L.closeLine; if(fm!==0){ c.covN++; if(fm>0) c.cov++; }   // 各平台自己的收盤線
+        const tl = L.closeTotal!=null ? L.closeTotal : rec.totBasis;
+        if(tl!=null){ const t=rec.awayScore+rec.homeScore; if(t!==tl){ c.ovN++; if(t>tl) c.ov++; } }
+      }
+      if(counted) total++;
+    }
+  }
+  return { total, out };
+}
+function renderLineMoveSection(lgSel){
+  const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
+  const leagues = (lgSel && lgSel!=="all") ? [String(lgSel).toUpperCase()] : ["NBA","WNBA"];
+  let h=`<div class="rv-section"><div class="rv-head">◆ 讓分級距變化 <span class="rv-sub">開盤 → 收盤（賽前最後一筆）・熱門＝獨贏賠率較低的那隊・讓分過盤用各平台自己的收盤線</span></div>`;
+  for(const lg of leagues){
+    const r=collectLineMoves(lg);
+    h+=`<div class="rv-head" style="font-size:14px;margin-top:14px">${lg}　<span class="rv-sub">${r.total} 場有開收盤紀錄</span></div>`;
+    if(!r.total){ h+=`<div class="rv-empty">${lg==="WNBA"?"WNBA 下季開始累積。":"比賽結算後會自動累積。"}</div>`; continue; }
+    h+=`<table class="rv-table"><tr><th class="lbl">平台／變動</th><th>場數</th><th>熱門勝</th><th>讓分過盤</th><th>開大</th></tr>`;
+    for(const [p,pl] of BB_PLATFORMS){
+      h+=`<tr class="rv-row grp"><td class="lbl" colspan="5">${pl}</td></tr>`;
+      for(const [g,gl] of BB_GROUPS){ const c=r.out[p][g];
+        h+=`<tr class="rv-row lm"><td class="lbl">${gl}</td><td>${c.n||"—"}</td><td>${pc(c.fw,c.fwN)}</td><td>${pc(c.cov,c.covN)}</td><td>${pc(c.ov,c.ovN)}</td></tr>`; }
+    }
+    h+=`</table>`;
+  }
+  return h+`</div>`;
+}
 function collectCrossTab(leagueFilter){
   const cell=()=>({ n:0, cov:0, covN:0, fw:0, fwN:0, ov:0, ovN:0, games:[] });
   const grp={ flip:{ solo:cell(), swap:cell(), div:cell(), both:cell(), all:cell() },
@@ -2362,7 +2464,7 @@ function renderReview(){
   if(mkt!=="all") rows=rows.filter(r=>r.market===mkt);
   if(!rows.length){
     body.innerHTML=`<div class="rv-headline"><div class="big">—</div><div class="cap">還沒有已結算的帶燈選項。點燈＋比賽結算後，這裡會自動累積跨日命中率（燈數桶／各盤口）。</div></div>`
-      + renderAnomSection(lg);
+      + renderAnomSection(lg) + renderLineMoveSection(lg);
     return;
   }
   const hit=rows.filter(r=>r.hit).length, tot=rows.length, dates=new Set(rows.map(r=>r.date)).size;
@@ -2388,7 +2490,7 @@ function renderReview(){
     html+=`<tr><td class="lbl">${lab}</td>${seg(list)}</tr>`;
   });
   html+=`</table></div>`;
-  html += renderAnomSection(lg);
+  html += renderAnomSection(lg) + renderLineMoveSection(lg);
   body.innerHTML=html;
 }
 function openReview(){ $("#reviewpage").classList.add("show"); renderReview(); renderMatchNav(); }
