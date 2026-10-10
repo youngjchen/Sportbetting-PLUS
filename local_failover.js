@@ -207,16 +207,31 @@ function run() {
       saveState(state);
       const pregameGames = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'pregame_data.json'), 'utf8'));
       const oddsSummary = JSON.parse(fs.readFileSync(path.join(REPO_DIR, 'data', 'oddsportal_summary.json'), 'utf8'));
-      const missingAsia = missingStakeOpenLeagues(pregameGames, oddsSummary, Date.now());
+      // 2026-10-11：BetExplorer 有賽事頁卻一家莊家盤都沒有（中職 兄弟@統一）→ 完整抓取永遠 0 場、每輪失敗，
+      // 失敗又不記成功 → 每 5 分鐘重抓一次，而且一直走這條，其他聯盟的 Bet365 輕量對調巡檢整個停擺。
+      // 抓不到時暫停該聯盟升級 2 小時，改跑全部聯盟的輕量巡檢；2 小時後再試一次。
+      const pausedAsia = state.asia_open_paused_until || {};
+      const missingAsia = missingStakeOpenLeagues(pregameGames, oddsSummary, Date.now())
+        .filter((lg) => !(Number(pausedAsia[lg]) > Date.now()));
+      let escalated = false;
       if (missingAsia.length) {
         log(`亞洲 Stake 初盤仍缺 ${missingAsia.join('+')} → 30 分鐘巡檢升級為完整抓取`);
-        staged.push(...runBetExplorer({ repoDir: REPO_DIR, leagues: missingAsia }));
-      } else {
+        try {
+          staged.push(...runBetExplorer({ repoDir: REPO_DIR, leagues: missingAsia }));
+          escalated = true;
+        } catch (e) {
+          for (const lg of missingAsia) pausedAsia[lg] = Date.now() + 2 * 3600e3;
+          state.asia_open_paused_until = pausedAsia;
+          saveState(state);
+          log(`亞洲 Stake 初盤補抓沒有結果（${missingAsia.join('+')}；BetExplorer 多半還沒有莊家盤）→ 暫停升級 2 小時，改跑輕量巡檢`);
+        }
+      }
+      if (!escalated) {
         staged.push(...runBetExplorer({ repoDir: REPO_DIR, leagues: LEAGUES, bet365Only: true }));
       }
       state.bet365_probe_last_success = Date.now();
       saveState(state);
-      log(missingAsia.length ? '亞洲 Stake 缺盤補抓完成' : 'Bet365 30 分鐘輕量對調巡檢完成');
+      log(escalated ? '亞洲 Stake 缺盤補抓完成' : 'Bet365 30 分鐘輕量對調巡檢完成');
     } catch (e) {
       log('30 分鐘賠率巡檢失敗：' + e.message.split('\n')[0]);
     }
