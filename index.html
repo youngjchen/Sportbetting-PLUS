@@ -2402,6 +2402,24 @@ async function load(){
       save();
     }
   }catch(_){}
+  // ── 2026-10-10 七類更正（使用者核准，只改「明確錯誤」的一場）──
+  // 10/4 日職 阪神虎@橫濱DeNA：結算時 BET365 備援誤用了 Stake 的盤（客讓）→ 記成「顛倒」。
+  // BetExplorer 回溯：BET365 收盤＝主讓1.5（當天 11:16 開的客讓已撤下），台彩也主讓 → 應為「收斂／雙方對調」。
+  // 只在現值仍是當初錯值時才改：改過就不會再動，舊資料（備份／雲端）回來時也會自動更正。
+  try{
+    if(!_loadBlocked){
+      let n = 0;
+      for(const g of (doc.games||[])){
+        const s = g && g.bet365Taiwan;
+        if(!s || String(g.league).toLowerCase()!=="npb" || g.date!=="2026-10-04" || g.awayTeam!=="阪神虎" || g.homeTeam!=="橫濱DeNA") continue;
+        if(s.relation!=="顛倒" || s.bet365Side!=="away") continue;
+        Object.assign(s, { relation:"收斂", bet365Side:"home", bet365Swapped:true, swapCombo:s.taiwanSwapped?"both":"bet365_only",
+          correctedAt:"2026-10-10", correction:"BetExplorer 回溯：BET365 收盤主讓1.5（原誤用 Stake 客讓）" });
+        n++;
+      }
+      if(n){ console.warn("[七類更正 2026-10-10] 阪神虎@橫濱DeNA 改為收斂 " + n + " 筆"); save(); }
+    }
+  }catch(_){}
   loadActiveBoard();
 }
 
@@ -3183,7 +3201,7 @@ function renderCardB(it){
     const monitor=(monitorApi&&monitorApi.renderMonitor)?monitorApi.renderMonitor({
       documentRef:document,card:it,stakeGame,
       stakeMissingText:"尚未配對",
-      bet365:(iv&&iv.side)?{side:iv.side,line:iv.line,flipEver:!!((iv.be&&iv.be.flipEver)||(ist&&Number(ist.sw||0)>0)),events:betEvents,transitionText:(ist&&ist.tr)||"",markets:betGame&&betGame.markets,providerLabel:iv.sourceLabel||"BET365"}:null,
+      bet365:(iv&&iv.side)?{side:iv.side,line:iv.line,flipEver:!!((iv.be&&iv.be.flipEver)||(ist&&Number(ist.sw||0)>0)),events:betEvents,swapUnknown:!!(iv.be&&iv.be.swapUnknown)&&!(ist&&Number(ist.sw||0)>0),transitionText:(ist&&ist.tr)||"",markets:betGame&&betGame.markets,providerLabel:iv.sourceLabel||"BET365"}:null,
       taiwan:(ist&&ist.ls)?{side:ist.ls,line:ist.ll,flipCount:Number(ist.lsw||0)||(epSwapText?1:0),transitionText:ist.ltr||(epSwapText?("明牌指紋："+epSwapText+"（時間不明）"):""),live:!!ist.lsLive}:null,
       onRestoreHandicap:()=>stakeApi&&stakeApi.restoreAuto&&stakeApi.restoreAuto(it,"handicap"),
       onRestoreTotal:()=>stakeApi&&stakeApi.restoreAuto&&stakeApi.restoreAuto(it,"total")
@@ -3889,7 +3907,7 @@ function intlVerdict(it, ist){
   // 方向衝突且 Titan 的實際觀測時間較新時退回 Titan；同向或 BE 較新仍維持
   // BetExplorer 主來源。2026-08-26 海盜@教士等三場因此避免被舊摘要錯判顛倒。
   const beSeen=Date.parse((be&&be.observedAt)||observedAt||""), titanSeen=Date.parse((ist&&ist.u)||"");
-  if(source!=="bet365-official"&&ist&&ist.is&&be.side!==ist.is&&Number.isFinite(beSeen)&&Number.isFinite(titanSeen)&&beSeen<titanSeen){
+  if(source!=="bet365-official"&&source!=="bet365-manual"&&ist&&ist.is&&be.side!==ist.is&&Number.isFinite(beSeen)&&Number.isFinite(titanSeen)&&beSeen<titanSeen){
     return { be:null, side:ist.is, line:ist.il, v:ist.v||null, lag:false, dv:!!ist.dv, source:"titan-legacy", sourceLabel:"舊快照" };
   }
   const lside = ist && ist.ls;
@@ -8230,6 +8248,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261009ui1"></script><script src="./baseball-bet365-integration.js?v=20261004"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20261009ui1"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261010swap1"></script><script src="./baseball-bet365-integration.js?v=20261010manual1"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20261009ui1"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

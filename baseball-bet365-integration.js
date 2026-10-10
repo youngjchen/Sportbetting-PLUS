@@ -7,6 +7,10 @@
 })(typeof window !== 'undefined' ? window : null, function () {
   const RAW_URL = 'https://raw.githubusercontent.com/youngjchen/Sportbetting-PLUS/main/data/baseball_bet365_odds.json';
   const LOCAL_URL = './data/baseball_bet365_odds.json';
+  // 使用者在 BET365 官網親眼確認的讓分方（2026-10-10）：官網只有 MLB 抓得到，亞洲聯盟遇到
+  // 所有自動來源都沒有或不可信時，由這份清單補上；優先順序最高，等同官網。
+  const MANUAL_RAW_URL = 'https://raw.githubusercontent.com/youngjchen/Sportbetting-PLUS/main/data/bet365_manual.json';
+  const MANUAL_LOCAL_URL = './data/bet365_manual.json';
   const REFRESH_MS = 5 * 60 * 1000;
 
   const TEAM_SYNONYM = Object.freeze({
@@ -70,8 +74,28 @@
     return best;
   }
 
+  // 人工確認清單 → 與官方 feed 同形的 matches，沿用 findGame／verdictFor
+  function manualFeedFrom(value) {
+    const matches = {};
+    for (const [id, entry] of Object.entries(value && value.matches || {})) {
+      if (!entry || (entry.side !== 'away' && entry.side !== 'home')) continue;
+      const line = Number(entry.line);
+      if (!Number.isFinite(line) || line <= 0) continue;
+      const observedAt = entry.confirmedAt || null;
+      matches[id] = {
+        league: entry.league, officialId: entry.officialId || id, scheduledStart: entry.scheduledStart,
+        away: entry.away, home: entry.home, provider: 'bet365-manual', observedAt, favorite: entry.side,
+        markets: { hd: { favorite: entry.side, line, provider: 'bet365-manual', observedAt } },
+        events: Array.isArray(entry.events) ? entry.events : [], history: [], note: entry.note || '',
+        swapUnknown: entry.swapKnown === false,   // 只確認了讓分方，換邊與否沒有來源可證 → 卡片顯示「未確認」
+      };
+    }
+    return { matches };
+  }
+
   function sourceLabel(provider) {
     if (provider === 'bet365-official') return 'BET365 官網';
+    if (provider === 'bet365-manual') return 'BET365 官網（人工確認）';
     if (provider === 'betexplorer') return 'BetExplorer 備援';
     return provider ? String(provider) : '來源不明';
   }
@@ -90,6 +114,7 @@
       observedAt: handicap.observedAt || game.observedAt || null,
       provider,
       flipEver: flips.length > 0,
+      swapUnknown: !!game.swapUnknown && flips.length === 0,
       struck: flips.map(function (event) {
         const line = event.line == null ? handicap.line : event.line;
         return { side: event.from, line: line == null ? null : Number(line), at: event.at || null };
@@ -101,6 +126,7 @@
   function install(global) {
     if (global.__baseballBet365Integration) return global.__baseballBet365Integration;
     let feed = { schemaVersion: 1, provider: 'bet365-official-first', matches: {}, leagues: {} };
+    let manual = { matches: {} };
 
     function validFeed(value) {
       return value && value.schemaVersion === 1 && value.provider === 'bet365-official-first' &&
@@ -117,7 +143,15 @@
       return value;
     }
 
+    async function fetchManual(url) {
+      const response = await global.fetch(`${url}?t=${Date.now()}`, { cache: 'no-store', credentials: 'omit', redirect: 'error' });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      return manualFeedFrom(await response.json());
+    }
+
     async function refresh() {
+      try { manual = await fetchManual(MANUAL_RAW_URL); }
+      catch (_) { try { manual = await fetchManual(MANUAL_LOCAL_URL); } catch (_) {} }   // 清單缺檔不影響主 feed
       try { feed = await fetchOne(RAW_URL); }
       catch (_) { feed = await fetchOne(LOCAL_URL); }
       try { if (typeof global.__backfillBet365TaiwanSnapshots === 'function') global.__backfillBet365TaiwanSnapshots(); } catch (_) {}
@@ -130,7 +164,7 @@
       if (!activeDate) {
         try { activeDate = typeof doc !== 'undefined' && doc && doc.activeDate; } catch (_) {}
       }
-      return findGame(feed, card, activeDate || '');
+      return findGame(manual, card, activeDate || '') || findGame(feed, card, activeDate || '');
     }
 
     const api = {
@@ -139,6 +173,7 @@
       verdictFor,
       sourceLabel,
       _setFeed(value) { if (validFeed(value)) feed = value; },
+      _setManual(value) { manual = manualFeedFrom(value); },
       _getFeed() { return feed; },
     };
     global.__baseballBet365Integration = api;
@@ -151,5 +186,5 @@
     return api;
   }
 
-  return { install, findGame, verdictFor, sourceLabel };
+  return { install, findGame, verdictFor, sourceLabel, manualFeedFrom };
 });

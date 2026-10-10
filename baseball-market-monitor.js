@@ -115,10 +115,11 @@
 
   function addSummary(head, label, current, changed, tone) {
     const cell = head.ownerDocument.createElement('span');
-    cell.className = `market-platform ${tone || ''}${changed ? ' changed' : ''}`.trim();
+    cell.className = `market-platform ${tone || ''}${changed === true ? ' changed' : ''}`.trim();
     addText(cell, 'market-source', label);
     addText(cell, 'market-current', current);
-    addText(cell, 'market-state', current === '未取得方向' ? '待資料' : (changed ? '曾對調' : '未對調'));
+    // changed＝'unknown'：方向已確認、但有沒有換過邊沒有任何來源能證明（人工確認的 BET365 亞洲場）→ 不替它下「未對調」的結論
+    addText(cell, 'market-state', current === '未取得方向' ? '待資料' : (changed === 'unknown' ? '未確認' : (changed ? '曾對調' : '未對調')));
     head.appendChild(cell);
   }
 
@@ -193,7 +194,8 @@
     const taiwan = options.taiwan || null;
     const stakeChanged = !!(stake && ((Number(stake.favoriteFlipCount) || 0) > 0 ||
       (Array.isArray(stake.favoriteTransitions) && stake.favoriteTransitions.length > 0)));
-    const betChanged = !!(bet365 && (bet365.flipEver || (Array.isArray(bet365.events) && bet365.events.length)));
+    const betSwapSeen = !!(bet365 && (bet365.flipEver || (Array.isArray(bet365.events) && bet365.events.length)));
+    const betChanged = betSwapSeen ? true : (bet365 && bet365.swapUnknown ? 'unknown' : false);
     const taiwanChanged = !!(taiwan && Number(taiwan.flipCount));
 
     const root = documentRef.createElement('div');
@@ -246,7 +248,8 @@
         .filter((event) => event && event.type === 'favorite-flip')
         .map((event) => ({ at: event.at, text: `${sideName(card, event.from)} → ${sideName(card, event.to)}` }));
       if (!events.length && bet365.transitionText) events.push({ displayTime: '', text: bet365.transitionText });
-      addEvents(betSection, events);
+      if (!events.length && betChanged === 'unknown') addDetailLine(betSection, '變動', '沒有任何來源記到換邊紀錄，有沒有對調未確認');
+      else addEvents(betSection, events);
       addDetailLine(betSection, '來源', bet365.providerLabel || 'BET365');
     } else addDetailLine(betSection, '狀態', '尚未取得盤口');
     details.appendChild(betSection);
