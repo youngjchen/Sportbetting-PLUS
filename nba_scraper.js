@@ -151,7 +151,14 @@ async function collectNbaPregame(options = {}) {
       failures.push({ source: 'livescore', date, error: String(error && error.message || error) });
     }
   }
-  for (const date of [twDate(-1, now), ...dates]) {
+  // 自動回補：保留期內已完賽卻沒有台彩盤的日期（之前被解析錯誤洗空）→ 這輪多讀那天的結果頁，補回後就不再讀
+  const previousGames = (options.previous && Array.isArray(options.previous.games)) ? options.previous.games : [];
+  const hasTaiwanLine = (game) => !!(game && game.taiwan && game.taiwan.hd && game.taiwan.hd.favorite);
+  const backfillDates = [...new Set(previousGames
+    .filter((game) => game && game.date >= twDate(-KEEP_DAYS, now) && game.date < twDate(-1, now) &&
+      game.status === 'finished' && !hasTaiwanLine(game))
+    .map((game) => game.date))].sort().slice(-KEEP_DAYS);
+  for (const date of [...backfillDates, twDate(-1, now), ...dates]) {
     const ymd = date.replace(/-/g, '');
     try {
       const html = await fetchText(`https://www.playsport.cc/gamesData/result?allianceid=3&gametime=${ymd}`, HEADERS, 30000);
@@ -162,7 +169,9 @@ async function collectNbaPregame(options = {}) {
   }
   const fresh = [];
   for (const date of new Set([...Object.keys(liveByDate), ...Object.keys(resultByDate)])) {
-    fresh.push(...mergeDayGames(liveByDate[date] || [], resultByDate[date] || []));
+    // 沒讀即時比分的日期（昨天、回補日）：以既有紀錄為底，只把結果頁的台彩盤併進來，節分／狀態不被洗掉
+    const base = liveByDate[date] || previousGames.filter((game) => game && game.date === date);
+    fresh.push(...mergeDayGames(base, resultByDate[date] || []));
   }
   const previous = options.previous && typeof options.previous === 'object' ? options.previous : { games: [] };
   const cutoff = twDate(-KEEP_DAYS, now);
@@ -170,11 +179,18 @@ async function collectNbaPregame(options = {}) {
   for (const game of previous.games || []) {
     if (game.date >= cutoff && game.officialId) byId.set(game.officialId, game);
   }
+  const hasTaiwan = (game) => !!(game && game.taiwan && ((game.taiwan.hd && game.taiwan.hd.favorite) ||
+    (game.taiwan.ml && Number.isFinite(game.taiwan.ml.away)) || (game.taiwan.ou && Number.isFinite(game.taiwan.ou.line))));
   for (const game of fresh) {
     if (!game.officialId) continue;
+    let keep = byId.get(game.officialId) || null;
     for (const [oldId, old] of byId) {
       if (oldId !== game.officialId && old.date === game.date && old.away === game.away && old.home === game.home &&
-          (!old.time || !game.time || old.time === game.time)) byId.delete(oldId);
+          (!old.time || !game.time || old.time === game.time)) { if (!keep) keep = old; byId.delete(oldId); }
+    }
+    // 本輪沒讀到台彩盤（結果頁失敗、版面變動）時，保留之前已抓到的台彩盤，不可用空值洗掉（2026-10-11：24 場被洗空）
+    if (!hasTaiwan(game) && hasTaiwan(keep)) {
+      for (const field of ['taiwan', 'hdFav', 'hdVal', 'hdSrc', 'totLine', 'mlOffered']) game[field] = keep[field];
     }
     byId.set(game.officialId, game);
   }

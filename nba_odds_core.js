@@ -59,7 +59,7 @@ function translateNbaTeam(value) {
 }
 
 function teamCode(value) {
-  const code = TEAM_CODE_BY_ZH[clean(value)];
+  const code = TEAM_CODE_BY_ZH[clean(value)] || TEAM_CODE_BY_ZH[BOARD_TEAM_ALIAS[clean(value)]];
   if (!code) throw new Error(`未知 NBA 板面隊名：${clean(value) || '(空白)'}`);
   return code;
 }
@@ -103,9 +103,24 @@ function parseTaiwanResult(html, date) {
   const games = [];
   for (const [gid, rows] of grouped) {
     if (rows.length < 2) continue;
-    const away = clean(rows[0].find('td.td-teaminfo').text());
-    const home = clean(rows[1].find('td.td-teaminfo').text());
+    let away = clean(rows[0].find('td.td-teaminfo').first().text());
+    let home = clean(rows[1].find('td.td-teaminfo').first().text());
+    let finishedAway = null, finishedHome = null;
+    // 完賽後的版面：兩隊與比分擠在第一列同一格（巢狀表格，DOM 順序＝客、主；class 只標勝負 winnerteam／secondteam），
+    // 第二列沒有隊名格。舊寫法會把整場跳過 → 下一輪把已抓到的台彩盤洗成空的（2026-10-11 發現 24 場被洗掉）。
+    const nestedTeams = rows[0].find('td.td-teaminfo td.winnerteam, td.td-teaminfo td.secondteam');
+    if (nestedTeams.length >= 2) {
+      away = clean($(nestedTeams[0]).text());
+      home = clean($(nestedTeams[1]).text());
+      const points = rows[0].find('td.td-teaminfo td.scores li')
+        .filter((_, li) => !/vsicon/.test($(li).attr('class') || ''))
+        .map((_, li) => Number(clean($(li).text()))).get();
+      if (points.length >= 2 && points.every(Number.isFinite)) { finishedAway = points[0]; finishedHome = points[points.length - 1]; }
+    }
     if (!away || !home) continue;
+    let officialCodes;
+    try { officialCodes = `${teamCode(away)}@${teamCode(home)}`; }
+    catch (_) { continue; }   // 單一場隊名認不得只跳過那一場，不可讓整天的台彩盤一起失敗（2026-10-11「塞爾提」案）
     const time = parseClock(rows[0].find('td.td-gameinfo h4').text()) || '00:00';
     const awayHd = sidePrice(rows[0].find('td.td-bank-bet01').text(), '客');
     const homeHd = sidePrice(rows[1].find('td.td-bank-bet01').text(), '主');
@@ -120,11 +135,11 @@ function parseTaiwanResult(html, date) {
     const score = /(\d+)\s*V\.?S\.?\s*(\d+)/i.exec(teamText);
     const ymd = String(date || '').replace(/-/g, '');
     games.push({
-      officialId: `NBA_${ymd}_${teamCode(away)}@${teamCode(home)}`,
+      officialId: `NBA_${ymd}_${officialCodes}`,
       gid,
       league: 'NBA', date, time, away, home,
-      awayScore: score ? Number(score[1]) : null,
-      homeScore: score ? Number(score[2]) : null,
+      awayScore: finishedAway != null ? finishedAway : (score ? Number(score[1]) : null),
+      homeScore: finishedHome != null ? finishedHome : (score ? Number(score[2]) : null),
       hdFav: favorite,
       hdVal: line,
       hdSrc: favorite ? '運彩' : null,

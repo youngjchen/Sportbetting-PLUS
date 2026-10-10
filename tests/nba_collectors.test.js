@@ -242,3 +242,71 @@ test('賽程寫「塞爾提」也配得上 Stake 的塞爾提克，臨時鍵的�
   assert.ok(game.history.length >= 2);                     // 舊的 3.5 那筆保留、新觀測追加
   assert.equal(game.history[0].line, 3.5);
 });
+
+// ===== 2026-10-11：台彩盤沒抓到 =====
+// ①完賽後玩運彩結果頁把兩隊＋比分擠在第一列（巢狀表格），舊解析整場跳過 → 下一輪把台彩盤洗成空的。
+// ②賽程隊名「塞爾提」對不上代碼表 → 整天結果頁解析失敗（同一天所有比賽都沒台彩盤）。
+const { parseTaiwanResult } = require('../nba_odds_core.js');
+function finishedRow(gid, away, home, awayPts, homePts, bank) {
+  return `
+  <tr gameid="${gid}">
+    <td rowspan="2" class="td-gameinfo"><div><h3>323</h3><h4>AM 08:00</h4></div></td>
+    <td rowspan="2" class="td-teaminfo"><table><tbody>
+      <tr><td rowspan="3" class="scores"><ul><li class="${awayPts > homePts ? 'winnerscores' : ''}"> ${awayPts} </li><li class="vsicon">V.S.</li><li class="${homePts > awayPts ? 'winnerscores' : ''}"> ${homePts} </li></ul></td>
+          <td class="${awayPts > homePts ? 'winnerteam' : 'secondteam'}"><a>${away}</a></td></tr>
+      <tr><td class="teamgap">&nbsp;</td></tr>
+      <tr><td class="${homePts > awayPts ? 'winnerteam' : 'secondteam'}"><a>${home}</a></td></tr>
+    </tbody></table></td>
+    <td class="td-bank-bet01"><div><strong>客</strong><span class="data-wrap"><strong>${bank.awayHd}</strong><span>, 1.72</span></span></div></td>
+    <td class="td-bank-bet03"><div><strong>客</strong><span class="data-wrap"><strong></strong><span>${bank.awayMl}</span></span></div></td>
+    <td class="td-bank-bet02"><div><strong>大</strong><span class="data-wrap"><strong>${bank.total}</strong><span>, 1.75</span></span></div></td>
+  </tr>
+  <tr gameid="${gid}">
+    <td class="td-bank-bet01"><div><strong>主</strong><span class="data-wrap"><strong>${bank.homeHd}</strong><span>, 1.72</span></span></div></td>
+    <td class="td-bank-bet03"><div><strong>主</strong><span class="data-wrap"><strong></strong><span>${bank.homeMl}</span></span></div></td>
+    <td class="td-bank-bet02"><div><strong>小</strong><span class="data-wrap"><strong>${bank.total}</strong><span>, 1.68</span></span></div></td>
+  </tr>`;
+}
+const FINISHED_HTML = `<table class="gamedata-results">${
+  finishedRow('2026101031001', '灰熊', '公牛', 104, 100, { awayHd: '+2.5', homeHd: '-2.5', awayMl: '1.88', homeMl: '1.56', total: '239.5' })}${
+  finishedRow('2026100931001', '塞爾提', '騎士', 124, 113, { awayHd: '+3.5', homeHd: '-3.5', awayMl: '1.96', homeMl: '1.5', total: '222.5' })}${
+  finishedRow('2026100939999', '外星隊', '騎士', 90, 80, { awayHd: '+1.5', homeHd: '-1.5', awayMl: '2', homeMl: '1.8', total: '200.5' })}
+</table>`;
+
+test('完賽版面讀得到兩隊、比分與台彩盤；「塞爾提」視同塞爾提克；認不得的隊只跳過那一場', () => {
+  const games = parseTaiwanResult(FINISHED_HTML, '2026-10-10');
+  assert.equal(games.length, 2);                                   // 外星隊那場跳過，其他照常
+  const [bulls, celtics] = games;
+  assert.deepEqual([bulls.officialId, bulls.away, bulls.home, bulls.awayScore, bulls.homeScore], ['NBA_20261010_MEM@CHI', '灰熊', '公牛', 104, 100]);
+  assert.deepEqual([bulls.hdFav, bulls.hdVal, bulls.totLine], ['home', 2.5, 239.5]);
+  assert.deepEqual(bulls.taiwan.ml, { away: 1.88, home: 1.56 });
+  assert.equal(celtics.officialId, 'NBA_20261010_BOS@CLE');
+  assert.equal(celtics.away, '塞爾提');
+});
+
+test('昨天與回補日以既有紀錄為底：補回台彩盤、節分不被洗掉；本輪沒讀到台彩盤時保留舊的', async () => {
+  const prior = (id, date, extra = {}) => ({ officialId: id, league: 'NBA', date, time: '08:00', away: '灰熊', home: '公牛', status: 'finished',
+    awayScore: 104, homeScore: 100, qAway: [30, 30, 25, 19], qHome: [27, 23, 32, 18], hdFav: null, hdVal: null,
+    taiwan: { ml: null, hd: null, ou: null }, ...extra });
+  const yesterday = prior('NBA_20261010_MEM@CHI', '2026-10-10');
+  const backfill = { ...prior('NBA_20261007_MEM@CHI', '2026-10-07'), away: '灰熊', home: '公牛' };
+  const kept = prior('NBA_20261011_MEM@CHI', '2026-10-11', { status: 'upcoming', awayScore: null, homeScore: null, qAway: [], qHome: [],
+    hdFav: 'home', hdVal: 3.5, hdSrc: '運彩', totLine: 230.5, taiwan: { ml: { away: 2, home: 1.8 }, hd: { favorite: 'home', line: 3.5 }, ou: { line: 230.5 } } });
+  const requested = [];
+  const fetchText = async (url) => {
+    requested.push(url);
+    if (url.includes('gamesData/result') && url.includes('20261010')) return FINISHED_HTML;
+    if (url.includes('gamesData/result') && url.includes('20261007')) return FINISHED_HTML.replaceAll('2026101031001', '2026100731001');
+    if (url.includes('livescore') && url.includes('20261011')) return LIVE_HTML.replace('NBA_20261004_MIA@TOR', 'NBA_20261011_MEM@CHI').replaceAll('熱火', '灰熊').replaceAll('暴龍', '公牛');
+    return '<html></html>';
+  };
+  const output = await collectNbaPregame({ fetchText, now: Date.parse('2026-10-10T20:00:00Z'), previous: { games: [yesterday, backfill, kept] } });
+  const y = output.games.find((g) => g.officialId === 'NBA_20261010_MEM@CHI');
+  assert.deepEqual([y.hdFav, y.hdVal, y.totLine], ['home', 2.5, 239.5]);    // 補回台彩盤
+  assert.deepEqual(y.qAway, [30, 30, 25, 19]);                                // 節分沒被洗掉
+  assert.ok(requested.some((u) => u.includes('result') && u.includes('20261007')));   // 回補日有去讀
+  const b = output.games.find((g) => g.officialId === 'NBA_20261007_MEM@CHI');
+  assert.equal(b.hdFav, 'home');
+  const k = output.games.find((g) => g.officialId === 'NBA_20261011_MEM@CHI');
+  assert.deepEqual([k.hdFav, k.hdVal, k.totLine], ['home', 3.5, 230.5]);    // 本輪只讀到即時比分 → 舊台彩盤保留
+});
