@@ -121,6 +121,7 @@
     // changed＝'unknown'：方向已確認、但有沒有換過邊沒有任何來源能證明（人工確認的 BET365 亞洲場）→ 不替它下「未對調」的結論
     addText(cell, 'market-state', current === '未取得方向' ? '待資料' : (changed === 'unknown' ? '未確認' : (changed ? '曾對調' : '未對調')));
     head.appendChild(cell);
+    return cell;
   }
 
   function addDetailLine(section, label, text) {
@@ -195,7 +196,9 @@
     const stakeChanged = !!(stake && ((Number(stake.favoriteFlipCount) || 0) > 0 ||
       (Array.isArray(stake.favoriteTransitions) && stake.favoriteTransitions.length > 0)));
     const betSwapSeen = !!(bet365 && (bet365.flipEver || (Array.isArray(bet365.events) && bet365.events.length)));
-    const betChanged = betSwapSeen ? true : (bet365 && bet365.swapUnknown ? 'unknown' : false);
+    // 使用者手動標的對調（亮／暗）優先於自動判斷（2026-10-10）
+    const manualSwap = typeof options.bet365ManualSwap === 'boolean' ? options.bet365ManualSwap : null;
+    const betChanged = manualSwap != null ? manualSwap : (betSwapSeen ? true : (bet365 && bet365.swapUnknown ? 'unknown' : false));
     const taiwanChanged = !!(taiwan && Number(taiwan.flipCount));
 
     const root = documentRef.createElement('div');
@@ -210,7 +213,24 @@
     head.setAttribute('aria-expanded', 'false');
     head.title = '展開三方盤口變動明細';
     addSummary(head, 'STAKE', currentLabel(card, stake && { side: stake.favorite, line: stake.canonicalLine }), stakeChanged, 'stake');
-    addSummary(head, 'BET365', currentLabel(card, bet365), betChanged, 'bet365');
+    const betCell = addSummary(head, 'BET365', currentLabel(card, bet365), betChanged, 'bet365');
+    // 手動調整 BET365（2026-10-10 使用者規格）：點讓分隊名＝換成另一隊；點圓圈＝亮（有對調）／暗（沒對調）。不觸發展開明細。
+    if (typeof options.onBet365Side === 'function') {
+      const el = betCell.querySelector('.market-current');
+      el.classList.add('market-edit');
+      el.title = '點隊名：把 BET365 讓分方換成另一隊（手動）';
+      el.addEventListener('click', (event) => {
+        event.stopPropagation(); event.preventDefault();
+        const now = bet365 && (bet365.side === 'away' || bet365.side === 'home') ? bet365.side : null;
+        options.onBet365Side(now === 'away' ? 'home' : 'away');
+      });
+    }
+    if (typeof options.onBet365Swap === 'function') {
+      const el = betCell.querySelector('.market-source');
+      el.classList.add('market-edit');
+      el.title = '點圓圈：亮＝BET365 有對調、暗＝沒對調（手動）';
+      el.addEventListener('click', (event) => { event.stopPropagation(); event.preventDefault(); options.onBet365Swap(betChanged !== true); });
+    }
     addSummary(head, '台彩', currentLabel(card, taiwan), taiwanChanged, 'taiwan');
     root.appendChild(head);
 
@@ -252,6 +272,15 @@
       else addEvents(betSection, events);
       addDetailLine(betSection, '來源', bet365.providerLabel || 'BET365');
     } else addDetailLine(betSection, '狀態', '尚未取得盤口');
+    if (options.bet365Manual && typeof options.onBet365Restore === 'function') {
+      const controls = documentRef.createElement('div');
+      controls.className = 'market-auto-controls';
+      const button = documentRef.createElement('button');
+      button.type = 'button'; button.textContent = '↻ 恢復自動判斷';
+      button.onclick = (event) => { event.stopPropagation(); options.onBet365Restore(); };
+      controls.appendChild(button);
+      betSection.appendChild(controls);
+    }
     details.appendChild(betSection);
 
     const taiwanSection = section(documentRef, '台彩', 'taiwan');

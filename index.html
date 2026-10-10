@@ -1332,6 +1332,8 @@
 .market-platform.changed .market-source::before{background:#e89d32;box-shadow:0 0 0 3px rgba(232,157,50,.12);}
 .market-current{grid-area:current;overflow:hidden;padding-left:13px;color:#dbe5ed;font-size:11.5px;font-weight:720;white-space:nowrap;text-overflow:ellipsis;}
 .market-state{grid-area:state;justify-self:end;color:#758697;font-size:10px;white-space:nowrap}.market-platform.changed .market-state{color:#e8a84f}
+/* BET365 手動調整：可點的隊名與圓圈（hover 不改字重、不位移） */
+.market-edit{cursor:pointer}.market-current.market-edit:hover{color:#fff;text-decoration:underline dotted rgba(255,255,255,.45);text-underline-offset:3px}.market-source.market-edit:hover::before{box-shadow:0 0 0 4px rgba(88,170,255,.3)}
 .market-monitor.diverged{border-bottom-color:rgba(224,128,32,.25)}
 .market-monitor-details{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:0;padding:0 0 10px;border-top:1px solid rgba(255,255,255,.05);background:#0d151c;}
 .market-monitor-details[hidden]{display:none}
@@ -3203,6 +3205,12 @@ function renderCardB(it){
       stakeMissingText:"尚未配對",
       bet365:(iv&&iv.side)?{side:iv.side,line:iv.line,flipEver:!!((iv.be&&iv.be.flipEver)||(ist&&Number(ist.sw||0)>0)),events:betEvents,swapUnknown:!!(iv.be&&iv.be.swapUnknown)&&!(ist&&Number(ist.sw||0)>0),transitionText:(ist&&ist.tr)||"",markets:betGame&&betGame.markets,providerLabel:iv.sourceLabel||"BET365"}:null,
       taiwan:(ist&&ist.ls)?{side:ist.ls,line:ist.ll,flipCount:Number(ist.lsw||0)||(epSwapText?1:0),transitionText:ist.ltr||(epSwapText?("明牌指紋："+epSwapText+"（時間不明）"):""),live:!!ist.lsLive}:null,
+      // BET365 手動調整：點讓分隊名換邊、點圓圈標對調；已結算的卡片同步改寫七類紀錄
+      bet365Manual:!!bet365ManualOf(it),
+      bet365ManualSwap:typeof it.bet365ManualSwap==="boolean"?it.bet365ManualSwap:null,
+      onBet365Side:(next)=>{ snapshot(); it.bet365ManualSide=next; syncSettledBet365Manual(it); save(); render(); },
+      onBet365Swap:(next)=>{ snapshot(); it.bet365ManualSwap=!!next; syncSettledBet365Manual(it); save(); render(); },
+      onBet365Restore:()=>{ snapshot(); delete it.bet365ManualSide; delete it.bet365ManualSwap; syncSettledBet365Manual(it); save(); render(); },
       onRestoreHandicap:()=>stakeApi&&stakeApi.restoreAuto&&stakeApi.restoreAuto(it,"handicap"),
       onRestoreTotal:()=>stakeApi&&stakeApi.restoreAuto&&stakeApi.restoreAuto(it,"total")
     }):null;
@@ -3882,6 +3890,54 @@ function intlBet365HistoryHTML(it, ist, iv){
   const latchedBet365 = !!(iv&&iv.v==="was"&&ist&&ist.eo&&Number(ist.lsw||0)===0&&Number(ist.sw||0)===0);
   return latchedBet365 ? `<span style="color:#6b7bff">bet365 曾對調（歷史比對證據已保存；目前沒有可列出的逐筆時間）</span>` : "";
 }
+// ===== BET365 手動調整（2026-10-10 使用者規格）=====
+// 卡片監控列：點 BET365 的讓分隊名＝換成另一隊；點 BET365 旁的圓圈＝亮（有對調）／暗（沒對調）。
+// 亞洲聯盟官網抓不到、備援可能不準 → 使用者肉眼看官網後以手動為準。手動值存在卡片 it 上（隨盤面同步）。
+function bet365ManualOf(it){
+  const side = it && (it.bet365ManualSide==="away"||it.bet365ManualSide==="home") ? it.bet365ManualSide : null;
+  const swap = it && typeof it.bet365ManualSwap==="boolean" ? it.bet365ManualSwap : null;
+  return (side || swap!=null) ? { side, swap } : null;
+}
+// 依手動值改寫七類快照（規則同 anomaly-nrfi-addon 的 classifyBet365TaiwanEvidence）。不入七類回傳 null。
+function bet365TaiwanWithManual(auto, man, ist, fallbackSide){
+  if(!man) return auto || null;
+  const base = auto || {};
+  const side = man.side || base.bet365Side || fallbackSide || null;
+  const twSide = base.taiwanSide || (ist && ist.ls) || null;
+  if(!side || !twSide) return null;
+  const b365Sw = man.swap!=null ? man.swap : !!base.bet365Swapped;
+  const twSw = base.taiwanSwapped!=null ? !!base.taiwanSwapped : Number(ist && ist.lsw || 0) > 0;
+  const relation = side!==twSide ? "顛倒" : ((b365Sw || twSw) ? "收斂" : null);
+  if(!relation) return null;
+  return Object.assign({}, base, {
+    relation, swapCombo: b365Sw&&twSw ? "both" : (b365Sw ? "bet365_only" : (twSw ? "taiwan_only" : "neither")),
+    bet365Swapped: b365Sw, taiwanSwapped: twSw, bet365Side: side, taiwanSide: twSide,
+    bet365Line: base.bet365Line!=null ? base.bet365Line : ((ist && ist.il!=null) ? ist.il : null),
+    taiwanLine: base.taiwanLine!=null ? base.taiwanLine : ((ist && ist.ll!=null) ? ist.ll : null),
+    bet365SwitchCount: b365Sw ? Math.max(1, Number(base.bet365SwitchCount||0)) : 0,
+    taiwanSwitchCount: base.taiwanSwitchCount!=null ? base.taiwanSwitchCount : Number(ist && ist.lsw || 0),
+    evidenceSource: "manual+playsport", bet365Manual: { side: man.side, swap: man.swap } });
+}
+// 已結算的卡片被手動調整 → 同步改寫結算副本與歷史紀錄的七類快照。
+// 第一次手動前的自動快照存在 bet365TaiwanAuto；按「恢復自動判斷」時原樣還原。
+function syncSettledBet365Manual(it){
+  if(!it || !it.settled) return;
+  const man = bet365ManualOf(it);
+  const rec = it.settled._sid ? (doc.games||[]).find(g=>g && g.sid===it.settled._sid) : null;
+  for(const t of [it.settled, rec]){
+    if(!t) continue;
+    if(!("bet365TaiwanAuto" in t)) t.bet365TaiwanAuto = t.bet365Taiwan || null;
+    if(man){
+      const ist = t.intlState || null;
+      let side = null; try{ side = (intlVerdict(it, ist) || {}).side || null; }catch(_){}
+      t.bet365Taiwan = bet365TaiwanWithManual(t.bet365TaiwanAuto, man, ist, side);
+    } else {
+      t.bet365Taiwan = t.bet365TaiwanAuto;
+      delete t.bet365TaiwanAuto;
+    }
+  }
+  try{ bumpGamesVersion(); }catch(_){}
+}
 function intlVerdict(it, ist){
   const dateKey=arguments[2];
   let be=null, observedAt=null, source=null, sourceName=null;
@@ -3902,17 +3958,33 @@ function intlVerdict(it, ist){
       if(be&&be.side){ source="betexplorer-legacy"; sourceName="BetExplorer 舊備援"; }
     }catch(_){}
   }
+  // 卡片上手動調整的 BET365（讓分方／有沒有對調）優先於所有自動來源（2026-10-10 使用者規格）
+  const man = (typeof bet365ManualOf==="function") ? bet365ManualOf(it) : null;
+  if(man){
+    const auto = be, side = man.side || (auto&&auto.side) || (ist&&ist.is) || null;
+    if(side){
+      be = Object.assign({}, auto||{}, {
+        side, line: (auto&&auto.line!=null) ? auto.line : ((ist&&ist.il!=null) ? ist.il : 1.5),
+        flipEver: man.swap!=null ? man.swap : !!(auto&&auto.flipEver),
+        swapUnknown: man.swap!=null ? false : !!(auto&&auto.swapUnknown),
+        struck: man.swap===false ? [] : ((auto&&auto.struck)||[]),
+        manualSide: !!man.side, manualSwap: man.swap });
+      source = "bet365-card-manual"; sourceName = "BET365（手動調整）";
+    }
+  }
   if(!(be&&be.side)) return { be:null, side:(ist&&ist.is)||null, line:ist&&ist.il, v:(ist&&ist.v)||null, lag:false, dv:!!(ist&&ist.dv), source:"titan-legacy", sourceLabel:"舊快照" };
   // BetExplorer 摘要若停止刷新，不得永遠壓住較新的 Titan 現行方向。只在兩邊
   // 方向衝突且 Titan 的實際觀測時間較新時退回 Titan；同向或 BE 較新仍維持
   // BetExplorer 主來源。2026-08-26 海盜@教士等三場因此避免被舊摘要錯判顛倒。
   const beSeen=Date.parse((be&&be.observedAt)||observedAt||""), titanSeen=Date.parse((ist&&ist.u)||"");
-  if(source!=="bet365-official"&&source!=="bet365-manual"&&ist&&ist.is&&be.side!==ist.is&&Number.isFinite(beSeen)&&Number.isFinite(titanSeen)&&beSeen<titanSeen){
+  if(source!=="bet365-official"&&source!=="bet365-manual"&&source!=="bet365-card-manual"&&ist&&ist.is&&be.side!==ist.is&&Number.isFinite(beSeen)&&Number.isFinite(titanSeen)&&beSeen<titanSeen){
     return { be:null, side:ist.is, line:ist.il, v:ist.v||null, lag:false, dv:!!ist.dv, source:"titan-legacy", sourceLabel:"舊快照" };
   }
   const lside = ist && ist.ls;
   let v=null;
-  if(lside) v = (be.side!==lside) ? "flip" : ((be.flipEver || (ist&&ist.v)) ? "was" : null);
+  // 手動標了「有沒有對調」時，Titan 的舊換邊證據（ist.v）不再算 BET365 對調，只看台彩自己有沒有換邊
+  const otherSwap = (be.manualSwap!=null) ? Number(ist&&ist.lsw||0)>0 : !!(ist&&ist.v);
+  if(lside) v = (be.side!==lside) ? "flip" : ((be.flipEver || otherSwap) ? "was" : null);
   else if(be.flipEver) v = "swap";   // 台彩未開盤仍提示 Bet365 自身曾換邊，不提前判顛倒／收斂
   return { be, side:be.side, line:be.line, v, source, sourceLabel:sourceName||"BET365",
            lag: !!(ist && ist.is && ist.is!==be.side),
@@ -3927,6 +3999,7 @@ function backfillRecentBet365TaiwanSnapshots(){
   };
   const changed=window.backfillBet365TaiwanSnapshots(doc.games,function(game,state){
     if(!isRecent(game)) return null;
+    if(game && ("bet365TaiwanAuto" in game)) return null;   // 使用者手動調整過的場次：手動結果（含「不入七類」）不得被自動回補蓋掉
     const card={away:game.awayTeam,home:game.homeTeam,league:game.league,gameTime:game.gameTime};
     const verdict=intlVerdict(card,state,game.date);
     // Titan 的 sw/eo 是永久歷史證據；BetExplorer 缺列或漏掉早期變盤時仍可回補。
@@ -7471,6 +7544,9 @@ $("#settleConfirm") && ($("#settleConfirm").onclick = ()=>{
     const _iv = (_ist && typeof intlVerdict==="function") ? intlVerdict(it,_ist) : null;
     picks.intlState = _ist;   // 國際軸快照（幕後分帳，不影響手標）
     picks.bet365Taiwan = (window.buildBet365TaiwanSnapshot && _ist && _iv) ? window.buildBet365TaiwanSnapshot(_ist,_iv) : null;
+    // 卡片上手動調整過 BET365 → 七類照手動值；自動判斷另存，日後可「恢復自動判斷」
+    const _man = bet365ManualOf(it);
+    if(_man){ picks.bet365TaiwanAuto = picks.bet365Taiwan; picks.bet365Taiwan = bet365TaiwanWithManual(picks.bet365Taiwan, _man, _ist, _iv && _iv.side); }
   }
   // Stake moneyline odds — now read for ANY game (divergence analysis no longer
   // limited to flip games). Blank = not recorded.
@@ -7601,7 +7677,8 @@ function applySettlement(it, picks, delta, settlementDate){
     totVal: (function(){ const v = parseFloat(it.totVal); return isNaN(v) ? null : v; })(),
     myTotLine: (function(){ const v = parseFloat(it.myTotLine); return isNaN(v) ? null : v; })(),   // B：我的大小成交線（市場基準 totVal 不變）
     intlState: (picks.intlState || null),                                                            // 國際軸快照（bet365 vs 台彩開盤；前瞻分帳）
-    bet365Taiwan: (picks.bet365Taiwan || null),                                                       // 七類快照：警示條同源、自動結算後直接進統計
+    bet365Taiwan: (picks.bet365Taiwan || null),
+    ...(("bet365TaiwanAuto" in picks) ? { bet365TaiwanAuto: picks.bet365TaiwanAuto || null } : {}),   // 手動調整前的自動七類快照（恢復自動用）                                                       // 七類快照：警示條同源、自動結算後直接進統計
     nrfiStatus: (picks.nrfiStatus || "pending"),
     nrfiSource: (picks.nrfiSource || null),
     nrfi: picks.nrfiStatus==="nrfi" ? true : (picks.nrfiStatus==="yrfi" ? false : null),
@@ -8248,6 +8325,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261010swap1"></script><script src="./baseball-bet365-integration.js?v=20261010manual1"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20261009ui1"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261010edit1"></script><script src="./baseball-bet365-integration.js?v=20261010manual1"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20261009ui1"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

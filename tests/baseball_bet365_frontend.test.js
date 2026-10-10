@@ -238,3 +238,84 @@ test('人工確認只知道讓分方時，BET365 顯示「未確認」而不是�
     bet365: { side: 'home', line: 1.5, flipEver: false, events: [] } });
   assert.match(known.querySelector('.market-platform.bet365 .market-state').textContent, /^未對調$/);
 });
+
+// ===== 2026-10-10 BET365 手動調整：點隊名換邊、點圓圈標對調 =====
+function loadManualHelpers(extra = {}) {
+  const start = INDEX_SOURCE.indexOf('// ===== BET365 手動調整（2026-10-10 使用者規格）=====');
+  const end = INDEX_SOURCE.indexOf('\nasync function loadIntlState()', start);
+  assert.ok(start >= 0 && end > start, '找不到 BET365 手動調整程式');
+  const context = {
+    doc: { activeDate: '2026-10-10', games: extra.games || [] },
+    bumpGamesVersion() {},
+    window: {
+      __baseballBet365Integration: { gameFor: () => extra.feedGame || null, verdictFor, sourceLabel },
+      __oddsPortalIntegration: { gameFor: () => null },
+    },
+  };
+  vm.runInNewContext(`${INDEX_SOURCE.slice(start, end)}\nthis.api = { bet365ManualOf, bet365TaiwanWithManual, syncSettledBet365Manual, intlVerdict };`, context);
+  return context.api;
+}
+
+test('手動讓分方與對調優先於所有自動來源；手動「沒對調」時 Titan 的舊換邊不算', () => {
+  const { intlVerdict } = loadManualHelpers({ feedGame: officialGame({ provider: 'betexplorer', markets: { hd: {
+    favorite: 'away', line: 1.5, away: 2.5, home: 1.5, provider: 'betexplorer', observedAt: '2026-10-10T03:00:00.000Z' } } }) });
+  const titan = { is: 'away', il: 1.5, sw: 2, ls: 'home', ll: 1.5, lsw: 0, v: 'was', u: '2026-10-10T12:30:00+08:00' };
+  const auto = intlVerdict({ away: '統一獅', home: '中信兄弟' }, titan);
+  assert.equal(auto.v, 'flip');                                  // 自動：客讓 vs 台彩主讓 → 顛倒
+  const manualSide = intlVerdict({ away: '統一獅', home: '中信兄弟', bet365ManualSide: 'home' }, titan);
+  assert.equal(manualSide.side, 'home');
+  assert.equal(manualSide.source, 'bet365-card-manual');
+  assert.equal(manualSide.v, 'was');                             // 同邊，沒手標對調 → 沿用 Titan 證據 → 收斂
+  const noSwap = intlVerdict({ away: '統一獅', home: '中信兄弟', bet365ManualSide: 'home', bet365ManualSwap: false }, titan);
+  assert.equal(noSwap.v, null);                                  // 手動說沒對調、台彩也沒換 → 不入七類
+  const swapped = intlVerdict({ away: '統一獅', home: '中信兄弟', bet365ManualSide: 'home', bet365ManualSwap: true }, titan);
+  assert.equal(swapped.v, 'was');
+  assert.equal(swapped.be.flipEver, true);
+});
+
+test('手動值改寫七類：同邊沒對調不入七類、有對調收斂、不同邊顛倒', () => {
+  const { bet365TaiwanWithManual } = loadManualHelpers();
+  const ist = { ls: 'home', ll: 1.5, lsw: 0, il: 1.5 };
+  assert.equal(bet365TaiwanWithManual(null, { side: 'home', swap: false }, ist), null);
+  const was = bet365TaiwanWithManual(null, { side: 'home', swap: true }, ist);
+  assert.deepEqual([was.relation, was.swapCombo, was.bet365SwitchCount, was.evidenceSource], ['收斂', 'bet365_only', 1, 'manual+playsport']);
+  const flip = bet365TaiwanWithManual({ relation: '收斂', swapCombo: 'taiwan_only', bet365Side: 'home', taiwanSide: 'home', taiwanSwapped: true, bet365Swapped: false },
+    { side: 'away', swap: null }, ist);
+  assert.deepEqual([flip.relation, flip.swapCombo, flip.bet365Side], ['顛倒', 'taiwan_only', 'away']);
+});
+
+test('已結算的卡片手動調整會同步改寫歷史紀錄，按恢復自動判斷原樣還原', () => {
+  const original = { relation: '顛倒', swapCombo: 'neither', bet365Side: 'away', taiwanSide: 'home', bet365Swapped: false, taiwanSwapped: false };
+  const rec = { sid: 's1', intlState: { ls: 'home', lsw: 0 }, bet365Taiwan: JSON.parse(JSON.stringify(original)) };
+  const { syncSettledBet365Manual } = loadManualHelpers({ games: [rec] });
+  const it = { away: '統一獅', home: '中信兄弟', settled: { _sid: 's1', intlState: { ls: 'home', lsw: 0 }, bet365Taiwan: JSON.parse(JSON.stringify(original)) } };
+  it.bet365ManualSide = 'home'; it.bet365ManualSwap = true;
+  syncSettledBet365Manual(it);
+  assert.equal(rec.bet365Taiwan.relation, '收斂');
+  assert.equal(it.settled.bet365Taiwan.swapCombo, 'bet365_only');
+  assert.equal(rec.bet365TaiwanAuto.relation, '顛倒');
+  delete it.bet365ManualSide; delete it.bet365ManualSwap;
+  syncSettledBet365Manual(it);
+  assert.equal(JSON.stringify(rec.bet365Taiwan), JSON.stringify(original));
+  assert.equal('bet365TaiwanAuto' in rec, false);
+});
+
+test('監控列：點 BET365 隊名換成另一隊、點圓圈切換對調，都不會展開明細；手動時有恢復按鈕', () => {
+  const { JSDOM } = require('jsdom');
+  const { renderMonitor } = require('../baseball-market-monitor.js');
+  const dom = new JSDOM('<!doctype html><body></body>');
+  const calls = [];
+  const monitor = renderMonitor({ documentRef: dom.window.document, card: { away: '中信兄弟', home: '統一獅' },
+    bet365: { side: 'away', line: 1.5, flipEver: false, events: [] },
+    bet365Manual: true, bet365ManualSwap: true,
+    onBet365Side: (s) => calls.push(['side', s]), onBet365Swap: (v) => calls.push(['swap', v]), onBet365Restore: () => calls.push(['restore']) });
+  dom.window.document.body.appendChild(monitor);
+  const cell = monitor.querySelector('.market-platform.bet365');
+  assert.equal(cell.classList.contains('changed'), true);          // 手動亮＝曾對調
+  assert.match(cell.querySelector('.market-state').textContent, /^曾對調$/);
+  cell.querySelector('.market-current').click();
+  cell.querySelector('.market-source').click();
+  monitor.querySelector('.market-detail-section.bet365 .market-auto-controls button').click();
+  assert.deepEqual(calls, [['side', 'home'], ['swap', false], ['restore']]);
+  assert.equal(monitor.querySelector('.market-monitor-details').hidden, true);   // 點隊名／圓圈不展開明細
+});
