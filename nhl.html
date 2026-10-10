@@ -1362,9 +1362,23 @@ $("#settleRemove").onclick = ()=>{
 
 // ===== 重點總結／今日戰績（棒球版移植） =====
 function leagueOfModel(m){ return (m.league||"NHL").toLowerCase(); }
+// 某日場次＝比賽資料檔 ∪ 本機比賽紀錄。
+// 比賽資料檔是滾動視窗（約 8 天）：已滾出的舊日期改用本機比賽紀錄畫卡片，卡片不再消失（2026-10-10）
+function gamesOfDate(d){
+  const games=(pregameCache.games||[]).filter(g=>g.date===d);
+  const have=new Set(games.map(g=>g.officialId)), pair=new Set(games.map(g=>g.away+"@"+g.home));   // 開賽時間改過（如 0900→0904）也算同一場
+  for(const r of (doc.games||[])){
+    if(r.league!=="NHL" || r.date!==d || have.has(r.sid) || pair.has(r.awayTeam+"@"+r.homeTeam)) continue;
+    const tm=/_(\d{2})(\d{2})$/.exec(String(r.sid||""));
+    games.push({ officialId:r.sid, league:"NHL", date:r.date, time:tm?`${tm[1]}:${tm[2]}`:"", away:r.awayTeam, home:r.homeTeam,
+      status:"finished", awayScore:r.awayScore, homeScore:r.homeScore, decidedBy:r.decidedBy||null,
+      hdFav:r.hdFav||null, hdVal:r.hdVal, totLine:r.totBasis, periodsAway:[], periodsHome:[], fromRecord:true });
+    pair.add(r.awayTeam+"@"+r.homeTeam);
+  }
+  return games;
+}
 function currentModels(){
-  return (pregameCache.games||[]).filter(g=>g.date===doc.activeDate)
-    .map(modelFromPregame).filter(m=>!m._item.hidden);
+  return gamesOfDate(doc.activeDate).map(modelFromPregame).filter(m=>!m._item.hidden);
 }
 function collectSummary(models){
   const strong = [], conflicts = [];
@@ -2252,12 +2266,12 @@ function renderCardW(model){
     let anomChip=null;
     try{ const ai=bAnomInfo(model, it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], null),
+    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], hdTrend()),
       mktRow("讓","give", favName, hv?hdHv(favSide,-Math.abs(Number(hv))):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
       mktRow("受讓","recv", undName, hv?hdHv(undSide,Math.abs(Number(hv))):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
     ana.appendChild(hdWrap);
 
-    // 大小：Stake 主盤基準線；缺盤才回到可編輯預設 6.5。
+    // 大小：Stake 主盤基準線 → BET365 → 比賽紀錄；完全沒有盤口才回到可編輯預設 6.5。
     const totWrap=wrapDiv();
     const basis=document.createElement("span"); basis.className="basis";
     const tv = String(totalLineFor(it, model));
@@ -2276,7 +2290,7 @@ function renderCardW(model){
       const ss = lowS ? `<span class="ss">(${samp})</span>` : "";
       return `<span class="bcover ${cls}">${Math.round(pn*100)}%${ss}</span>`;
     }
-    totWrap.append(mktSecHead("大小", totConflict, [basis], null),
+    totWrap.append(mktSecHead("大小", totConflict, [basis], ouTrend()),
       mktRow("大","", "大", ouHv("over",tv), it.over, totCover(true), totConflict),
       mktRow("小","", "小", ouHv("under",tv), it.under, totCover(false), totConflict));
     ana.appendChild(totWrap);
@@ -2328,6 +2342,17 @@ function modelFromPregame(g){
   const stake = stakeObserved && (!stakeObserved.stale || historical) ? stakeObserved : null;
   const bet365 = bet365OddsFor(g);
   const applied = window.NhlStake.applyOddsToPregame(g, it, stake, bet365, DEFAULT_NHL_HD_FAV);
+  // Stake／BET365 已滾出資料檔時，改用比賽紀錄裡記下的讓分與大小：卡片不顯示假的預設值，自動結算也不會用預設 6.5 改寫
+  // （預設 6.5 只在完全沒抓到大小盤口、紀錄也沒有時才用；2026-10-09 使用者規格）
+  const rec = gameFind(g.officialId, g.date, "NHL", g.away, g.home);
+  if(rec){
+    const realHd = applied.hdSrc==="STAKE" || applied.hdSrc==="BET365";
+    if(!realHd && rec.hdFav && rec.hdVal!=null){
+      applied.hdFav = (it.hdFavOverride==="away"||it.hdFavOverride==="home") ? it.hdFavOverride : rec.hdFav;
+      applied.hdVal = rec.hdVal; applied.hdSrc = applied.hdSrc || "紀錄";
+    }
+    if(applied.totLine==null && rec.totBasis!=null){ applied.totLine = rec.totBasis; applied.totSrc = applied.totSrc || "紀錄"; }
+  }
   // id/type/gameTime＝棒球 item 介面（nhl-picks-addon 沿用棒球比對邏輯,需要這三個欄位）
   return { ...g, ...applied, stakeObserved, id: g.officialId, type: 'match', gameTime: g.time,
     inning:g.period||g.inning||"", qAway:g.periodsAway||g.qAway||[], qHome:g.periodsHome||g.qHome||[], _item: it,
@@ -2711,7 +2736,7 @@ function render(){
   if(doc.cols!=="auto"){ board.style.gridTemplateColumns=`repeat(${doc.cols}, minmax(0,1fr))`; board.style.alignItems="start"; board.style.justifyItems="center"; }
   else { board.style.gridTemplateColumns=""; }
   document.body.style.zoom = doc.uiScale!==1 ? doc.uiScale : "";
-  let todays=(pregameCache.games||[]).filter(g=>g.date===doc.activeDate)
+  let todays=gamesOfDate(doc.activeDate)
       .sort((a,b)=> (a.time||"") < (b.time||"") ? -1 : 1);
   if(doc.sortMkt){
       const key={ml:["mlAway","mlHome"],hd:["hdGive","hdRecv"],tot:["over","under"]}[doc.sortMkt]||[];
