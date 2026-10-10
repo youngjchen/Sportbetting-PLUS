@@ -1375,6 +1375,29 @@ function bbLineSnap(model){
   if(ml) snap.mlFav = Number(ml.away) < Number(ml.home) ? "away" : "home";
   return snap;
 }
+// 卡片「讓分／大小基準線變動」提示（2026-10-10 使用者規格，同冰球）：只看 Stake，沒有 Stake 盤口才看 BET365；數值有變才顯示。
+// 盤口資料已滾出資料檔時，讓分改用結算時固定的 lineSnap（大小沒有開盤紀錄就不顯示）。
+function bbLineMoves(model, it){
+  const api = window.__nbaOddsIntegration, start = bbStartMs(model);
+  const num = (v)=> (v==null || v==="") ? NaN : Number(v);
+  const atOf = (h)=> Date.parse(h.observedAt||h.at||"");
+  const ends = (vals)=>{ const v=vals.filter(Number.isFinite); return v.length ? { open:v[0], close:v[v.length-1] } : null; };
+  const of = (k)=>{
+    const m = api && api.gameFor(model,k);
+    const rows = (m && Array.isArray(m.history) ? m.history : []).filter(h=>{ const ms=atOf(h); return !Number.isFinite(ms) || ms<=start; })
+      .slice().sort((a,b)=>(atOf(a)||0)-(atOf(b)||0));
+    let hd = ends(rows.map(h=>{ const x=h.markets&&h.markets.hd; return Math.abs(num(h.line!=null ? h.line : (x && x.line))); }));
+    const tot = ends(rows.map(h=>{ const x=h.markets&&h.markets.ou; return num(h.total && h.total.line!=null ? h.total.line : (x && x.line)); }));
+    const snap = it && it.lineSnap && it.lineSnap[k];
+    if(!hd && snap && Number.isFinite(snap.openLine) && Number.isFinite(snap.closeLine)) hd = { open:snap.openLine, close:snap.closeLine };
+    return { hd, tot };
+  };
+  const s = of("stake"), b = of("bet365");
+  const hint = (src, word, m)=> (m && m.open!==m.close)
+    ? { html:`<span class="l">${src}</span><span class="tm">${word} ${m.open}→${m.close}</span>`, strong:true } : null;
+  return { hd: s.hd ? hint("STAKE","讓分",s.hd) : hint("BET365","讓分",b.hd),
+           tot: s.tot ? hint("STAKE","基準",s.tot) : hint("BET365","基準",b.tot) };
+}
 function bbSnapScore(s){ if(!s) return 0; return BB_PLATFORMS.reduce((n,[k])=>n+(s[k]?2:0),0) + (s.mlFav?1:0); }
 function bbMoveGroup(p){
   if(!p) return null;
@@ -2083,21 +2106,10 @@ function renderCardW(model){
     }
     const wrapDiv = ()=>{ const d=document.createElement("div"); d.className="bmkt"; return d; };
 
-    // 賠率趨勢評語（bet365 賽前序列;棒球由 odds addon 寫入,此處同語彙自算）
-    function hdTrend(){
-      if(!intl) return null;
-      if(intl.flips>0) return { html:`<span class="l">賠率</span><span class="tm">讓分方曾換邊 ⇄${intl.flips}</span>`, strong:true };
-      if(intl.move>=2.5) return { html:`<span class="l">賠率</span><span class="tm">大幅轉向 ${esc(intl.dir<0?model.away:model.home)}讓分</span>`, strong:true };
-      if(intl.move>=1) return { html:`<span class="l">賠率</span><span class="tm">看好 ${esc(intl.dir<0?model.away:model.home)}讓分</span>` };
-      return { html:`<span class="l">賠率</span>持平` };
-    }
-    function ouTrend(){
-      if(!intl || !intl.ouMove) return null;
-      const m = intl.ouMove;
-      if(Math.abs(m)>=3) return { html:`<span class="l">賠率</span><span class="tm">大幅轉向 ${m>0?"大":"小"}分</span>`, strong:true };
-      if(Math.abs(m)>=1) return { html:`<span class="l">賠率</span><span class="tm">轉向 ${m>0?"大":"小"}分</span>` };
-      return null;
-    }
+    // 讓分／大小區只提示「盤口數值」變動（Stake，沒有才 BET365）；換邊次數看上方監控列（2026-10-10 使用者規格，同冰球）
+    const _lineMv = (()=>{ try{ return bbLineMoves(model, it); }catch(_){ return { hd:null, tot:null }; } })();
+    function hdTrend(){ return _lineMv.hd; }
+    function ouTrend(){ return _lineMv.tot; }
 
     // 獨贏
     const mlWrap=wrapDiv();
@@ -2130,7 +2142,7 @@ function renderCardW(model){
     let anomChip=null;
     try{ const ai=bAnomInfo(model, it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], null),
+    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], hdTrend()),
       mktRow("讓","give", favName, hv?("−"+hv):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
       mktRow("受讓","recv", undName, hv?("+"+hv):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
     ana.appendChild(hdWrap);
@@ -2154,7 +2166,7 @@ function renderCardW(model){
       const ss = lowS ? `<span class="ss">(${samp})</span>` : "";
       return `<span class="bcover ${cls}">${Math.round(pn*100)}%${ss}</span>`;
     }
-    totWrap.append(mktSecHead("大小", totConflict, [basis], null),
+    totWrap.append(mktSecHead("大小", totConflict, [basis], ouTrend()),
       mktRow("大","", "大", tv, it.over, totCover(true), totConflict),
       mktRow("小","", "小", tv, it.under, totCover(false), totConflict));
     ana.appendChild(totWrap);

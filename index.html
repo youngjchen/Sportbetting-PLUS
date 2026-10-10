@@ -1451,6 +1451,7 @@
 .bmkt-sec .bcmt .tm{ color:#9bd5ff; font-weight:600; }
 .bmkt-sec .bcmt.flat{ color:var(--ink-dim); }
 .bmkt-sec .bcmt.strong .tm{ color:#ffd27f; }
+.bmkt-sec .bmove{ margin-right:10px; }
 .bmkt-sec .binfo{ margin-left:1px; }
 
 /* 固定欄位網格：選項名｜燈號｜過盤率% 三者緊靠並對齊，中間不留空洞 */
@@ -3288,14 +3289,17 @@ function renderCardB(it){
       row.append(b, nm, lightsEl, chip, _firstEl(coverHTML));  // grid: badge/name/燈號/注/% 五欄對齊
       return row;
     }
-    function mktSecHead(label, conflict, extras, cmtKey){
+    function mktSecHead(label, conflict, extras, cmtKey, move){
       const sec=document.createElement("div"); sec.className="bmkt-sec"+(conflict?" conflict":"");
       const mn=document.createElement("span"); mn.className="mname"; mn.textContent=label; sec.appendChild(mn);
       (extras||[]).forEach(x=> x && sec.appendChild(x));
       const sp=document.createElement("span"); sp.className="mksp"; sec.appendChild(sp);
+      // 盤口數值變動（Stake／BET365）獨立一格；右邊的「賠率」評語由 odds-integration 另外填，互不覆蓋
+      if(move){ const mv=document.createElement("span"); mv.className="bcmt strong bmove"; mv.innerHTML=move.html; sec.appendChild(mv); }
       const cmt=document.createElement("span"); cmt.className="bcmt"; cmt.dataset.cmt=cmtKey; sec.appendChild(cmt);
       return { sec, cmt };
     }
+    const lineMv = (()=>{ try{ return bLineMoves(it); }catch(_){ return { hd:null, tot:null }; } })();
 
     // 獨贏
     const mlWrap=document.createElement("div"); mlWrap.className="bmkt";
@@ -3314,7 +3318,7 @@ function renderCardB(it){
     // 「⚠疑顛倒場」晶片已移除（2026-07-26 使用者拍板）：警示條時代前的老提醒，
     // 現由頂部紫色「平台顛倒」橫幅＋異常晶片承擔，重複警示徒增版面噪音。
     const hv = it.hdVal || "1.5";
-    const hdH=mktSecHead("讓分", hdConflict, [swap], "hd");
+    const hdH=mktSecHead("讓分", hdConflict, [swap], "hd", lineMv.hd);
     hdWrap.append(hdH.sec,
       mktRow("讓","give", it[favSide], "−"+hv, it.hdGive, bCoverHTML(it[favSide],"hd",favV), hdConflict),
       mktRow("受讓","recv", it[undSide], "+"+hv, it.hdRecv, bCoverHTML(it[undSide],"recv",undV), hdConflict));
@@ -3328,7 +3332,7 @@ function renderCardB(it){
     tinp.onclick=(e)=>e.stopPropagation();
     tinp.oninput=()=>{ it.stakeAutoTotal=false; it.totVal = tinp.value.trim(); save(); };
     basis.appendChild(tinp);
-    const totH=mktSecHead("大小", totConflict, [basis], "tot");
+    const totH=mktSecHead("大小", totConflict, [basis], "tot", lineMv.tot);
     // 大/小 過盤率：兩隊大分率平均；小=100-大
     const aT=pctInfo(it.away,"tot",awayV), hT=pctInfo(it.home,"tot",homeV);
     let overPct=null, lowS=false, samp=0;
@@ -3737,6 +3741,28 @@ function bStakeTaiwanLive(it){
     stakeSwapped: !!(sg && ((Number(sg.favoriteFlipCount)||0)>0 || (Array.isArray(sg.favoriteTransitions) && sg.favoriteTransitions.length>0))),
     taiwanSwapped: !!(ist && Number(ist.lsw||0)>0)
   };
+}
+// 卡片「讓分／大小基準線變動」提示（2026-10-10 使用者規格，同冰球）：只看 Stake，沒有 Stake 盤口才看 BET365；數值有變才顯示。
+function bLineMoves(it){
+  const date = doc.activeDate, num = (v)=> (v==null || v==="") ? NaN : Number(v);
+  const sApi = window.__baseballStakeIntegration, bApi = window.__baseballBet365Integration;
+  const series = (game, hdOf, totOf)=>{
+    if(!game) return { hd:null, tot:null };
+    const start = Date.parse(game.scheduledStart||""), atOf = (r)=> Date.parse(r && r.observedAt || "");
+    const rows = (Array.isArray(game.history) ? game.history : []).concat([game])
+      .filter(r=>{ const t=atOf(r); return !Number.isFinite(start) || !Number.isFinite(t) || t<=start; })   // 只取開賽前的盤口
+      .sort((a,b)=>(atOf(a)||0)-(atOf(b)||0));
+    const ends = (f)=>{ const v=rows.map(f).filter(Number.isFinite); return v.length ? { open:v[0], close:v[v.length-1] } : null; };
+    return { hd: ends(r=>Math.abs(num(hdOf(r)))), tot: ends(r=>num(totOf(r))) };
+  };
+  const s = series(sApi && sApi.gameFor ? sApi.gameFor(it, date) : null,
+    r=> r.canonicalLine!=null ? r.canonicalLine : r.rawLine, r=> r.total && r.total.line);
+  const b = series(bApi && bApi.gameFor ? bApi.gameFor(it, date) : null,
+    r=> r.markets && r.markets.hd && r.markets.hd.line, r=> r.markets && r.markets.total && r.markets.total.line);
+  const hint = (src, word, m)=> (m && m.open!==m.close)
+    ? { html:`<span class="l">${src}</span><span class="tm">${word} ${m.open}→${m.close}</span>` } : null;
+  return { hd: s.hd ? hint("STAKE","讓分",s.hd) : hint("BET365","讓分",b.hd),
+           tot: s.tot ? hint("STAKE","基準",s.tot) : hint("BET365","基準",b.tot) };
 }
 function bStakeTaiwanAutoKind(it){
   const L = bStakeTaiwanLive(it);
