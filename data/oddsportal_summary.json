@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-10T16:10:50+08:00",
+  "updatedAt": "2026-10-10T17:22:36+08:00",
   "health": {
-    "discovered": 4,
-    "succeeded": 4,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 4,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -180656,7 +180656,7 @@
       "awayTeam": "兄弟",
       "homeTeam": "統一",
       "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/uni-lions-chinatrust-brothers/EcQJ7taM/",
-      "observedAt": "2026-10-10T11:00:35+08:00",
+      "observedAt": "2026-10-10T17:22:36+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -180666,9 +180666,15 @@
             "away": 1.88
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "home": 1.82,
-            "away": 1.88
+            "at": "2026-10-10T17:22:36+08:00",
+            "home": 1.54,
+            "away": 2.31
+          },
+          "close": {
+            "at": "2026-10-10T16:47:00+08:00",
+            "home": 1.54,
+            "away": 2.31,
+            "final": true
           }
         },
         "hd": {
@@ -180680,11 +180686,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "home": 1.45,
-            "away": 2.55,
+            "at": "2026-10-10T17:22:36+08:00",
+            "home": 2.22,
+            "away": 1.59,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-10T16:58:00+08:00",
+            "home": 2.22,
+            "away": 1.59,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -180695,23 +180709,37 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "over": 1.83,
-            "under": 1.88,
+            "at": "2026-10-10T17:22:36+08:00",
+            "over": 1.81,
+            "under": 1.9,
             "line": 6.5
+          },
+          "close": {
+            "at": "2026-10-10T16:58:00+08:00",
+            "over": 1.81,
+            "under": 1.9,
+            "line": 6.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
-        "ever": false,
+        "ever": true,
         "activeSide": [
+          "home"
+        ],
+        "struckSide": [
           "away"
         ],
-        "struckSide": [],
         "lines": [
           {
-            "line": 1.5,
+            "line": -1.5,
             "active": true,
+            "created": "10,10,2026,09,58"
+          },
+          {
+            "line": 1.5,
+            "active": false,
             "created": "09,10,2026,18,06"
           }
         ]
