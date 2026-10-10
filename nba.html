@@ -1357,7 +1357,7 @@ function bbLineSnap(model){
   const pre = (at)=>{ const ms=Date.parse(at||""); return !Number.isFinite(ms) || ms<=start; };   // 只取開賽前的盤口
   const byTime = (a,b)=> (Date.parse(a.at||"")||0) - (Date.parse(b.at||"")||0);
   const fromHistory = (m)=> (m && Array.isArray(m.history) ? m.history : []).filter(h=>pre(h.observedAt||h.at)).map(h=>{
-    const hd = h.markets && h.markets.hd, ou = h.markets && h.markets.ou;
+    const hd = h.markets && h.markets.hd, ou = h.markets && (h.markets.ou || h.markets.total);   // BET365 紀錄的大小放在 markets.total
     return { at:h.observedAt||h.at, fav: bbSide(h.favorite) || (hd && bbSide(hd.favorite)),
              line: Number(h.line!=null ? h.line : (hd && hd.line)),
              total: Number(h.total && h.total.line!=null ? h.total.line : (ou && ou.line)) };
@@ -1387,7 +1387,7 @@ function bbLineMoves(model, it){
     const rows = (m && Array.isArray(m.history) ? m.history : []).filter(h=>{ const ms=atOf(h); return !Number.isFinite(ms) || ms<=start; })
       .slice().sort((a,b)=>(atOf(a)||0)-(atOf(b)||0));
     let hd = ends(rows.map(h=>{ const x=h.markets&&h.markets.hd; return Math.abs(num(h.line!=null ? h.line : (x && x.line))); }));
-    const tot = ends(rows.map(h=>{ const x=h.markets&&h.markets.ou; return num(h.total && h.total.line!=null ? h.total.line : (x && x.line)); }));
+    const tot = ends(rows.map(h=>{ const x=h.markets&&(h.markets.ou||h.markets.total); return num(h.total && h.total.line!=null ? h.total.line : (x && x.line)); }));
     const snap = it && it.lineSnap && it.lineSnap[k];
     if(!hd && snap && Number.isFinite(snap.openLine) && Number.isFinite(snap.closeLine)) hd = { open:snap.openLine, close:snap.closeLine };
     return { hd, tot };

@@ -72,3 +72,22 @@ test('統計：熱門用獨贏熱門，讓分過盤用該平台收盤線，NBA�
   assert.equal(wnba.total, 1);
   assert.equal(wnba.out.stake.small.fw, 1);
 });
+
+test('BET365 紀錄的大小放在 markets.total 也讀得到（之前只讀 markets.ou，BET365 大小被漏掉）', () => {
+  const doc = {};
+  const start = '2026-10-11T06:30:00+08:00';
+  const history = [
+    { observedAt: '2026-10-10T01:00:00Z', favorite: 'home', markets: { hd: { favorite: 'home', line: 2.5 }, total: { line: 219.5 } } },
+    { observedAt: '2026-10-10T20:00:00Z', favorite: 'home', markets: { hd: { favorite: 'home', line: 4.5 }, total: { line: 218.5 } } },
+  ];
+  const source = fs.readFileSync(path.join(__dirname, '..', 'nba.html'), 'utf8');
+  const s = source.indexOf('const BB_PLATFORMS = ');
+  const e = source.indexOf('function collectCrossTab(leagueFilter){', s);
+  const sandbox = { doc, nbaSeriesCache: {}, seriesCache: {},
+    window: { __nbaOddsIntegration: { gameFor: (_m, k) => (k === 'bet365' ? { history } : null) } } };
+  vm.runInNewContext(`${source.slice(s, e)}\nthis.snap = bbLineSnap({ league: 'NBA', officialId: 'X', date: '2026-10-11', time: '06:30' });`, sandbox);
+  assert.equal(sandbox.snap.bet365.closeTotal, 218.5);
+  assert.equal(sandbox.snap.bet365.openLine, 2.5);
+  assert.equal(sandbox.snap.bet365.closeLine, 4.5);
+  void start;
+});

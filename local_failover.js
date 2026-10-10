@@ -222,6 +222,21 @@ function run() {
     }
   }
 
+  // 2d) NBA 的 BET365 備援：BetExplorer 的 BET365 欄（2026-10-11 使用者規格）。
+  // BET365 官網靜態頁只有正規賽、互動頁擋程式；GitHub 美國主機看不到 BetExplorer 的 BET365 欄 → 只能本機抓。
+  // 每 15 分一輪；已完賽的場次抓過就不再抓，平常一輪只抓未開賽的十來場。
+  try {
+    const NBA_BE_GAP_MIN = 15;
+    const last = Number(state.nba_betexplorer_last || 0);
+    if (Date.now() - last >= NBA_BE_GAP_MIN * 60e3) {
+      state.nba_betexplorer_last = Date.now();
+      saveState(state);
+      execFileSync('node', ['nba_betexplorer.js'], { cwd: REPO_DIR, stdio: ['ignore', 'inherit', 'inherit'], timeout: 420e3 });
+      staged.push('data/nba_betexplorer_bet365.json');
+      log('NBA BetExplorer BET365 完成');
+    }
+  } catch (e) { log('NBA BetExplorer BET365 失敗：' + String(e.message).split('\n')[0]); }
+
   // 3) 明牌各聯盟：被擋指紋 qualified===0 且 updated 新鮮
   for (const lg of LEAGUES) {
     let d;

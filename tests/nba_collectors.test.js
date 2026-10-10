@@ -310,3 +310,68 @@ test('昨天與回補日以既有紀錄為底：補回台彩盤、節分不被�
   const k = output.games.find((g) => g.officialId === 'NBA_20261011_MEM@CHI');
   assert.deepEqual([k.hdFav, k.hdVal, k.totLine], ['home', 3.5, 230.5]);    // 本輪只讀到即時比分 → 舊台彩盤保留
 });
+
+// ===== 2026-10-11：NBA BET365 備援改讀 BetExplorer 的 BET365 欄（官網靜態頁只有正規賽） =====
+function beEntry(extra = {}) {
+  return {
+    eventId: 'UPGfglXr', siteStart: '10,10,2026,23,30', fetchedAt: '2026-10-10T20:00:00.000Z', complete: false,
+    ml: { home: 1.5, away: 2.5, created: '10,10,2026,13,04' },
+    hd: [
+      { line: -2.5, active: false, created: '9,10,2026,20,00', home: 1.9, away: 1.9 },   // 開盤：主讓 2.5
+      { line: -4.5, active: true, created: '10,10,2026,01,02', home: 1.86, away: 1.86 },  // 現行主盤（最平衡）
+      { line: -6.5, active: true, created: '10,10,2026,01,02', home: 2.3, away: 1.6 },    // 替代盤
+    ],
+    ou: [
+      { line: 219.5, active: false, created: '10,10,2026,00,27', over: 1.86, under: 1.86 },
+      { line: 218.5, active: true, created: '10,10,2026,17,12', over: 1.86, under: 1.86 },
+    ],
+    ...extra,
+  };
+}
+const nbaGame = (id, date, time, away, home, status = 'upcoming') => ({ officialId: id, league: 'NBA', date, time, away, home, status });
+
+test('NBA 沒有官網盤時用 BetExplorer 的 BET365：主盤取最平衡那條，歷史先放開盤', async () => {
+  const output = await collectBet365BasketballOdds({
+    now: Date.parse('2026-10-10T20:30:00Z'),
+    previous: { matches: {}, leagues: {} },
+    nbaPregame: { games: [nbaGame('NBA_20261011_LAC@TOR', '2026-10-11', '06:30', '快艇', '暴龍')] },
+    wnbaPregame: { games: [] },
+    betExplorer: { games: {} },
+    nbaBetExplorer: { siteOffsetHours: 7, games: { 'NBA_20261011_LAC@TOR': beEntry() } },
+    fetchPages: async () => [],
+  });
+  const game = output.matches['NBA_20261011_LAC@TOR'];
+  assert.equal(game.provider, 'betexplorer');
+  assert.deepEqual([game.favorite, game.line], ['home', 4.5]);
+  assert.deepEqual(game.moneyline, { away: 2.5, home: 1.5 });
+  assert.equal(game.total.line, 218.5);
+  assert.equal(game.history.length, 2);
+  assert.equal(game.history[0].markets.hd.line, 2.5);                       // 開盤主讓 2.5
+  assert.equal(game.history[0].observedAt, '2026-10-09T19:00:00.000Z');     // 站方 9/10 20:00 = 台灣 03:00 = UTC 19:00
+  assert.equal(output.leagues.NBA.fallbackMatched, 1);
+});
+
+test('已開賽還沒有 BET365 紀錄的 NBA 場次用 BetExplorer 回補開盤／收盤並凍結；官網有盤時官網優先', async () => {
+  const output = await collectBet365BasketballOdds({
+    now: Date.parse('2026-10-11T03:00:00Z'),
+    previous: { matches: { 'NBA_20261010_MEM@CHI': { officialId: 'NBA_20261010_MEM@CHI', provider: 'bet365-official', history: [{ provider: 'bet365-official' }] } }, leagues: {} },
+    nbaPregame: { games: [
+      nbaGame('NBA_20261011_LAC@TOR', '2026-10-11', '06:30', '快艇', '暴龍', 'finished'),
+      nbaGame('NBA_20261010_MEM@CHI', '2026-10-10', '08:00', '灰熊', '公牛', 'finished'),
+    ] },
+    wnbaPregame: { games: [] },
+    betExplorer: { games: {} },
+    nbaBetExplorer: { siteOffsetHours: 7, games: {
+      'NBA_20261011_LAC@TOR': beEntry({ complete: true, fetchedAt: '2026-10-10T23:00:00.000Z' }),
+      'NBA_20261010_MEM@CHI': beEntry({ complete: true }),
+    } },
+    fetchPages: async () => [],
+  });
+  const back = output.matches['NBA_20261011_LAC@TOR'];
+  assert.equal(back.backfilledFrom, 'betexplorer');
+  assert.ok(back.frozenAt);
+  assert.equal(back.history.length, 2);
+  assert.ok(Date.parse(back.history[1].observedAt) < Date.parse('2026-10-10T22:30:00Z'));   // 收盤觀測落在開賽前
+  assert.equal(output.matches['NBA_20261010_MEM@CHI'].provider, 'bet365-official');         // 已有官網紀錄不覆蓋
+  assert.equal(output.leagues.NBA.backfilled, 1);
+});
