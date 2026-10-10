@@ -5,7 +5,7 @@ const path = require('node:path');
 const vm = require('node:vm');
 const cheerio = require('cheerio');
 const sidecar = require('./sidecar_client.js');
-const { NBA_TEAMS, translateNbaTeam } = require('./nba_odds_core.js');
+const { NBA_TEAMS, translateNbaTeam, boardTeam } = require('./nba_odds_core.js');
 const { fetchBet365Page } = require('./bet365_official_transport.js');
 const {
   normalizeMarketObservation,
@@ -220,7 +220,9 @@ function scheduleRows(value, league) {
 }
 
 function findScheduleGame(fixture, schedules) {
-  const candidates = schedules.filter((game) => game.league === fixture.league && game.away === fixture.away && game.home === fixture.home)
+  // 賽程隊名與對照表不一致時（如「塞爾提」）用同隊異名表比對（2026-10-10）
+  const candidates = schedules.filter((game) => game.league === fixture.league &&
+    boardTeam(game.away) === boardTeam(fixture.away) && boardTeam(game.home) === boardTeam(fixture.home))
     .map((game) => ({ game, diff: Math.abs(game.startTime - fixture.startTime) }))
     .filter((entry) => entry.diff <= MATCH_TOLERANCE_MS)
     .sort((a, b) => a.diff - b.diff);

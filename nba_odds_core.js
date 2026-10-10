@@ -158,9 +158,20 @@ function fixtureHomeAway(fixture) {
   return { homeName: parts[0], awayName: parts[1] };
 }
 
+function translateOrNull(value) {
+  try { return translateNbaTeam(value); } catch (_) { return null; }
+}
+
 function outcomeFor(market, teamName) {
   const key = clean(teamName).toLowerCase();
-  return (market.outcomes || []).find((outcome) => clean(outcome && outcome.name).toLowerCase().startsWith(key));
+  const outcomes = market.outcomes || [];
+  const direct = outcomes.find((outcome) => clean(outcome && outcome.name).toLowerCase().startsWith(key));
+  if (direct) return direct;
+  // 同隊異名：Stake 賽事名寫「LA Clippers」、選項卻寫「Los Angeles Clippers」（2026-10-10 快艇@暴龍抓不到獨贏／讓分）
+  // → 兩邊都換成中文隊名再比；選項名尾巴的讓分「(-2.5)」先拿掉。
+  const zh = translateOrNull(teamName);
+  if (!zh) return undefined;
+  return outcomes.find((outcome) => translateOrNull(clean(outcome && outcome.name).replace(/\s*\([^)]*\)\s*$/, '')) === zh);
 }
 
 function signedLine(outcome) {
@@ -232,10 +243,18 @@ function pregameStartMs(game) {
   return Date.parse(`${date}T${time || '00:00'}:00+08:00`);
 }
 
+// 賽程（玩運彩）與 Stake 對照表的中文隊名不一致時的同隊異名（2026-10-10：賽程寫「塞爾提」）
+const BOARD_TEAM_ALIAS = Object.freeze({ '塞爾提': '塞爾提克' });
+function boardTeam(value) {
+  const text = clean(value);
+  return BOARD_TEAM_ALIAS[text] || text;
+}
+
 function matchPregameGame(stake, games, toleranceMs = 12 * 3600000) {
   const start = Date.parse(stake && stake.scheduledStart || '');
   if (!Number.isFinite(start)) return null;
-  const candidates = (games || []).filter((game) => game && game.away === stake.away && game.home === stake.home)
+  const candidates = (games || []).filter((game) => game && boardTeam(game.away) === boardTeam(stake.away) &&
+    boardTeam(game.home) === boardTeam(stake.home))
     .map((game) => ({ game, diff: Math.abs(pregameStartMs(game) - start) }))
     .filter((item) => Number.isFinite(item.diff) && item.diff <= toleranceMs)
     .sort((a, b) => a.diff - b.diff);
@@ -297,6 +316,7 @@ module.exports = {
   NBA_TEAMS,
   TEAM_CODE_BY_ZH,
   translateNbaTeam,
+  boardTeam,
   parseTaiwanResult,
   parseStakeMarkets,
   matchPregameGame,

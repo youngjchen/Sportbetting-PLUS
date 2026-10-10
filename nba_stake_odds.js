@@ -110,7 +110,13 @@ async function collectStakeNbaOdds(options = {}) {
       };
       const card = matchPregameGame(normalized, pregame.games || []);
       normalized.officialId = card && card.officialId || fallbackKey(normalized);
-      const old = matches[normalized.officialId] || null;
+      let old = matches[normalized.officialId] || null;
+      // 之前配不上賽程時用臨時鍵存的同一場：歷史搬到正式編號下，臨時鍵刪掉（免得同一場兩筆）
+      const tempKey = fallbackKey(normalized);
+      if (normalized.officialId !== tempKey && matches[tempKey] && matches[tempKey].slug === normalized.slug) {
+        if (!old) old = matches[tempKey];
+        delete matches[tempKey];
+      }
       matches[normalized.officialId] = mergeStakeObservation(old, normalized, observedAt);
       succeeded++;
     } catch (error) {

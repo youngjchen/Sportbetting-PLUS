@@ -185,3 +185,60 @@ test('籃球收集器以 Bet365 官網資料同時配對 NBA 與 WNBA', async ()
   assert.equal(output.matches['NBA_20261006_MIA@TOR'].total.line, 229.5);
   assert.equal(output.matches['WNBA_20261006_自由_美夢_0800'].moneyline.away, 2.1);
 });
+
+// 2026-10-10：快艇@暴龍抓不到獨贏／讓分（Stake 賽事名「LA Clippers」、選項「Los Angeles Clippers」），
+// 76人@塞爾提克配不上賽程（玩運彩賽程寫「塞爾提」）。
+function clipperGroups() {
+  return [{ name: 'Main', markets: [
+    { name: 'Winner (Incl. Overtime)', status: 'active', outcomes: [
+      { name: 'Toronto Raptors', odds: 1.51 }, { name: 'Los Angeles Clippers', odds: 2.39 }] },
+    { name: 'Handicap (Incl. Overtime)', status: 'active', specifiers: 'hcp=-2.5', outcomes: [
+      { name: 'Toronto Raptors (-2.5)', odds: 1.66 }, { name: 'Los Angeles Clippers (2.5)', odds: 2.09 }] },
+    { name: 'Total (Incl. Overtime)', status: 'active', specifiers: 'total=215.5', outcomes: [
+      { name: 'Over 215.5', odds: 1.72 }, { name: 'Under 215.5', odds: 2.01 }] },
+  ] }];
+}
+
+test('STAKE 同隊異名：賽事名 LA Clippers、選項 Los Angeles Clippers 仍讀得到獨贏與讓分', async () => {
+  const start = Date.parse('2026-10-10T22:00:00Z');
+  const fixture = { slug: '46894505-toronto-raptors-la-clippers', name: 'Toronto Raptors - LA Clippers', date: start, status: 'active' };
+  const request = async (p) => {
+    if (p.endsWith('/nba-preseason')) return { schedule: [{ fixtures: [fixture] }] };
+    if (p.endsWith('/nba')) return { schedule: [] };
+    if (p === `/odds/${fixture.slug}`) return { fixture, groups: clipperGroups() };
+    throw new Error(`unexpected ${p}`);
+  };
+  const output = await collectStakeNbaOdds({ request, now: Date.parse('2026-10-10T10:00:00Z'), previous: { matches: {} },
+    pregame: { games: [{ officialId: 'NBA_20261011_LAC@TOR', league: 'NBA', date: '2026-10-11', time: '06:30', away: '快艇', home: '暴龍' }] } });
+  const game = output.matches['NBA_20261011_LAC@TOR'];
+  assert.ok(game);
+  assert.deepEqual(game.moneyline, { away: 2.39, home: 1.51 });
+  assert.equal(game.favorite, 'home');
+  assert.equal(game.line, 2.5);
+});
+
+test('賽程寫「塞爾提」也配得上 Stake 的塞爾提克，臨時鍵的舊歷史搬到正式編號', async () => {
+  const start = Date.parse('2026-10-11T00:00:00Z');
+  const fixture = { slug: '46894540-boston-celtics-philadelphia-76ers', name: 'Boston Celtics - Philadelphia 76ers', date: start, status: 'active' };
+  const groups = [{ name: 'Main', markets: [
+    { name: 'Winner (Incl. Overtime)', status: 'active', outcomes: [{ name: 'Boston Celtics', odds: 1.51 }, { name: 'Philadelphia 76ers', odds: 2.39 }] },
+  ] }];
+  const request = async (p) => {
+    if (p.endsWith('/nba-preseason')) return { schedule: [{ fixtures: [fixture] }] };
+    if (p.endsWith('/nba')) return { schedule: [] };
+    if (p === `/odds/${fixture.slug}`) return { fixture, groups };
+    throw new Error(`unexpected ${p}`);
+  };
+  const tempKey = 'NBA_2026-10-11T00_00_76___';
+  const oldHistory = [{ observedAt: '2026-10-09T10:00:00.000Z', favorite: 'home', line: 3.5, moneyline: null, handicapOdds: null, total: null }];
+  const previous = { matches: { [tempKey]: { provider: 'stake-official', slug: fixture.slug, scheduledStart: new Date(start).toISOString(),
+    away: '76人', home: '塞爾提克', officialId: tempKey, observedAt: '2026-10-09T10:00:00.000Z', history: oldHistory } } };
+  const output = await collectStakeNbaOdds({ request, previous, now: Date.parse('2026-10-10T10:00:00Z'),
+    pregame: { games: [{ officialId: 'NBA_20261011_PHI@BOS', league: 'NBA', date: '2026-10-11', time: '08:00', away: '76人', home: '塞爾提' }] } });
+  assert.equal(output.matches[tempKey], undefined);
+  const game = output.matches['NBA_20261011_PHI@BOS'];
+  assert.ok(game);
+  assert.equal(game.officialId, 'NBA_20261011_PHI@BOS');
+  assert.ok(game.history.length >= 2);                     // 舊的 3.5 那筆保留、新觀測追加
+  assert.equal(game.history[0].line, 3.5);
+});
