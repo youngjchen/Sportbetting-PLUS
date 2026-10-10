@@ -561,6 +561,40 @@ if(!doc.covWin) doc.covWin = "season";    // 過盤率視窗:season|10|30（棒�
 if(!doc.covThr) doc.covThr = 0.55;        // 過盤率高亮門檻（棒球同款 55/60/65）
 if(!doc.cols) doc.cols = "auto";
 if(!doc.uiScale) doc.uiScale = 1;
+// ===== 一次性資料更正：冰球大小線（2026-10-10 使用者核准） =====
+// 10/2–10/6 有 22 場在結算當下 Stake 賠率還沒載入，紀錄被寫進預設 6.5 → 改成 Stake 收盤線（git 歷史 data/stake_api_odds.json 開賽前最後一筆）；
+// 9/30–10/1 有 8 場沒有大小線 → 用玩運彩國際盤補（大6輸50%=6.25、大6贏50%=5.75）。
+// 只改「現值仍等於當初錯值」且不是手填／手動結算的場次：重跑不會重複改，舊備份再匯入也會自動更正。
+const NHL_TOT_FIX_20261010 = {   // 日期: [客, 主, 錯值, 正確值]
+  "2026-09-30":[["佛羅里","颶風",null,6.25],["加人","油人",null,6.5],["加拿大","楓葉",null,6.5],["遊騎兵","棕熊",null,5.75],["黑鷹","騎士",null,5.75]],
+  "2026-10-01":[["企鵝","飛人",null,6.25],["島人","楓葉",null,6.25],["國王","雪崩",null,6.5]],
+  "2026-10-02":[["飛人","魔鬼",6.5,5.5],["閃電","遊騎兵",6.5,6],["軍刀","藍衣",6.5,6],["荒野","掠奪者",6.5,6],["海怪","火焰",6.5,6],["黑鷹","猛瑪象",6.5,6]],
+  "2026-10-03":[["遊騎兵","紅翼",6.5,6],["棕熊","噴射機",6.5,6],["藍調","達拉斯",6.5,6]],
+  "2026-10-04":[["參議員","楓葉",6.5,6],["颶風","飛人",6.5,6],["猛瑪象","藍衣",6.5,6],["魔鬼","島人",6.5,6],["達拉斯","掠奪者",6.5,6],["棕熊","荒野",6.5,6],["火焰","加人",6.5,6],["國王","鯊魚",6.5,6]],
+  "2026-10-05":[["噴射機","紅翼",6.5,5.5],["猛瑪象","遊騎兵",6.5,5.5],["火焰","海怪",6.5,5.5],["騎士","加人",6.5,6]],
+  "2026-10-06":[["飛人","閃電",6.5,6]],
+};
+(function fixNhlTotals20261010(){
+  const items = {};
+  for(const b of Object.values(doc.boards||{})) for(const it of (b.items||[])) items[it.id] = it;
+  let n = 0;
+  for(const [date, rows] of Object.entries(NHL_TOT_FIX_20261010)){
+    for(const [away, home, from, to] of rows){
+      const rec = doc.games.find(g=>g.league==="NHL" && g.date===date && g.awayTeam===away && g.homeTeam===home);
+      if(!rec || rec.manual) continue;
+      if((rec.totBasis==null ? null : Number(rec.totBasis)) !== from) continue;
+      const it = items[rec.sid];
+      if(it && ((it.totVal!=null && it.totVal!=="") || (it.settled && it.settled.manual))) continue;
+      rec.totBasis = to;
+      if(it && it.settled && it.settled.awayScore!=null && it.settled.homeScore!=null){
+        const t = it.settled.awayScore + it.settled.homeScore;
+        it.settled.tot = t>to ? "over" : (t<to ? "under" : "push");
+      }
+      n++;
+    }
+  }
+  if(n){ doc.gamesVersion = (doc.gamesVersion||0) + 1; saveDoc(doc); console.info(`[冰球] 大小線更正 ${n} 場`); }
+})();
 // ===== 復原（棒球 snapshot 系統移植;燈/注/⇄/收合/刪除/結算前存快照,⌘Z 或選單復原） =====
 const _snaps = [];
 function snapshot(){
