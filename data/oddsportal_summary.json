@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-10T15:50:49+08:00",
+  "updatedAt": "2026-10-10T16:10:50+08:00",
   "health": {
-    "discovered": 10,
-    "succeeded": 5,
+    "discovered": 4,
+    "succeeded": 4,
     "failed": 0,
     "added": 0,
-    "updated": 5,
+    "updated": 4,
     "errors": []
   },
   "games": {
@@ -63279,12 +63279,18 @@
     },
     "kbo|2026-08-28|恐龍|華老鷹|17:30|h424KqhI": {
       "bet365": {
-        "side": "away",
+        "side": "home",
         "line": 1.5,
-        "at": "2026-08-28T14:20:00+08:00",
-        "flipEver": false,
-        "struck": [],
-        "observedAt": "2026-08-28T14:30:14+08:00"
+        "at": "2026-10-10T14:38:00+08:00",
+        "flipEver": true,
+        "struck": [
+          {
+            "line": 1.5,
+            "side": "away",
+            "at": "2026-08-28T14:20:00+08:00"
+          }
+        ],
+        "observedAt": "2026-10-10T16:10:50+08:00"
       },
       "eventId": "h424KqhI",
       "league": "kbo",
@@ -63294,7 +63300,7 @@
       "awayTeam": "恐龍",
       "homeTeam": "華老鷹",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/hanwha-eagles-nc-dinos/h424KqhI/",
-      "observedAt": "2026-08-28T14:30:14+08:00",
+      "observedAt": "2026-10-10T16:10:50+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -63304,9 +63310,9 @@
             "away": 1.87
           },
           "active": {
-            "at": "2026-08-28T14:30:14+08:00",
-            "home": 1.93,
-            "away": 1.81
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 1.79,
+            "away": 2.03
           }
         },
         "hd": {
@@ -63318,11 +63324,11 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-08-28T14:30:14+08:00",
-            "home": 1.57,
-            "away": 2.21,
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 2.43,
+            "away": 1.52,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
           }
         },
         "ou": {
@@ -63333,24 +63339,52 @@
             "line": 10.5
           },
           "active": {
-            "at": "2026-08-28T14:30:14+08:00",
-            "over": 1.75,
-            "under": 1.93,
-            "line": 10.5
+            "at": "2026-10-10T16:10:50+08:00",
+            "over": 1.73,
+            "under": 2.03,
+            "line": 9.5
           }
         }
       },
       "stakeSwap": {
         "ever": false,
         "activeSide": [
+          "away",
+          "home"
+        ],
+        "struckSide": [
           "away"
         ],
-        "struckSide": [],
         "lines": [
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "10,10,2026,08,59"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "10,10,2026,08,59"
+          },
           {
             "line": 1.5,
             "active": true,
-            "created": "28,08,2026,06,20"
+            "created": "10,10,2026,08,59"
+          },
+          {
+            "line": 2.5,
+            "active": true,
+            "created": "10,10,2026,08,40"
+          },
+          {
+            "line": 3.5,
+            "active": false,
+            "created": "10,10,2026,07,02"
+          },
+          {
+            "line": 4.5,
+            "active": true,
+            "created": "10,10,2026,08,40"
           }
         ]
       }
@@ -68942,11 +68976,17 @@
     "kbo|2026-08-30|登陸者|起亞虎|17:00|4UKWAEzS": {
       "bet365": {
         "side": "home",
-        "line": 1.5,
-        "at": "2026-08-30T14:30:00+08:00",
+        "line": 2.5,
+        "at": "2026-10-10T01:45:00+08:00",
         "flipEver": false,
-        "struck": [],
-        "observedAt": "2026-08-30T16:15:13+08:00"
+        "struck": [
+          {
+            "line": -1.5,
+            "side": "home",
+            "at": "2026-10-10T01:25:00+08:00"
+          }
+        ],
+        "observedAt": "2026-10-10T16:10:50+08:00"
       },
       "eventId": "4UKWAEzS",
       "league": "kbo",
@@ -68956,7 +68996,7 @@
       "awayTeam": "登陸者",
       "homeTeam": "起亞虎",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/kia-tigers-ssg-landers/4UKWAEzS/",
-      "observedAt": "2026-08-30T16:15:13+08:00",
+      "observedAt": "2026-10-10T16:10:50+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -68966,9 +69006,9 @@
             "away": 2.6
           },
           "active": {
-            "at": "2026-08-30T16:15:13+08:00",
-            "home": 1.46,
-            "away": 2.75
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 1.26,
+            "away": 3.9
           }
         },
         "hd": {
@@ -68980,9 +69020,9 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-08-30T16:15:13+08:00",
-            "home": 1.9,
-            "away": 1.84,
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 1.53,
+            "away": 2.39,
             "line": 1.5,
             "favorite": "home"
           }
@@ -68995,34 +69035,34 @@
             "line": 9.5
           },
           "active": {
-            "at": "2026-08-30T16:15:13+08:00",
-            "over": 1.51,
-            "under": 2.45,
-            "line": 7.5
+            "at": "2026-10-10T16:10:50+08:00",
+            "over": 1.56,
+            "under": 2.32,
+            "line": 8.5
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [],
-        "struckSide": [
+        "activeSide": [
           "home"
         ],
+        "struckSide": [],
         "lines": [
           {
             "line": -3.5,
-            "active": false,
-            "created": "30,08,2026,08,02"
+            "active": true,
+            "created": "10,10,2026,07,02"
           },
           {
             "line": -2.5,
-            "active": false,
-            "created": "30,08,2026,08,30"
+            "active": true,
+            "created": "10,10,2026,07,02"
           },
           {
             "line": -1.5,
-            "active": false,
-            "created": "30,08,2026,08,30"
+            "active": true,
+            "created": "10,10,2026,07,02"
           }
         ]
       }
@@ -180065,7 +180105,7 @@
             "at": "2026-08-28T14:20:00+08:00"
           }
         ],
-        "observedAt": "2026-10-10T15:50:49+08:00"
+        "observedAt": "2026-10-10T16:10:50+08:00"
       },
       "eventId": "h424KqhI",
       "league": "kbo",
@@ -180075,7 +180115,7 @@
       "awayTeam": "恐龍",
       "homeTeam": "華老鷹",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/hanwha-eagles-nc-dinos/h424KqhI/",
-      "observedAt": "2026-10-10T15:50:49+08:00",
+      "observedAt": "2026-10-10T16:10:50+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -180085,9 +180125,15 @@
             "away": 1.84
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "home": 1.81,
-            "away": 1.94
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 1.79,
+            "away": 2.03
+          },
+          "close": {
+            "at": "2026-10-10T15:59:00+08:00",
+            "home": 1.79,
+            "away": 2.03,
+            "final": true
           }
         },
         "hd": {
@@ -180099,11 +180145,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "home": 1.5,
-            "away": 2.37,
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 2.43,
+            "away": 1.52,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-10T15:59:00+08:00",
+            "home": 2.43,
+            "away": 1.52,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -180114,42 +180168,59 @@
             "line": 9.5
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "over": 1.88,
-            "under": 1.79,
-            "line": 10.5
+            "at": "2026-10-10T16:10:50+08:00",
+            "over": 1.73,
+            "under": 2.03,
+            "line": 9.5
+          },
+          "close": {
+            "at": "2026-10-10T15:59:00+08:00",
+            "over": 1.73,
+            "under": 2.03,
+            "line": 9.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
-        "ever": true,
+        "ever": false,
         "activeSide": [
-          "away"
-        ],
-        "struckSide": [
           "away",
           "home"
         ],
+        "struckSide": [
+          "away"
+        ],
         "lines": [
           {
+            "line": -2.5,
+            "active": true,
+            "created": "10,10,2026,08,59"
+          },
+          {
             "line": -1.5,
-            "active": false,
-            "created": "09,10,2026,17,05"
+            "active": true,
+            "created": "10,10,2026,08,59"
           },
           {
             "line": 1.5,
             "active": true,
-            "created": "10,10,2026,01,35"
+            "created": "10,10,2026,08,59"
           },
           {
             "line": 2.5,
-            "active": false,
-            "created": "28,08,2026,08,31"
+            "active": true,
+            "created": "10,10,2026,08,40"
           },
           {
             "line": 3.5,
             "active": false,
-            "created": "28,08,2026,08,31"
+            "created": "10,10,2026,07,02"
+          },
+          {
+            "line": 4.5,
+            "active": true,
+            "created": "10,10,2026,08,40"
           }
         ]
       }
@@ -180167,7 +180238,7 @@
             "at": "2026-10-10T01:25:00+08:00"
           }
         ],
-        "observedAt": "2026-10-10T15:50:49+08:00"
+        "observedAt": "2026-10-10T16:10:50+08:00"
       },
       "eventId": "4UKWAEzS",
       "league": "kbo",
@@ -180177,7 +180248,7 @@
       "awayTeam": "登陸者",
       "homeTeam": "起亞虎",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/kia-tigers-ssg-landers/4UKWAEzS/",
-      "observedAt": "2026-10-10T15:50:49+08:00",
+      "observedAt": "2026-10-10T16:10:50+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -180187,9 +180258,15 @@
             "away": 2.75
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "home": 1.25,
-            "away": 3.75
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 1.26,
+            "away": 3.9
+          },
+          "close": {
+            "at": "2026-10-10T14:02:00+08:00",
+            "home": 1.26,
+            "away": 3.9,
+            "final": true
           }
         },
         "hd": {
@@ -180201,11 +180278,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "home": 1.76,
-            "away": 1.92,
-            "line": 2.5,
+            "at": "2026-10-10T16:10:50+08:00",
+            "home": 1.53,
+            "away": 2.39,
+            "line": 1.5,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-10T14:02:00+08:00",
+            "home": 1.53,
+            "away": 2.39,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -180216,10 +180301,17 @@
             "line": 7.5
           },
           "active": {
-            "at": "2026-10-10T11:00:35+08:00",
-            "over": 1.8,
-            "under": 1.87,
-            "line": 9.5
+            "at": "2026-10-10T16:10:50+08:00",
+            "over": 1.56,
+            "under": 2.32,
+            "line": 8.5
+          },
+          "close": {
+            "at": "2026-10-10T14:02:00+08:00",
+            "over": 1.56,
+            "under": 2.32,
+            "line": 8.5,
+            "final": true
           }
         }
       },
@@ -180228,24 +180320,22 @@
         "activeSide": [
           "home"
         ],
-        "struckSide": [
-          "home"
-        ],
+        "struckSide": [],
         "lines": [
           {
             "line": -3.5,
-            "active": false,
-            "created": "09,10,2026,19,47"
+            "active": true,
+            "created": "10,10,2026,07,02"
           },
           {
             "line": -2.5,
             "active": true,
-            "created": "09,10,2026,20,41"
+            "created": "10,10,2026,07,02"
           },
           {
             "line": -1.5,
-            "active": false,
-            "created": "09,10,2026,16,25"
+            "active": true,
+            "created": "10,10,2026,07,02"
           }
         ]
       }
