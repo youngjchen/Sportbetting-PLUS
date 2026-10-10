@@ -406,3 +406,14 @@ test('玩運彩缺漏以官方資料補齊，真正取消場標記取消且不�
   assert.equal(canceled.nrfi, null);
   assert.equal(history.bet365Taiwan.filter((game) => game.nrfi == null).length, 1);
 });
+
+test('賽前卡片沒填收盤／下注賠率時，背離改用 Stake 即時獨贏判定（2026-10-10 NC恐龍@韓華鷹＝收斂＋對調＋背離）', () => {
+  const stake = { favorite: 'away', favoriteFlipCount: 4, moneyline: { away: 2.0, home: 1.81 } };
+  const noOdds = { league: 'kbo', platformFlip: false, flipVanished: false, preGameSwap: false, hdFav: 'away' };
+  const info = loadBAnomInfoLive({ ls: 'away', lsw: 0 }, stake, 'kbo')(noOdds);
+  assert.equal(info.lbl, '收斂＋對調＋背離');                      // NC 獨贏 2.00 較高卻讓分
+  const close = loadBAnomInfoLive({ ls: 'away', lsw: 0 }, { ...stake, moneyline: { away: 1.9, home: 1.85 } }, 'kbo')(noOdds);
+  assert.equal(close.lbl, '收斂＋對調');                           // 賠率差 <0.10 → 不算背離
+  const filled = loadBAnomInfoLive({ ls: 'away', lsw: 0 }, stake, 'kbo')({ ...noOdds, closeOddsAway: 1.7, closeOddsHome: 2.2 });
+  assert.equal(filled.lbl, '收斂＋對調');                          // 卡片已填收盤賠率 → 以卡片為準
+});

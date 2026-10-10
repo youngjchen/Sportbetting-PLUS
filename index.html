@@ -2995,7 +2995,15 @@ function bAnomInfo(it){
     let a,b;
     if(it.closeOddsAway!=null && it.closeOddsHome!=null){ a=it.closeOddsAway; b=it.closeOddsHome; }
     else if(it.flipOddsAway!=null && it.flipOddsHome!=null){ a=it.flipOddsAway; b=it.flipOddsHome; }
-    else return false;                                   // 無賠率＝不可判 → 視同無背離（同統計）
+    else {
+      // 賽前卡片還沒填收盤／下注賠率 → 改用 Stake 官網即時獨贏（統計「STAKE 收盤低賠方」在賽前最接近的值）。
+      // 2026-10-10 NC恐龍@韓華鷹：NC 獨贏 2.00 較高卻讓分＝背離，卻因卡片沒填賠率被當成無背離。
+      let ml=null;
+      try{ const api=(typeof window!=="undefined")?window.__baseballStakeIntegration:null;
+           const sg=(api&&api.gameFor)?api.gameFor(it, doc.activeDate):null; ml=sg&&sg.moneyline; }catch(_){}
+      if(!(ml && Number(ml.away)>1 && Number(ml.home)>1)) return false;   // 仍無賠率＝不可判 → 視同無背離（同統計）
+      a=Number(ml.away); b=Number(ml.home);
+    }
     if(Math.abs(a-b)<0.10) return false;
     return (a<b?"away":"home")!==it.hdFav;
   })();
