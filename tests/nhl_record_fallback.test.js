@@ -138,6 +138,7 @@ test('卡片恢復顯示大小基準線變動（開盤 5.5 → 收盤 6）', asy
     return current && /STAKE/.test(current.textContent) ? current : null;
   });
   assert.match(section(card, '大小').textContent, /基準 5\.5→6/);
+  assert.doesNotMatch(section(card, '讓分').textContent, /換邊|歷史/);   // 換邊次數只在上方監控列顯示
   assert.equal(card.querySelector('.basis input').value, '6');
   assert.deepEqual(jsdomErrors, []);
 });

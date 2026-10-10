@@ -2235,26 +2235,17 @@ function renderCardW(model){
 
     // 讓分趨勢：兩個官方來源都各自列出換邊次數，避免只看到其中一方。
     function hdTrend(){
-      if(hdHistory && (hdHistory.stake.rows.length||hdHistory.bet365.rows.length)){
-        const rel=hdHistory.currentRelation==="diverged"?"・目前顛倒":"";
-        return { html:`<span class="l">歷史</span><span class="tm">STAKE 換邊 ${hdHistory.stake.swapCount} 次・BET365 換邊 ${hdHistory.bet365.swapCount} 次${rel}</span>`,
-          strong:hdHistory.currentRelation==="diverged"||hdHistory.stake.swapCount>0||hdHistory.bet365.swapCount>0 };
-      }
+      // 讓分區只提示「讓分數值」變動（如 1.5→2.5）；換邊／對調次數上方監控列已有，這裡不重複（2026-10-10 使用者規格）
+      const abs=(v)=>Math.abs(Number(v));
       if(stake && stake.hd && stake.hd.line!=null){
-        const open=stake.open&&stake.open.hd, moved=open&&Number(open.line)!==Number(stake.hd.line);
-        const flipped=open&&open.favorite&&stake.hd.favorite&&open.favorite!==stake.hd.favorite;
-        return { html:`<span class="l">STAKE</span><span class="tm">${flipped?"讓分方曾換邊 ⇄":(moved?`盤口 ${Math.abs(Number(open.line))}→${Math.abs(Number(stake.hd.line))}`:`盤口 ${Math.abs(Number(stake.hd.line))}`)}</span>`, strong:!!(flipped||moved) };
+        const open=stake.open&&stake.open.hd;
+        if(open && open.line!=null && abs(open.line)!==abs(stake.hd.line))
+          return { html:`<span class="l">STAKE</span><span class="tm">讓分 ${abs(open.line)}→${abs(stake.hd.line)}</span>`, strong:true };
+        return null;
       }
-      if(bet365 && bet365.hdLine!=null){
-        const flipped=bet365.events.some(x=>x&&x.type==="favorite-flip");
-        const moved=bet365.hdOpen!=null && bet365.hdOpen!==bet365.hdLine;
-        return { html:`<span class="l">BET365</span><span class="tm">${flipped?`讓分方曾換邊 ⇄`:(moved?`盤口 ${bet365.hdOpen}→${bet365.hdLine}`:`盤口 ${bet365.hdLine}`)}</span>`, strong:flipped||moved };
-      }
-      if(!intl) return null;
-      if(intl.flips>0) return { html:`<span class="l">賠率</span><span class="tm">讓分方曾換邊 ⇄${intl.flips}</span>`, strong:true };
-      if(intl.move>=2.5) return { html:`<span class="l">賠率</span><span class="tm">大幅轉向 ${esc(intl.dir<0?model.away:model.home)}讓分</span>`, strong:true };
-      if(intl.move>=1) return { html:`<span class="l">賠率</span><span class="tm">看好 ${esc(intl.dir<0?model.away:model.home)}讓分</span>` };
-      return { html:`<span class="l">賠率</span>持平` };
+      if(bet365 && bet365.hdLine!=null && bet365.hdOpen!=null && abs(bet365.hdOpen)!==abs(bet365.hdLine))
+        return { html:`<span class="l">BET365</span><span class="tm">讓分 ${abs(bet365.hdOpen)}→${abs(bet365.hdLine)}</span>`, strong:true };
+      return null;
     }
     function ouTrend(){
       if(stake && stake.ou && stake.ou.line!=null){
