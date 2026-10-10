@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-10T11:12:37.530Z",
+  "generatedAt": "2026-10-10T11:17:20.553Z",
   "officialScheduleCount": 9,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-10T11:12:37.530Z",
-      "lastAttemptAt": "2026-10-10T11:12:37.530Z",
+      "lastSuccessAt": "2026-10-10T11:17:20.553Z",
+      "lastAttemptAt": "2026-10-10T11:17:20.553Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -18,9 +18,9 @@
       }
     },
     "NPB": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-10T11:12:37.530Z",
-      "lastAttemptAt": "2026-10-10T11:12:37.530Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-10T11:17:20.553Z",
+      "lastAttemptAt": "2026-10-10T11:17:20.553Z",
       "error": null,
       "matched": 2,
       "health": {
@@ -33,12 +33,12 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-10T11:12:37.530Z",
-      "lastAttemptAt": "2026-10-10T11:12:37.530Z",
+      "lastSuccessAt": "2026-10-10T11:17:20.553Z",
+      "lastAttemptAt": "2026-10-10T11:17:20.553Z",
       "error": null,
       "matched": 0,
       "health": {
-        "discovered": 2,
+        "discovered": 1,
         "matched": 0,
         "unmatched": 0,
         "failed": 0,
@@ -47,8 +47,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-10T11:12:37.530Z",
-      "lastAttemptAt": "2026-10-10T11:12:37.530Z",
+      "lastSuccessAt": "2026-10-10T11:17:20.553Z",
+      "lastAttemptAt": "2026-10-10T11:17:20.553Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -30365,7 +30365,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-10T11:12:19.991Z",
+      "observedAt": "2026-10-10T11:17:19.674Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -30910,7 +30910,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-10T11:12:20.837Z",
+      "observedAt": "2026-10-10T11:17:20.144Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -30971,23 +30971,30 @@
       "fixtureId": "bd0acf5a-5d04-4980-89ea-a0416f891bb6",
       "slug": "46971367-saitama-seibu-lions-hokkaido-nippon-ham-fighters",
       "sourceUrl": "https://stake.com/sports/baseball/japan/npb/46971367-saitama-seibu-lions-hokkaido-nippon-ham-fighters",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
-      "moneyline": {
-        "away": 1.75,
-        "home": 2.05
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 2.4,
+        "home": 1.55
       },
-      "total": null,
+      "moneyline": {
+        "away": 1.73,
+        "home": 2.07
+      },
+      "total": {
+        "line": 5.5,
+        "over": 1.82,
+        "under": 1.96
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-10T11:12:37.149Z",
+      "partial": false,
+      "observedAt": "2026-10-10T11:17:20.276Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31010,6 +31017,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-10T11:17:20.276Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.4,
+            "home": 1.55
+          },
+          "moneyline": {
+            "away": 1.73,
+            "home": 2.07
+          },
+          "total": {
+            "line": 5.5,
+            "over": 1.82,
+            "under": 1.96
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
