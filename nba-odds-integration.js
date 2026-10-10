@@ -109,7 +109,7 @@
         if (market && market.provider) providers.add(market.provider);
       });
       const official = providers.has('bet365-official');
-      const fallback = providers.has('betexplorer');
+      const fallback = providers.has('betexplorer') || providers.has('betexplorer-bet365');   // 後者＝BetExplorer 的 BET365 欄（2026-10-11）
       if (official && fallback) displayLabel = 'BET365 官網＋BetExplorer 備援';
       else if (official) displayLabel = 'BET365 官網';
       else if (fallback) displayLabel = 'BetExplorer 備援';
@@ -164,9 +164,10 @@
     if (source.markets) Object.values(source.markets).forEach((market) => {
       if (market && market.provider) providers.add(market.provider);
     });
-    if (providers.has('bet365-official') && providers.has('betexplorer')) return 'BET365 官網；缺項由 BetExplorer 備援';
+    const fallback = providers.has('betexplorer') || providers.has('betexplorer-bet365');
+    if (providers.has('bet365-official') && fallback) return 'BET365 官網；缺項由 BetExplorer 備援';
     if (providers.has('bet365-official')) return 'BET365 官網';
-    if (providers.has('betexplorer')) return 'BetExplorer 備援';
+    if (fallback) return 'BetExplorer 備援';
     return 'BET365';
   }
 

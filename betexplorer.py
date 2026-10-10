@@ -460,12 +460,28 @@ def bet365_summary(lines: list[dict[str, Any]], offset: float,
     main = sorted(act, key=lambda x: abs(x["line"]))[0]
     side = "home" if main["line"] < 0 else "away"
     ever = any((("home" if x["line"] < 0 else "away") != side) for x in struck)
+    # 2026-10-11：同一條線兩個方向同時開著（勢均力敵常見）→ 主盤方向只是網頁排列順序，不可當真；
+    # 標 ambiguous，讓下游退回下一層來源（Titan）。主盤賠率一併帶出（BET365 備援要用，不再拿 Stake 的盤）。
+    min_abs = abs(main["line"])
+    sides_at_main = {("home" if x["line"] < 0 else "away") for x in act if abs(x["line"]) == min_abs}
+
+    def price(value):
+        try:
+            number = float(value)
+        except (TypeError, ValueError):
+            return None
+        return number if number > 1 else None
+
     summary = {
         "side": side, "line": abs(main["line"]), "at": stamp(main.get("created")),
         "flipEver": ever,
+        "ambiguous": len(sides_at_main) > 1,
         "struck": [{"line": x["line"], "side": "home" if x["line"] < 0 else "away",
                     "at": stamp(x.get("created"))} for x in struck],
     }
+    home_odds, away_odds = price(main.get("home")), price(main.get("away"))
+    if home_odds and away_odds:
+        summary["odds"] = {"home": home_odds, "away": away_odds}
     if observed_at:
         summary["observedAt"] = observed_at
     return summary

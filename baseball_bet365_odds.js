@@ -127,50 +127,68 @@ function parseBet365BaseballPage(html) {
   return [...games.values()].sort((a, b) => a.startTime - b.startTime);
 }
 
-function snapshotBeforeStart(market, startTime) {
-  if (!market || typeof market !== 'object') return null;
-  for (const key of ['close', 'active', 'open']) {
-    const snapshot = market[key];
-    if (!snapshot) continue;
-    const at = snapshot.at || market.observedAt;
-    if (isPregameObservation(startTime, at)) return { ...snapshot, at };
-  }
-  return null;
-}
-
+// BET365 備援＝BetExplorer 摘要裡「真的 BET365 欄」（game.bet365）。
+// ‼️ game.markets 是 Stake.com 的盤（摘要的 bookmaker＝Stake.com），絕不可當 BET365
+// （2026-10-11 發現：日韓職 BET365 欄一直顯示 Stake 的讓分方與換邊，七類跟著記錯）。
+// BET365 兩個方向同時開著（ambiguous）時方向只是網頁排列順序 → 不給，讓下一層來源接手。
+const BETEXPLORER_BET365 = 'betexplorer-bet365';
 function betExplorerObservation(game) {
-  if (!game || !game.markets) return null;
+  const b = game && game.bet365;
+  if (!b || (b.side !== 'away' && b.side !== 'home') || b.ambiguous) return null;
+  const line = Number(b.line);
+  if (!Number.isFinite(line) || line <= 0) return null;
   const startTime = game.startISO || `${game.date}T${game.startTime}:00+08:00`;
-  const ml = snapshotBeforeStart(game.markets.ml, startTime);
-  const hd = snapshotBeforeStart(game.markets.hd, startTime);
-  const total = snapshotBeforeStart(game.markets.ou, startTime);
-  const selectedTimes = [ml, hd, total].map((market) => market && Date.parse(market.at)).filter(Number.isFinite);
-  if (!selectedTimes.length) return null;
-  const observedAt = new Date(Math.max(...selectedTimes)).toISOString();
+  const seen = Date.parse(b.observedAt || game.observedAt || b.at || '');   // 舊摘要沒有觀測時間 → 用該線開出時間
+  if (!Number.isFinite(seen)) return null;
+  const odds = b.odds || {};
   const observation = normalizeMarketObservation({
-    provider: 'betexplorer',
-    observedAt,
+    provider: BETEXPLORER_BET365,
+    observedAt: new Date(seen).toISOString(),
     scheduledStart: new Date(Date.parse(startTime)).toISOString(),
-    ml: ml && { away: ml.away, home: ml.home },
-    hd: hd && { favorite: hd.favorite || (game.bet365 && game.bet365.side), line: hd.line, away: hd.away, home: hd.home },
-    total: total && { line: total.line, over: total.over, under: total.under },
-  });
+    hd: { favorite: b.side, line, away: odds.away, home: odds.home },
+  }, { allowPricelessHd: true });
+  if (!observation.markets.hd) return null;
   const activeSide = observation.favorite;
   const struck = Array.isArray(game.bet365 && game.bet365.struck) ? game.bet365.struck : [];
   const priorSide = struck.find((entry) => entry && (entry.side === 'away' || entry.side === 'home') && entry.side !== activeSide);
   if (game.bet365 && game.bet365.flipEver && activeSide && priorSide) {
+    const observedAt = observation.observedAt;
     const changedAt = Date.parse(game.bet365.at || game.bet365.observedAt || observedAt);
     observation.evidenceEvents = [{
       at: Number.isFinite(changedAt) ? new Date(changedAt).toISOString() : observedAt,
       type: 'favorite-flip',
-      provider: 'betexplorer',
+      provider: BETEXPLORER_BET365,
       from: priorSide.side,
       to: activeSide,
       line: observation.markets.hd && observation.markets.hd.line,
-      evidenceId: `betexplorer:${game.eventId || `${game.date}|${game.awayTeam}|${game.homeTeam}`}:bet365-favorite-flip:${priorSide.side}:${activeSide}`,
+      evidenceId: `${BETEXPLORER_BET365}:${game.eventId || `${game.date}|${game.awayTeam}|${game.homeTeam}`}:bet365-favorite-flip:${priorSide.side}:${activeSide}`,
     }];
   }
   return observation;
+}
+
+// 2026-10-11 以前存的 'betexplorer' 紀錄其實是 Stake.com 的盤（誤標成 BET365）→ 清掉；官網紀錄保留。
+// 只剩誤標資料的場次整筆刪除，下一輪從真的 BET365 欄（betexplorer-bet365）重建。可重複執行。
+function purgeStakeMislabel(match) {
+  if (!match || typeof match !== 'object') return null;
+  const bad = (provider) => provider === 'betexplorer';
+  const oldHistory = Array.isArray(match.history) ? match.history : [];
+  const oldEvents = Array.isArray(match.events) ? match.events : [];
+  const history = oldHistory.filter((row) => row && !bad(row.provider));
+  const events = oldEvents.filter((event) => event && !bad(event.provider) &&
+    !(event.type === 'source-change' && (bad(event.from) || bad(event.to))));
+  const touched = history.length !== oldHistory.length || events.length !== oldEvents.length || bad(match.provider) ||
+    Object.values(match.markets || {}).some((market) => market && bad(market.provider));
+  if (!touched) return match;
+  if (!history.length) return null;
+  const last = history[history.length - 1];
+  const providerHistories = { ...(match.providerHistories || {}) };
+  delete providerHistories.betexplorer;
+  return {
+    ...match, provider: last.provider, favorite: last.favorite || null,
+    markets: JSON.parse(JSON.stringify(last.markets || {})), history, providerHistories, events,
+    favoriteFlipCount: events.filter((event) => event.type === 'favorite-flip').length,
+  };
 }
 
 function resolveBaseballGame(official, fallback, frozenOfficial) {
@@ -255,6 +273,11 @@ async function collectBaseballBet365Odds(options = {}) {
   }
 
   const matches = JSON.parse(JSON.stringify(previous.matches || {}));
+  for (const [key, match] of Object.entries(matches)) {
+    const cleaned = purgeStakeMislabel(match);
+    if (cleaned) matches[key] = cleaned;
+    else delete matches[key];
+  }
   const leagues = JSON.parse(JSON.stringify(previous.leagues || {}));
   const health = Object.fromEntries(['MLB', 'NPB', 'KBO', 'CPBL'].map((league) => [league, {
     scheduled: 0, officialMatched: 0, fallbackMatched: 0, matched: 0,
@@ -271,7 +294,7 @@ async function collectBaseballBet365Odds(options = {}) {
     const resolved = resolveBaseballGame(direct, fallback, frozen);
     if (!Object.keys(resolved.markets).length) continue;
     if (direct && Object.keys(direct.markets || {}).length) health[official.league].officialMatched++;
-    if (fallback && Object.values(resolved.markets).some((market) => market.provider === 'betexplorer')) {
+    if (fallback && Object.values(resolved.markets).some((market) => market.provider === BETEXPLORER_BET365)) {
       health[official.league].fallbackMatched++;
     }
     health[official.league].matched++;
@@ -356,6 +379,7 @@ module.exports = {
   translateBaseballTeam,
   parseBet365BaseballPage,
   betExplorerObservation,
+  purgeStakeMislabel,
   resolveBaseballGame,
   collectBaseballBet365Odds,
   saveAtomic,

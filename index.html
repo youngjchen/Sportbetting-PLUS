@@ -3984,7 +3984,10 @@ function intlVerdict(it, ist){
   // BetExplorer 摘要若停止刷新，不得永遠壓住較新的 Titan 現行方向。只在兩邊
   // 方向衝突且 Titan 的實際觀測時間較新時退回 Titan；同向或 BE 較新仍維持
   // BetExplorer 主來源。2026-08-26 海盜@教士等三場因此避免被舊摘要錯判顛倒。
-  const beSeen=Date.parse((be&&be.observedAt)||observedAt||""), titanSeen=Date.parse((ist&&ist.u)||"");
+  // 2026-10-11：ist.u 是 Titan 狀態檔每幾分鐘重寫的時間，不是 Titan 真的看到變盤的時間 → 衝突時舊 Titan 幾乎永遠贏
+  // （NC恐龍@韓華鷹：BE 10:32 已換邊，Titan 01:58 後沒動，卻因 u=11:25 蓋掉 BE）。有變盤序列 iseq 就用最後一次變盤時間。
+  const titanChanges=(ist&&Array.isArray(ist.iseq))?ist.iseq.map(x=>Number(x&&x.t)*1000).filter(Number.isFinite):[];
+  const beSeen=Date.parse((be&&be.observedAt)||observedAt||""), titanSeen=titanChanges.length?Math.max(...titanChanges):Date.parse((ist&&ist.u)||"");
   if(source!=="bet365-official"&&source!=="bet365-manual"&&source!=="bet365-card-manual"&&ist&&ist.is&&be.side!==ist.is&&Number.isFinite(beSeen)&&Number.isFinite(titanSeen)&&beSeen<titanSeen){
     return { be:null, side:ist.is, line:ist.il, v:ist.v||null, lag:false, dv:!!ist.dv, source:"titan-legacy", sourceLabel:"舊快照" };
   }
@@ -8333,6 +8336,6 @@ $("#importGames") && ($("#importGames").addEventListener("click", e=>{
     if(el && el.type==="number" && el===e.target) e.preventDefault();
   }, { passive:false });
 })();
-</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261010edit1"></script><script src="./baseball-bet365-integration.js?v=20261010manual1"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20261009ui1"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
+</script><script src="./anomaly-nrfi-addon.js?v=20261009ui1"></script><script src="./odds-integration.js?v=20261001schedule3"></script><script src="./pregame-integration.js?v=20260926dh1"></script><script src="./oddsportal-integration.js?v=20260924activity1"></script><script src="./baseball-market-monitor.js?v=20261010edit1"></script><script src="./baseball-bet365-integration.js?v=20261011be1"></script><script src="./baseball-stake-integration.js?v=20261004bs6"></script><script src="./github-sync.js?v=20261007autobackup1"></script><script src="./divination-addon.js?v=20261005statsready1"></script><script src="./expert-picks-addon.js?v=20261009ui1"></script><script src="./stake-odds-addon.js?v=20260802so1"></script>
 </body>
 </html>

@@ -342,6 +342,16 @@ class Bet365LinesTests(unittest.TestCase):
         self.assertEqual(s['at'], '2026-08-15T10:10:00+08:00')   # 站方+7=台灣
         self.assertEqual(s['struck'][0]['side'], 'home')
 
+    def test_summary_carries_main_odds_and_flags_both_sides_open(self):
+        # 2026-10-11：BET365 備援改用 BetExplorer 的 BET365 欄 → 需要主盤賠率；同線兩方向同時開著要標 ambiguous
+        from betexplorer import bet365_lines, bet365_summary
+        s = bet365_summary(bet365_lines('x', odds_html=self.AH), 7.0)
+        self.assertEqual(s['odds'], {'home': 1.54, 'away': 2.4})
+        self.assertFalse(s['ambiguous'])
+        both = self.AH.replace('class="table-main__odds inactive " data-odd="2.75"', 'class="table-main__odds" data-odd="2.75"') \
+                      .replace('class="table-main__odds inactive " data-odd="1.42"', 'class="table-main__odds" data-odd="1.42"')
+        self.assertTrue(bet365_summary(bet365_lines('x', odds_html=both), 7.0)['ambiguous'])
+
     def test_no_active_rows_returns_none(self):
         from betexplorer import bet365_lines, bet365_summary
         html = self.AH.replace('class="table-main__odds" data-odd="1.54"', 'class="table-main__odds inactive" data-odd="1.54"') \

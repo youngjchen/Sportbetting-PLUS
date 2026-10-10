@@ -341,7 +341,7 @@ test('NBA 沒有官網盤時用 BetExplorer 的 BET365：主盤取最平衡那�
     fetchPages: async () => [],
   });
   const game = output.matches['NBA_20261011_LAC@TOR'];
-  assert.equal(game.provider, 'betexplorer');
+  assert.equal(game.provider, 'betexplorer-bet365');
   assert.deepEqual([game.favorite, game.line], ['home', 4.5]);
   assert.deepEqual(game.moneyline, { away: 2.5, home: 1.5 });
   assert.equal(game.total.line, 218.5);
@@ -354,7 +354,9 @@ test('NBA 沒有官網盤時用 BetExplorer 的 BET365：主盤取最平衡那�
 test('已開賽還沒有 BET365 紀錄的 NBA 場次用 BetExplorer 回補開盤／收盤並凍結；官網有盤時官網優先', async () => {
   const output = await collectBet365BasketballOdds({
     now: Date.parse('2026-10-11T03:00:00Z'),
-    previous: { matches: { 'NBA_20261010_MEM@CHI': { officialId: 'NBA_20261010_MEM@CHI', provider: 'bet365-official', history: [{ provider: 'bet365-official' }] } }, leagues: {} },
+    previous: { matches: { 'NBA_20261010_MEM@CHI': { officialId: 'NBA_20261010_MEM@CHI', provider: 'bet365-official',
+      markets: { hd: { favorite: 'home', line: 3.5, provider: 'bet365-official' } },
+      history: [{ provider: 'bet365-official', markets: { hd: { favorite: 'home', line: 3.5 } } }] } }, leagues: {} },
     nbaPregame: { games: [
       nbaGame('NBA_20261011_LAC@TOR', '2026-10-11', '06:30', '快艇', '暴龍', 'finished'),
       nbaGame('NBA_20261010_MEM@CHI', '2026-10-10', '08:00', '灰熊', '公牛', 'finished'),
@@ -374,4 +376,48 @@ test('已開賽還沒有 BET365 紀錄的 NBA 場次用 BetExplorer 回補開盤
   assert.ok(Date.parse(back.history[1].observedAt) < Date.parse('2026-10-10T22:30:00Z'));   // 收盤觀測落在開賽前
   assert.equal(output.matches['NBA_20261010_MEM@CHI'].provider, 'bet365-official');         // 已有官網紀錄不覆蓋
   assert.equal(output.leagues.NBA.backfilled, 1);
+});
+
+test('WNBA 也改用 BetExplorer 的 BET365 欄；摘要裡 Stake.com 的盤不再當 BET365；舊 betexplorer 紀錄清掉重建', async () => {
+  const wnbaId = 'WNBA_20261011_美夢_自由_1200';
+  const output = await collectBet365BasketballOdds({
+    now: Date.parse('2026-10-10T20:30:00Z'),
+    previous: { matches: {
+      [wnbaId]: { officialId: wnbaId, provider: 'betexplorer', favorite: 'home', history: [{ provider: 'betexplorer', favorite: 'home' }], events: [] },
+      'NBA_OLD': { officialId: 'NBA_OLD', provider: 'betexplorer', history: [{ provider: 'betexplorer' }], scheduledStart: '2026-10-10T00:00:00Z' },
+    }, leagues: {} },
+    nbaPregame: { games: [] },
+    wnbaPregame: { games: [{ officialId: wnbaId, league: 'WNBA', date: '2026-10-11', time: '12:00', away: '美夢', home: '自由', status: 'upcoming' }] },
+    betExplorer: { games: { stake: { league: 'wnba', date: '2026-10-11', startISO: '2026-10-11T12:00:00+08:00', awayTeam: 'Atlanta Dream', homeTeam: 'New York Liberty',
+      markets: { hd: { active: { at: '2026-10-10T20:00:00Z', favorite: 'home', line: 3.5, away: 1.9, home: 1.9 } } } } } },
+    nbaBetExplorer: { siteOffsetHours: 7, games: { [wnbaId]: { ...beEntry({ hd: [{ line: 2.5, active: true, created: '10,10,2026,01,02', home: 2.0, away: 1.8 }] }), league: 'WNBA' } } },
+    fetchPages: async () => [],
+  });
+  const game = output.matches[wnbaId];
+  assert.equal(game.provider, 'betexplorer-bet365');
+  assert.deepEqual([game.favorite, game.line], ['away', 2.5]);   // BetExplorer BET365：主隊 +2.5＝客讓
+  assert.equal(game.history.every((row) => row.provider === 'betexplorer-bet365'), true);
+  assert.equal(output.matches.NBA_OLD, undefined);               // 舊格式只剩 betexplorer 的紀錄 → 清掉
+});
+
+test('官網紀錄只有獨贏（WNBA 官網頁沒有讓分）時，已開賽場次用 BetExplorer 補讓分／大小，獨贏保留官網', async () => {
+  const id = 'WNBA_20261010_金州_王牌_0930';
+  const official = { officialId: id, league: 'WNBA', provider: 'bet365-official', scheduledStart: '2026-10-10T01:30:00.000Z',
+    moneyline: { away: 2.57, home: 1.47 }, markets: { ml: { away: 2.57, home: 1.47, provider: 'bet365-official' } },
+    history: [{ provider: 'bet365-official', observedAt: '2026-10-09T20:00:00.000Z', favorite: null, markets: { ml: { away: 2.57, home: 1.47 } } }], events: [] };
+  const output = await collectBet365BasketballOdds({
+    now: Date.parse('2026-10-10T20:30:00Z'),
+    previous: { matches: { [id]: official }, leagues: {} },
+    nbaPregame: { games: [] },
+    wnbaPregame: { games: [{ officialId: id, league: 'WNBA', date: '2026-10-10', time: '09:30', away: '金州', home: '王牌', status: 'finished' }] },
+    nbaBetExplorer: { siteOffsetHours: 7, games: { [id]: { ...beEntry({ complete: true, fetchedAt: '2026-10-10T03:00:00.000Z',
+      hd: [{ line: -4.5, active: true, created: '9,10,2026,20,00', home: 1.9, away: 1.9 }] }), league: 'WNBA' } } },
+    fetchPages: async () => [],
+  });
+  const game = output.matches[id];
+  assert.equal(game.provider, 'bet365-official');
+  assert.deepEqual(game.moneyline, { away: 2.57, home: 1.47 });   // 官網獨贏不動
+  assert.deepEqual([game.favorite, game.line], ['home', 4.5]);   // 讓分由 BetExplorer 補上
+  assert.equal(game.markets.hd.provider, 'betexplorer-bet365');
+  assert.equal(output.leagues.WNBA.backfilled, 1);
 });

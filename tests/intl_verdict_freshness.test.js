@@ -118,3 +118,28 @@ test('Bet365 單平台對調在卡片警示條使用青綠色，而不是普通�
   assert.equal(colorFor('swap', true), '#2bbfa0');
   assert.notEqual(colorFor('swap', true), colorFor(null, true));
 });
+
+test('Titan 只用「真的變盤時間」比新舊：狀態檔剛重寫不算（2026-10-11 NC恐龍@韓華鷹案）', () => {
+  // BetExplorer 10:32 看到 NC 讓；Titan 最後一次變盤是 01:58（韓華讓），狀態檔 u 卻是 11:25（每幾分鐘重寫）
+  const verdict = loadIntlVerdict({
+    observedAt: '2026-10-10T10:32:00+08:00',
+    bet365: { side: 'away', line: 1.5, flipEver: false, observedAt: '2026-10-10T10:32:00+08:00' },
+  })(
+    { type: 'match', away: 'NC恐龍', home: '韓華鷹' },
+    { is: 'home', il: 1.5, sw: 0, ls: 'away', ll: 1.5, lsw: 0, v: 'flip', iseq: [{ d: 'home', t: Date.parse('2026-10-10T01:58:00+08:00') / 1000 }],
+      u: '2026-10-10T11:25:50+08:00' },
+  );
+  assert.equal(verdict.side, 'away');                    // BetExplorer 較新 → 不被舊 Titan 蓋掉
+  assert.equal(verdict.source, 'betexplorer-legacy');
+  // Titan 在 BetExplorer 之後真的變盤 → 才改用 Titan
+  const later = loadIntlVerdict({
+    observedAt: '2026-10-10T10:32:00+08:00',
+    bet365: { side: 'away', line: 1.5, flipEver: false, observedAt: '2026-10-10T10:32:00+08:00' },
+  })(
+    { type: 'match', away: 'NC恐龍', home: '韓華鷹' },
+    { is: 'home', il: 1.5, sw: 1, ls: 'away', iseq: [{ d: 'away', t: Date.parse('2026-10-10T08:00:00+08:00') / 1000 }, { d: 'home', t: Date.parse('2026-10-10T11:00:00+08:00') / 1000 }],
+      u: '2026-10-10T11:25:50+08:00' },
+  );
+  assert.equal(later.side, 'home');
+  assert.equal(later.source, 'titan-legacy');
+});

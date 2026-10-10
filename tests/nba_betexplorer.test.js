@@ -77,3 +77,9 @@ test('配對：同隊名＋開賽時間（站方 +7 小時）±3 小時才算同
   assert.equal(again.health.cached, 1);
   assert.equal(requested.some((u) => u.includes('08aTHh6N')), false);
 });
+
+test('WNBA 列表頁：隊名尾巴的「 W」拿掉後翻成中文', () => {
+  const html = '<a href="/basketball/usa/wnba/las-vegas-aces-golden-state-valkyries/Aa2RZoFM/" class="in-match"><span>Las Vegas Aces W</span> - <span><strong>Golden State Valkyries W</strong></span></a>';
+  assert.deepEqual(parseListPage(html, 'WNBA').map((g) => [g.eventId, g.league, g.away, g.home]), [['Aa2RZoFM', 'WNBA', '金州', '王牌']]);
+  assert.deepEqual(parseListPage(html, 'NBA'), []);   // NBA 列表規則不會誤收 WNBA 連結
+});

@@ -43,6 +43,9 @@ function normalizeMarketObservation(raw, context = {}) {
   if (ml) markets.ml = { ...ml, provider, observedAt };
   if (favorite && hdLine != null && hdLine > 0 && hdPrices) {
     markets.hd = { favorite, line: Math.abs(hdLine), ...hdPrices, provider, observedAt };
+  } else if (favorite && hdLine != null && hdLine > 0 && context.allowPricelessHd) {
+    // BetExplorer 的 BET365 摘要舊資料只有方向＋線、沒有賠率（2026-10-11 起才帶賠率）；方向才是重點
+    markets.hd = { favorite, line: Math.abs(hdLine), provider, observedAt };
   }
   if (totalLine != null && totalLine > 0 && totalPrices) {
     markets.total = { line: Math.abs(totalLine), ...totalPrices, provider, observedAt };
@@ -152,7 +155,8 @@ function mergeProviderObservation(previous, observation) {
 
 function resolveMarket(officialMarket, fallbackMarket, frozenOfficialMarket) {
   if (officialMarket) return { ...clone(officialMarket), provider: 'bet365-official', stale: false };
-  if (fallbackMarket) return { ...clone(fallbackMarket), provider: 'betexplorer', stale: false };
+  // 備援盤保留自己的來源名（betexplorer-bet365＝真的 BET365 欄），沒標才當 betexplorer
+  if (fallbackMarket) return { ...clone(fallbackMarket), provider: fallbackMarket.provider || 'betexplorer', stale: false };
   if (frozenOfficialMarket) return { ...clone(frozenOfficialMarket), provider: 'bet365-official', stale: true };
   return null;
 }

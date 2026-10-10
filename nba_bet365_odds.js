@@ -17,7 +17,6 @@ const {
 const OUT = path.join(__dirname, 'data', 'nba_bet365_odds.json');
 const PREGAME = path.join(__dirname, 'data', 'nba_pregame.json');
 const WNBA_PREGAME = path.join(__dirname, 'data', 'wnba_pregame.json');
-const BETEXPLORER = path.join(__dirname, 'data', 'oddsportal_summary.json');
 // NBA 的 BET365 備援：本機 nba_betexplorer.js 從 BetExplorer 抓的「真的 BET365 欄」（2026-10-11 使用者規格）。
 // oddsportal_summary.json 的 markets 是 Stake.com 的盤，不可當 BET365（棒球已踩過），NBA 改讀這份。
 const NBA_BETEXPLORER_BET365 = path.join(__dirname, 'data', 'nba_betexplorer_bet365.json');
@@ -222,16 +221,41 @@ function scheduleRows(value, league) {
   }).filter(Boolean);
 }
 
-// 已開賽（含完賽、進行中）且仍在保留期內的 NBA 場次：回補 BET365 用
-function pastNbaRows(value, now) {
+// 已開賽（含完賽、進行中）且仍在保留期內的 NBA／WNBA 場次：回補 BET365 用
+function pastNbaRows(value, now, league = 'NBA') {
   const rows = Array.isArray(value) ? value : value && Array.isArray(value.games) ? value.games : [];
   const rejected = new Set(['postponed', 'cancelled', 'canceled']);
+  const prefix = new RegExp(`^${league}_`);
   return rows.map((game) => {
     const startTime = Date.parse(`${game.date}T${String(game.time || '').slice(0, 5)}:00+08:00`);
-    if (!/^NBA_/.test(String(game.officialId || '')) || !Number.isFinite(startTime) || rejected.has(String(game.status || '').toLowerCase())) return null;
+    if (!prefix.test(String(game.officialId || '')) || !Number.isFinite(startTime) || rejected.has(String(game.status || '').toLowerCase())) return null;
     if (startTime > now || now - startTime > RETENTION_MS) return null;
-    return { ...game, league: 'NBA', startTime, scheduledStart: new Date(startTime).toISOString() };
+    return { ...game, league, startTime, scheduledStart: new Date(startTime).toISOString() };
   }).filter(Boolean);
+}
+
+// 2026-10-11 以前的 'betexplorer' 籃球紀錄：WNBA 是 Stake.com 的盤（誤標成 BET365），NBA 是當天早上的舊格式 →
+// 一律清掉，同一輪由真的 BET365 欄（betexplorer-bet365）重建；官網紀錄保留。可重複執行。
+function purgeOldBetExplorer(match) {
+  if (!match || typeof match !== 'object') return null;
+  const bad = (provider) => provider === 'betexplorer';
+  const oldHistory = Array.isArray(match.history) ? match.history : [];
+  const oldEvents = Array.isArray(match.events) ? match.events : [];
+  const history = oldHistory.filter((row) => row && !bad(row.provider));
+  const events = oldEvents.filter((event) => event && !bad(event.provider) &&
+    !(event.type === 'source-change' && (bad(event.from) || bad(event.to))));
+  const touched = history.length !== oldHistory.length || events.length !== oldEvents.length || bad(match.provider) ||
+    Object.values(match.markets || {}).some((market) => market && bad(market.provider));
+  if (!touched) return match;
+  if (!history.length) return null;
+  const last = history[history.length - 1];
+  const providerHistories = { ...(match.providerHistories || {}) };
+  delete providerHistories.betexplorer;
+  return {
+    ...match, provider: last.provider, favorite: last.favorite || null,
+    markets: JSON.parse(JSON.stringify(last.markets || {})), history, providerHistories, events,
+    favoriteFlipCount: events.filter((event) => event.type === 'favorite-flip').length,
+  };
 }
 
 function findScheduleGame(fixture, schedules) {
@@ -244,32 +268,7 @@ function findScheduleGame(fixture, schedules) {
   return candidates[0] ? candidates[0].game : null;
 }
 
-function fallbackSnapshot(market, startTime) {
-  for (const key of ['close', 'active', 'open']) {
-    const row = market && market[key];
-    if (row && isPregameObservation(startTime, row.at)) return { ...row, at: row.at };
-  }
-  return null;
-}
-
-function basketballFallback(game, schedule) {
-  if (!game || !game.markets) return null;
-  const ml = fallbackSnapshot(game.markets.ml, schedule.scheduledStart);
-  const hd = fallbackSnapshot(game.markets.hd, schedule.scheduledStart);
-  const total = fallbackSnapshot(game.markets.ou, schedule.scheduledStart);
-  const times = [ml, hd, total].map((row) => row && Date.parse(row.at)).filter(Number.isFinite);
-  if (!times.length) return null;
-  return normalizeMarketObservation({
-    provider: 'betexplorer',
-    observedAt: new Date(Math.max(...times)).toISOString(),
-    scheduledStart: schedule.scheduledStart,
-    ml: ml && { away: ml.away, home: ml.home },
-    hd: hd && { favorite: hd.favorite || game.bet365 && game.bet365.side, line: hd.line, away: hd.away, home: hd.home },
-    total: total && { line: total.line, over: total.over, under: total.under },
-  });
-}
-
-// ===== NBA：BetExplorer 的 BET365 欄 → 開盤／收盤兩筆觀測 =====
+// ===== NBA／WNBA：BetExplorer 的 BET365 欄 → 開盤／收盤兩筆觀測 =====
 // 一場會同時掛好幾條替代盤，主盤＝兩邊賠率最接近的那條；開盤＝最早開出的那條（同時開出取最平衡）。
 function validOdd(value) { const n = Number(value); return Number.isFinite(n) && n > 1; }
 function beCreatedMs(raw, offsetH) {
@@ -304,7 +303,7 @@ function betExplorerBet365Observations(entry, schedule, offsetH, now) {
   const fetched = Date.parse(entry.fetchedAt || '');
   // 收盤觀測時間必須在開賽前：賽前抓到的用抓取時間，已開賽的用開賽前一分鐘（BetExplorer 的現行盤即收盤）
   const closeAt = Number.isFinite(fetched) && fetched < start - 60e3 ? fetched : start - 60e3;
-  const base = { provider: 'betexplorer', scheduledStart: schedule.scheduledStart };
+  const base = { provider: 'betexplorer-bet365', scheduledStart: schedule.scheduledStart };
   const close = normalizeMarketObservation({
     ...base, observedAt: new Date(closeAt).toISOString(),
     ml: entry.ml && validOdd(entry.ml.home) && validOdd(entry.ml.away) ? { away: Number(entry.ml.away), home: Number(entry.ml.home) } : null,
@@ -315,15 +314,6 @@ function betExplorerBet365Observations(entry, schedule, offsetH, now) {
     ...base, observedAt: new Date(openAt).toISOString(), hd: beHd(openHd), total: beTotal(openOu),
   }) : null;
   return { open, close };
-}
-
-function findBasketballFallback(feed, schedule) {
-  return Object.values(feed && feed.games || {}).find((game) =>
-    basketballLeague(game && game.league) === schedule.league &&
-    translateBasketballTeam(schedule.league, game.awayTeam) === schedule.away &&
-    translateBasketballTeam(schedule.league, game.homeTeam) === schedule.home &&
-    Math.abs(Date.parse(game.startISO || '') - schedule.startTime) <= MATCH_TOLERANCE_MS
-  ) || null;
 }
 
 async function defaultFetchBasketballPages() {
@@ -373,6 +363,11 @@ async function collectBet365BasketballOdds(options = {}) {
     });
   }
   const matches = JSON.parse(JSON.stringify(previous.matches || {}));
+  for (const [key, match] of Object.entries(matches)) {
+    const cleaned = purgeOldBetExplorer(match);
+    if (cleaned) matches[key] = cleaned;
+    else delete matches[key];
+  }
   const leagues = JSON.parse(JSON.stringify(previous.leagues || {}));
   const health = { NBA: { scheduled: 0, officialMatched: 0, fallbackMatched: 0, matched: 0 }, WNBA: { scheduled: 0, officialMatched: 0, fallbackMatched: 0, matched: 0 } };
   const nbaBe = options.nbaBetExplorer && options.nbaBetExplorer.games ? options.nbaBetExplorer : null;
@@ -392,38 +387,52 @@ async function collectBet365BasketballOdds(options = {}) {
     const row = health[schedule.league];
     row.scheduled++;
     const direct = officialById[schedule.officialId] || null;
-    // NBA 備援＝BetExplorer 的 BET365 欄；WNBA 維持原本的摘要備援
-    const beEntry = schedule.league === 'NBA' && nbaBe ? nbaBe.games[schedule.officialId] : null;
+    // 備援＝BetExplorer 的 BET365 欄（NBA、WNBA 都是）。摘要 oddsportal_summary.json 的 markets 是 Stake.com 的盤，不可再當 BET365。
+    const beEntry = nbaBe ? nbaBe.games[schedule.officialId] : null;
     const beObs = beEntry ? betExplorerBet365Observations(beEntry, schedule, nbaBe.siteOffsetHours, now) : null;
-    let fallback = null;
-    if (schedule.league === 'NBA') fallback = beObs ? beObs.close : null;
-    else {
-      const fallbackGame = findBasketballFallback(options.betExplorer, schedule);
-      fallback = fallbackGame ? basketballFallback(fallbackGame, schedule) : null;
-    }
+    const fallback = beObs ? beObs.close : null;
     const frozen = matches[schedule.officialId] && matches[schedule.officialId].provider === 'bet365-official'
       ? matches[schedule.officialId]
       : null;
     const resolved = resolveGameSources(direct, fallback, frozen);
     if (!Object.keys(resolved.markets).length) continue;
     if (direct && Object.keys(direct.markets || {}).length) row.officialMatched++;
-    if (Object.values(resolved.markets).some((market) => market.provider === 'betexplorer')) row.fallbackMatched++;
+    if (Object.values(resolved.markets).some((market) => market.provider === 'betexplorer-bet365')) row.fallbackMatched++;
     row.matched++;
     const observation = buildObservation(schedule, resolved, observedAt);
     let prior = matches[schedule.officialId];
     // 第一次記到這場而且只有 BetExplorer：先放開盤那筆，歷史才看得到「開盤 → 現在」的變動
-    if (!prior && !direct && observation.provider === 'betexplorer' && beObs && beObs.open) {
+    if (!prior && !direct && observation.provider === 'betexplorer-bet365' && beObs && beObs.open) {
       prior = mergeProviderObservation(null, buildObservation(schedule, resolveGameSources(null, beObs.open, null), beObs.open.observedAt));
     }
     const merged = mergeProviderObservation(prior, observation);
     if (merged) matches[schedule.officialId] = merged;
   }
-  // 回補：保留期內已開賽、還沒有任何 BET365 紀錄的 NBA 場次 → 用 BetExplorer 的開盤／收盤補上（2026-10-11）
+  // 回補：保留期內已開賽、還沒有任何 BET365 紀錄的 NBA／WNBA 場次 → 用 BetExplorer 的開盤／收盤補上（2026-10-11）
   if (nbaBe) {
-    for (const schedule of pastNbaRows(options.nbaPregame, now)) {
-      if (matches[schedule.officialId]) continue;
+    const hasHandicap = (m) => !!(m && ((m.markets && m.markets.hd) || (m.history || []).some((h) => h && h.markets && h.markets.hd)));
+    for (const schedule of [...pastNbaRows(options.nbaPregame, now, 'NBA'), ...pastNbaRows(options.wnbaPregame, now, 'WNBA')]) {
+      const existing = matches[schedule.officialId];
+      if (existing && hasHandicap(existing)) continue;
       const obs = betExplorerBet365Observations(nbaBe.games[schedule.officialId], schedule, nbaBe.siteOffsetHours, now);
       if (!obs || !obs.close || !Object.keys(obs.close.markets || {}).length) continue;
+      if (existing) {
+        // 官網只有獨贏（WNBA 官網頁沒有讓分）→ 讓分／大小用 BetExplorer 的 BET365 欄補，獨贏保留官網
+        const snaps = [obs.open, obs.close].filter(Boolean)
+          .map((o) => ({ provider: o.provider, observedAt: o.observedAt, favorite: o.favorite, markets: JSON.parse(JSON.stringify(o.markets || {})) }));
+        existing.history = [...(existing.history || []), ...snaps]
+          .sort((a, b) => (Date.parse(a.observedAt || '') || 0) - (Date.parse(b.observedAt || '') || 0));
+        const hd = obs.close.markets.hd, total = obs.close.markets.total;
+        existing.markets = { ...(existing.markets || {}), ...(hd ? { hd } : {}), ...(!(existing.markets && existing.markets.total) && total ? { total } : {}) };
+        if (hd) {
+          existing.favorite = hd.favorite; existing.line = hd.line;
+          existing.handicapOdds = { away: hd.away, home: hd.home };
+        }
+        if (!existing.total && total) existing.total = { line: total.line, over: total.over, under: total.under };
+        existing.backfilledFrom = 'betexplorer';
+        health[schedule.league].backfilled = (health[schedule.league].backfilled || 0) + 1;
+        continue;
+      }
       let record = obs.open
         ? mergeProviderObservation(null, buildObservation(schedule, resolveGameSources(null, obs.open, null), obs.open.observedAt))
         : null;
@@ -432,7 +441,7 @@ async function collectBet365BasketballOdds(options = {}) {
       record.frozenAt = new Date(schedule.startTime - 30000).toISOString();
       record.backfilledFrom = 'betexplorer';
       matches[schedule.officialId] = record;
-      health.NBA.backfilled = (health.NBA.backfilled || 0) + 1;
+      health[schedule.league].backfilled = (health[schedule.league].backfilled || 0) + 1;
     }
   }
   for (const league of ['NBA', 'WNBA']) {
@@ -473,7 +482,6 @@ async function main() {
       previous: loadJson(OUT, { matches: {}, leagues: {} }),
       nbaPregame: loadJson(PREGAME, { games: [] }),
       wnbaPregame: loadJson(WNBA_PREGAME, { games: [] }),
-      betExplorer: loadJson(BETEXPLORER, { games: {} }),
       nbaBetExplorer: loadJson(NBA_BETEXPLORER_BET365, null),
     });
     saveAtomic(OUT, output);

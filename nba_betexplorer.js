@@ -13,7 +13,21 @@ const { translateNbaTeam, boardTeam } = require('./nba_odds_core.js');
 const BASE = 'https://www.betexplorer.com';
 const OUT = path.join(__dirname, 'data', 'nba_betexplorer_bet365.json');
 const PREGAME = path.join(__dirname, 'data', 'nba_pregame.json');
-const LIST_URLS = Object.freeze([`${BASE}/basketball/usa/nba/fixtures/`, `${BASE}/basketball/usa/nba/results/`]);
+const WNBA_PREGAME = path.join(__dirname, 'data', 'wnba_pregame.json');
+// 2026-10-11：WNBA 一併改用 BetExplorer 的 BET365 欄（原本的 WNBA 備援拿的是 Stake.com 的盤）。
+// BetExplorer 的 WNBA 隊名尾巴多一個「 W」（Las Vegas Aces W）。
+function wnbaZh(name) {
+  const text = clean(name).replace(/\s+W$/, '');
+  try {
+    const zh = require('./nba_bet365_odds.js').translateBasketballTeam('WNBA', text);
+    return zh && zh !== text ? zh : null;
+  } catch (_) { return null; }
+}
+const LEAGUES = Object.freeze({
+  NBA: { path: 'nba', idPattern: /^NBA_/, zh: (name) => zhTeam(name), key: (name) => boardTeam(name) },
+  WNBA: { path: 'wnba', idPattern: /^WNBA_/, zh: (name) => wnbaZh(name), key: (name) => clean(name) },
+});
+const listUrls = (league) => [`${BASE}/basketball/usa/${LEAGUES[league].path}/fixtures/`, `${BASE}/basketball/usa/${LEAGUES[league].path}/results/`];
 const HEADERS = Object.freeze({
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
   Referer: `${BASE}/basketball/`,
@@ -30,16 +44,17 @@ function twDate(offsetDays, now) { return new Date(now + 8 * 3600e3 + offsetDays
 function zhTeam(name) { try { return translateNbaTeam(name); } catch (_) { return null; } }
 
 // 列表頁（賽程／賽果）：<a href="/basketball/usa/nba/{slug}/{id}/" class="in-match"><span>主隊</span> - <span>客隊</span></a>
-function parseListPage(html) {
+function parseListPage(html, league = 'NBA') {
+  const cfg = LEAGUES[league];
   const out = [];
   const seen = new Set();
-  const re = /<a\b[^>]*href="(\/basketball\/usa\/nba\/[^"\/]+\/([A-Za-z0-9]{8})\/)"[^>]*class="in-match"[^>]*>([\s\S]*?)<\/a>/g;
+  const re = new RegExp(`<a\\b[^>]*href="(\\/basketball\\/usa\\/${cfg.path}\\/[^"\\/]+\\/([A-Za-z0-9]{8})\\/)"[^>]*class="in-match"[^>]*>([\\s\\S]*?)<\\/a>`, 'g');
   let m;
   while ((m = re.exec(String(html || '')))) {
     const [homeEn, awayEn] = stripTags(m[3]).split(' - ').map(clean);
     if (!homeEn || !awayEn || seen.has(m[2])) continue;
     seen.add(m[2]);
-    out.push({ eventId: m[2], url: BASE + m[1], homeEn, awayEn, home: zhTeam(homeEn), away: zhTeam(awayEn) });
+    out.push({ eventId: m[2], url: BASE + m[1], league, homeEn, awayEn, home: cfg.zh(homeEn), away: cfg.zh(awayEn) });
   }
   return out;
 }
@@ -111,21 +126,27 @@ async function collectNbaBetExplorer(options = {}) {
   const sleepMs = options.sleepMs == null ? 500 : Number(options.sleepMs);
   const pause = () => (sleepMs > 0 ? new Promise((resolve) => setTimeout(resolve, sleepMs)) : Promise.resolve());
   const previous = options.previous && typeof options.previous === 'object' ? options.previous : { games: {} };
-  const pregame = options.pregame && typeof options.pregame === 'object' ? options.pregame : { games: [] };
+  const pregames = {
+    NBA: options.pregame && typeof options.pregame === 'object' ? options.pregame : { games: [] },
+    WNBA: options.wnbaPregame && typeof options.wnbaPregame === 'object' ? options.wnbaPregame : { games: [] },
+  };
+  const leagues = Array.isArray(options.leagues) ? options.leagues : Object.keys(LEAGUES);
   const health = { lists: 0, targeted: 0, fetched: 0, cached: 0, unmatched: [], failures: [] };
-
+  const from = twDate(-BACK_DAYS, now), to = twDate(AHEAD_DAYS, now);
+  const games = {};
+  const offsets = [];
+  for (const league of leagues) {
+  const cfg = LEAGUES[league];
+  if (!cfg) continue;
+  const targets = (pregames[league].games || []).filter((g) => g && cfg.idPattern.test(String(g.officialId || '')) &&
+    g.date >= from && g.date <= to && String(g.status || '').toLowerCase() !== 'postponed');
+  if (!targets.length) continue;   // 這個聯盟近期沒比賽就不去抓列表頁
   const listed = [];
-  for (const url of LIST_URLS) {
-    try { listed.push(...parseListPage(await fetchText(url, false))); health.lists++; }
+  for (const url of listUrls(league)) {
+    try { listed.push(...parseListPage(await fetchText(url, false), league)); health.lists++; }
     catch (error) { health.failures.push({ url, error: String(error && error.message || error).slice(0, 200) }); }
     await pause();
   }
-
-  const from = twDate(-BACK_DAYS, now), to = twDate(AHEAD_DAYS, now);
-  const targets = (pregame.games || []).filter((g) => g && /^NBA_/.test(String(g.officialId || '')) &&
-    g.date >= from && g.date <= to && String(g.status || '').toLowerCase() !== 'postponed');
-  const games = {};
-  const offsets = [];
   for (const game of targets) {
     health.targeted++;
     const start = Date.parse(`${game.date}T${String(game.time || '00:00').slice(0, 5)}:00+08:00`);
@@ -136,7 +157,7 @@ async function collectNbaBetExplorer(options = {}) {
     try {
       // 候選：同主客隊（中文、含同隊異名）；之前配過的比賽編號優先
       const candidates = listed.filter((e) => e.home && e.away &&
-        boardTeam(e.home) === boardTeam(game.home) && boardTeam(e.away) === boardTeam(game.away));
+        cfg.key(e.home) === cfg.key(game.home) && cfg.key(e.away) === cfg.key(game.away));
       if (cached && cached.eventId && !candidates.some((c) => c.eventId === cached.eventId)) candidates.unshift({ eventId: cached.eventId, url: cached.url });
       let picked = null;
       for (const cand of candidates) {
@@ -166,7 +187,7 @@ async function collectNbaBetExplorer(options = {}) {
       }
       const ml = odds.ha.find((r) => r.active) || odds.ha[0] || null;
       games[game.officialId] = {
-        officialId: game.officialId, eventId: picked.eventId, url: picked.url || null,
+        officialId: game.officialId, league, eventId: picked.eventId, url: picked.url || null,
         siteStart: picked.siteDt, scheduledStart: new Date(start).toISOString(), away: game.away, home: game.home,
         fetchedAt: new Date(now).toISOString(), complete: now >= start + COMPLETE_AFTER_MS,
         ml: ml ? { home: ml.first, away: ml.second, created: ml.created } : null,
@@ -178,6 +199,7 @@ async function collectNbaBetExplorer(options = {}) {
       health.failures.push({ officialId: game.officialId, error: String(error && error.message || error).slice(0, 200) });
       if (cached) games[game.officialId] = cached;
     }
+  }
   }
   // 保留期內但這輪沒列到的舊資料保留，過期刪除
   for (const [id, g] of Object.entries(previous.games || {})) {
@@ -199,7 +221,11 @@ async function collectNbaBetExplorer(options = {}) {
 function loadJson(file, fallback) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return fallback; } }
 
 async function main() {
-  const output = await collectNbaBetExplorer({ previous: loadJson(OUT, { games: {} }), pregame: loadJson(PREGAME, { games: [] }) });
+  const output = await collectNbaBetExplorer({
+    previous: loadJson(OUT, { games: {} }),
+    pregame: loadJson(PREGAME, { games: [] }),
+    wnbaPregame: loadJson(WNBA_PREGAME, { games: [] }),
+  });
   const temp = `${OUT}.tmp`;
   fs.writeFileSync(temp, `${JSON.stringify(output, null, 1)}\n`);
   fs.renameSync(temp, OUT);
