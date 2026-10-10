@@ -291,6 +291,17 @@ function run() {
   if (!staged.length) { log('本輪無事可做（雲端健康或無變化）'); return; }
   try {
     sh('git add -- ' + staged.map(s => `"${s}"`).join(' '));
+    // 本輪其他工作失敗時留下、沒列入 staged 的資料檔修改，會讓下面的 pull --rebase 直接拒絕（工作樹不乾淨）
+    // → 三次推送全敗。比照開頭的「自癒收殮」一併提交；含衝突標記的還原。
+    // （2026-10-11：中職巡檢每輪失敗留下 oddsportal_summary.json，連帶 NBA BET365 資料推不出去）
+    try {
+      const leftovers = sh('git diff --name-only').split('\n').map(s => s.trim()).filter(f => f && f.startsWith('data/'));
+      for (const f of leftovers) {
+        if (fs.readFileSync(path.join(REPO_DIR, f), 'utf8').includes('<<<<<<<')) { sh('git checkout -- "' + f + '"'); continue; }
+        sh('git add -- "' + f + '"');
+      }
+      if (leftovers.length) log('一併收殮本輪其他工作的殘留產出：' + leftovers.join(', '));
+    } catch (e) { log('殘留產出收殮失敗：' + String(e.message).split('\n')[0]); }
     // 提交前最後一道閘：暫存內容絕不可含衝突標記（見上方 2026-07-29 污染案）
     if (sh('git diff --cached').includes('<<<<<<<')) {
       log('⚠️ 暫存內容含衝突標記，本輪放棄推送並還原');
