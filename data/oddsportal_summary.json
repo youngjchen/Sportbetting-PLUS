@@ -2,14 +2,16 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-10T19:00:59+08:00",
+  "updatedAt": "2026-10-10T21:55:40+08:00",
   "health": {
-    "discovered": 8,
-    "succeeded": 3,
-    "failed": 0,
-    "added": 0,
-    "updated": 3,
-    "errors": []
+    "discovered": 7,
+    "succeeded": 5,
+    "failed": 1,
+    "added": 3,
+    "updated": 2,
+    "errors": [
+      "樂天@起亞虎: BetExplorer 讀取失敗 https://www.betexplorer.com/match-odds-old/OAVE9Sw0/0/ah/1/en/?sportname="
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -180344,10 +180346,10 @@
       "bet365": {
         "side": "home",
         "line": 1.5,
-        "at": "2026-10-10T12:58:00+08:00",
+        "at": "2026-10-10T21:51:00+08:00",
         "flipEver": false,
         "struck": [],
-        "observedAt": "2026-10-10T19:00:59+08:00"
+        "observedAt": "2026-10-10T21:55:40+08:00"
       },
       "eventId": "COfAdiz1",
       "league": "mlb",
@@ -180357,7 +180359,7 @@
       "awayTeam": "白襪",
       "homeTeam": "守護者",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/cleveland-guardians-chicago-white-sox/COfAdiz1/",
-      "observedAt": "2026-10-10T19:00:59+08:00",
+      "observedAt": "2026-10-10T21:55:40+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -180827,7 +180829,14 @@
       }
     },
     "kbo|2026-10-11|巫師|三星獅|13:00|OOAmORhg": {
-      "bet365": null,
+      "bet365": {
+        "side": "home",
+        "line": 1.5,
+        "at": "2026-10-10T20:28:00+08:00",
+        "flipEver": false,
+        "struck": [],
+        "observedAt": "2026-10-10T21:55:40+08:00"
+      },
       "eventId": "OOAmORhg",
       "league": "kbo",
       "date": "2026-10-11",
@@ -180836,7 +180845,7 @@
       "awayTeam": "巫師",
       "homeTeam": "三星獅",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/samsung-lions-kt-wiz-suwon/OOAmORhg/",
-      "observedAt": "2026-10-10T11:00:35+08:00",
+      "observedAt": "2026-10-10T21:55:40+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -180906,6 +180915,75 @@
           }
         ]
       }
+    },
+    "npb|2026-10-11|火腿|西武|13:00|OArdFvm3": {
+      "bet365": {
+        "side": "away",
+        "line": 1.5,
+        "at": "2026-10-10T19:56:00+08:00",
+        "flipEver": false,
+        "struck": [],
+        "observedAt": "2026-10-10T21:55:40+08:00"
+      },
+      "eventId": "OArdFvm3",
+      "league": "npb",
+      "date": "2026-10-11",
+      "startTime": "13:00",
+      "startISO": "2026-10-11T13:00:00+08:00",
+      "awayTeam": "火腿",
+      "homeTeam": "西武",
+      "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/seibu-lions-nippon-ham-fighters/OArdFvm3/",
+      "observedAt": "2026-10-10T21:55:40+08:00",
+      "source": "BetExplorer",
+      "markets": {}
+    },
+    "npb|2026-10-11|橫濱|巨人|13:00|IipCBdnS": {
+      "bet365": {
+        "side": "away",
+        "line": 1.5,
+        "at": "2026-10-10T19:56:00+08:00",
+        "flipEver": false,
+        "struck": [],
+        "observedAt": "2026-10-10T21:55:40+08:00"
+      },
+      "eventId": "IipCBdnS",
+      "league": "npb",
+      "date": "2026-10-11",
+      "startTime": "13:00",
+      "startISO": "2026-10-11T13:00:00+08:00",
+      "awayTeam": "橫濱",
+      "homeTeam": "巨人",
+      "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/yomiuri-giants-yokohama-baystars/IipCBdnS/",
+      "observedAt": "2026-10-10T21:55:40+08:00",
+      "source": "BetExplorer",
+      "markets": {}
+    },
+    "mlb|2026-10-12|道奇|釀酒人|08:00|M5I1QVL8": {
+      "bet365": {
+        "side": "away",
+        "line": 1.5,
+        "at": "2026-10-09T23:51:00+08:00",
+        "flipEver": true,
+        "struck": [
+          {
+            "line": -1.5,
+            "side": "home",
+            "at": "2026-10-09T09:19:00+08:00"
+          }
+        ],
+        "observedAt": "2026-10-10T21:55:40+08:00"
+      },
+      "eventId": "M5I1QVL8",
+      "league": "mlb",
+      "date": "2026-10-12",
+      "startTime": "08:00",
+      "startISO": "2026-10-12T08:00:00+08:00",
+      "awayTeam": "道奇",
+      "homeTeam": "釀酒人",
+      "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/milwaukee-brewers-los-angeles-dodgers/M5I1QVL8/",
+      "observedAt": "2026-10-10T21:55:40+08:00",
+      "source": "BetExplorer",
+      "markets": {}
     }
   },
   "siteOffsetHours": 7.0
