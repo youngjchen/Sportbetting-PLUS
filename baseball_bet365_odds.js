@@ -250,11 +250,18 @@ async function collectBaseballBet365Odds(options = {}) {
   const pages = await fetchPages();
   const parsed = [];
   const pageErrors = [];
+  // 每個官網頁的抓取狀態（以頁為單位，ALL 的攔截回應不覆寫主頁結果）。
+  // 2026-10-11：同一台 runner 的 IP 被 bet365 擋 403 長達 4.5 小時，新 runner 卻正常 →
+  // 工作流看 pages.MLB.ok 連續失敗就結束本棒換 runner（新 IP）。
+  const pageStatus = {};
   for (const page of pages || []) {
+    const pageKey = page && page.league || 'ALL';
     if (page && page.error) {
       pageErrors.push(page.error);
+      if (!pageStatus[pageKey]) pageStatus[pageKey] = { ok: false, error: String(page.error).slice(0, 200) };
       continue;
     }
+    if (!pageStatus[pageKey]) pageStatus[pageKey] = { ok: true };
     parsed.push(...parseBet365BaseballPage(page && page.html));
   }
   const officialById = {};
@@ -340,6 +347,7 @@ async function collectBaseballBet365Odds(options = {}) {
     provider: 'bet365-official-first',
     updated: observedAt,
     source: 'https://www.bet365.com/',
+    pages: pageStatus,
     leagues,
     matches,
   };
