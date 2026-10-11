@@ -37,9 +37,27 @@ jobs:
           scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零"
           pip freeze | grep -i -E 'scrapling|patchright|playwright|browserforge|apify|curl.cffi'
           command -v xvfb-run || sudo apt-get install -y -q xvfb
-      - name: probe（Scrapling 直連三模式）
+      - name: probe（Scrapling 直連；第二輪＝亞洲三聯盟有沒有 hub 頁）
         continue-on-error: true
+        env:
+          PROBE_TARGETS: 'baseball=https://www.bet365.com/hub/en-us/baseball,mlbhub=https://www.bet365.com/hub/en-us/baseball/mlb,kbo=https://www.bet365.com/hub/en-us/baseball/kbo,npb=https://www.bet365.com/hub/en-us/baseball/npb,cpbl=https://www.bet365.com/hub/en-us/baseball/cpbl'
+          PROBE_MODES: stealth
         run: timeout 900 xvfb-run -a python odds_lab/bet365_scrapling_probe.py --label ${{ matrix.label }} --out probe_out/${{ matrix.label }}
+      - name: 用正式解析程式解每一頁
+        continue-on-error: true
+        run: |
+          npm ci --silent
+          node -e "
+          const fs = require('fs'), path = require('path');
+          const { parseBet365BaseballPage } = require('./baseball_bet365_odds.js');
+          const dir = 'probe_out/${{ matrix.label }}', out = {};
+          for (const f of fs.readdirSync(dir).filter((f) => f.endsWith('.html'))) {
+            out[f] = parseBet365BaseballPage(fs.readFileSync(path.join(dir, f), 'utf8')).map((g) => ({
+              league: g.league, away: g.away, home: g.home, start: g.scheduledStart, ml: g.markets.ml, hd: g.markets.hd, total: g.markets.total }));
+          }
+          fs.writeFileSync(dir + '/parsed.json', JSON.stringify(out, null, 1));
+          console.log(JSON.stringify(out, null, 1));
+          "
       - name: probe（現役傳輸層 fetch_sidecar.py 全鏈）
         continue-on-error: true
         env:
@@ -67,7 +85,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: probe-${{ matrix.label }}
+          name: probe2-${{ matrix.label }}
           path: probe_out/${{ matrix.label }}
           if-no-files-found: warn
   collect:

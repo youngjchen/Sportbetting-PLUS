@@ -15,6 +15,9 @@ TARGETS = {
     'sportsbook': 'https://www.bet365.com/#/AS/B16/',          # baseball_bet365_odds.js 的 SPORTSBOOK_URL
     'mlbhub': 'https://www.bet365.com/hub/en-us/baseball/mlb',  # baseball_bet365_odds.js 的 MLB_HUB_URL
 }
+# 環境變數覆寫：PROBE_TARGETS="name=url,name=url"、PROBE_MODES="stealth,solve,headful"
+if os.environ.get('PROBE_TARGETS'):
+    TARGETS = dict(item.split('=', 1) for item in os.environ['PROBE_TARGETS'].split(',') if '=' in item)
 HEADERS = {'Accept': 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9'}
 CONTENT_RE = re.compile(r'data-item-name|data-fixture-id|gl-MarketGroup|src-Participant|ovm-Fixture|cpm-Participant')
 FP_JS = """() => {
@@ -88,6 +91,7 @@ async def probe_one(session, mode, name, url, out_dir):
         page = await session.fetch(url, extra_headers=HEADERS, page_action=act,
                                    google_search=False, timeout=90000)
         html = getattr(page, 'html_content', None) or str(page)
+        rec['hub_links'] = sorted(set(re.findall(r'href="(?:https://www\.bet365\.com)?(/hub/en-us/baseball/[^"#?]*)"', html)))[:40]
         rec.update(status=int(getattr(page, 'status', 0) or 0), html_len=len(html),
                    title=(re.search(r'<title[^>]*>(.*?)</title>', html, re.S | re.I) or [None, ''])[1].strip()[:120],
                    verdict=classify(html))
@@ -129,6 +133,9 @@ async def main():
     ]
     if os.environ.get('DISPLAY'):
         modes.append(('headful', dict(headless=False, block_webrtc=True)))          # 有畫面（xvfb）對照組
+    wanted = [m for m in os.environ.get('PROBE_MODES', '').split(',') if m]
+    if wanted:
+        modes = [m for m in modes if m[0] in wanted]
     for mode, kw in modes:
         try:
             cm = AsyncStealthySession(**kw)
