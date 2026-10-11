@@ -2,13 +2,19 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-11T20:30:32+08:00",
+  "updatedAt": "2026-10-11T22:40:16+08:00",
   "health": {
-    "scheduled": 1,
-    "discovered": 1,
-    "succeeded": 1,
-    "failed": 0,
-    "errors": []
+    "discovered": 8,
+    "succeeded": 2,
+    "failed": 4,
+    "added": 0,
+    "updated": 2,
+    "errors": [
+      "火腿@西武: BetExplorer 讀取失敗 https://www.betexplorer.com/match-odds-old/dW0Bupc5/0/ah/1/en/?sportname=",
+      "守護者@光芒: BetExplorer 讀取失敗 https://www.betexplorer.com/match-odds-old/xUGgX6ne/0/ah/1/en/?sportname=",
+      "道奇@釀酒人: BetExplorer 讀取失敗 https://www.betexplorer.com/match-odds-old/hhuZ7N5s/0/ah/1/en/?sportname=",
+      "統一@兄弟: BetExplorer 讀取失敗 https://www.betexplorer.com/match-odds-old/KGUu2s36/0/ah/1/en/?sportname="
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -181268,7 +181274,7 @@
           "home": 1.44,
           "away": 2.7
         },
-        "observedAt": "2026-10-11T11:15:23+08:00"
+        "observedAt": "2026-10-11T22:40:16+08:00"
       },
       "eventId": "M5I1QVL8",
       "league": "mlb",
@@ -181278,7 +181284,7 @@
       "awayTeam": "道奇",
       "homeTeam": "釀酒人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/milwaukee-brewers-los-angeles-dodgers/M5I1QVL8/",
-      "observedAt": "2026-10-11T11:15:23+08:00",
+      "observedAt": "2026-10-11T22:40:16+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -181535,7 +181541,25 @@
       }
     },
     "kbo|2026-10-12|巫師|三星獅|17:30|WGMOCz6F": {
-      "bet365": null,
+      "bet365": {
+        "side": "away",
+        "line": 1.5,
+        "at": "2026-10-11T22:44:00+08:00",
+        "flipEver": true,
+        "ambiguous": false,
+        "struck": [
+          {
+            "line": -1.5,
+            "side": "home",
+            "at": "2026-08-30T08:42:00+08:00"
+          }
+        ],
+        "odds": {
+          "home": 1.8,
+          "away": 1.87
+        },
+        "observedAt": "2026-10-11T22:40:16+08:00"
+      },
       "eventId": "WGMOCz6F",
       "league": "kbo",
       "date": "2026-10-12",
@@ -181544,7 +181568,7 @@
       "awayTeam": "巫師",
       "homeTeam": "三星獅",
       "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/samsung-lions-kt-wiz-suwon/WGMOCz6F/",
-      "observedAt": "2026-10-11T10:41:04+08:00",
+      "observedAt": "2026-10-11T22:40:16+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
