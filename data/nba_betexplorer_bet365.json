@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-11T02:35:39.430Z",
+ "updated": "2026-10-11T03:17:04.010Z",
  "siteOffsetHours": 7,
  "health": {
   "lists": 4,
@@ -9,10 +9,14 @@
   "fetched": 5,
   "cached": 35,
   "unmatched": [
-   "WNBA_20261011_美夢_自由_1200 美夢@自由",
    "WNBA_20261011_金州_王牌_1200 金州@王牌"
   ],
-  "failures": []
+  "failures": [
+   {
+    "officialId": "WNBA_20261011_美夢_自由_1200",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
   "NBA_20261004_MIA@TOR": {
@@ -2463,8 +2467,8 @@
    "scheduledStart": "2026-10-11T02:30:00.000Z",
    "away": "馬刺",
    "home": "太陽",
-   "fetchedAt": "2026-10-11T02:35:39.430Z",
-   "complete": false,
+   "fetchedAt": "2026-10-11T03:17:04.010Z",
+   "complete": true,
    "ml": {
     "home": 3.3,
     "away": 1.32,
@@ -2526,7 +2530,7 @@
    "scheduledStart": "2026-10-11T10:00:00.000Z",
    "away": "獨行俠",
    "home": "火箭",
-   "fetchedAt": "2026-10-11T02:35:39.430Z",
+   "fetchedAt": "2026-10-11T03:17:04.010Z",
    "complete": false,
    "ml": {
     "home": 1.7,
@@ -2561,7 +2565,7 @@
    "scheduledStart": "2026-10-11T22:30:00.000Z",
    "away": "魔術",
    "home": "騎士",
-   "fetchedAt": "2026-10-11T02:35:39.430Z",
+   "fetchedAt": "2026-10-11T03:17:04.010Z",
    "complete": false,
    "ml": null,
    "hd": [],
@@ -2576,7 +2580,7 @@
    "scheduledStart": "2026-10-11T23:00:00.000Z",
    "away": "公鹿",
    "home": "黃蜂",
-   "fetchedAt": "2026-10-11T02:35:39.430Z",
+   "fetchedAt": "2026-10-11T03:17:04.010Z",
    "complete": false,
    "ml": null,
    "hd": [],
@@ -2591,7 +2595,7 @@
    "scheduledStart": "2026-10-12T01:00:00.000Z",
    "away": "公牛",
    "home": "金塊",
-   "fetchedAt": "2026-10-11T02:35:39.430Z",
+   "fetchedAt": "2026-10-11T03:17:04.010Z",
    "complete": false,
    "ml": null,
    "hd": [],
