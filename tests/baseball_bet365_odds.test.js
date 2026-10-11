@@ -130,6 +130,23 @@ test('collector matches CPBL official odds without requiring a BetExplorer row',
   assert.equal(game.markets.total.line, 7.5);
 });
 
+test('collector 記錄每個官網頁的抓取狀態：MLB 頁被擋要標成 ok:false（工作流靠它換 runner）', async () => {
+  const output = await collectBaseballBet365Odds({
+    now: Date.parse(OBSERVED),
+    officialRows: [],
+    previous: { matches: {}, leagues: {} },
+    betExplorer: { games: {} },
+    fetchPages: async () => [
+      { league: 'MLB', error: 'RuntimeError: solve-cloudflare returned challenge/status 403' },
+      { league: 'ALL', html: FIXTURE },
+      { league: 'ALL', html: '', capturedUrl: 'https://www.bet365.com/defaultapi/x' },
+    ],
+  });
+
+  assert.deepEqual(output.pages.MLB, { ok: false, error: 'RuntimeError: solve-cloudflare returned challenge/status 403' });
+  assert.deepEqual(output.pages.ALL, { ok: true });
+});
+
 test('collector imports BetExplorer Bet365 flip evidence even when only the active line is sampled', async () => {
   const officialId = 'NPB_20261004_Tigers@DeNA_1700';
   const output = await collectBaseballBet365Odds({

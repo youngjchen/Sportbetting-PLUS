@@ -53,6 +53,7 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           END=$(( SECONDS + 18600 ))
           FAIL_STREAK=0
+          MLB_BLOCK_STREAK=0
           while [ "$SECONDS" -lt "$END" ]; do
             T0=$SECONDS
             git rebase --abort 2>/dev/null || true
@@ -67,6 +68,18 @@ jobs:
                   git pull --rebase --autostash || { git rebase --abort 2>/dev/null || true; }
                   git push || true
                 fi
+              fi
+              # 2026-10-11：同一台 runner 的 IP 被 bet365 擋 403 達 4.5 小時（新 runner 正常）。
+              # MLB 有賽程、MLB 官網頁卻連續 3 輪（約 15 分）抓失敗 → 結束本棒，由「自我接棒」換新 runner＝新 IP。
+              if node -e 'const d=require("./data/baseball_bet365_odds.json");const p=(d.pages||{}).MLB;const l=(d.leagues||{}).MLB||{};process.exit(p&&p.ok===false&&l.scheduled>0?0:1)'; then
+                MLB_BLOCK_STREAK=$(( MLB_BLOCK_STREAK + 1 ))
+                echo "WARN MLB 官網頁抓取失敗（連續 $MLB_BLOCK_STREAK 輪）"
+                if [ "$MLB_BLOCK_STREAK" -ge 3 ]; then
+                  echo "WARN 疑似本 runner IP 被 bet365 擋；結束本棒，交給新 runner 接手"
+                  break
+                fi
+              else
+                MLB_BLOCK_STREAK=0
               fi
             else
               FAIL_STREAK=$(( FAIL_STREAK + 1 ))
