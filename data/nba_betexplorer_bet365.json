@@ -1,10 +1,10 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-10T23:35:51.479Z",
+ "updated": "2026-10-11T01:12:32.329Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 2,
   "targeted": 42,
   "fetched": 8,
   "cached": 32,
@@ -12,7 +12,16 @@
    "WNBA_20261011_美夢_自由_1200 美夢@自由",
    "WNBA_20261011_金州_王牌_1200 金州@王牌"
   ],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
   "NBA_20261004_MIA@TOR": {
@@ -2232,8 +2241,8 @@
    "scheduledStart": "2026-10-11T00:00:00.000Z",
    "away": "灰狼",
    "home": "熱火",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
-   "complete": false,
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "complete": true,
    "ml": {
     "home": 2.3,
     "away": 1.58,
@@ -2309,18 +2318,25 @@
    "scheduledStart": "2026-10-11T00:00:00.000Z",
    "away": "76人",
    "home": "塞爾提",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
-   "complete": false,
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "complete": true,
    "ml": {
-    "home": 1.34,
-    "away": 3.2,
-    "created": "10,10,2026,23,52"
+    "home": 1.32,
+    "away": 3.3,
+    "created": "11,10,2026,00,54"
    },
    "hd": [
     {
      "line": -7.5,
      "active": true,
      "created": "10,10,2026,23,49",
+     "home": 1.86,
+     "away": 1.86
+    },
+    {
+     "line": -6.5,
+     "active": true,
+     "created": "11,10,2026,00,55",
      "home": 1.86,
      "away": 1.86
     },
@@ -2393,20 +2409,20 @@
    "scheduledStart": "2026-10-11T00:30:00.000Z",
    "away": "國王",
    "home": "勇士",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
-   "complete": false,
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "complete": true,
    "ml": {
-    "home": 1.4,
-    "away": 2.85,
-    "created": "10,10,2026,13,06"
+    "home": 1.37,
+    "away": 3.05,
+    "created": "11,10,2026,00,51"
    },
    "hd": [
     {
      "line": -7.5,
-     "active": false,
-     "created": "10,10,2026,04,04",
-     "home": 1.91,
-     "away": 1.82
+     "active": true,
+     "created": "11,10,2026,00,51",
+     "home": 1.82,
+     "away": 1.91
     },
     {
      "line": -7,
@@ -2424,7 +2440,7 @@
     },
     {
      "line": -5.5,
-     "active": true,
+     "active": false,
      "created": "10,10,2026,18,55",
      "home": 1.82,
      "away": 1.91
@@ -2456,12 +2472,12 @@
    "scheduledStart": "2026-10-11T02:30:00.000Z",
    "away": "馬刺",
    "home": "太陽",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
    "complete": false,
    "ml": {
-    "home": 2.9,
-    "away": 1.38,
-    "created": "10,10,2026,20,32"
+    "home": 3.3,
+    "away": 1.32,
+    "created": "11,10,2026,02,16"
    },
    "hd": [
     {
@@ -2512,7 +2528,7 @@
    "scheduledStart": "2026-10-11T10:00:00.000Z",
    "away": "獨行俠",
    "home": "火箭",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
    "complete": false,
    "ml": {
     "home": 1.7,
@@ -2547,7 +2563,7 @@
    "scheduledStart": "2026-10-11T22:30:00.000Z",
    "away": "魔術",
    "home": "騎士",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
    "complete": false,
    "ml": null,
    "hd": [],
@@ -2562,7 +2578,7 @@
    "scheduledStart": "2026-10-11T23:00:00.000Z",
    "away": "公鹿",
    "home": "黃蜂",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
    "complete": false,
    "ml": null,
    "hd": [],
@@ -2577,7 +2593,7 @@
    "scheduledStart": "2026-10-12T01:00:00.000Z",
    "away": "公牛",
    "home": "金塊",
-   "fetchedAt": "2026-10-10T23:35:51.479Z",
+   "fetchedAt": "2026-10-11T01:12:32.329Z",
    "complete": false,
    "ml": null,
    "hd": [],
