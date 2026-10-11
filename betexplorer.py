@@ -247,13 +247,17 @@ def discover_season(league: str, team_zh, season_start: str, today_tw: datetime 
 
 
 def detect_offset_hours(schedule: Iterable[dict[str, Any]], listing: Iterable[dict[str, Any]],
-                        min_agree: int = 3) -> float:
+                        min_agree: int = 3, known: float | None = None) -> float:
     """用已知開賽時間（我們的賽程檔／官方來源）反推「站方時間→台灣時間」的時差。
 
     2026-08-09 修正：同一組對戰在連續系列賽會出現在好幾天，若把 (客,主) 當唯一鍵
     就會取到別天的時間，算出一堆互相矛盾的時差（實例 2.5/4.42/4.5/5.5）而整輪中止。
     改成每組對戰保留所有候選時間，各場投票，取得票最高者；票數需達 min_agree
     且不得與第二名同票，否則拒絕採用（寧可不抓也不要抓錯日期）。
+
+    2026-10-11 修正：季後賽首頁常只剩 1~2 場可比對，永遠湊不到 3 票 → 整輪中止、備援停擺一整天。
+    票數不足時，只有「上次驗證成功存下的時差（known）」與每一場可比對的比賽都吻合，才沿用它；
+    任何一場對不上（例如站方換夏令時間）仍照舊拒絕。
     """
     want: dict[tuple[str, str], set[str]] = {}
     for row in schedule or []:
@@ -272,6 +276,7 @@ def detect_offset_hours(schedule: Iterable[dict[str, Any]], listing: Iterable[di
         return round(value, 2)
 
     votes: dict[float, int] = {}
+    per_game: list[set[float]] = []
     matched = 0
     for game in listing or []:
         targets = want.get((game.get("awayZh"), game.get("homeZh")))
@@ -287,11 +292,16 @@ def detect_offset_hours(schedule: Iterable[dict[str, Any]], listing: Iterable[di
                 continue
             seen.add(value)
             votes[value] = votes.get(value, 0) + 1
+        per_game.append(seen)
     if not votes:
         raise RuntimeError(f"可比對場次僅 {matched} 場（需 {min_agree}），拒絕猜測時差")
     ranked = sorted(votes.items(), key=lambda kv: -kv[1])
     best, support = ranked[0]
     if support < min_agree:
+        if known is not None:
+            k = round(float(known), 2)
+            if all(k in seen for seen in per_game):
+                return k
         raise RuntimeError(f"最高票時差 {best}h 只有 {support} 場支持（需 {min_agree}），拒絕採用")
     if len(ranked) > 1 and ranked[1][1] == support:
         raise RuntimeError(f"時差同票無法決定：{ranked[:2]}，拒絕採用")

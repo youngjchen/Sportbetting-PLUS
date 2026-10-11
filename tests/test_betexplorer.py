@@ -82,6 +82,22 @@ class OffsetTests(unittest.TestCase):
         with self.assertRaises(RuntimeError):
             detect_offset_hours(self.schedule, listing)
 
+    def test_thin_vote_reuses_known_offset_when_every_game_agrees(self):
+        # 季後賽首頁只剩 1 場可比對：與上次成功存下的 +7h 吻合 → 沿用，不整輪中止
+        self.assertEqual(detect_offset_hours(self.schedule, self._listing(7)[:1], known=7.0), 7.0)
+        self.assertEqual(detect_offset_hours(self.schedule, self._listing(7)[:2], known=7), 7.0)
+
+    def test_thin_vote_refuses_when_known_offset_mismatches(self):
+        # 站方換時區（例：夏令時間）→ 唯一那場算出 +6h，與存檔 +7h 不符 → 照舊拒絕
+        with self.assertRaises(RuntimeError):
+            detect_offset_hours(self.schedule, self._listing(6)[:1], known=7.0)
+
+    def test_thin_vote_refuses_when_any_game_contradicts_known(self):
+        listing = self._listing(7)[:2]
+        listing[1]["siteStart"] = datetime(2026, 8, 7, 9, 0)      # 第二場對不上 +7h
+        with self.assertRaises(RuntimeError):
+            detect_offset_hours(self.schedule, listing, known=7.0)
+
 
 class DiscoveryTests(unittest.TestCase):
     UPCOMING = '''

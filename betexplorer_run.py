@@ -541,7 +541,12 @@ def main() -> int:
                 reference.append({"awayTeam": away, "homeTeam": home, "time": hhmm})
         except Exception:
             pass
-    offset = BE.detect_offset_hours(reference, all_games)  # 第二重：對不上就丟例外，不猜
+    # 第二重：對不上就丟例外，不猜。季後賽場次少湊不到票時，只沿用上次成功存下、且每場都吻合的時差。
+    try:
+        known_offset = float(summary["siteOffsetHours"]) if summary.get("siteOffsetHours") is not None else None
+    except (TypeError, ValueError):
+        known_offset = None
+    offset = BE.detect_offset_hours(reference, all_games, known=known_offset)
     print(f"INFO 首頁發現 {len(games)} 場、站方時差 {offset:+.1f}h", file=sys.stderr)
 
     # 2026-08-07 使用者反映「8/8 美職初盤沒填」：/baseball/ 首頁只列少數場次
