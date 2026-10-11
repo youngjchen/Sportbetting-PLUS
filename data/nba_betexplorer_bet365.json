@@ -1,10 +1,10 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-11T14:00:26.040Z",
+ "updated": "2026-10-11T14:32:39.676Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 2,
   "targeted": 42,
   "fetched": 3,
   "cached": 37,
@@ -12,7 +12,16 @@
    "WNBA_20261011_美夢_自由_1200 美夢@自由",
    "WNBA_20261011_金州_王牌_1200 金州@王牌"
   ],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
   "NBA_20261004_MIA@TOR": {
@@ -2575,12 +2584,12 @@
    "scheduledStart": "2026-10-11T22:30:00.000Z",
    "away": "魔術",
    "home": "騎士",
-   "fetchedAt": "2026-10-11T14:00:26.040Z",
+   "fetchedAt": "2026-10-11T14:32:39.676Z",
    "complete": false,
    "ml": {
-    "home": 1.44,
-    "away": 2.7,
-    "created": "11,10,2026,07,17"
+    "home": 1.45,
+    "away": 2.65,
+    "created": "11,10,2026,15,35"
    },
    "hd": [
     {
@@ -2631,12 +2640,12 @@
    "scheduledStart": "2026-10-11T23:00:00.000Z",
    "away": "公鹿",
    "home": "黃蜂",
-   "fetchedAt": "2026-10-11T14:00:26.040Z",
+   "fetchedAt": "2026-10-11T14:32:39.676Z",
    "complete": false,
    "ml": {
-    "home": 1.51,
-    "away": 2.45,
-    "created": "11,10,2026,11,20"
+    "home": 1.54,
+    "away": 2.4,
+    "created": "11,10,2026,15,35"
    },
    "hd": [
     {
@@ -2680,17 +2689,17 @@
    "scheduledStart": "2026-10-12T01:00:00.000Z",
    "away": "公牛",
    "home": "金塊",
-   "fetchedAt": "2026-10-11T14:00:26.040Z",
+   "fetchedAt": "2026-10-11T14:32:39.676Z",
    "complete": false,
    "ml": {
-    "home": 1.26,
-    "away": 3.7,
-    "created": "11,10,2026,13,35"
+    "home": 1.28,
+    "away": 3.6,
+    "created": "11,10,2026,15,34"
    },
    "hd": [
     {
      "line": -9.5,
-     "active": true,
+     "active": false,
      "created": "11,10,2026,13,36",
      "home": 1.96,
      "away": 1.79
