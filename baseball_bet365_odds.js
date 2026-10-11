@@ -16,6 +16,7 @@ const { buildOfficialGames, normalizeTeam } = require('./baseball_stake_core.js'
 const OUT = path.join(__dirname, 'data', 'baseball_bet365_odds.json');
 const PREGAME = path.join(__dirname, 'data', 'pregame_data.json');
 const BETEXPLORER = path.join(__dirname, 'data', 'oddsportal_summary.json');
+const ODDSPORTAL = path.join(__dirname, 'data', 'oddsportal_bet365.json');
 const MLB_HUB_URL = 'https://www.bet365.com/hub/en-us/baseball/mlb';
 const SPORTSBOOK_URL = 'https://www.bet365.com/#/AS/B16/';
 const MATCH_TOLERANCE_MS = 2 * 60 * 60 * 1000;
@@ -132,7 +133,11 @@ function parseBet365BaseballPage(html) {
 // （2026-10-11 發現：日韓職 BET365 欄一直顯示 Stake 的讓分方與換邊，七類跟著記錯）。
 // BET365 兩個方向同時開著（ambiguous）時方向只是網頁排列順序 → 不給，讓下一層來源接手。
 const BETEXPLORER_BET365 = 'betexplorer-bet365';
-function betExplorerObservation(game) {
+// 第二道備援（2026-10-12 使用者規格）：OddsPortal 的 BET365 欄（oddsportal_bet365.py，本機每 30 分）。
+// 檔案的 games[].bet365 與 BetExplorer 摘要同形 → 同一支函式轉換，只換 provider。
+const ODDSPORTAL_BET365 = 'oddsportal-bet365';
+const FALLBACK_STALE_MS = 90 * 60 * 1000;
+function betExplorerObservation(game, provider = BETEXPLORER_BET365) {
   const b = game && game.bet365;
   if (!b || (b.side !== 'away' && b.side !== 'home') || b.ambiguous) return null;
   const line = Number(b.line);
@@ -142,7 +147,7 @@ function betExplorerObservation(game) {
   if (!Number.isFinite(seen)) return null;
   const odds = b.odds || {};
   const observation = normalizeMarketObservation({
-    provider: BETEXPLORER_BET365,
+    provider,
     observedAt: new Date(seen).toISOString(),
     scheduledStart: new Date(Date.parse(startTime)).toISOString(),
     hd: { favorite: b.side, line, away: odds.away, home: odds.home },
@@ -157,14 +162,23 @@ function betExplorerObservation(game) {
     observation.evidenceEvents = [{
       at: Number.isFinite(changedAt) ? new Date(changedAt).toISOString() : observedAt,
       type: 'favorite-flip',
-      provider: BETEXPLORER_BET365,
+      provider,
       from: priorSide.side,
       to: activeSide,
       line: observation.markets.hd && observation.markets.hd.line,
-      evidenceId: `${BETEXPLORER_BET365}:${game.eventId || `${game.date}|${game.awayTeam}|${game.homeTeam}`}:bet365-favorite-flip:${priorSide.side}:${activeSide}`,
+      evidenceId: `${provider}:${game.eventId || `${game.date}|${game.awayTeam}|${game.homeTeam}`}:bet365-favorite-flip:${priorSide.side}:${activeSide}`,
     }];
   }
   return observation;
+}
+
+// BetExplorer 第一道、OddsPortal 第二道：BetExplorer 沒抓到（沒有可用的 bet365 列）就用 OddsPortal；
+// BetExplorer 有、但 90 分鐘沒更新（網站當機，10/11 晚上實例）而 OddsPortal 較新，也換 OddsPortal。
+function pickFallbackObservation(betExplorer, oddsPortal, now) {
+  const fresh = (obs) => obs && now - Date.parse(obs.observedAt) <= FALLBACK_STALE_MS;
+  if (fresh(betExplorer)) return betExplorer;
+  if (fresh(oddsPortal)) return oddsPortal;
+  return betExplorer || oddsPortal || null;
 }
 
 // 2026-10-11 以前存的 'betexplorer' 紀錄其實是 Stake.com 的盤（誤標成 BET365）→ 清掉；官網紀錄保留。
@@ -287,23 +301,30 @@ async function collectBaseballBet365Odds(options = {}) {
   }
   const leagues = JSON.parse(JSON.stringify(previous.leagues || {}));
   const health = Object.fromEntries(['MLB', 'NPB', 'KBO', 'CPBL'].map((league) => [league, {
-    scheduled: 0, officialMatched: 0, fallbackMatched: 0, matched: 0,
+    scheduled: 0, officialMatched: 0, fallbackMatched: 0, oddsPortalMatched: 0, matched: 0,
   }]));
 
   for (const official of officialGames) {
     health[official.league].scheduled++;
     const direct = officialById[official.officialId] || null;
     const fallbackGame = findFallbackGame(options.betExplorer, official);
-    const fallback = fallbackGame ? betExplorerObservation(fallbackGame) : null;
+    const oddsPortalGame = findFallbackGame(options.oddsPortal, official);
+    const fallback = pickFallbackObservation(
+      fallbackGame ? betExplorerObservation(fallbackGame) : null,
+      oddsPortalGame ? betExplorerObservation(oddsPortalGame, ODDSPORTAL_BET365) : null,
+      now,
+    );
     const frozen = matches[official.officialId] && matches[official.officialId].provider === 'bet365-official'
       ? matches[official.officialId]
       : null;
     const resolved = resolveBaseballGame(direct, fallback, frozen);
     if (!Object.keys(resolved.markets).length) continue;
     if (direct && Object.keys(direct.markets || {}).length) health[official.league].officialMatched++;
-    if (fallback && Object.values(resolved.markets).some((market) => market.provider === BETEXPLORER_BET365)) {
+    const usedProviders = Object.values(resolved.markets).map((market) => market.provider);
+    if (fallback && usedProviders.some((p) => p === BETEXPLORER_BET365 || p === ODDSPORTAL_BET365)) {
       health[official.league].fallbackMatched++;
     }
+    if (usedProviders.includes(ODDSPORTAL_BET365)) health[official.league].oddsPortalMatched++;
     health[official.league].matched++;
     const provider = resolved.markets.hd && resolved.markets.hd.provider ||
       resolved.markets.ml && resolved.markets.ml.provider ||
@@ -370,10 +391,11 @@ async function main() {
       previous: loadJSON(OUT, { matches: {}, leagues: {} }),
       officialRows: loadJSON(PREGAME, []),
       betExplorer: loadJSON(BETEXPLORER, { games: {} }),
+      oddsPortal: loadJSON(ODDSPORTAL, { games: {} }),
     });
     saveAtomic(OUT, output);
     const summary = Object.entries(output.leagues).map(([league, row]) =>
-      `${league}:${row.status} 官網${row.officialMatched}/備援${row.fallbackMatched}`).join(' ');
+      `${league}:${row.status} 官網${row.officialMatched}/備援${row.fallbackMatched}(OddsPortal ${row.oddsPortalMatched})`).join(' ');
     console.log(`Bet365 棒球：${Object.keys(output.matches).length} 場；${summary}`);
   } finally {
     await sidecar.shutdown();
@@ -387,6 +409,8 @@ module.exports = {
   translateBaseballTeam,
   parseBet365BaseballPage,
   betExplorerObservation,
+  pickFallbackObservation,
+  ODDSPORTAL_BET365,
   purgeStakeMislabel,
   resolveBaseballGame,
   collectBaseballBet365Odds,

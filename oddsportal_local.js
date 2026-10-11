@@ -313,6 +313,20 @@ function runBetExplorer({ repoDir, python = resolvePython(), leagues = null, bet
   return [...BETEXPLORER_OUTPUTS];
 }
 
+// 棒球 BET365 第二道備援（2026-10-12 使用者規格：BetExplorer 第一道、OddsPortal 第二道）。
+// oddsportal_bet365.py 只開「BetExplorer 沒抓到 bet365」的未開賽場（一個真 Chrome 跑完，約 1~4 分）。
+const ODDSPORTAL_BET365_OUTPUTS = Object.freeze(['data/oddsportal_bet365.json']);
+
+function runOddsPortalBet365({ repoDir, python = resolvePython(), timeoutMs = 9 * 60_000 }) {
+  execFileSync(python, ['oddsportal_bet365.py'], {
+    cwd: repoDir,
+    stdio: ['ignore', 'inherit', 'inherit'],
+    timeout: timeoutMs,
+    windowsHide: true,
+  });
+  return [...ODDSPORTAL_BET365_OUTPUTS];
+}
+
 // ── 對調巡檢閘（2026-08-05 使用者拍板 SOP）：每天 10:00 掃「隔天」比賽的讓分方對調──
 // 只產證據卡警示（stakeSwap），永不勾選任何狀態；規則=擴盤前窗政權接替（鑑別力 11/12）。
 const SWAP_HHMM = '10:00';
@@ -361,6 +375,8 @@ function runOddsPortal({ repoDir, gate = null, python = resolvePython(), timeout
 }
 
 module.exports = {
+  runOddsPortalBet365,
+  ODDSPORTAL_BET365_OUTPUTS,
   INTERVAL_MS,
   BET365_PROBE_INTERVAL_MS,
   isBet365ProbeDue,

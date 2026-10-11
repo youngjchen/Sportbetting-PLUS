@@ -20,7 +20,7 @@ const fs = require('fs');
 const path = require('path');
 const os = require('os');
 const { expertRescueReason, selectExpertRescueSlot } = require('./failover_health.js');
-const { computeOddsPortalGates, dueOddsPortalGate, markOddsPortalGateAttempt, markOddsPortalGateSuccess, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, isBet365ProbeDue, missingStakeOpenLeagues, missingCloseEventIds, prefersDirectOddsPortal } = require('./oddsportal_local.js');
+const { computeOddsPortalGates, dueOddsPortalGate, markOddsPortalGateAttempt, markOddsPortalGateSuccess, pruneOddsPortalGateState, runOddsPortal, dueHarvestGate, runOddsPortalHarvest, dueSwapGate, runBetExplorer, runOddsPortalBet365, isBet365ProbeDue, missingStakeOpenLeagues, missingCloseEventIds, prefersDirectOddsPortal } = require('./oddsportal_local.js');
 const { mirrorPregameOutputs } = require('./local_failover_workspace.js');
 
 const REPO_DIR = __dirname;
@@ -236,6 +236,19 @@ function run() {
       log('30 分鐘賠率巡檢失敗：' + e.message.split('\n')[0]);
     }
   }
+
+  // 2d-2) 棒球 BET365 第二道備援（2026-10-12 使用者規格）：BetExplorer 第一道、OddsPortal 第二道。
+  // BetExplorer 沒抓到（該場沒有 bet365 列，或 90 分鐘沒更新＝網站當機）的未開賽場，改讀 OddsPortal 的 BET365 欄。
+  // 不看上面 BetExplorer 這輪成敗：BetExplorer 當機時正是這一道要上場的時候。每 30 分一輪。
+  try {
+    const OP_B365_GAP_MIN = 30;
+    if (Date.now() - Number(state.op_bet365_last || 0) >= OP_B365_GAP_MIN * 60e3) {
+      state.op_bet365_last = Date.now();
+      saveState(state);
+      staged.push(...runOddsPortalBet365({ repoDir: REPO_DIR }));
+      log('OddsPortal BET365 第二道備援完成');
+    }
+  } catch (e) { log('OddsPortal BET365 第二道備援失敗：' + String(e.message).split('\n')[0]); }
 
   // 2d) NBA 的 BET365 備援：BetExplorer 的 BET365 欄（2026-10-11 使用者規格）。
   // BET365 官網靜態頁只有正規賽、互動頁擋程式；GitHub 美國主機看不到 BetExplorer 的 BET365 欄 → 只能本機抓。

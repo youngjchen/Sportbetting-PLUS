@@ -207,3 +207,68 @@ test('collector imports BetExplorer Bet365 flip evidence even when only the acti
     evidenceId: 'betexplorer-bet365:27mgd74D:bet365-favorite-flip:home:away',
   }]);
 });
+
+// ── 第二道備援：OddsPortal 的 BET365 欄（2026-10-12 使用者規格：BetExplorer 沒抓到就抓 OddsPortal）──
+function kboRow() {
+  return [{
+    league: 'KBO', officialId: 'KBO_20261012_LOTTE@DOOSAN_1730', date: '2026-10-12', time: '17:30',
+    awayTeam: '樂天', homeTeam: '斗山熊', status: 'upcoming',
+  }];
+}
+function kboGame(bet365) {
+  return {
+    eventId: '8KICHMzo', league: 'kbo', date: '2026-10-12', startTime: '17:30',
+    startISO: '2026-10-12T17:30:00+08:00', awayTeam: '樂天', homeTeam: '斗山熊', bet365,
+  };
+}
+const OP_SWAP = {
+  side: 'away', line: 1.5, at: '2026-10-12T00:30:00+08:00', observedAt: '2026-10-12T00:30:00+08:00',
+  flipEver: true, ambiguous: false, odds: { home: 1.53, away: 2.4 },
+  struck: [{ line: -1.5, side: 'home', at: null }],
+};
+
+test('BetExplorer 沒有 bet365 列 → 用 OddsPortal 的 BET365 欄，含對調證據', async () => {
+  const output = await collectBaseballBet365Odds({
+    now: Date.parse('2026-10-11T17:00:00.000Z'),
+    officialRows: kboRow(),
+    previous: { matches: {}, leagues: {} },
+    betExplorer: { games: { be: kboGame(null) } },
+    oddsPortal: { games: { op: kboGame(OP_SWAP) } },
+    fetchPages: async () => [],
+  });
+  const game = output.matches['KBO_20261012_LOTTE@DOOSAN_1730'];
+  assert.equal(game.provider, 'oddsportal-bet365');
+  assert.equal(game.markets.hd.favorite, 'away');
+  assert.equal(game.markets.hd.line, 1.5);
+  assert.equal(game.favoriteFlipCount, 1);
+  assert.equal(game.events[0].provider, 'oddsportal-bet365');
+  assert.equal(game.events[0].from, 'home');
+  assert.equal(output.leagues.KBO.oddsPortalMatched, 1);
+});
+
+test('BetExplorer 有新鮮的 bet365 → 照用 BetExplorer，不用 OddsPortal', async () => {
+  const be = { ...OP_SWAP, observedAt: '2026-10-12T00:50:00+08:00', at: '2026-09-25T15:25:00+08:00' };
+  const output = await collectBaseballBet365Odds({
+    now: Date.parse('2026-10-11T17:00:00.000Z'),
+    officialRows: kboRow(),
+    previous: { matches: {}, leagues: {} },
+    betExplorer: { games: { be: kboGame(be) } },
+    oddsPortal: { games: { op: kboGame({ ...OP_SWAP, side: 'home', struck: [] }) } },
+    fetchPages: async () => [],
+  });
+  const game = output.matches['KBO_20261012_LOTTE@DOOSAN_1730'];
+  assert.equal(game.provider, 'betexplorer-bet365');
+  assert.equal(game.markets.hd.favorite, 'away');
+  assert.equal(output.leagues.KBO.oddsPortalMatched, 0);
+});
+
+test('BetExplorer 超過 90 分鐘沒更新、OddsPortal 較新 → 換 OddsPortal', () => {
+  const { pickFallbackObservation } = require('../baseball_bet365_odds.js');
+  const now = Date.parse('2026-10-11T17:00:00.000Z');
+  const stale = { provider: 'betexplorer-bet365', observedAt: '2026-10-11T14:00:00.000Z' };
+  const fresh = { provider: 'oddsportal-bet365', observedAt: '2026-10-11T16:45:00.000Z' };
+  assert.equal(pickFallbackObservation(stale, fresh, now), fresh);
+  assert.equal(pickFallbackObservation({ ...stale, observedAt: '2026-10-11T16:00:00.000Z' }, fresh, now).provider, 'betexplorer-bet365');
+  assert.equal(pickFallbackObservation(stale, null, now), stale);
+  assert.equal(pickFallbackObservation(null, { ...fresh, observedAt: '2026-10-11T10:00:00.000Z' }, now).provider, 'oddsportal-bet365');
+});

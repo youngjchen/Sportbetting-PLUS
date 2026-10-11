@@ -97,6 +97,7 @@
     if (provider === 'bet365-official') return 'BET365 官網';
     if (provider === 'bet365-manual') return 'BET365 官網（人工確認）';
     if (provider === 'betexplorer-bet365') return 'BetExplorer 備援（BET365 欄）';
+    if (provider === 'oddsportal-bet365') return 'OddsPortal 備援（BET365 欄）';
     if (provider === 'betexplorer') return 'BetExplorer 備援';
     return provider ? String(provider) : '來源不明';
   }

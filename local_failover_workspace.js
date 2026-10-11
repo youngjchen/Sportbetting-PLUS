@@ -38,6 +38,7 @@ const FAILOVER_OWNED_RE = [
   /^data\/oddsportal_history\//,
   /^data\/oddsportal_archive\//,
   /^data\/oddsportal_harvest_state\.json$/,
+  /^data\/oddsportal_bet365\.json$/,          // 棒球 BET365 第二道備援（2026-10-12）
   /^data\/pregame_data\.json$/,
   /^data\/lottery_series\.json$/,
   /^data\/expert_picks_(?:mlb|npb|cpbl|kbo)\.json$/,
