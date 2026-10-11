@@ -1,0 +1,30 @@
+# WORKFLOW_PAT 健康檢查（2026-10-11 金鑰失效事故後新增）
+# · 推送本檔或手動執行 → 用 WORKFLOW_PAT 讀 Actions＋排一次看門狗；失敗=金鑰無效或缺 Actions 寫入權限
+# · 看門狗本身只在資料停更時才動手，被排一次無副作用
+name: pat-check
+
+on:
+  push:
+    branches: [main]
+    paths: ['.github/workflows/pat-check.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    env:
+      GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
+      R: ${{ github.repository }}
+    steps:
+      - name: 用 WORKFLOW_PAT 讀 Actions（驗金鑰有效）
+        run: |
+          test -n "$GH_TOKEN" || { echo "::error::WORKFLOW_PAT 沒設定"; exit 1; }
+          gh api "repos/$R/actions/workflows" --jq '"OK 讀到 \(.total_count) 條工作流"'
+      - name: 用 WORKFLOW_PAT 排一次看門狗（驗能自我接棒）
+        run: |
+          gh workflow run pipeline-watchdog.yml -R "$R"
+          echo "OK 已排 pipeline-watchdog"
