@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-11T14:32:14.168Z",
+  "generatedAt": "2026-10-11T14:36:30.334Z",
   "officialScheduleCount": 7,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-11T14:32:14.168Z",
-      "lastAttemptAt": "2026-10-11T14:32:14.168Z",
+      "lastSuccessAt": "2026-10-11T14:36:30.334Z",
+      "lastAttemptAt": "2026-10-11T14:36:30.334Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -18,9 +18,9 @@
       }
     },
     "NPB": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-11T14:32:14.168Z",
-      "lastAttemptAt": "2026-10-11T14:32:14.168Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-11T14:36:30.334Z",
+      "lastAttemptAt": "2026-10-11T14:36:30.334Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -32,9 +32,9 @@
       }
     },
     "KBO": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-11T14:32:14.168Z",
-      "lastAttemptAt": "2026-10-11T14:32:14.168Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-11T14:36:30.334Z",
+      "lastAttemptAt": "2026-10-11T14:36:30.334Z",
       "error": null,
       "matched": 3,
       "health": {
@@ -47,8 +47,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-11T14:32:14.168Z",
-      "lastAttemptAt": "2026-10-11T14:32:14.168Z",
+      "lastSuccessAt": "2026-10-11T14:36:30.334Z",
+      "lastAttemptAt": "2026-10-11T14:36:30.334Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -30522,7 +30522,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-11T14:31:28.205Z",
+      "observedAt": "2026-10-11T14:36:29.007Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31135,23 +31135,30 @@
       "fixtureId": "3a152891-459c-47a7-b576-c67fc5462c74",
       "slug": "46984106-saitama-seibu-lions-hokkaido-nippon-ham-fighters",
       "sourceUrl": "https://stake.com/sports/baseball/japan/npb/46984106-saitama-seibu-lions-hokkaido-nippon-ham-fighters",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.43,
+        "home": 2.75
+      },
       "moneyline": {
         "away": 2.05,
         "home": 1.75
       },
-      "total": null,
+      "total": {
+        "line": 5.5,
+        "over": 1.86,
+        "under": 1.91
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-11T14:31:47.650Z",
+      "partial": false,
+      "observedAt": "2026-10-11T14:36:29.683Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31174,6 +31181,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-11T14:36:29.683Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.43,
+            "home": 2.75
+          },
+          "moneyline": {
+            "away": 2.05,
+            "home": 1.75
+          },
+          "total": {
+            "line": 5.5,
+            "over": 1.86,
+            "under": 1.91
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -31186,23 +31219,30 @@
       "fixtureId": "1e5fffe6-268e-48d8-8ef2-6b97f67f0080",
       "slug": "46955537-samsung-lions-kt-wiz",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46955537-samsung-lions-kt-wiz",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.9,
+        "home": 1.77
+      },
       "moneyline": {
         "away": 1.61,
         "home": 2.23
       },
-      "total": null,
+      "total": {
+        "line": 10.5,
+        "over": 1.72,
+        "under": 1.97
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-11T14:31:57.402Z",
+      "partial": false,
+      "observedAt": "2026-10-11T14:36:29.944Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31225,6 +31265,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-11T14:36:29.944Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.9,
+            "home": 1.77
+          },
+          "moneyline": {
+            "away": 1.61,
+            "home": 2.23
+          },
+          "total": {
+            "line": 10.5,
+            "over": 1.72,
+            "under": 1.97
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -31237,23 +31303,30 @@
       "fixtureId": "1ef9a99a-5178-45c9-88f8-b65bf3242778",
       "slug": "46955540-kia-tigers-lg-twins",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46955540-kia-tigers-lg-twins",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 2.36,
+        "home": 1.5
+      },
       "moneyline": {
         "away": 1.89,
         "home": 1.85
       },
-      "total": null,
+      "total": {
+        "line": 9.5,
+        "over": 1.91,
+        "under": 1.77
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-11T14:32:05.452Z",
+      "partial": false,
+      "observedAt": "2026-10-11T14:36:30.060Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31276,6 +31349,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-11T14:36:30.060Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.36,
+            "home": 1.5
+          },
+          "moneyline": {
+            "away": 1.89,
+            "home": 1.85
+          },
+          "total": {
+            "line": 9.5,
+            "over": 1.91,
+            "under": 1.77
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -31288,23 +31387,30 @@
       "fixtureId": "70189c61-5070-49a5-b671-0d56d0e3a8be",
       "slug": "46955536-doosan-bears-lotte-giants",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46955536-doosan-bears-lotte-giants",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 2.34,
+        "home": 1.51
+      },
       "moneyline": {
         "away": 1.81,
         "home": 1.93
       },
-      "total": null,
+      "total": {
+        "line": 7.5,
+        "over": 1.83,
+        "under": 1.84
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-11T14:32:13.997Z",
+      "partial": false,
+      "observedAt": "2026-10-11T14:36:30.175Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31327,6 +31433,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-11T14:36:30.175Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.34,
+            "home": 1.51
+          },
+          "moneyline": {
+            "away": 1.81,
+            "home": 1.93
+          },
+          "total": {
+            "line": 7.5,
+            "over": 1.83,
+            "under": 1.84
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
