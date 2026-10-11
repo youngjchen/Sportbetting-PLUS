@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-11T21:23:33.067Z",
+  "generatedAt": "2026-10-11T21:28:25.128Z",
   "officialScheduleCount": 9,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-11T21:23:33.067Z",
-      "lastAttemptAt": "2026-10-11T21:23:33.067Z",
+      "lastSuccessAt": "2026-10-11T21:28:25.128Z",
+      "lastAttemptAt": "2026-10-11T21:28:25.128Z",
       "error": null,
       "matched": 2,
       "health": {
@@ -19,8 +19,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-11T21:23:33.067Z",
-      "lastAttemptAt": "2026-10-11T21:23:33.067Z",
+      "lastSuccessAt": "2026-10-11T21:28:25.128Z",
+      "lastAttemptAt": "2026-10-11T21:28:25.128Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -33,8 +33,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-11T21:23:33.067Z",
-      "lastAttemptAt": "2026-10-11T21:23:33.067Z",
+      "lastSuccessAt": "2026-10-11T21:28:25.128Z",
+      "lastAttemptAt": "2026-10-11T21:28:25.128Z",
       "error": null,
       "matched": 3,
       "health": {
@@ -46,9 +46,9 @@
       }
     },
     "CPBL": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-11T21:23:33.067Z",
-      "lastAttemptAt": "2026-10-11T21:23:33.067Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-11T21:28:25.128Z",
+      "lastAttemptAt": "2026-10-11T21:28:25.128Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -30093,7 +30093,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-11T21:23:22.602Z",
+      "observedAt": "2026-10-11T21:28:21.939Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -30859,7 +30859,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-11T21:23:24.122Z",
+      "observedAt": "2026-10-11T21:28:22.899Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31099,7 +31099,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-11T21:23:24.432Z",
+      "observedAt": "2026-10-11T21:28:23.669Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31287,7 +31287,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-11T21:23:24.777Z",
+      "observedAt": "2026-10-11T21:28:24.253Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31527,7 +31527,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-11T21:23:24.922Z",
+      "observedAt": "2026-10-11T21:28:24.811Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31741,7 +31741,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-11T21:23:23.801Z",
+      "observedAt": "2026-10-11T21:28:22.566Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31835,23 +31835,30 @@
       "fixtureId": "6cfd9f23-03f0-4558-bb4c-5c0476139bf9",
       "slug": "46986048-ctbc-brothers-uni-lions",
       "sourceUrl": "https://stake.com/sports/baseball/chinese-taipei/cpbl/46986048-ctbc-brothers-uni-lions",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 2.6,
+        "home": 1.44
+      },
       "moneyline": {
         "away": 1.94,
         "home": 1.77
       },
-      "total": null,
+      "total": {
+        "line": 7.5,
+        "over": 2.06,
+        "under": 1.68
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-11T21:23:33.067Z",
+      "partial": false,
+      "observedAt": "2026-10-11T21:28:25.128Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -31874,6 +31881,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-11T21:28:25.128Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.6,
+            "home": 1.44
+          },
+          "moneyline": {
+            "away": 1.94,
+            "home": 1.77
+          },
+          "total": {
+            "line": 7.5,
+            "over": 2.06,
+            "under": 1.68
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
