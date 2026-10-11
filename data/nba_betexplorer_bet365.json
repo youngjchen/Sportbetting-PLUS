@@ -1,18 +1,51 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-11T09:01:25.381Z",
+ "updated": "2026-10-11T09:37:30.606Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 0,
   "targeted": 42,
-  "fetched": 4,
+  "fetched": 0,
   "cached": 36,
   "unmatched": [
    "WNBA_20261011_美夢_自由_1200 美夢@自由",
    "WNBA_20261011_金州_王牌_1200 金州@王牌"
   ],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
+    "error": "fetch failed"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
+    "error": "fetch failed"
+   },
+   {
+    "officialId": "NBA_20261011_DAL@HOU",
+    "error": "fetch failed"
+   },
+   {
+    "officialId": "NBA_20261012_ORL@CLE",
+    "error": "fetch failed"
+   },
+   {
+    "officialId": "NBA_20261012_MIL@CHA",
+    "error": "fetch failed"
+   },
+   {
+    "officialId": "NBA_20261012_CHI@DEN",
+    "error": "fetch failed"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/wnba/fixtures/",
+    "error": "fetch failed"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/wnba/results/",
+    "error": "fetch failed"
+   }
+  ]
  },
  "games": {
   "NBA_20261004_MIA@TOR": {
