@@ -1,27 +1,18 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-11T01:12:32.329Z",
+ "updated": "2026-10-11T02:03:19.059Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 2,
+  "lists": 4,
   "targeted": 42,
-  "fetched": 8,
-  "cached": 32,
+  "fetched": 5,
+  "cached": 35,
   "unmatched": [
    "WNBA_20261011_美夢_自由_1200 美夢@自由",
    "WNBA_20261011_金州_王牌_1200 金州@王牌"
   ],
-  "failures": [
-   {
-    "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
-    "error": "The operation was aborted due to timeout"
-   },
-   {
-    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
-    "error": "The operation was aborted due to timeout"
-   }
-  ]
+  "failures": []
  },
  "games": {
   "NBA_20261004_MIA@TOR": {
@@ -2472,7 +2463,7 @@
    "scheduledStart": "2026-10-11T02:30:00.000Z",
    "away": "馬刺",
    "home": "太陽",
-   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "fetchedAt": "2026-10-11T02:03:19.059Z",
    "complete": false,
    "ml": {
     "home": 3.3,
@@ -2496,8 +2487,15 @@
     },
     {
      "line": 7.5,
-     "active": true,
+     "active": false,
      "created": "10,10,2026,13,53",
+     "home": 1.82,
+     "away": 1.91
+    },
+    {
+     "line": 8.5,
+     "active": true,
+     "created": "11,10,2026,02,15",
      "home": 1.82,
      "away": 1.91
     }
@@ -2528,7 +2526,7 @@
    "scheduledStart": "2026-10-11T10:00:00.000Z",
    "away": "獨行俠",
    "home": "火箭",
-   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "fetchedAt": "2026-10-11T02:03:19.059Z",
    "complete": false,
    "ml": {
     "home": 1.7,
@@ -2563,7 +2561,7 @@
    "scheduledStart": "2026-10-11T22:30:00.000Z",
    "away": "魔術",
    "home": "騎士",
-   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "fetchedAt": "2026-10-11T02:03:19.059Z",
    "complete": false,
    "ml": null,
    "hd": [],
@@ -2578,7 +2576,7 @@
    "scheduledStart": "2026-10-11T23:00:00.000Z",
    "away": "公鹿",
    "home": "黃蜂",
-   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "fetchedAt": "2026-10-11T02:03:19.059Z",
    "complete": false,
    "ml": null,
    "hd": [],
@@ -2593,7 +2591,7 @@
    "scheduledStart": "2026-10-12T01:00:00.000Z",
    "away": "公牛",
    "home": "金塊",
-   "fetchedAt": "2026-10-11T01:12:32.329Z",
+   "fetchedAt": "2026-10-11T02:03:19.059Z",
    "complete": false,
    "ml": null,
    "hd": [],
