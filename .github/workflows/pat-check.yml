@@ -1,9 +1,14 @@
 # WORKFLOW_PAT 健康檢查（2026-10-11 金鑰失效事故後新增）
-# · 推送本檔或手動執行 → 用 WORKFLOW_PAT 讀 Actions＋排一次看門狗；失敗=金鑰無效或缺 Actions 寫入權限
+# · 每 12 小時自動跑（UTC 01:17、13:17＝台灣 09:17、21:17；GitHub 排程常遲到數十分）＋推送本檔／手動執行
+# · 用 WORKFLOW_PAT 讀 Actions＋排一次看門狗；失敗=金鑰無效或缺 Actions 寫入權限 → 本 job 紅燈
+#   （排程工作流紅燈時 GitHub 通知「最後改 cron 的人」：Email＋GitHub 手機 App 推播，App 需開 Actions 通知）
+# · 紅燈時另開一張 issue 指派並 @ 擁有者（手機「指派／提及」推播；已有未關的就留言再提醒），恢復綠燈自動關單
 # · 看門狗本身只在資料停更時才動手，被排一次無副作用
 name: pat-check
 
 on:
+  schedule:
+    - cron: '17 1,13 * * *'
   push:
     branches: [main]
     paths: ['.github/workflows/pat-check.yml']
@@ -11,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   check:
@@ -19,6 +25,8 @@ jobs:
     env:
       GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
       R: ${{ github.repository }}
+      ALERT_TITLE: 'WORKFLOW_PAT 失效警報：迴圈工作流無法自我接棒'
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
     steps:
       - name: 用 WORKFLOW_PAT 讀 Actions（驗金鑰有效）
         run: |
@@ -28,3 +36,35 @@ jobs:
         run: |
           gh workflow run pipeline-watchdog.yml -R "$R"
           echo "OK 已排 pipeline-watchdog"
+      - name: 紅燈 → 開 issue 指派給擁有者（GitHub 手機推播）
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          BODY="@$OWNER WORKFLOW_PAT 檢查失敗（台灣時間 $(TZ=Asia/Taipei date '+%F %H:%M')）：金鑰可能過期、被刪或權限不足，迴圈工作流跑完後無法自我接棒，只剩 cron 備援（常遲到或整批丟）。
+
+          修法：
+          1. https://github.com/settings/personal-access-tokens 重新產生細粒度權杖（只選本 repo，Actions: Read and write）
+          2. https://github.com/$R/settings/secrets/actions 更新 WORKFLOW_PAT
+          3. 到 Actions 手動跑一次 pat-check，轉綠燈後本 issue 會自動關閉
+
+          失敗紀錄：$RUN_URL"
+          N=$(gh issue list -R "$R" --state open --limit 100 --json number,title \
+                --jq 'map(select(.title == $ENV.ALERT_TITLE))[0].number // empty' 2>/dev/null || true)
+          if [ -n "$N" ]; then
+            gh issue comment "$N" -R "$R" --body "$BODY" && echo "已在 #$N 留言再提醒" \
+              || echo "::warning::issue 留言提醒失敗"
+          else
+            gh issue create -R "$R" --title "$ALERT_TITLE" --assignee "$OWNER" --body "$BODY" \
+              || echo "::warning::開 issue 失敗（Issues 功能可能關閉）"
+          fi
+      - name: 綠燈 → 自動關閉舊警報 issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          for N in $(gh issue list -R "$R" --state open --limit 100 --json number,title \
+                       --jq 'map(select(.title == $ENV.ALERT_TITLE))[].number' 2>/dev/null || true); do
+            gh issue close "$N" -R "$R" --comment "WORKFLOW_PAT 檢查恢復正常：$RUN_URL" || true
+          done

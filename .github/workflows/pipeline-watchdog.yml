@@ -78,7 +78,7 @@ jobs:
             if [ -n "$PAT" ]; then
               GH_TOKEN="$PAT" gh workflow run "$wf" -R "$R" \
                 && echo "   > 已用 WORKFLOW_PAT 立即重啟 $wf" \
-                || echo "   WARN PAT dispatch 失敗，等下一個 cron 重啟"
+                || { echo "   WARN PAT dispatch 失敗，等下一個 cron 重啟"; echo "::error::WORKFLOW_PAT 接棒失敗（金鑰可能失效）"; }
             else
               echo "   > 未設 WORKFLOW_PAT → 等下一個 cron 在乾淨群組重啟（≤~30 分）"
             fi

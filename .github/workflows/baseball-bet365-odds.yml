@@ -83,6 +83,8 @@ jobs:
                   if [ -n "$PAT" ] && GH_TOKEN="$PAT" gh workflow run baseball-bet365-odds.yml -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
                     echo "INFO 已用 WORKFLOW_PAT 排下一棒"
                     sleep 15
+                  elif [ -n "$PAT" ]; then
+                    echo "::error::WORKFLOW_PAT 接棒失敗（金鑰可能失效）"
                   fi
                   NEXT=$(gh run list -R "$GITHUB_REPOSITORY" --workflow baseball-bet365-odds.yml --limit 20 --json status \
                     --jq '[.[] | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested")] | length' 2>/dev/null || echo 0)
@@ -109,4 +111,4 @@ jobs:
           GH_TOKEN: ${{ secrets.WORKFLOW_PAT }}
         run: |
           if [ -z "$GH_TOKEN" ]; then echo "INFO 無 PAT，靠 cron 重點火"; exit 0; fi
-          gh workflow run baseball-bet365-odds.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || echo "WARN 接棒失敗，靠 cron"
+          gh workflow run baseball-bet365-odds.yml -R "${{ github.repository }}" && echo "OK 已排下一棒" || { echo "WARN 接棒失敗，靠 cron"; echo "::error::WORKFLOW_PAT 接棒失敗（金鑰可能失效）"; }

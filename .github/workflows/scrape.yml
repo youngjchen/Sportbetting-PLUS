@@ -102,4 +102,4 @@ jobs:
           fi
           gh workflow run scrape.yml -R "${{ github.repository }}" \
             && echo "✅ 已排入下一輪（不受 GitHub schedule 丟包影響）" \
-            || echo "⚠️ 自我重觸發失敗（PAT 權限不足？）— 仍有 cron 後援，不影響本輪"
+            || { echo "⚠️ 自我重觸發失敗（PAT 權限不足？）— 仍有 cron 後援，不影響本輪"; echo "::error::WORKFLOW_PAT 接棒失敗（金鑰可能失效）"; }
