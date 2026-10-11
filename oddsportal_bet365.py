@@ -438,6 +438,12 @@ def main() -> int:
             failed += 1
             errors.append(f"{game['awayTeam']}@{game['homeTeam']}: {visit['closed']}/{visit.get('heads')} 組讓分沒展開")
             continue
+        if not visit.get("rows"):
+            # 一家莊家列都讀不到＝讓分盤還沒開，或 OddsPortal 又改版（8 月版的讀法 10 月已失效）。
+            # 不能報成「沒有 bet365」，否則改版後每場都靜默變空。
+            failed += 1
+            errors.append(f"{game['awayTeam']}@{game['homeTeam']}: 讀不到任何莊家讓分列（{visit.get('heads', 0)} 組表頭；未開盤或版面改了）")
+            continue
         summary = summarize_bet365(rows, observed_at)
         old = (games.get(key) or {}).get("bet365")
         entry = {k: game[k] for k in ("eventId", "league", "date", "startTime", "startISO", "awayTeam", "homeTeam", "url")}
