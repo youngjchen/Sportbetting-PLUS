@@ -7468,9 +7468,13 @@ $("#settleSaveOdds") && ($("#settleSaveOdds").onclick = ()=>{
   it.closeOddsHome = isNaN(coh) ? null : coh;
   it.preGameSwap = !!($("#settlePreSwap") && $("#settlePreSwap").checked);  // flipVanished 已由 applyFlipState 設定
   readSettleHdMove(it);
+  // 暫存只寫「視窗裡真的改過」的盤口／基準。沒動就不寫：否則空卡會被寫進預設 1.5／8.5，
+  // Stake 誤當人工值而永久停止自動同步（2026-10-12 道奇@釀酒人實例）。
+  // 改成別的數字＝人工，停 Stake 自動；清空＝交還 Stake 自動。
   const _hv = $("#settleHdVal")?.value, _tv = $("#settleTotVal")?.value;
-  if(_hv!==undefined) it.hdVal = (_hv==="" ? "" : _hv);
-  if(_tv!==undefined) it.totVal = (_tv==="" ? "" : _tv);
+  const _edited = (v, cur, dflt)=>{ const shown = (cur!=="" && cur!=null) ? cur : dflt; return String(v).trim()==="" || parseFloat(v)!==parseFloat(shown); };
+  if(_hv!==undefined && _edited(_hv, it.hdVal, "1.5")){ const blank = String(_hv).trim()===""; it.hdVal = blank ? "" : _hv; it.stakeAutoHandicap = blank; }
+  if(_tv!==undefined && _edited(_tv, it.totVal, "8.5")){ const blank = String(_tv).trim()===""; it.totVal = blank ? "" : _tv; it.stakeAutoTotal = blank; }
   const _mtl0 = $("#settleMyTotLine")?.value;   // B：暫存也記我的大小成交線
   if(_mtl0!==undefined) it.myTotLine = (_mtl0==="" || isNaN(parseFloat(_mtl0))) ? null : parseFloat(_mtl0);
   const _mha0 = $("#settleMyHdAway")?.value, _mhh0 = $("#settleMyHdHome")?.value;   // 讓分成交線（對調場）
