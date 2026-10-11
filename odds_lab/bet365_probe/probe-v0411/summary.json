@@ -1,0 +1,727 @@
+{
+ "label": "v0411",
+ "at": "2026-10-11T04:32:02Z",
+ "versions": {
+  "scrapling": "0.4.11",
+  "patchright": "1.61.2",
+  "playwright": "1.61.0",
+  "browserforge": "1.2.4",
+  "apify_fingerprint_datapoints": "0.13.0",
+  "curl_cffi": "0.16.3"
+ },
+ "geo": {
+  "ip": "48.211.212.211",
+  "city": "Boydton",
+  "region": "Virginia",
+  "country": "US",
+  "org": "AS8075 Microsoft Corporation"
+ },
+ "results": [
+  {
+   "mode": "stealth",
+   "target": "sportsbook",
+   "url": "https://www.bet365.com/#/AS/B16/",
+   "status": 403,
+   "html_len": 28821,
+   "title": "Just a moment...",
+   "verdict": "cloudflare-challenge",
+   "secs": 12.7,
+   "final_url": "https://www.va.bet365.com/?_h=zzlZDy35FXe3H-NZfPJLUA%3D%3D&btsffd=1#/AS/B16/",
+   "visible_text": "www.va.bet365.com\nPerforming security verification\n\nThis website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot.\n\nRay ID: a48b23890b43eb77\nPerformance and Security by Cloudflare\nPrivacy",
+   "subrequests": [
+    [
+     403,
+     "https://www.bet365.com/websiteroutingdatacontentapi/routingdata?v=2062526294"
+    ],
+    [
+     200,
+     "https://www.bet365.com/manifestapi/getmanifest?s=www-sports&v=16630&cl=US&a=0"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,rll/25/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/sportsbook-static/favicons/icon.svg"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,brl/26/SL%7Clog/14/%7Cuic/8/%7Cdtl/12/%7Cdal/21/%7Cspl/5076/%7Cgen5base/5659/%7Cwcl/5897/S%7Cgll/5178/%7CNavLib/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/manifestapi/getmanifest?s=www-sports&v=16630&cl=US&a=0"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,rll/25/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,brl/26/SL%7Clog/14/%7Cuic/8/%7Cdtl/12/%7Cdal/21/%7Cspl/5076/%7Cgen5base/5659/%7Cwcl/5897/S%7Cgll/5178/%7CNavLib/"
+    ],
+    [
+     403,
+     "https://www.bet365.com/websiteroutingdatacontentapi/routingdata?v=2062526294"
+    ],
+    [
+     200,
+     "https://www.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA=="
+    ],
+    [
+     200,
+     "https://www.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA==&pd=%23%2FAS%2FB16%2F"
+    ],
+    [
+     200,
+     "https://clienterrors.365lpodds.com/api/1/clienterrors/batch"
+    ],
+    [
+     200,
+     "https://www.bet365.com/crossdomainapi/dr/drs?rl=https%3A%2F%2Fwww.va.bet365.com%3F_h%3DzzlZDy35FXe3H-NZfPJLUA%253D%253D%26btsffd%3D1%23%2FAS%2FB16%2F&rlh=f49ce7"
+    ],
+    [
+     302,
+     "https://www.va.bet365.com/crossdomainapi/dr/drres?rl=https%3A%2F%2Fwww.va.bet365.com%3F_h%3DzzlZDy35FXe3H-NZfPJLUA%253D%253D%26btsffd%3D1%23%2FAS%2FB16%2F&rlh=f"
+    ],
+    [
+     403,
+     "https://www.va.bet365.com/?_h=zzlZDy35FXe3H-NZfPJLUA%3D%3D&btsffd=1"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1?ray=a48b23890b43eb77"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/cdn-cgi/challenge-platform/h/g/fo/469094968:1791691504:j954DKMyasQnHU4fZZTiYeuo92dWnPTglFerk1Fz8Tg/a48b23890b43eb77/Gu7eQz8ZV.Y0YPzulX"
+    ]
+   ],
+   "fingerprint": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "webdriver": false,
+    "platform": "Linux x86_64",
+    "languages": [
+     "en-US"
+    ],
+    "hw": 4,
+    "mem": 16,
+    "tz": "UTC",
+    "screen": [
+     1920,
+     1080
+    ],
+    "webgl": [
+     "Google Inc. (Google)",
+     "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    ]
+   }
+  },
+  {
+   "mode": "stealth",
+   "target": "mlbhub",
+   "url": "https://www.bet365.com/hub/en-us/baseball/mlb",
+   "status": 200,
+   "html_len": 171658,
+   "title": "MLB Playoff Betting Odds 2026: Wild Card, Run Lines, &amp; World Series | bet365",
+   "verdict": "odds-content",
+   "secs": 14.6,
+   "final_url": "https://www.bet365.com/hub/en-us/baseball/mlb",
+   "visible_text": "Gambling Problem? Call 1-800-MY-RESET\nJoin\nLog In\nBASEBALL\n/\nMLB\nMLB ODDS\n\nBETTING LINES FOR THE WILD CARD ROUND, PLAYOFFS & WS\n\nBet Now\nDownload the App\nMLB Upcoming Games\nMon Oct 12 12:00 AM\n\nLA Dodgers\n\n@\n\nMIL Brewers\n\n1\n-115\n2\n-115\nTue Oct 13 12:00 AM\n\nCLE Guardians\n\n@\n\nTB Rays\n\n1\n+135\n2\n-176\nBet Now\nMLB Futures\nFutures for the key markets throughout the 2026 MLB playoffs.\nBet Now\nMLB World Series Odds\nTo Win Outright\nLA Dodgers\n+120\nMIL Brewers\n+290\nTB Rays\n+300\nCLE Guardians\n+750\nBet Now\nClaim your New Customer Promo\n\nJoin\n\nDeposit required. Paid in Bonus Bets. Bonus Bets wager excluded ",
+   "subrequests": [
+    [
+     200,
+     "https://www.bet365.com/hub/assets/e13f45bbeb4b9056cfa3d6bd2453f70f"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/en-us/baseball/mlb"
+    ],
+    [
+     200,
+     "https://members.bet365.com/staticcontentapi/static/appsflyer/v1/onelinklite.html"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/read"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/servertime"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/geolocation/loadlocation"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=19&frm=0&apvc=1&ae=g&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fmlb&scrsrc=ww"
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a72v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693137366&gcs=G100&gcd=13"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/restricted"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693137451&cv=11&tid=G-45M1DQFW2B&fst=1791693137451&fmt=8&en=view_item_list&gtm=45je6a72v"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693137451&cv=11&tid=G-45M1DQFW2B&fst=1791693137451&fmt=8&en=session_start&gtm=45je6a72v8"
+    ],
+    [
+     302,
+     "https://ade.googlesyndication.com/ddm/activity/src=14019463;type=remark;cat=webpi0;rcb=0;ord=773162424685;npa=1;uaa=x86;uab=64;uafvl=Chromium%3B149.0.7827.55%7C"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=18&frm=0&apvc=0&tid=AW-865431267&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fm"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/pagead/conversion/865431267/?random=1791693137530&cv=11&fst=1791693137530&fmt=8&bg=ffffff&guid=ON&async=1&en=page_view&gtm"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=0&frm=0&apvc=0&tid=DC-14019463&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fmlb"
+    ],
+    [
+     200,
+     "https://ade.googlesyndication.com/ddm/activity/src=14019463;dc_pre=CML1jIiRsZcDFTZhKQYd7e4IrA;type=remark;cat=webpi0;rcb=0;ord=773162424685;npa=1;uaa=x86;uab=64"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/en-us-va/baseball/mlb"
+    ],
+    [
+     200,
+     "https://members.bet365.com/staticcontentapi/static/appsflyer/v1/onelinklite.html"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/image/4dJ1iPWzLB4jbE0ARzLCgQ/4b0b64a648b8334a0c97bd94af2d1c65/image/png/24/24"
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a72v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693137366&gcs=G100&gcd=13"
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a72v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693137366&gcs=G100&gcd=13"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693137974&cv=11&tid=G-45M1DQFW2B&fst=1791693137974&fmt=8&en=view_item_list&gtm=45je6a72v"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/read"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/servertime"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/geolocation/loadlocation"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/restricted"
+    ]
+   ],
+   "fingerprint": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "webdriver": false,
+    "platform": "Linux x86_64",
+    "languages": [
+     "en-US"
+    ],
+    "hw": 4,
+    "mem": 16,
+    "tz": "UTC",
+    "screen": [
+     1920,
+     1080
+    ],
+    "webgl": [
+     "Google Inc. (Google)",
+     "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    ]
+   }
+  },
+  {
+   "mode": "solve",
+   "target": "sportsbook",
+   "url": "https://www.bet365.com/#/AS/B16/",
+   "status": 200,
+   "html_len": 1551455,
+   "title": "bet365 - Licensed Sports Betting &amp; Sportsbook",
+   "verdict": "geo-or-restricted",
+   "secs": 26.7,
+   "final_url": "https://www.va.bet365.com/?_h=zzlZDy35FXe3H-NZfPJLUA%3D%3D&btsffd=1#/AS/B16/",
+   "visible_text": "",
+   "subrequests": [
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,rll/25/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/sportsbook-static/favicons/icon.svg"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,brl/26/SL%7Clog/14/%7Cuic/8/%7Cdtl/12/%7Cdal/21/%7Cspl/5076/%7Cgen5base/5659/%7Cwcl/5897/S%7Cgll/5178/%7CNavLib/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA=="
+    ],
+    [
+     200,
+     "https://www.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA==&pd=%23%2FAS%2FB16%2F"
+    ],
+    [
+     200,
+     "https://www.bet365.com/crossdomainapi/dr/drs?rl=https%3A%2F%2Fwww.va.bet365.com%3F_h%3DzzlZDy35FXe3H-NZfPJLUA%253D%253D%26btsffd%3D1%23%2FAS%2FB16%2F&rlh=b225b2"
+    ],
+    [
+     302,
+     "https://www.va.bet365.com/crossdomainapi/dr/drres?rl=https%3A%2F%2Fwww.va.bet365.com%3F_h%3DzzlZDy35FXe3H-NZfPJLUA%253D%253D%26btsffd%3D1%23%2FAS%2FB16%2F&rlh=b"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/?_h=zzlZDy35FXe3H-NZfPJLUA%3D%3D&btsffd=1"
+    ],
+    [
+     403,
+     "https://www.va.bet365.com/websiteroutingdatacontentapi/routingdata?v=2062526294"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/manifestapi/getmanifest?s=www-US-sportsus&v=3796&cl=US&sl=USVA&a=0"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/sportsbook-static/favicons/icon.svg"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/Api/1/Blob?32,www-US-sportsus,rll/14/"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA=="
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA==&pd=%23%2FAS%2FB16%2F"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/Api/1/Blob?32,www-US-sportsus,brl/28/SL%7Clog/14/%7Cuic/9/%7Cdtl/12/%7Cdal/22/%7Cspl/13/%7Cgen5base/149/%7Cwcl/273/S%7Cgll/64/%7CNavLi"
+    ]
+   ],
+   "fingerprint": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "webdriver": false,
+    "platform": "Linux x86_64",
+    "languages": [
+     "en-US"
+    ],
+    "hw": 4,
+    "mem": 16,
+    "tz": "UTC",
+    "screen": [
+     1920,
+     1080
+    ],
+    "webgl": [
+     "Google Inc. (Google)",
+     "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    ]
+   }
+  },
+  {
+   "mode": "solve",
+   "target": "mlbhub",
+   "url": "https://www.bet365.com/hub/en-us/baseball/mlb",
+   "status": 200,
+   "html_len": 171658,
+   "title": "MLB Playoff Betting Odds 2026: Wild Card, Run Lines, &amp; World Series | bet365",
+   "verdict": "odds-content",
+   "secs": 15.1,
+   "final_url": "https://www.bet365.com/hub/en-us/baseball/mlb",
+   "visible_text": "Gambling Problem? Call 1-800-MY-RESET\nJoin\nLog In\nBASEBALL\n/\nMLB\nMLB ODDS\n\nBETTING LINES FOR THE WILD CARD ROUND, PLAYOFFS & WS\n\nBet Now\nDownload the App\nMLB Upcoming Games\nMon Oct 12 12:00 AM\n\nLA Dodgers\n\n@\n\nMIL Brewers\n\n1\n-115\n2\n-115\nTue Oct 13 12:00 AM\n\nCLE Guardians\n\n@\n\nTB Rays\n\n1\n+135\n2\n-176\nBet Now\nMLB Futures\nFutures for the key markets throughout the 2026 MLB playoffs.\nBet Now\nMLB World Series Odds\nTo Win Outright\nLA Dodgers\n+120\nMIL Brewers\n+290\nTB Rays\n+300\nCLE Guardians\n+750\nBet Now\nClaim your New Customer Promo\n\nJoin\n\nDeposit required. Paid in Bonus Bets. Bonus Bets wager excluded ",
+   "subrequests": [
+    [
+     200,
+     "https://www.bet365.com/hub/en-us/baseball/mlb"
+    ],
+    [
+     200,
+     "https://members.bet365.com/staticcontentapi/static/appsflyer/v1/onelinklite.html"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/assets/e13f45bbeb4b9056cfa3d6bd2453f70f"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/servertime"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/read"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/geolocation/loadlocation"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=11&frm=0&apvc=1&ae=g&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fmlb&scrsrc=ww"
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a72v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693179785&gcs=G100&gcd=13"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693179856&cv=11&tid=G-45M1DQFW2B&fst=1791693179856&fmt=8&en=view_item_list&gtm=45je6a72v"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693179856&cv=11&tid=G-45M1DQFW2B&fst=1791693179856&fmt=8&en=session_start&gtm=45je6a72v8"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/restricted"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/en-us-va/baseball/mlb"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/pagead/conversion/865431267/?random=1791693179923&cv=11&fst=1791693179923&fmt=8&bg=ffffff&guid=ON&async=1&en=page_view&gtm"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=17&frm=0&apvc=0&tid=AW-865431267&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fm"
+    ],
+    [
+     200,
+     "https://members.bet365.com/staticcontentapi/static/appsflyer/v1/onelinklite.html"
+    ],
+    [
+     302,
+     "https://ade.googlesyndication.com/ddm/activity/src=14019463;type=remark;cat=webpi0;rcb=17;ord=5886703010535;npa=1;uaa=x86;uab=64;uafvl=Chromium%3B149.0.7827.55%"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=17&frm=0&apvc=0&tid=DC-14019463&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fml"
+    ],
+    [
+     200,
+     "https://ade.googlesyndication.com/ddm/activity/src=14019463;dc_pre=CKOTqJyRsZcDFRZkKQYdHnAobQ;type=remark;cat=webpi0;rcb=17;ord=5886703010535;npa=1;uaa=x86;uab="
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a72v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693179785&gcs=G100&gcd=13"
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a72v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693179785&gcs=G100&gcd=13"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693180044&cv=11&tid=G-45M1DQFW2B&fst=1791693180044&fmt=8&en=view_item_list&gtm=45je6a72v"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/servertime"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/read"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/geolocation/loadlocation"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/restricted"
+    ]
+   ],
+   "fingerprint": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "webdriver": false,
+    "platform": "Linux x86_64",
+    "languages": [
+     "en-US"
+    ],
+    "hw": 4,
+    "mem": 16,
+    "tz": "UTC",
+    "screen": [
+     1920,
+     1080
+    ],
+    "webgl": [
+     "Google Inc. (Google)",
+     "ANGLE (Google, Vulkan 1.3.0 (SwiftShader Device (Subzero) (0x0000C0DE)), SwiftShader driver)"
+    ]
+   }
+  },
+  {
+   "mode": "headful",
+   "target": "sportsbook",
+   "url": "https://www.bet365.com/#/AS/B16/",
+   "status": 403,
+   "html_len": 28821,
+   "title": "Just a moment...",
+   "verdict": "cloudflare-challenge",
+   "secs": 13.5,
+   "final_url": "https://www.va.bet365.com/?_h=zzlZDy35FXe3H-NZfPJLUA%3D%3D&btsffd=1#/AS/B16/",
+   "visible_text": "www.va.bet365.com\nPerforming security verification\n\nThis website uses a security service to protect against malicious bots. This page is displayed while the website verifies you are not a bot.\n\nRay ID: a48b2559dcece44c\nPerformance and Security by Cloudflare\nPrivacy",
+   "subrequests": [
+    [
+     403,
+     "https://www.bet365.com/websiteroutingdatacontentapi/routingdata?v=2062526294"
+    ],
+    [
+     200,
+     "https://www.bet365.com/manifestapi/getmanifest?s=www-sports&v=16630&cl=US&a=0"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,rll/25/"
+    ],
+    [
+     307,
+     "https://www.bet365.com/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/sportsbook-static/favicons/icon.svg"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,brl/26/SL%7Clog/14/%7Cuic/8/%7Cdtl/12/%7Cdal/21/%7Cspl/5076/%7Cgen5base/5659/%7Cwcl/5897/S%7Cgll/5178/%7CNavLib/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/manifestapi/getmanifest?s=www-sports&v=16630&cl=US&a=0"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,rll/25/"
+    ],
+    [
+     200,
+     "https://www.bet365.com/Api/1/Blob?32,www-sports,brl/26/SL%7Clog/14/%7Cuic/8/%7Cdtl/12/%7Cdal/21/%7Cspl/5076/%7Cgen5base/5659/%7Cwcl/5897/S%7Cgll/5178/%7CNavLib/"
+    ],
+    [
+     403,
+     "https://www.bet365.com/websiteroutingdatacontentapi/routingdata?v=2062526294"
+    ],
+    [
+     200,
+     "https://www.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA=="
+    ],
+    [
+     200,
+     "https://www.bet365.com/defaultapi/sports-configuration?_h=zzlZDy35FXe3H-NZfPJLUA==&pd=%23%2FAS%2FB16%2F"
+    ],
+    [
+     200,
+     "https://www.bet365.com/crossdomainapi/dr/drs?rl=https%3A%2F%2Fwww.va.bet365.com%3F_h%3DzzlZDy35FXe3H-NZfPJLUA%253D%253D%26btsffd%3D1%23%2FAS%2FB16%2F&rlh=4717e5"
+    ],
+    [
+     302,
+     "https://www.va.bet365.com/crossdomainapi/dr/drres?rl=https%3A%2F%2Fwww.va.bet365.com%3F_h%3DzzlZDy35FXe3H-NZfPJLUA%253D%253D%26btsffd%3D1%23%2FAS%2FB16%2F&rlh=4"
+    ],
+    [
+     403,
+     "https://www.va.bet365.com/?_h=zzlZDy35FXe3H-NZfPJLUA%3D%3D&btsffd=1"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/cdn-cgi/challenge-platform/h/g/orchestrate/chl_page/v1?ray=a48b2559dcece44c"
+    ],
+    [
+     200,
+     "https://www.va.bet365.com/cdn-cgi/challenge-platform/h/g/fo/469094968:1791691504:j954DKMyasQnHU4fZZTiYeuo92dWnPTglFerk1Fz8Tg/a48b2559dcece44c/ANrFCfhJBURXLD0_aO"
+    ]
+   ],
+   "fingerprint": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "webdriver": false,
+    "platform": "Linux x86_64",
+    "languages": [
+     "en-US"
+    ],
+    "hw": 4,
+    "mem": 16,
+    "tz": "UTC",
+    "screen": [
+     1920,
+     1080
+    ],
+    "webgl": [
+     "Google Inc. (Mesa)",
+     "ANGLE (Mesa, llvmpipe (LLVM 20.1.2 256 bits), OpenGL 4.5)"
+    ]
+   }
+  },
+  {
+   "mode": "headful",
+   "target": "mlbhub",
+   "url": "https://www.bet365.com/hub/en-us/baseball/mlb",
+   "status": 200,
+   "html_len": 171658,
+   "title": "MLB Playoff Betting Odds 2026: Wild Card, Run Lines, &amp; World Series | bet365",
+   "verdict": "odds-content",
+   "secs": 14.2,
+   "final_url": "https://www.bet365.com/hub/en-us/baseball/mlb",
+   "visible_text": "Gambling Problem? Call 1-800-MY-RESET\nJoin\nLog In\nBASEBALL\n/\nMLB\nMLB ODDS\n\nBETTING LINES FOR THE WILD CARD ROUND, PLAYOFFS & WS\n\nBet Now\nDownload the App\nMLB Upcoming Games\nMon Oct 12 12:00 AM\n\nLA Dodgers\n\n@\n\nMIL Brewers\n\n1\n-115\n2\n-115\nTue Oct 13 12:00 AM\n\nCLE Guardians\n\n@\n\nTB Rays\n\n1\n+135\n2\n-176\nBet Now\nMLB Futures\nFutures for the key markets throughout the 2026 MLB playoffs.\nBet Now\nMLB World Series Odds\nTo Win Outright\nLA Dodgers\n+120\nMIL Brewers\n+290\nTB Rays\n+300\nCLE Guardians\n+750\nBet Now\nClaim your New Customer Promo\n\nJoin\n\nDeposit required. Paid in Bonus Bets. Bonus Bets wager excluded ",
+   "subrequests": [
+    [
+     200,
+     "https://www.bet365.com/hub/assets/e13f45bbeb4b9056cfa3d6bd2453f70f"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/en-us/baseball/mlb"
+    ],
+    [
+     200,
+     "https://members.bet365.com/staticcontentapi/static/appsflyer/v1/onelinklite.html"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/servertime"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/read"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/geolocation/loadlocation"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=2&frm=0&apvc=1&ae=g&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fmlb&scrsrc=www"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/restricted"
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a80h2v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693211425&gcs=G100&gcd="
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693211541&cv=11&tid=G-45M1DQFW2B&fst=1791693211541&fmt=8&en=view_item_list&gtm=45je6a80h"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693211541&cv=11&tid=G-45M1DQFW2B&fst=1791693211541&fmt=8&en=session_start&gtm=45je6a80h2"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=12&frm=0&apvc=0&tid=AW-865431267&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fm"
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/pagead/conversion/865431267/?random=1791693211629&cv=11&fst=1791693211629&fmt=8&bg=ffffff&guid=ON&async=1&en=page_view&gtm"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/en-us-va/baseball/mlb"
+    ],
+    [
+     200,
+     "https://members.bet365.com/staticcontentapi/static/appsflyer/v1/onelinklite.html"
+    ],
+    [
+     302,
+     "https://ade.googlesyndication.com/ddm/activity/src=14019463;type=remark;cat=webpi0;rcb=10;ord=5260026147987;npa=1;uaa=x86;uab=64;uafvl=Chromium%3B149.0.7827.55%"
+    ],
+    [
+     200,
+     "https://pagead2.googlesyndication.com/ccm/collect?rcb=10&frm=0&apvc=0&tid=DC-14019463&en=page_view&dl=https%3A%2F%2Fwww.bet365.com%2Fhub%2Fen-us%2Fbaseball%2Fml"
+    ],
+    [
+     200,
+     "https://ade.googlesyndication.com/ddm/activity/src=14019463;dc_pre=CKWpt6uRsZcDFXzHPwQdRosSwg;type=remark;cat=webpi0;rcb=10;ord=5260026147987;npa=1;uaa=x86;uab="
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a80h2v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693211425&gcs=G100&gcd="
+    ],
+    [
+     204,
+     "https://www.google-analytics.com/g/collect?v=2&tid=G-45M1DQFW2B&gtm=45je6a80h2v894926616z8898241180za20gzb898241180zd898241180xf1&_p=1791693211425&gcs=G100&gcd="
+    ],
+    [
+     204,
+     "https://pagead2.googlesyndication.com/measurement/conversion?random=1791693211760&cv=11&tid=G-45M1DQFW2B&fst=1791693211760&fmt=8&en=view_item_list&gtm=45je6a80h"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/servertime"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/read"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/geolocation/loadlocation"
+    ],
+    [
+     200,
+     "https://www.bet365.com/hub/persistence/perf/restricted"
+    ]
+   ],
+   "fingerprint": {
+    "ua": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/149.0.0.0 Safari/537.36",
+    "webdriver": false,
+    "platform": "Linux x86_64",
+    "languages": [
+     "en-US"
+    ],
+    "hw": 4,
+    "mem": 16,
+    "tz": "UTC",
+    "screen": [
+     1920,
+     1080
+    ],
+    "webgl": [
+     "Google Inc. (Mesa)",
+     "ANGLE (Mesa, llvmpipe (LLVM 20.1.2 256 bits), OpenGL 4.5)"
+    ]
+   }
+  }
+ ]
+}
