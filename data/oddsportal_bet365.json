@@ -2,15 +2,20 @@
  "version": 1,
  "source": "OddsPortal",
  "bookmaker": "bet365",
- "updatedAt": "2026-10-12T06:05:31+08:00",
+ "updatedAt": "2026-10-12T06:40:41+08:00",
  "health": {
   "discovered": 7,
   "coveredByBetExplorer": 3,
   "targets": 4,
-  "captured": 3,
-  "noBet365": 1,
-  "failed": 0,
-  "errors": [],
+  "captured": 0,
+  "noBet365": 0,
+  "failed": 4,
+  "errors": [
+   "樂天@斗山熊: Page.goto: net::ERR_CONNECTION_RESET at https://www.oddsportal.com/baseball/h2h/doosan-bears-pGmPNh11/lotte-giants-pGw4ggkO/#8KICHMzo\nCall log:\n  - navigating t",
+   "雙子@起亞虎: Page.goto: Navigation to \"about:blank\" is interrupted by another navigation to \"chrome-error://chromewebdata/\"\nCall log:\n  - navigating to \"about:blank\", waitin",
+   "巫師@三星獅: Page.goto: Navigation to \"about:blank\" is interrupted by another navigation to \"about:blank\"\nCall log:\n  - navigating to \"about:blank\", waiting until \"load\"\n",
+   "統一@兄弟: Page.goto: Navigation to \"about:blank\" is interrupted by another navigation to \"about:blank\"\nCall log:\n  - navigating to \"about:blank\", waiting until \"load\"\n"
+  ],
   "unmapped": []
  },
  "games": {
