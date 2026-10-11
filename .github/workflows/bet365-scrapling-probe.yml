@@ -1,0 +1,93 @@
+name: bet365-scrapling-probe
+# 探針（一次性，只在 claude/ 開發分支跑，不碰 main）：Scrapling 現役釘版 0.4.11 vs 最新 0.4.15，
+# 在 GitHub runner 上能不能看見 bet365（截圖＋指紋＋子請求狀態碼）。結論後可刪。
+on:
+  workflow_dispatch: {}
+  push:
+    branches: ['claude/affectionate-lovelace-cd64ht']
+    paths:
+      - .github/workflows/bet365-scrapling-probe.yml
+      - odds_lab/bet365_scrapling_probe.py
+permissions:
+  contents: write
+concurrency: bet365-scrapling-probe
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - label: v0411
+            req: 'scrapling[all]==0.4.11 browserforge==1.2.4 apify_fingerprint_datapoints==0.13.0'
+          - label: v0415
+            req: 'scrapling[fetchers]==0.4.15'
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: install
+        run: |
+          pip -q install ${{ matrix.req }}
+          scrapling install --force >/dev/null 2>&1 || echo "WARN scrapling install 非零"
+          pip freeze | grep -i -E 'scrapling|patchright|playwright|browserforge|apify|curl.cffi'
+          command -v xvfb-run || sudo apt-get install -y -q xvfb
+      - name: probe（Scrapling 直連三模式）
+        continue-on-error: true
+        run: timeout 900 xvfb-run -a python odds_lab/bet365_scrapling_probe.py --label ${{ matrix.label }} --out probe_out/${{ matrix.label }}
+      - name: probe（現役傳輸層 fetch_sidecar.py 全鏈）
+        continue-on-error: true
+        env:
+          EP_TRANSPORT: sidecar
+        run: |
+          timeout 400 node -e "
+          const fs = require('fs');
+          const sc = require('./sidecar_client.js');
+          const { fetchBet365Page } = require('./bet365_official_transport.js');
+          (async () => {
+            const out = {};
+            try { const p = await fetchBet365Page('https://www.bet365.com/#/AS/B16/', { waitMs: 10000, timeoutMs: 90000 });
+                  out.sportsbook = { ok: true, htmlLen: p.html.length, finalUrl: p.finalUrl, captured: p.captured.map(c => [c.status, c.url.slice(0, 120)]) }; }
+            catch (e) { out.sportsbook = { ok: false, err: String(e && e.message || e) }; }
+            try { const h = await sc.fetchText('https://www.bet365.com/hub/en-us/baseball/mlb', { Accept: 'text/html,application/xhtml+xml', 'Accept-Language': 'en-US,en;q=0.9' }, 90000);
+                  out.mlbhub = { ok: true, htmlLen: h.length }; }
+            catch (e) { out.mlbhub = { ok: false, err: String(e && e.message || e) }; }
+            console.log(JSON.stringify(out, null, 1));
+            fs.mkdirSync('probe_out/${{ matrix.label }}', { recursive: true });
+            fs.writeFileSync('probe_out/${{ matrix.label }}/transport.json', JSON.stringify(out, null, 1));
+            try { await sc.shutdown(); } catch (_) {}
+            process.exit(0);
+          })();
+          "
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: probe-${{ matrix.label }}
+          path: probe_out/${{ matrix.label }}
+          if-no-files-found: warn
+  collect:
+    needs: probe
+    if: always()
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: odds_lab/bet365_probe
+      - name: commit 結果回開發分支
+        run: |
+          gzip -9 odds_lab/bet365_probe/*/*.html 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add odds_lab/bet365_probe
+          git commit -m "bet365 scrapling probe result [skip ci]" || exit 0
+          for i in 1 2 3; do
+            git push origin HEAD:${{ github.ref_name }} && break
+            git pull --rebase origin ${{ github.ref_name }} || true
+            sleep 5
+          done
