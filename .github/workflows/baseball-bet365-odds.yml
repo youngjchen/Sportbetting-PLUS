@@ -48,6 +48,9 @@ jobs:
       - name: 驗證四聯盟 Bet365 收集器
         run: node --test tests/bet365_official_core.test.js tests/bet365_official_transport.test.js tests/baseball_bet365_odds.test.js tests/baseball_bet365_frontend.test.js
       - name: 5h10m 四聯盟 Bet365 官網優先盤口迴圈
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PAT: ${{ secrets.WORKFLOW_PAT }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
@@ -70,13 +73,24 @@ jobs:
                 fi
               fi
               # 2026-10-11：同一台 runner 的 IP 被 bet365 擋 403 達 4.5 小時（新 runner 正常）。
-              # MLB 有賽程、MLB 官網頁卻連續 2 輪（約 10 分）抓失敗 → 結束本棒，由「自我接棒」換新 runner＝新 IP。
+              # MLB 有賽程、MLB 官網頁卻連續 2 輪（約 10 分）抓失敗 → 結束本棒，換新 runner＝新 IP。
+              # ‼️ 必須先確認「下一棒已在排隊」才結束：WORKFLOW_PAT 失效時（10/11 實測 401）自我接棒會失敗，
+              #    貿然結束＝等 cron（常遲到 25~55 分）＝整段沒資料。排不到就本棒續跑（BetExplorer 備援照寫），下輪再試。
               if node -e 'const d=require("./data/baseball_bet365_odds.json");const p=(d.pages||{}).MLB;const l=(d.leagues||{}).MLB||{};process.exit(p&&p.ok===false&&l.scheduled>0?0:1)'; then
                 MLB_BLOCK_STREAK=$(( MLB_BLOCK_STREAK + 1 ))
                 echo "WARN MLB 官網頁抓取失敗（連續 $MLB_BLOCK_STREAK 輪）"
                 if [ "$MLB_BLOCK_STREAK" -ge 2 ]; then
-                  echo "WARN 疑似本 runner IP 被 bet365 擋；結束本棒，交給新 runner 接手"
-                  break
+                  if [ -n "$PAT" ] && GH_TOKEN="$PAT" gh workflow run baseball-bet365-odds.yml -R "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+                    echo "INFO 已用 WORKFLOW_PAT 排下一棒"
+                    sleep 15
+                  fi
+                  NEXT=$(gh run list -R "$GITHUB_REPOSITORY" --workflow baseball-bet365-odds.yml --limit 20 --json status \
+                    --jq '[.[] | select(.status=="pending" or .status=="queued" or .status=="waiting" or .status=="requested")] | length' 2>/dev/null || echo 0)
+                  if [ "${NEXT:-0}" -gt 0 ] 2>/dev/null; then
+                    echo "WARN 疑似本 runner IP 被 bet365 擋；下一棒已排隊 → 結束本棒，交給新 runner 接手"
+                    break
+                  fi
+                  echo "WARN 疑似本 runner IP 被 bet365 擋，但沒有下一棒可接（PAT 失效且 cron 尚未排隊）→ 本棒續跑，下輪再試"
                 fi
               else
                 MLB_BLOCK_STREAK=0
