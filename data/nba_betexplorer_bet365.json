@@ -1,128 +1,25 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-11T15:26:09.837Z",
+ "updated": "2026-10-11T16:24:12.198Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 1,
-  "targeted": 42,
-  "fetched": 0,
-  "cached": 37,
+  "lists": 4,
+  "targeted": 45,
+  "fetched": 6,
+  "cached": 36,
   "unmatched": [
    "WNBA_20261011_美夢_自由_1200 美夢@自由",
    "WNBA_20261011_金州_王牌_1200 金州@王牌"
   ],
   "failures": [
    {
-    "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
-    "error": "BetExplorer HTTP 502 https://www.betexplorer.com/basketball/usa/nba/fixtures/"
-   },
-   {
-    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
-    "error": "BetExplorer HTTP 502 https://www.betexplorer.com/basketball/usa/nba/results/"
-   },
-   {
-    "officialId": "NBA_20261012_ORL@CLE",
-    "error": "BetExplorer HTTP 502 https://www.betexplorer.com/match-odds-old/WAtgYDj4/0/ha/1/en/?sportname=basketball"
-   },
-   {
-    "officialId": "NBA_20261012_MIL@CHA",
-    "error": "BetExplorer HTTP 502 https://www.betexplorer.com/match-odds-old/x8q1WiLG/0/ha/1/en/?sportname=basketball"
-   },
-   {
-    "officialId": "NBA_20261012_CHI@DEN",
-    "error": "The operation was aborted due to timeout"
-   },
-   {
-    "url": "https://www.betexplorer.com/basketball/usa/wnba/fixtures/",
+    "officialId": "NBA_20261013_OKC@ATL",
     "error": "The operation was aborted due to timeout"
    }
   ]
  },
  "games": {
-  "NBA_20261004_MIA@TOR": {
-   "officialId": "NBA_20261004_MIA@TOR",
-   "eventId": "z5hn2uMj",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/toronto-raptors-miami-heat/z5hn2uMj/",
-   "siteStart": "4,10,2026,0,00",
-   "scheduledStart": "2026-10-03T23:00:00.000Z",
-   "away": "熱火",
-   "home": "暴龍",
-   "fetchedAt": "2026-10-10T20:28:49.816Z",
-   "complete": true,
-   "ml": {
-    "home": 1.7,
-    "away": 2.1,
-    "created": "03,10,2026,23,52"
-   },
-   "hd": [
-    {
-     "line": -4.5,
-     "active": false,
-     "created": "03,10,2026,18,26",
-     "home": 1.86,
-     "away": 1.86
-    },
-    {
-     "line": -3.5,
-     "active": false,
-     "created": "03,10,2026,22,54",
-     "home": 1.91,
-     "away": 1.82
-    },
-    {
-     "line": -2.5,
-     "active": true,
-     "created": "03,10,2026,23,52",
-     "home": 1.91,
-     "away": 1.82
-    },
-    {
-     "line": -1.5,
-     "active": false,
-     "created": "03,10,2026,15,02",
-     "home": 1.86,
-     "away": 1.86
-    },
-    {
-     "line": 1.5,
-     "active": false,
-     "created": "03,10,2026,14,24",
-     "home": 1.82,
-     "away": 1.91
-    }
-   ],
-   "ou": [
-    {
-     "line": 227.5,
-     "active": false,
-     "created": "02,10,2026,01,10",
-     "over": 1.86,
-     "under": 1.86
-    },
-    {
-     "line": 228.5,
-     "active": false,
-     "created": "03,10,2026,07,48",
-     "over": 1.86,
-     "under": 1.86
-    },
-    {
-     "line": 229.5,
-     "active": true,
-     "created": "03,10,2026,22,07",
-     "over": 1.86,
-     "under": 1.86
-    },
-    {
-     "line": 230.5,
-     "active": false,
-     "created": "03,10,2026,18,26",
-     "over": 1.86,
-     "under": 1.86
-    }
-   ]
-  },
   "NBA_20261005_GS@LAC": {
    "officialId": "NBA_20261005_GS@LAC",
    "eventId": "4lGlNFkm",
@@ -2600,7 +2497,7 @@
    "scheduledStart": "2026-10-11T22:30:00.000Z",
    "away": "魔術",
    "home": "騎士",
-   "fetchedAt": "2026-10-11T14:32:39.676Z",
+   "fetchedAt": "2026-10-11T16:24:12.198Z",
    "complete": false,
    "ml": {
     "home": 1.45,
@@ -2656,7 +2553,7 @@
    "scheduledStart": "2026-10-11T23:00:00.000Z",
    "away": "公鹿",
    "home": "黃蜂",
-   "fetchedAt": "2026-10-11T14:32:39.676Z",
+   "fetchedAt": "2026-10-11T16:24:12.198Z",
    "complete": false,
    "ml": {
     "home": 1.54,
@@ -2705,7 +2602,7 @@
    "scheduledStart": "2026-10-12T01:00:00.000Z",
    "away": "公牛",
    "home": "金塊",
-   "fetchedAt": "2026-10-11T14:32:39.676Z",
+   "fetchedAt": "2026-10-11T16:24:12.198Z",
    "complete": false,
    "ml": {
     "home": 1.28,
@@ -2722,10 +2619,10 @@
     },
     {
      "line": -8.5,
-     "active": false,
-     "created": "11,10,2026,07,16",
-     "home": 1.86,
-     "away": 1.86
+     "active": true,
+     "created": "11,10,2026,15,37",
+     "home": 1.82,
+     "away": 1.91
     }
    ],
    "ou": [
@@ -2744,6 +2641,51 @@
      "under": 1.86
     }
    ]
+  },
+  "NBA_20261013_BKN@WAS": {
+   "officialId": "NBA_20261013_BKN@WAS",
+   "league": "NBA",
+   "eventId": "8AQQnD5c",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/washington-wizards-brooklyn-nets/8AQQnD5c/",
+   "siteStart": "13,10,2026,0,00",
+   "scheduledStart": "2026-10-12T23:00:00.000Z",
+   "away": "籃網",
+   "home": "巫師",
+   "fetchedAt": "2026-10-11T16:24:12.198Z",
+   "complete": false,
+   "ml": null,
+   "hd": [],
+   "ou": []
+  },
+  "NBA_20261013_MIN@NY": {
+   "officialId": "NBA_20261013_MIN@NY",
+   "league": "NBA",
+   "eventId": "tOOYpizA",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/new-york-knicks-minnesota-timberwolves/tOOYpizA/",
+   "siteStart": "13,10,2026,0,30",
+   "scheduledStart": "2026-10-12T23:30:00.000Z",
+   "away": "灰狼",
+   "home": "尼克",
+   "fetchedAt": "2026-10-11T16:24:12.198Z",
+   "complete": false,
+   "ml": null,
+   "hd": [],
+   "ou": []
+  },
+  "NBA_20261013_SA@UTA": {
+   "officialId": "NBA_20261013_SA@UTA",
+   "league": "NBA",
+   "eventId": "QDo6SrKr",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/utah-jazz-san-antonio-spurs/QDo6SrKr/",
+   "siteStart": "13,10,2026,2,00",
+   "scheduledStart": "2026-10-13T01:00:00.000Z",
+   "away": "馬刺",
+   "home": "爵士",
+   "fetchedAt": "2026-10-11T16:24:12.198Z",
+   "complete": false,
+   "ml": null,
+   "hd": [],
+   "ou": []
   },
   "WNBA_20261008_自由_美夢_0730": {
    "officialId": "WNBA_20261008_自由_美夢_0730",
@@ -2971,6 +2913,89 @@
      "line": 156.5,
      "active": true,
      "created": "10,10,2026,01,48",
+     "over": 1.86,
+     "under": 1.86
+    }
+   ]
+  },
+  "NBA_20261004_MIA@TOR": {
+   "officialId": "NBA_20261004_MIA@TOR",
+   "eventId": "z5hn2uMj",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/toronto-raptors-miami-heat/z5hn2uMj/",
+   "siteStart": "4,10,2026,0,00",
+   "scheduledStart": "2026-10-03T23:00:00.000Z",
+   "away": "熱火",
+   "home": "暴龍",
+   "fetchedAt": "2026-10-10T20:28:49.816Z",
+   "complete": true,
+   "ml": {
+    "home": 1.7,
+    "away": 2.1,
+    "created": "03,10,2026,23,52"
+   },
+   "hd": [
+    {
+     "line": -4.5,
+     "active": false,
+     "created": "03,10,2026,18,26",
+     "home": 1.86,
+     "away": 1.86
+    },
+    {
+     "line": -3.5,
+     "active": false,
+     "created": "03,10,2026,22,54",
+     "home": 1.91,
+     "away": 1.82
+    },
+    {
+     "line": -2.5,
+     "active": true,
+     "created": "03,10,2026,23,52",
+     "home": 1.91,
+     "away": 1.82
+    },
+    {
+     "line": -1.5,
+     "active": false,
+     "created": "03,10,2026,15,02",
+     "home": 1.86,
+     "away": 1.86
+    },
+    {
+     "line": 1.5,
+     "active": false,
+     "created": "03,10,2026,14,24",
+     "home": 1.82,
+     "away": 1.91
+    }
+   ],
+   "ou": [
+    {
+     "line": 227.5,
+     "active": false,
+     "created": "02,10,2026,01,10",
+     "over": 1.86,
+     "under": 1.86
+    },
+    {
+     "line": 228.5,
+     "active": false,
+     "created": "03,10,2026,07,48",
+     "over": 1.86,
+     "under": 1.86
+    },
+    {
+     "line": 229.5,
+     "active": true,
+     "created": "03,10,2026,22,07",
+     "over": 1.86,
+     "under": 1.86
+    },
+    {
+     "line": 230.5,
+     "active": false,
+     "created": "03,10,2026,18,26",
      "over": 1.86,
      "under": 1.86
     }
