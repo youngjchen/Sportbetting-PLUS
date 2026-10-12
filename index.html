@@ -2422,6 +2422,39 @@ async function load(){
       if(n){ console.warn("[七類更正 2026-10-10] 阪神虎@橫濱DeNA 改為收斂 " + n + " 筆"); save(); }
     }
   }catch(_){}
+  // ── 2026-10-12 七類更正（使用者指出，只改這一場）──
+  // 10/12 美職 道奇@釀酒人：台彩 10/11 00:12 釀酒人讓1.5 → 10/12 07:21 道奇讓1.5（lottery_series 證據，開賽前）。
+  // 結算時這場沒有 intl_state 條目，台彩側走快照後備、換邊數寫死 0 → 記成「收斂／只有 BET365 對調」，應為「收斂／雙方對調」。
+  // 紀錄、卡片結算副本、手動前的自動快照（bet365TaiwanAuto）一起改；只改仍是錯值的，改過不再動，舊備份回來也會自動更正。
+  try{
+    if(!_loadBlocked){
+      const TR = "00:12 釀酒人 → 07:21 道奇";
+      const fix = (s)=>{
+        if(!s || s.relation!=="收斂" || s.taiwanSwapped!==false || s.taiwanSide!=="away") return false;
+        Object.assign(s, { taiwanSwapped:true, taiwanSwitchCount:Math.max(1, Number(s.taiwanSwitchCount||0)),
+          swapCombo: s.bet365Swapped ? "both" : "taiwan_only",
+          correctedAt:"2026-10-12", correction:"台彩序列：釀酒人讓1.5→道奇讓1.5（07:21，開賽前）；原快照換邊數誤為 0" });
+        return true;
+      };
+      const fixState = (st)=>{ if(st && st.ls==="away" && !Number(st.lsw||0)){ st.lsw = 1; st.ltr = TR; } };
+      const hit = (lg, date, away, home)=> String(lg).toLowerCase()==="mlb" && date==="2026-10-12" && away==="道奇" && home==="釀酒人";
+      let n = 0;
+      for(const g of (doc.games||[])){
+        if(!g || !hit(g.league, g.date, g.awayTeam, g.homeTeam)) continue;
+        if(fix(g.bet365Taiwan)) n++;
+        if(fix(g.bet365TaiwanAuto)) n++;
+        fixState(g.intlState);
+      }
+      for(const it of ((doc.boards||{})["2026-10-12"]||{}).items||[]){
+        const s = it && it.settled;
+        if(!s || !hit(it.league||"mlb", "2026-10-12", it.away, it.home)) continue;
+        if(fix(s.bet365Taiwan)) n++;
+        if(fix(s.bet365TaiwanAuto)) n++;
+        fixState(s.intlState);
+      }
+      if(n){ console.warn("[七類更正 2026-10-12] 道奇@釀酒人 改為收斂／雙方對調 " + n + " 筆"); try{ bumpGamesVersion(); }catch(_){} save(); }
+    }
+  }catch(_){}
   loadActiveBoard();
 }
 
@@ -3855,16 +3888,22 @@ function intlFor(it,dateKey){
   const tm = String(it.gameTime||"").match(/\d{1,2}:\d{2}/);
   const timed = tm ? base+"|"+tm[0].padStart(5,"0") : null;
   // 台彩資料本來就已在玩運彩 feed；不能因 Titan／intl_state 管線停更而一起消失。
-  // intl_state 有盤中序列時仍以它為準，只在條目或台彩側缺漏時用賽前快照補上。
+  // intl_state 有盤中序列時仍以它為準，只在條目或台彩側缺漏時補上：
+  // 先用台彩讓分方序列（lottery_series.json：方向、換邊數、軌跡），沒有序列才用賽前快照（單點、換邊數 0）。
+  // 2026-10-12：intl_state 只建 Titan 有的場，美職季後賽等場一律走這裡；以前只拿快照、換邊數寫死 0，
+  // 道奇@釀酒人 台彩 釀酒人讓→道奇讓 被記成沒換邊 → 七類錯歸「收斂／只有 BET365 對調」。
   const withLotteryFallback = (current)=>{
     if(current && current.ls) return current;
     try{
       const fu=window.__psFusion;
       const game=(fu&&fu.findGame&&fu.getData)?fu.findGame(fu.getData(),it,activeDate):null;
+      const blank={ is:null,il:null,sw:0,tr:null,iseq:[],ls:null,ll:null,lsLive:false,
+        lsw:0,ltr:null,mf:null,dv:null,eo:null,v:null,u:null };
+      const ser=(game&&typeof lotterySeriesState==="function")?lotterySeriesState(lg,activeDate,game.awayTeam,game.homeTeam,it):null;
+      if(ser) return Object.assign(blank,current||{},ser);
       const lh=game&&game.lotteryHandicap;
       if(!lh || lh.src!=="運彩" || !lh.favSide) return current||null;
-      return Object.assign({ is:null,il:null,sw:0,tr:null,iseq:[],ls:null,ll:null,lsLive:false,
-        lsw:0,ltr:null,mf:null,dv:null,eo:null,v:null,u:null },current||{},
+      return Object.assign(blank,current||{},
         { ls:lh.favSide,ll:lh.line!=null?lh.line:null,lsLive:false });
     }catch(_){ return current||null; }
   };
@@ -4037,6 +4076,49 @@ async function loadIntlState(){
 }
 setTimeout(loadIntlState, 2500);                      // 開機後再抓，避免搶在初始化前重繪
 setInterval(loadIntlState, 5*60*1000);
+// ===== 台彩讓分方序列（data/lottery_series.json，玩運彩爬蟲每輪寫；鍵＝玩運彩 officialId）=====
+// intl_state 沒有的場（Titan 沒收：美職季後賽等）由 intlFor 的 withLotteryFallback 拿這裡算台彩側，
+// 規則同爬蟲 applyLot：連續同方向合併、換邊數＝段數−1、軌跡「HH:MM 隊名 → …」；只看開賽前的點。
+var __lotSer = null, __lotSerRaw = "";   // var：intlFor 可能在本行執行前就被呼叫（let 會 TDZ 例外，連快照後備都丟失）
+function lotterySeriesState(lg, date, away, home, it){
+  const games = __lotSer && __lotSer.games;
+  if(!games || !away || !home) return null;
+  const tm = String(it&&it.gameTime||"").match(/(\d{1,2}):(\d{2})/);
+  const want = tm ? (+tm[1])*60 + (+tm[2]) : null;
+  let best = null, bestDiff = Infinity;
+  for(const [oid, g] of Object.entries(games)){
+    if(!g || String(g.league||"").toLowerCase()!==String(lg||"").toLowerCase() || g.date!==date) continue;
+    if(g.awayTeam!==away || g.homeTeam!==home) continue;
+    const m = String(oid).match(/_(\d{2})(\d{2})$/);
+    const at = m ? (+m[1])*60 + (+m[2]) : null;
+    const diff = (want==null || at==null) ? 0 : Math.abs(want-at);   // 雙重賽：取開球時間最近的一場（±120 分）
+    if(diff<=120 && diff<bestDiff){ best = { g, hhmm: m ? m[1]+":"+m[2] : null }; bestDiff = diff; }
+  }
+  if(!best || !Array.isArray(best.g.pts)) return null;
+  const start = best.hhmm ? Date.parse(date+"T"+best.hhmm+":00+08:00") : NaN;
+  const pts = best.g.pts.filter(p=>p && (p.side==="home"||p.side==="away") &&
+    !(Number.isFinite(start) && Date.parse(p.t) > start));
+  if(!pts.length) return null;
+  const seq = [];
+  for(const p of pts){ const last = seq[seq.length-1]; if(!last || last.side!==p.side) seq.push(p); }
+  const hm = t => new Date(Date.parse(t)+8*3600e3).toISOString().slice(11,16);
+  const name = s => s==="home" ? it.home : it.away;
+  const last = pts[pts.length-1];
+  return { ls:last.side, ll:last.line!=null?last.line:null, lsLive:true, lsw:seq.length-1,
+           ltr: seq.length>1 ? seq.map(p=>hm(p.t)+" "+name(p.side)).join(" → ") : null };
+}
+async function loadLotterySeries(){
+  try{
+    const r = await fetch("data/lottery_series.json?t="+Date.now(), {cache:"no-store"});
+    if(!r.ok) return;
+    const txt = await r.text();
+    if(txt===__lotSerRaw) return;
+    __lotSerRaw = txt; __lotSer = JSON.parse(txt);
+    if(typeof render==="function") try{ render(); }catch(_){}
+  }catch(_){}
+}
+setTimeout(loadLotterySeries, 2000);
+setInterval(loadLotterySeries, 5*60*1000);
 function renderMatchNav(){
   const el = document.getElementById("matchnav"); if(!el) return;
   if(document.querySelector("#reviewpage.show, #statspage.show")){ el.style.display="none"; return; }  // 回顧/統計頁開啟時隱藏導覽列
