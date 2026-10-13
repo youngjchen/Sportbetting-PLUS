@@ -1,26 +1,31 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T05:09:40.731Z",
+  "generatedAt": "2026-10-13T05:14:40.968Z",
   "officialScheduleCount": 4,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T05:09:40.731Z",
-      "lastAttemptAt": "2026-10-13T05:09:40.731Z",
+      "lastSuccessAt": "2026-10-13T05:14:40.968Z",
+      "lastAttemptAt": "2026-10-13T05:14:40.968Z",
       "error": null,
       "matched": 1,
       "health": {
         "discovered": 2,
         "matched": 1,
-        "unmatched": 1,
-        "failed": 0,
-        "failures": []
+        "unmatched": 0,
+        "failed": 1,
+        "failures": [
+          {
+            "slug": "46951951-nlcs-finalist-2-nlcs-finalist-1",
+            "error": "Stake HTTP 502 /odds/46951951-nlcs-finalist-2-nlcs-finalist-1"
+          }
+        ]
       }
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T05:09:40.731Z",
-      "lastAttemptAt": "2026-10-13T05:09:40.731Z",
+      "lastSuccessAt": "2026-10-13T05:14:40.968Z",
+      "lastAttemptAt": "2026-10-13T05:14:40.968Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -33,8 +38,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T05:09:40.731Z",
-      "lastAttemptAt": "2026-10-13T05:09:40.731Z",
+      "lastSuccessAt": "2026-10-13T05:14:40.968Z",
+      "lastAttemptAt": "2026-10-13T05:14:40.968Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -47,8 +52,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T05:09:40.731Z",
-      "lastAttemptAt": "2026-10-13T05:09:40.731Z",
+      "lastSuccessAt": "2026-10-13T05:14:40.968Z",
+      "lastAttemptAt": "2026-10-13T05:14:40.968Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -31894,7 +31899,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-13T05:09:39.881Z",
+      "observedAt": "2026-10-13T05:14:40.279Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
