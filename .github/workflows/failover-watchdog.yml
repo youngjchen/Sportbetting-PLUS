@@ -1,0 +1,59 @@
+# ============================================================
+#  本機備援停擺警示（2026-10-14 使用者規格）
+#  · 本機備援（使用者電腦的排程 BB-ScrapeFailover）兩度無聲停擺：8/7–8/9 約 33h、
+#    10/12 10:21–10/13 23:05 約 37h，都是事後才發現 BET365 資料缺。
+#  · 每 30 分檢查一次：棒球 BET365 兩道備援檔（oddsportal_summary／oddsportal_bet365）
+#    都超過 90 分沒更新，且 36 小時內有未開賽棒球 → 開 issue 並 @ 使用者（GitHub 寄信）；
+#    恢復後自動留言並關閉。判定與排盤板紅條、桌面通知共用 failover-alert.js。
+#  · 電腦關機／睡眠時桌面通知也跟著停，這條是補位；cron 常遲到，最慢約 2.5 小時才開單。
+#  · 只讀資料、只寫 issue；不碰任何爬蟲 run（不取消、不 dispatch）。
+#  · push 改到本檔或判定程式時跑一次「通道測試」：開一張測試 issue 立刻關掉，證明開／關 issue 權限通。
+# ============================================================
+name: failover-watchdog
+
+on:
+  workflow_dispatch:
+    inputs:
+      self_test:
+        description: '通道測試（開一張測試 issue 後立即關閉）'
+        type: boolean
+        default: false
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/failover-watchdog.yml'
+      - 'failover_watch.js'
+      - 'failover-alert.js'
+  schedule:
+    - cron: '21,51 * * * *'   # 錯開 pipeline-watchdog(:09,:39)
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: failover-watchdog
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          sparse-checkout-cone-mode: false
+          sparse-checkout: |
+            /failover-alert.js
+            /failover_watch.js
+            /data/oddsportal_summary.json
+            /data/oddsportal_bet365.json
+            /data/pregame_data.json
+
+      - name: 判定本機備援是否停擺；停擺開 issue、恢復關 issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          SELF_TEST: ${{ github.event_name == 'push' || inputs.self_test == true }}
+        run: node failover_watch.js --github

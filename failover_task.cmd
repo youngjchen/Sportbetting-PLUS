@@ -11,4 +11,6 @@ set "BB_FAILOVER_WORKSPACE=%SBP_RUNTIME%\failover-workspace"
 if not exist "%SBP_RUNTIME%\tmp" mkdir "%SBP_RUNTIME%\tmp"
 set "TEMP=%SBP_RUNTIME%\tmp"
 set "TMP=%SBP_RUNTIME%\tmp"
+rem 停擺警示（2026-10-14）：排在備援本體之前、自己看 GitHub 上的檔，本體卡死也照樣跳桌面通知 -- see failover_watch.js
+node failover_watch.js --desktop >> "%SBP_RUNTIME%\failover_watch.log" 2>&1
 node local_failover_workspace.js >> "%SBP_RUNTIME%\bb_failover.log" 2>&1

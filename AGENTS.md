@@ -28,6 +28,9 @@
 - 停用某條工作流＝Actions 頁 **Disable workflow**，不是取消 run。
 - `WORKFLOW_PAT` secret 驅動「run 結束自我接棒」（實測無縫，交接空窗 ≈0 秒）；cron 常遲到 25~55 分、會整批丟，是備援不是主力。
 - 看門狗 `pipeline-watchdog.yml`：賠率/比分資料停更 >25 分自動清障重啟（不含明牌管線）。
+- 本機備援停擺警示（2026-10-14）：`oddsportal_summary`／`oddsportal_bet365` 兩檔 updatedAt 較新者 >90 分、且 36h 內有未開賽棒球＝停擺。
+  判定只在 `failover-alert.js`（兼排盤板紅條）；`failover_watch.js --github`（`failover-watchdog.yml` 每 30 分開/關 issue）、
+  `--desktop`（`failover_task.cmd` 每 5 分、排在備援本體前，Windows 桌面通知）共用它。
 
 ## 資料檔語義速查（詳見交接文檔 §4）
 
