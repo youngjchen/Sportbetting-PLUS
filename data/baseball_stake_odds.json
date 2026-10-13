@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T11:15:44.038Z",
+  "generatedAt": "2026-10-13T11:20:21.879Z",
   "officialScheduleCount": 4,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T11:15:44.038Z",
-      "lastAttemptAt": "2026-10-13T11:15:44.038Z",
+      "lastSuccessAt": "2026-10-13T11:20:21.879Z",
+      "lastAttemptAt": "2026-10-13T11:20:21.879Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -18,14 +18,14 @@
       }
     },
     "NPB": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-13T11:15:44.038Z",
-      "lastAttemptAt": "2026-10-13T11:15:44.038Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-13T11:20:21.879Z",
+      "lastAttemptAt": "2026-10-13T11:20:21.879Z",
       "error": null,
-      "matched": 1,
+      "matched": 2,
       "health": {
-        "discovered": 1,
-        "matched": 1,
+        "discovered": 2,
+        "matched": 2,
         "unmatched": 0,
         "failed": 0,
         "failures": []
@@ -33,8 +33,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T11:15:44.038Z",
-      "lastAttemptAt": "2026-10-13T11:15:44.038Z",
+      "lastSuccessAt": "2026-10-13T11:20:21.879Z",
+      "lastAttemptAt": "2026-10-13T11:20:21.879Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -47,8 +47,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T11:15:44.038Z",
-      "lastAttemptAt": "2026-10-13T11:15:44.038Z",
+      "lastSuccessAt": "2026-10-13T11:20:21.879Z",
+      "lastAttemptAt": "2026-10-13T11:20:21.879Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -27621,7 +27621,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-13T11:15:20.907Z",
+      "observedAt": "2026-10-13T11:20:19.796Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -28105,23 +28105,30 @@
       "fixtureId": "4957e134-e749-40d2-a014-9bd44e8374e0",
       "slug": "46986763-hanshin-tigers-yokohama-dena-baystars",
       "sourceUrl": "https://stake.com/sports/baseball/japan/npb/46986763-hanshin-tigers-yokohama-dena-baystars",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.54,
+        "home": 2.44
+      },
       "moneyline": {
         "away": 2.3,
         "home": 1.6
       },
-      "total": null,
+      "total": {
+        "line": 5.5,
+        "over": 2.01,
+        "under": 1.78
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-13T11:15:43.133Z",
+      "partial": false,
+      "observedAt": "2026-10-13T11:20:20.791Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -28144,6 +28151,97 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-13T11:20:20.791Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.54,
+            "home": 2.44
+          },
+          "moneyline": {
+            "away": 2.3,
+            "home": 1.6
+          },
+          "total": {
+            "line": 5.5,
+            "over": 2.01,
+            "under": 1.78
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        }
+      ]
+    },
+    "NPB_20261014_Fighters@Hawks_1700": {
+      "league": "NPB",
+      "officialId": "NPB_20261014_Fighters@Hawks_1700",
+      "scheduledStart": "2026-10-14T09:00:00.000Z",
+      "away": "火腿",
+      "home": "軟銀",
+      "fixtureId": "f0a54205-565a-4ca0-be5e-e3cee5e665fc",
+      "slug": "46988674-fukuoka-hawks-hokkaido-nippon-ham-fighters",
+      "sourceUrl": "https://stake.com/sports/baseball/japan/npb/46988674-fukuoka-hawks-hokkaido-nippon-ham-fighters",
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 2.08,
+        "home": 1.72
+      },
+      "moneyline": {
+        "away": 3.5,
+        "home": 1.29
+      },
+      "total": {
+        "line": 6.5,
+        "over": 1.81,
+        "under": 1.97
+      },
+      "sources": {
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
+        "moneyline": "stake-official"
+      },
+      "partial": false,
+      "observedAt": "2026-10-13T11:20:21.463Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-13T11:20:21.463Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.08,
+            "home": 1.72
+          },
+          "moneyline": {
+            "away": 3.5,
+            "home": 1.29
+          },
+          "total": {
+            "line": 6.5,
+            "over": 1.81,
+            "under": 1.97
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
