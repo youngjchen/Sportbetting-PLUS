@@ -360,3 +360,72 @@ test('a leftover rebase directory is cleaned up instead of wedging every run', (
     try { fs.rmSync(root, { recursive: true, force: true }); } catch (_) {}
   }
 });
+
+// 2026-10-12 卡死案：本機沒推上去的產出撞到雲端較新的同一檔 → rebase 停在半路（UU 衝突檔）；
+// 下一輪潔癖檢查排在收拾之前、又看到漏列的 nba_betexplorer_bet365.json → 整輪拒跑 37 小時。
+function conflictFixture(prefix) {
+  const { execFileSync } = require('node:child_process');
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
+  const origin = path.join(root, 'origin.git');
+  const seed = path.join(root, 'seed');
+  const ws = path.join(root, 'ws');
+  const run = (args, cwd) => execFileSync('git', args, { cwd, stdio: 'ignore' });
+  const write = (dir, rel, text) => {
+    fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true });
+    fs.writeFileSync(path.join(dir, rel), text);
+  };
+  fs.mkdirSync(origin); run(['init', '--bare', '-b', 'main'], origin);
+  fs.mkdirSync(seed); run(['init', '-b', 'main'], seed);
+  run(['config', 'user.email', 't@t'], seed); run(['config', 'user.name', 't'], seed);
+  write(seed, 'data/pregame_data.json', '["base"]\n');
+  write(seed, 'data/nba_betexplorer_bet365.json', '{"v":0}\n');
+  run(['add', '-A'], seed); run(['commit', '-m', 'seed'], seed);
+  run(['remote', 'add', 'origin', origin], seed); run(['push', 'origin', 'main'], seed);
+  const { ensureFailoverWorkspace } = require('../local_failover_workspace.js');
+  ensureFailoverWorkspace({ originUrl: origin, workspaceDir: ws });
+  // 本機接手的產出（推送失敗、留在本機）
+  write(ws, 'data/pregame_data.json', '["local-old"]\n');
+  run(['add', '-A'], ws); run(['commit', '-m', 'local rescue'], ws);
+  // 雲端同時有較新的同一檔
+  write(seed, 'data/pregame_data.json', '["cloud-new"]\n');
+  run(['commit', '-am', 'cloud update'], seed); run(['push', 'origin', 'main'], seed);
+  return { root, origin, ws, run, write, ensureFailoverWorkspace };
+}
+
+test('同步時 rebase 撞衝突：放棄本機舊產出、以雲端為準，不停在半路', () => {
+  const f = conflictFixture('bbconflict-');
+  try {
+    f.ensureFailoverWorkspace({ originUrl: f.origin, workspaceDir: f.ws });   // 不該丟例外
+    assert.equal(fs.existsSync(path.join(f.ws, '.git', 'rebase-merge')), false);
+    assert.equal(git(['status', '--porcelain'], f.ws), '');
+    assert.equal(fs.readFileSync(path.join(f.ws, 'data/pregame_data.json'), 'utf8').trim(), '["cloud-new"]');
+    assert.equal(git(['rev-parse', 'HEAD'], f.ws), git(['rev-parse', 'origin/main'], f.ws));
+  } finally {
+    try { fs.rmSync(f.root, { recursive: true, force: true }); } catch (_) {}
+  }
+});
+
+test('上一輪停在半路的 rebase（UU 衝突檔＋已暫存的 NBA 備援檔）要先收拾，不可被潔癖檢查擋住', () => {
+  const f = conflictFixture('bbuu-');
+  try {
+    // 重現 10/12 現場：舊版流程 rebase 撞衝突停住，工作樹留下 UU 與已暫存的 NBA 產出
+    f.run(['fetch', 'origin', 'main'], f.ws);
+    assert.throws(() => f.run(['rebase', 'origin/main'], f.ws));
+    f.write(f.ws, 'data/nba_betexplorer_bet365.json', '{"v":1}\n');
+    f.run(['add', 'data/nba_betexplorer_bet365.json'], f.ws);
+    assert.match(git(['status', '--porcelain'], f.ws), /UU data\/pregame_data\.json/);
+
+    f.ensureFailoverWorkspace({ originUrl: f.origin, workspaceDir: f.ws });   // 不該丟例外
+    assert.equal(fs.existsSync(path.join(f.ws, '.git', 'rebase-merge')), false);
+    assert.equal(git(['status', '--porcelain'], f.ws), '');
+    assert.equal(git(['rev-parse', 'HEAD'], f.ws), git(['rev-parse', 'origin/main'], f.ws));
+  } finally {
+    try { fs.rmSync(f.root, { recursive: true, force: true }); } catch (_) {}
+  }
+});
+
+test('NBA BET365 備援產出列為備援自有檔', () => {
+  const { classifyFailoverDirt } = require('../local_failover_workspace.js');
+  const dirt = classifyFailoverDirt([' M data/nba_betexplorer_bet365.json', ' M data/oddsportal_bet365.json']);
+  assert.deepEqual(dirt.foreign, []);
+});

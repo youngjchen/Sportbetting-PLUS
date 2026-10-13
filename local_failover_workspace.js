@@ -39,6 +39,7 @@ const FAILOVER_OWNED_RE = [
   /^data\/oddsportal_archive\//,
   /^data\/oddsportal_harvest_state\.json$/,
   /^data\/oddsportal_bet365\.json$/,          // 棒球 BET365 第二道備援（2026-10-12）
+  /^data\/nba_betexplorer_bet365\.json$/,     // NBA BET365 備援（2026-10-11 加的產出，漏列 → 10/12 卡死 37 小時）
   /^data\/pregame_data\.json$/,
   /^data\/lottery_series\.json$/,
   /^data\/expert_picks_(?:mlb|npb|cpbl|kbo)\.json$/,
@@ -116,6 +117,23 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   // 潔癖檢查從此整輪拒跑 3.5 天（log「推送流程失敗：git commit」）。身分設定必須早於任何 commit。
   git(['config', 'user.name', 'bb-failover[local]'], workspaceDir);
   git(['config', 'user.email', 'bb-failover@local'], workspaceDir);
+  // 2026-08-09 卡死事故：上一輪的 rebase 中途死掉，留下 .git/rebase-merge，
+  // 之後每 5 分鐘的排程一進來就撞「already a rebase-merge directory」而整輪失敗
+  // ——從 8/7 14:35 起連續 33 小時完全沒抓資料，直到使用者發現 8/9 初盤沒填。
+  // 2026-10-12 再犯：rebase 撞衝突停在半路，工作樹留下 UU 衝突檔；下面的潔癖檢查排在收拾之前，
+  // 看到衝突檔就整輪拒跑 → 收拾永遠輪不到，本機備援（BET365／OddsPortal／玩運彩接手）全停 37 小時。
+  // 這個 clone 是可重建的產出區，殘留的 rebase 沒有保留價值：一定要在潔癖檢查「之前」先收拾。
+  const rebaseDir = path.join(workspaceDir, '.git', 'rebase-merge');
+  const rebaseApply = path.join(workspaceDir, '.git', 'rebase-apply');
+  if (fs.existsSync(rebaseDir) || fs.existsSync(rebaseApply)) {
+    console.warn('[failover workspace] 偵測到上一輪殘留的 rebase，自動收拾後重跑');
+    try { git(['rebase', '--abort'], workspaceDir); }
+    catch (_) {
+      try { fs.rmSync(rebaseDir, { recursive: true, force: true }); } catch (_) {}
+      try { fs.rmSync(rebaseApply, { recursive: true, force: true }); } catch (_) {}
+    }
+    git(['reset', '--hard', 'origin/main'], workspaceDir);   // 產出以雲端為準，本機殘留丟掉
+  }
   const dirtyLines = git(['status', '--porcelain'], workspaceDir)
     .split(/\r?\n/)
     .filter(line => line && line !== '?? node_modules/');
@@ -151,22 +169,16 @@ function ensureFailoverWorkspace({ originUrl, workspaceDir }) {
   }
 
   git(['fetch', 'origin', 'main', '--prune'], workspaceDir);
-  // 2026-08-09 卡死事故：上一輪的 rebase 中途死掉，留下 .git/rebase-merge，
-  // 之後每 5 分鐘的排程一進來就撞「already a rebase-merge directory」而整輪失敗
-  // ——從 8/7 14:35 起連續 33 小時完全沒抓資料，直到使用者發現 8/9 初盤沒填。
-  // 這個 clone 是可重建的產出區，殘留的 rebase 沒有保留價值：先收拾再繼續。
-  const rebaseDir = path.join(workspaceDir, '.git', 'rebase-merge');
-  const rebaseApply = path.join(workspaceDir, '.git', 'rebase-apply');
-  if (fs.existsSync(rebaseDir) || fs.existsSync(rebaseApply)) {
-    console.warn('[failover workspace] 偵測到上一輪殘留的 rebase，自動收拾後重跑');
-    try { git(['rebase', '--abort'], workspaceDir); }
-    catch (_) {
-      try { fs.rmSync(rebaseDir, { recursive: true, force: true }); } catch (_) {}
-      try { fs.rmSync(rebaseApply, { recursive: true, force: true }); } catch (_) {}
-    }
-    git(['reset', '--hard', 'origin/main'], workspaceDir);   // 產出以雲端為準，本機殘留丟掉
+  // 本機沒推上去的產出撞到雲端較新的同一檔（10/12：pregame_data／lottery_series）→ 不可停在半路。
+  // 放棄這些過期的本機提交、以雲端為準（下一輪會重抓），否則下一輪起整條備援卡死。
+  try {
+    git(['rebase', 'origin/main'], workspaceDir);
+  } catch (error) {
+    console.warn('[failover workspace] rebase 衝突，放棄本機未推送的舊產出、改以雲端為準：' +
+      String(error && error.message || error).split('\n')[0]);
+    try { git(['rebase', '--abort'], workspaceDir); } catch (_) {}
+    git(['reset', '--hard', 'origin/main'], workspaceDir);
   }
-  git(['rebase', 'origin/main'], workspaceDir);
   return workspaceDir;
 }
 
