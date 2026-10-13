@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-13T09:45:06.938Z",
+ "updated": "2026-10-13T09:50:10.139Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -42,24 +42,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "NJ Devils",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3.25
      },
      {
       "name": "DET Red Wings",
       "side": "home",
-      "line": -1.5,
-      "odds": 3
+      "line": 1.5,
+      "odds": 1.33
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-13T09:50:10.139Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "NJ Devils",
+        "side": "away",
+        "odds": 1.85
+       },
+       {
+        "name": "DET Red Wings",
+        "side": "home",
+        "odds": 1.88
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "NJ Devils",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.25
+       },
+       {
+        "name": "DET Red Wings",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.33
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-13T09:40:09.083Z",
      "provider": "bet365-official",
@@ -785,6 +823,12 @@
    ],
    "events": [
     {
+     "at": "2026-10-13T09:50:10.139Z",
+     "type": "favorite-flip",
+     "from": "home",
+     "to": "away"
+    },
+    {
      "at": "2026-10-13T09:40:09.083Z",
      "type": "favorite-flip",
      "from": "away",
@@ -1285,12 +1329,12 @@
      {
       "name": "BUF Sabres",
       "side": "away",
-      "odds": 2.27
+      "odds": 2.26
      },
      {
       "name": "MTL Canadiens",
       "side": "home",
-      "odds": 1.59
+      "odds": 1.6
      }
     ]
    },
@@ -1319,6 +1363,44 @@
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-13T09:50:10.139Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "BUF Sabres",
+        "side": "away",
+        "odds": 2.26
+       },
+       {
+        "name": "MTL Canadiens",
+        "side": "home",
+        "odds": 1.6
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "BUF Sabres",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.49
+       },
+       {
+        "name": "MTL Canadiens",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.51
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-13T09:30:08.905Z",
      "provider": "bet365-official",
