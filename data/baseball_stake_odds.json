@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-13T03:03:38.582Z",
+  "generatedAt": "2026-10-13T03:08:39.179Z",
   "officialScheduleCount": 5,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T03:03:38.582Z",
-      "lastAttemptAt": "2026-10-13T03:03:38.582Z",
+      "lastSuccessAt": "2026-10-13T03:08:39.179Z",
+      "lastAttemptAt": "2026-10-13T03:08:39.179Z",
       "error": null,
-      "matched": 0,
+      "matched": 1,
       "health": {
         "discovered": 2,
-        "matched": 0,
+        "matched": 1,
         "unmatched": 1,
         "failed": 0,
         "failures": []
@@ -19,8 +19,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T03:03:38.582Z",
-      "lastAttemptAt": "2026-10-13T03:03:38.582Z",
+      "lastSuccessAt": "2026-10-13T03:08:39.179Z",
+      "lastAttemptAt": "2026-10-13T03:08:39.179Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -33,8 +33,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T03:03:38.582Z",
-      "lastAttemptAt": "2026-10-13T03:03:38.582Z",
+      "lastSuccessAt": "2026-10-13T03:08:39.179Z",
+      "lastAttemptAt": "2026-10-13T03:08:39.179Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -47,8 +47,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-13T03:03:38.582Z",
-      "lastAttemptAt": "2026-10-13T03:03:38.582Z",
+      "lastSuccessAt": "2026-10-13T03:08:39.179Z",
+      "lastAttemptAt": "2026-10-13T03:08:39.179Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -31859,6 +31859,71 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        }
+      ]
+    },
+    "MLB_20261014_CLE@TB_0800": {
+      "league": "MLB",
+      "officialId": "MLB_20261014_CLE@TB_0800",
+      "scheduledStart": "2026-10-14T00:00:00.000Z",
+      "away": "守護者",
+      "home": "光芒",
+      "fixtureId": "9981f0d9-7cb7-446a-b04b-a6f4e78d3411",
+      "slug": "46951961-alcs-finalist-1-alcs-finalist-2",
+      "sourceUrl": "https://stake.com/sports/baseball/usa/mlb/46951961-alcs-finalist-1-alcs-finalist-2",
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.49,
+        "home": 2.55
+      },
+      "moneyline": {
+        "away": 2.07,
+        "home": 1.73
+      },
+      "total": {
+        "line": 6.5,
+        "over": 1.72,
+        "under": 2.08
+      },
+      "sources": {
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
+        "moneyline": "stake-official"
+      },
+      "partial": false,
+      "observedAt": "2026-10-13T03:08:38.441Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-13T03:08:38.441Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.49,
+            "home": 2.55
+          },
+          "moneyline": {
+            "away": 2.07,
+            "home": 1.73
+          },
+          "total": {
+            "line": 6.5,
+            "over": 1.72,
+            "under": 2.08
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
