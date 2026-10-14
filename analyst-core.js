@@ -309,8 +309,42 @@
     return { sides, query, keyOf: order };
   }
 
+  // 盤口類別：ML／PLUS（受讓，線 > 0）／MINUS（讓分，線 < 0）
+  function marketKind(r) { return r.market === 'ML' ? 'ML' : r.line > 0 ? 'PLUS' : 'MINUS'; }
+  // 對決查詢：主角 hero 押 heroMarket；對手＝其他分析師（opp 為陣列時須全部在場）押 oppMarket；
+  // relation：'oppose'＝押對面那隊，'same'＝押同一隊。每場一個事件；對手過盤以對手第一張（依分析師順序）為代表，
+  // 同隊同盤口的對手結果必然相同。
+  function duel(annotated, { hero, heroMarket = 'any', opp = 'any', oppMarket = 'any', relation = 'oppose' } = {}) {
+    const byGame = new Map();
+    for (const r of annotated) {
+      if (!byGame.has(r.officialId)) byGame.set(r.officialId, []);
+      byGame.get(r.officialId).push(r);
+    }
+    const events = [];
+    for (const list of byGame.values()) {
+      const h = list.find((r) => r.analyst === hero && (heroMarket === 'any' || marketKind(r) === heroMarket));
+      if (!h) continue;
+      let others = list.filter((r) => r.analyst !== hero && (relation === 'oppose' ? r.side !== h.side : r.side === h.side)
+        && (oppMarket === 'any' || marketKind(r) === oppMarket));
+      if (Array.isArray(opp)) {
+        others = others.filter((r) => opp.includes(r.analyst));
+        if (!opp.length || opp.some((a) => !others.some((r) => r.analyst === a))) continue;
+      }
+      if (!others.length) continue;
+      others.sort((a, b) => ANALYSTS.indexOf(a.analyst) - ANALYSTS.indexOf(b.analyst));
+      events.push({ officialId: h.officialId, hero: h, opps: others, heroWin: h.result === 'win', oppWin: others[0].result === 'win' });
+    }
+    return {
+      events,
+      games: events.length,
+      hero: summarize(events.map((e) => e.hero)),
+      opp: summarize(events.map((e) => e.opps[0])),
+      both: events.filter((e) => e.heroWin && e.oppWin).length,
+    };
+  }
+
   return {
-    ANALYSTS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex,
+    ANALYSTS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,
     pickKey, pickLine, mergePicks, livePicks, settlePick, priceQuote, priceFrom, priceFor, relationToCard,
     buildLedger, summarize, filterRows, annotateContexts, inScenario, scenarioStats, pairMatrix, comboBoard,
   };

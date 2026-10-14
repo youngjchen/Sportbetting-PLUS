@@ -102,8 +102,34 @@
   .mx-legend .bar{width:140px;height:10px;border-radius:5px;background:linear-gradient(90deg,rgb(84,92,106),rgb(214,168,40))}
   .drill{border:1px solid var(--lit);border-radius:10px;padding:8px 10px;margin:4px 0 2px;background:var(--panel)}
   .drill .dh{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px;font-size:15px}
-  .drill .dr{display:grid;grid-template-columns:96px minmax(0,1.3fr) minmax(0,1fr) 34px minmax(0,1.2fr) 118px;gap:8px;font-size:14px;padding:5px 0;border-top:1px solid var(--line);align-items:center}
-  .drill .dr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .drill .dg{display:grid;grid-template-columns:84px minmax(0,1fr) minmax(0,1.3fr) minmax(0,1.3fr);gap:8px;font-size:14px;padding:6px 0;border-top:1px solid var(--line);align-items:center;line-height:1.45}
+  .drill .dg-h{color:var(--ink-dim);font-size:12.5px;border-top:0;padding-top:0}
+  .tbl tr[data-anchor]{cursor:pointer}
+  .tbl tr[data-anchor]:hover td{background:var(--panel-2)}
+  .tbl td.me b{color:var(--lit)}
+  /* ---------- 分析頁分頁、查詢列 ---------- */
+  .stabs{display:flex;gap:4px;margin:0 0 10px;border-bottom:2px solid var(--line);overflow-x:auto}
+  .stab{padding:9px 16px;border:0;border-bottom:3px solid transparent;margin-bottom:-2px;background:transparent;color:var(--ink-dim);font-size:16px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
+  .stab.on{color:var(--ink);border-bottom-color:var(--lit)}
+  .qbox{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:6px 11px;margin:10px 0}
+  .qbox .chips{align-items:center}
+  .clab{color:var(--ink-dim);font-size:13.5px;min-width:52px}
+  .csep{width:1px;align-self:stretch;background:var(--line);margin:0 3px}
+  .chip.sm{padding:4px 10px;font-size:13px}
+  /* ---------- 對決卡 ---------- */
+  .duel{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--panel)}
+  .tcard .duel{background:var(--panel-2)}
+  .d-title{font-weight:700;font-size:15px;margin-bottom:6px;line-height:1.45}
+  .d-vs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;text-align:center}
+  .d-who{font-size:14px;color:var(--ink-dim);font-weight:700}
+  .d-big{font-size:34px;font-weight:800;line-height:1.15;font-variant-numeric:tabular-nums}
+  .d-sub{font-size:13px;color:var(--ink-dim)}
+  .d-mid{color:var(--ink-dim);font-weight:700}
+  .d-split{display:flex;height:10px;border-radius:5px;overflow:hidden;gap:3px;margin:8px 0 6px}
+  .d-note{font-size:13px;color:var(--ink-dim);line-height:1.55}
+  .duel.few .d-big,.duel.few .d-split{opacity:.5}
+  .d-one{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  .d-extra{font-size:13.5px;color:var(--ink-dim);margin-top:4px}
   .wrap-x{overflow-x:auto}
   /* ---------- 登錄頁底部：今日組合 vs 歷史 ---------- */
   .today{margin-top:22px;padding-top:6px;border-top:2px solid var(--line)}
@@ -117,18 +143,10 @@
   .tc-lab{color:var(--ink-dim);display:inline-block;min-width:96px}
   .tchip{padding:4px 11px;margin:2px 5px 2px 0;border:1px solid var(--lit);border-radius:8px;background:rgba(255,176,46,.12);color:var(--ink);font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit}
   .tchip.off{border-color:var(--line);background:transparent;color:var(--ink-dim);text-decoration:line-through}
-  .bars{display:flex;flex-direction:column;gap:8px}
-  .bar-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 96px;gap:10px;align-items:center;font-size:14.5px}
-  .bar-row .bl{line-height:1.35}
-  .bar-row .bt{height:26px;background:var(--panel-2);border-radius:6px;overflow:hidden}
-  .bar-row .bf{display:flex;align-items:center;justify-content:flex-end;height:100%;padding-right:7px;font-weight:700;font-size:14px;border-radius:6px;white-space:nowrap}
-  .bar-row .bn{color:var(--ink-dim);font-size:13.5px;text-align:right}
-  .bar-row.few{opacity:.5}
   .h-dim{color:var(--ink-dim)}
   @media (max-width:720px){
     .tcards{grid-template-columns:1fr}
-    .bar-row{grid-template-columns:minmax(0,1fr) 84px;grid-template-areas:"l l" "t n";gap:3px 8px}
-    .bar-row .bl{grid-area:l;white-space:normal}.bar-row .bt{grid-area:t}.bar-row .bn{grid-area:n}
+    .d-big{font-size:28px}
   }
   #toast{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--lit);color:var(--ink);padding:8px 15px;border-radius:10px;font-size:14.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
   #toast.show{opacity:1}
@@ -158,8 +176,11 @@
     .rate{min-width:50px;padding:1px 4px}
     .mx{grid-template-columns:50px repeat(5,minmax(0,1fr));font-size:12px;gap:3px}
     .mx .cell b{font-size:14.5px}
-    .drill .dr{grid-template-columns:78px minmax(0,1fr) minmax(0,1fr) 28px;font-size:13px}
-    .drill .dr .x{display:none}
+    .drill .dg{grid-template-columns:58px minmax(0,1fr);gap:2px 8px;font-size:13.5px}
+    .drill .dg > span:nth-child(n+3){grid-column:2}
+    .drill .dg-h{display:none}
+    .wrap-x .drill{position:sticky;left:0;width:calc(100vw - 88px);box-sizing:border-box}
+    .stab{padding:8px 10px;font-size:14.5px}
   }
 </style>
 </head>
@@ -184,7 +205,7 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261015c"></script>
+<script src="./analyst-core.js?v=20261015d"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
 <script>
 (function () {
@@ -216,7 +237,7 @@
 
   /* ---------- 狀態 ---------- */
   const view = Object.assign({ analyst: 'APE', league: 'NHL', date: twToday(), retro: false, mode: 'entry' }, readJson(VIEW_KEY) || {});
-  view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [] }, view.st || {});
+  view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [], tab: 'duel', hero: 'BANKROLL', heroM: 'PLUS', oppMode: 'any', opp: [], oppM: 'ML', rel: 'oppose' }, view.st || {});
   const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
   let RESULTS = {};   // data/analyst_results.json（analyst-settle 工作流寫）：官方核對後的比分、賽季階段、Stake 收盤價
   let picks = (readJson(LOCAL_KEY) || {}).picks || [];
@@ -495,11 +516,11 @@
     }).filter(Boolean);
     $('summary').innerHTML = parts.length ? `<span>${view.date} ${view.league} 主要命中：</span>${parts.join('')}` : `<span>${view.date} ${view.league} 尚無推薦</span>`;
   }
-  /* ================= 分析頁 =================
+  /* ================= 分析頁（分頁：對決查詢／個人總覽／兩兩組合／表單 vs LOTTO） =================
      資料＝data/analyst_history.json（匯入的歷史，唯讀）∪ 推薦主帳（10/13 起）；
      比賽＝歷史 games ∪ 賽程檔 ∪ analyst_results.json（結算檔優先）。
-     情境、兩兩、組合一律只用主帳票，且以「場」為單位（3 人同向＝1 場）。
-     明細在被點的那一列下方原地展開（drill.anchor），再點一次收起。 */
+     對決、情境、組合一律只用主帳票、以「場」為單位。
+     明細一律「每場一列、只列相關的人」，在被點的那一列下方展開，再點一次收起。 */
   const SCEN = [
     ['all', '全部', '主帳每一張已結算的票。'],
     ['absoluteAligned', '絕對同向', '同一場有推薦的人全押同一隊、同盤口同線（至少 2 人、沒人押對面）。'],
@@ -514,7 +535,10 @@
     ['conflict', '所有衝突', '同一場兩邊都有人押。'],
   ];
   const DEFAULT_PHASES = ['regular', 'postseason', null];
-  let HISTORY = null; let histLoading = false; let drill = null;   // drill = { anchor }
+  const MK = [['any', '任意'], ['ML', 'ML'], ['PLUS', '受讓（+）'], ['MINUS', '讓分（−）']];
+  const MK_TXT = { any: '任意盤口', ML: 'ML', PLUS: '受讓', MINUS: '讓分' };
+  const TABS = [['duel', '對決查詢'], ['overview', '個人總覽'], ['pairs', '兩兩組合'], ['lotto', '表單 vs LOTTO']];
+  let HISTORY = null; let histLoading = false; let drill = null; let GAMES = {};
   async function loadHistory() {
     if (HISTORY || histLoading) return;
     histLoading = true;
@@ -533,6 +557,7 @@
       if (g) games[p.officialId] = Object.assign({}, g);
     }
     for (const [id, r] of Object.entries(RESULTS)) games[id] = Object.assign({}, games[id] || {}, r, r.review ? { final: false } : {});
+    GAMES = games;
     return Core.buildLedger(Core.mergePicks(HISTORY ? HISTORY.picks : [], live), games);
   }
   function addDays(date, n) { const d = new Date(`${date}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
@@ -545,61 +570,141 @@
     return f;
   }
   // 命中率色階：45% 以下灰 → 80% 以上金；樣本少於門檻淡化（超過門檻就不再隨場數變色）
-  function rateStyle(rate) {
+  function rateMix(rate) {
     const t = Math.max(0, Math.min(1, (rate - 0.45) / 0.35));
     const gray = [84, 92, 106]; const gold = [214, 168, 40];
-    const c = gray.map((g, i) => Math.round(g + (gold[i] - g) * t));
-    return `background:rgb(${c.join(',')});color:${t > 0.55 ? '#1b1405' : '#eef2f7'}`;
+    return { t, c: gray.map((g, i) => Math.round(g + (gold[i] - g) * t)) };
   }
+  function rateStyle(rate) { const { t, c } = rateMix(rate); return `background:rgb(${c.join(',')});color:${t > 0.55 ? '#1b1405' : '#eef2f7'}`; }
+  function rateText(rate) { const t = Math.max(0, Math.min(1, (rate - 0.45) / 0.35)); const lo = [150, 160, 175]; const hi = [245, 195, 60]; return `rgb(${lo.map((g, i) => Math.round(g + (hi[i] - g) * t)).join(',')})`; }
   function ratePill(rate, n, minN) {
     if (rate == null) return '<span style="color:var(--ink-dim)">—</span>';
     return `<span class="rate${n < minN ? ' few' : ''}" style="${rateStyle(rate)}">${(rate * 100).toFixed(1)}%</span>`;
   }
+  const pctOf = (w, n) => (n ? `${((w / n) * 100).toFixed(1)}%` : '—');
   const roiTxt = (s) => (s.priced ? `<span class="${s.profit >= 0 ? 'pos' : 'neg'}">${s.profit >= 0 ? '+' : ''}${s.profit.toFixed(2)}u／${(s.roi * 100).toFixed(1)}%</span><small style="color:var(--ink-dim)">（${s.priced}）</small>` : '<span style="color:var(--ink-dim)">—</span>');
-  function pickText(r) { return `${esc(r.team)} ${r.market === 'ML' ? 'ML' : signed(r.line)}${r.layer === 'lotto' ? ' <small style="color:var(--lotto)">L</small>' : ''}`; }
-  function drillHtml(anchor, title, rows) {
-    const icon = { win: '✅', loss: '❌', push: '➖', refund: '↩', pending: '…' };
-    const list = rows.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 300);
-    return `<div class="drill"><div class="dh"><span>${esc(title)}｜${rows.length} 筆${rows.length > 300 ? '（顯示最近 300）' : ''}</span><button class="hbtn" data-anchor="${esc(anchor)}">收起</button></div>`
-      + (list.length ? list.map((r) => {
-        const ctx = r.ctx ? `同側 ${r.ctx.partners.map((a) => SHORT[a]).join('+') || '—'}｜對側 ${r.ctx.opponents.map((a) => SHORT[a]).join('+') || '—'}` : (r.relation || '');
-        return `<div class="dr"><span>${esc((r.date || '').slice(5).replace('-', '/'))} ${esc(r.league)}</span><span>${esc(r.away || '')}@${esc(r.home || '')}</span><span><b>${SHORT[r.analyst]}</b> ${pickText(r)}</span><span>${icon[r.result] || ''}</span><span class="x">${esc(ctx)}</span><span class="x">${r.odds == null ? '' : `${r.odds.toFixed(2)}<small style="color:var(--ink-dim)">${r.oddsBook === 'bet365' ? 'b' : 'S'}</small> `}${r.profit == null ? '' : `${r.profit >= 0 ? '+' : ''}${r.profit.toFixed(2)}u`}</span></div>`;
+
+  /* ---------- 明細：每場一列、只列相關的人 ---------- */
+  const ICON = { win: '✅', loss: '❌', push: '➖', refund: '↩', pending: '…' };
+  function pickLabel(r) { return `${esc(r.team)} ${r.market === 'ML' ? 'ML' : signed(r.line)}`; }
+  function rowsText(rows) {   // 同隊同盤口同結果的人合併：「APE・BOO 雪崩 ML ✅」
+    const groups = new Map();
+    for (const r of rows) {
+      const k = `${r.team}|${r.market}|${r.line}|${r.result}`;
+      if (!groups.has(k)) groups.set(k, []);
+      groups.get(k).push(r);
+    }
+    return [...groups.values()].map((g) => {
+      const odds = g.length === 1 && g[0].odds != null ? ` <small class="h-dim">${g[0].odds.toFixed(2)}${g[0].oddsBook === 'bet365' ? 'b' : 'S'}</small>` : '';
+      return `<b>${g.map((r) => SHORT[r.analyst]).join('・')}</b> ${pickLabel(g[0])}${g.some((r) => r.layer === 'lotto') ? '<small style="color:var(--lotto)"> L</small>' : ''} ${ICON[g[0].result] || ''}${odds}`;
+    }).join('　');
+  }
+  const ctxNote = (r) => (r.ctx ? `同側另 ${r.ctx.ownCount - 1} 人｜對面 ${r.ctx.oppCount} 人` : (r.relation || ''));
+  const singles = (rows) => rows.map((r) => ({ id: r.officialId, left: [r], right: [], note: ctxNote(r) }));
+  function drillGamesHtml(anchor, title, groups, leftHead, rightHead) {
+    const key = (x) => { const g = GAMES[x.id] || {}; const r = x.left[0] || x.right[0] || {}; return `${g.date || r.date || ''}${g.time || ''}`; };
+    const sorted = groups.slice().sort((a, b) => (key(a) < key(b) ? 1 : -1));
+    const list = sorted.slice(0, 200);
+    return `<div class="drill"><div class="dh"><span>${esc(title)}｜${groups.length} 場${groups.length > 200 ? '（顯示最近 200）' : ''}</span><button class="hbtn" data-anchor="${esc(anchor)}">收起</button></div>`
+      + `<div class="dg dg-h"><span>日期</span><span>比賽（客@主 比分）</span><span>${esc(leftHead || '推薦')}</span><span>${esc(rightHead || '')}</span></div>`
+      + (list.length ? list.map((x) => {
+        const g = GAMES[x.id] || {}; const r0 = x.left[0] || x.right[0] || {};
+        const date = (g.date || r0.date || '').slice(5).replace('-', '/');
+        const score = g.awayScore != null && g.homeScore != null ? ` <b>${g.awayScore}–${g.homeScore}</b>` : '';
+        return `<div class="dg"><span>${esc(date)} <small class="h-dim">${esc(r0.league || g.league || '')}</small></span><span>${esc(g.away || r0.away || '')}@${esc(g.home || r0.home || '')}${score}</span><span>${rowsText(x.left)}</span><span>${x.right.length ? rowsText(x.right) : `<span class="h-dim">${esc(x.note || '')}</span>`}</span></div>`;
       }).join('') : '<div class="st-help">沒有資料</div>') + '</div>';
   }
-  function anchorRow(anchor, cells, rows, title, cols = 5) {
+  function anchorRow(anchor, cells, drillFn, cols = 5) {
     const open = drill && drill.anchor === anchor;
     return `<tr data-anchor="${esc(anchor)}"${open ? ' class="open"' : ''}>${cells}</tr>`
-      + (open ? `<tr class="drill-row"><td colspan="${cols}">${drillHtml(anchor, title, rows)}</td></tr>` : '');
+      + (open ? `<tr class="drill-row"><td colspan="${cols}">${drillFn()}</td></tr>` : '');
   }
   function statCells(label, s, minN) {
     return `<td><b>${label}</b></td><td class="num">${s.wins}–${s.losses}${s.refunds ? `<small style="color:var(--ink-dim);font-weight:400"> 退${s.refunds}</small>` : ''}</td><td>${ratePill(s.hitRate, s.settled, minN)}</td><td>${ratePill(s.dirRate, s.dirSettled, minN)}</td><td>${roiTxt(s)}</td>`;
   }
   const TH = '<tr><th>分析師</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>';
 
-  function renderStats() {
+  /* ---------- 對決卡（登錄頁與分析頁共用） ---------- */
+  function duelCard(d, heroName, oppName, opts = {}) {
+    const title = opts.title ? `<div class="d-title">${opts.title}</div>` : '';
+    if (!d.games) return `<div class="duel">${title}<div class="h-dim">過去沒有這種對決。${opts.note ? `<br>${opts.note}` : ''}</div></div>`;
+    const hn = d.hero.settled; const on = d.opp.settled;
+    const hr = hn ? d.hero.wins / hn : 0; const or = on ? d.opp.wins / on : 0;
+    const roi = (s) => (s.priced ? `｜ROI <span class="${s.profit >= 0 ? 'pos' : 'neg'}">${(s.roi * 100).toFixed(1)}%</span>` : '');
+    return `<div class="duel${d.games < 10 ? ' few' : ''}">${title}
+      <div class="d-vs">
+        <div class="d-side"><div class="d-who">${heroName}</div><div class="d-big" style="color:${rateText(hr)}">${pctOf(d.hero.wins, hn)}</div><div class="d-sub">過盤 ${d.hero.wins}／${hn}${roi(d.hero)}</div></div>
+        <div class="d-mid">vs</div>
+        <div class="d-side"><div class="d-who">${oppName}</div><div class="d-big" style="color:${rateText(or)}">${pctOf(d.opp.wins, on)}</div><div class="d-sub">過盤 ${d.opp.wins}／${on}${roi(d.opp)}</div></div>
+      </div>
+      <div class="d-split"><span style="flex:${Math.max(0.02, hr)};background:rgb(${rateMix(hr).c.join(',')})"></span><span style="flex:${Math.max(0.02, or)};background:rgb(${rateMix(or).c.join(',')})"></span></div>
+      <div class="d-note">共 ${d.games} 場｜兩邊都過 ${d.both} 場${d.games < 10 ? '｜<b>樣本少於 10 場，僅供參考</b>' : ''}${opts.note ? `｜${opts.note}` : ''}</div>
+    </div>`;
+  }
+  const duelGroups = (d) => d.events.map((e) => ({ id: e.officialId, left: [e.hero], right: e.opps }));
+
+  /* ---------- 分頁內容 ---------- */
+  function chipRow(label, key, opts, extra = '') {
+    return `<div class="chips"><span class="clab">${label}</span>${opts.map(([v, t]) => `<button class="chip${String(view.st[key]) === v ? ' on' : ''}" data-st="${key}" data-v="${v}">${t}</button>`).join('')}${extra}</div>`;
+  }
+  function renderDuelTab(ann, minN) {
     const st = view.st;
-    $('rail').innerHTML = ['ALL', ...LEAGUES].map((lg) => `<button class="lg${lg === st.league ? ' on' : ''}" data-sl="${lg}">${lg === 'ALL' ? '全部' : lg}</button>`).join('');
-    if (!HISTORY) { $('list').innerHTML = '<div class="empty">載入歷史紀錄中…</div>'; loadHistory(); return; }
-    const chips = (key, opts) => `<div class="chips">${opts.map(([v, t]) => `<button class="chip${String(st[key]) === v ? ' on' : ''}" data-st="${key}" data-v="${v}">${t}</button>`).join('')}</div>`;
-    const rows = Core.filterRows(statsLedger(), statsFilter());
+    const hero = ANALYSTS.includes(st.hero) ? st.hero : 'BANKROLL';
+    const pickedOpp = (st.opp || []).filter((a) => ANALYSTS.includes(a) && a !== hero);
+    const opp = st.oppMode === 'pick' ? pickedOpp : 'any';
+    const q = { hero, heroMarket: st.heroM || 'any', opp, oppMarket: st.oppM || 'any', relation: st.rel || 'oppose' };
+    let html = '<div class="qbox">';
+    html += chipRow('主角', 'hero', ANALYSTS.map((a) => [a, a]));
+    html += chipRow('主角押', 'heroM', MK);
+    html += chipRow('對手', 'oppMode', [['any', '任何人'], ['pick', '指定']],
+      st.oppMode === 'pick' ? `<span class="csep"></span>${ANALYSTS.filter((a) => a !== hero).map((a) => `<button class="chip sm${pickedOpp.includes(a) ? ' on' : ''}" data-opp="${a}">${a}</button>`).join('')}` : '');
+    html += chipRow('對手押', 'oppM', MK);
+    html += chipRow('關係', 'rel', [['oppose', '押對面那隊'], ['same', '押同一隊']]);
+    html += '</div>';
+    if (st.oppMode === 'pick' && !pickedOpp.length) return `${html}<div class="st-help">請在「指定」後面點選至少一位對手。</div>`;
+    const oppNames = opp === 'any' ? '對手' : opp.map((a) => SHORT[a]).join('・');
+    const sentence = `${hero} 押${MK_TXT[q.heroMarket]}，${opp === 'any' ? '有任何人' : `${oppNames}${opp.length > 1 ? ' 都' : ' '}`}${q.relation === 'oppose' ? '押對面' : '押同一隊'}${q.oppMarket === 'any' ? '' : `的${MK_TXT[q.oppMarket]}`}`;
+    const d = Core.duel(ann, q);
+    html += duelCard(d, `${SHORT[hero]} ${MK_TXT[q.heroMarket]}`, `${oppNames} ${MK_TXT[q.oppMarket]}`, { title: sentence });
+    // 同一個問題，換每位當主角
+    html += `<div class="st-sec">同一個問題，換每位當主角</div><div class="st-help">條件不變，只換主角；被指定為對手的人不能當主角。點任一列看逐場。</div>`;
+    html += '<div class="wrap-x"><table class="tbl"><tr><th>主角</th><th>場數</th><th>主角過盤</th><th>對手過盤</th><th>兩邊都過</th><th>主角收盤 ROI（張）</th></tr>';
+    for (const a of ANALYSTS) {
+      if (opp !== 'any' && opp.includes(a)) continue;
+      const da = a === hero ? d : Core.duel(ann, Object.assign({}, q, { hero: a, opp: opp === 'any' ? 'any' : opp.filter((x) => x !== a) }));
+      if (opp !== 'any' && !opp.filter((x) => x !== a).length) continue;
+      const anchor = `duel:${a}:${q.heroMarket}:${q.oppMarket}:${q.relation}:${opp === 'any' ? 'any' : opp.join('+')}`;
+      const cells = `<td><b>${a}</b></td><td class="num">${da.games}</td><td>${ratePill(da.hero.hitRate, da.hero.settled, minN)}</td><td>${ratePill(da.opp.hitRate, da.opp.settled, minN)}</td><td class="num">${da.both}</td><td>${roiTxt(da.hero)}</td>`;
+      html += anchorRow(anchor, cells.replace('<td><b>', a === hero ? '<td class="me"><b>' : '<td><b>'), () => drillGamesHtml(anchor, sentence.replace(hero, a), duelGroups(da), `主角 ${SHORT[a]}`, oppNames), 6);
+    }
+    html += '</table></div>';
+    return html;
+  }
+  function renderOverviewTab(rows, ann, minN) {
+    const st = view.st;
     const main = rows.filter((r) => r.countsInMain && ['win', 'loss', 'push', 'refund'].includes(r.result));
-    const ann = Core.annotateContexts(rows);
-    const minN = Math.max(0, Number(st.min) || 0);
-    let html = `<div class="filters">
-      ${chips('range', [['all', '全部日期'], ['30', '近 30 天'], ['7', '近 7 天'], ['custom', '自訂']])}
-      ${st.range === 'custom' ? `<label>從 <input type="date" id="fromIn" value="${esc(st.from)}"></label><label>到 <input type="date" id="toIn" value="${esc(st.to)}"></label>` : ''}
-      ${chips('phase', [['default', '例行＋季後'], ['withPre', '含季前'], ['post', '只季後'], ['pre', '只季前']])}
-      <label>最少樣本 <input type="number" id="minIn" min="0" step="1" value="${minN}" style="width:60px"></label>
-      </div>`;
-    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起。損益用收盤賠率、每張 1 單位（Stake 優先，沒有才用 bet365；讓分推薦對不到盤口就不算）。命中率顏色：灰＝低、金＝高；樣本少於 ${minN} 會變淡。點任一列或格子，明細在下方展開。</div>`;
-    // 1. 情境
+    const annBy = new Map(ann.map((r) => [`${r.officialId}|${r.analyst}`, r]));
+    const withCtx = (l) => l.map((r) => annBy.get(`${r.officialId}|${r.analyst}`) || r);
+    let html = '<div class="st-sec">個人總覽</div><div class="wrap-x"><table class="tbl">' + TH;
+    for (const a of ANALYSTS) {
+      const list = main.filter((r) => r.analyst === a);
+      html += anchorRow(`ov:${a}`, statCells(a, Core.summarize(list), minN), () => drillGamesHtml(`ov:${a}`, `${a}｜全部`, singles(withCtx(list)), a, '這場的同向／對面人數'));
+    }
+    html += '</table></div>';
     const sc = SCEN.find((x) => x[0] === st.scenario) || SCEN[0];
-    html += `<div class="st-sec">情境命中率</div>${chips('scenario', SCEN.map((x) => [x[0], x[1]]))}<div class="st-help">${sc[2]}</div>`;
-    const scRows = (a) => (sc[0] === 'all' ? main.filter((r) => r.analyst === a) : ann.filter((r) => r.analyst === a && Core.inScenario(r, sc[0])));
-    html += `<div class="wrap-x"><table class="tbl">${TH}${ANALYSTS.map((a) => { const list = scRows(a); return anchorRow(`sc:${sc[0]}:${a}`, statCells(a, Core.summarize(list), minN), list, `${a}｜${sc[1]}`); }).join('')}</table></div>`;
-    // 2. 兩兩矩陣（灰→金；少於門檻淡化）
+    html += `<div class="st-sec">依情境</div><div class="chips">${SCEN.map((x) => `<button class="chip${x[0] === sc[0] ? ' on' : ''}" data-st="scenario" data-v="${x[0]}">${x[1]}</button>`).join('')}</div><div class="st-help">${sc[2]}</div>`;
+    html += `<div class="wrap-x"><table class="tbl">${TH}`;
+    for (const a of ANALYSTS) {
+      const list = sc[0] === 'all' ? main.filter((r) => r.analyst === a) : ann.filter((r) => r.analyst === a && Core.inScenario(r, sc[0]));
+      const anchor = `sc:${sc[0]}:${a}`;
+      html += anchorRow(anchor, statCells(a, Core.summarize(list), minN), () => drillGamesHtml(anchor, `${a}｜${sc[1]}`, singles(withCtx(list)), a, '這場的同向／對面人數'));
+    }
+    return `${html}</table></div>`;
+  }
+  function renderPairsTab(ann, minN) {
+    const st = view.st;
     const { same, versus } = Core.pairMatrix(ann);
-    html += `<div class="st-sec">兩兩組合</div>${chips('matrix', [['same', '同向時（球隊直勝率）'], ['versus', '對立時（行的人命中率）']])}`;
+    let html = `<div class="st-sec">兩兩矩陣</div><div class="chips">${[['same', '同向時（球隊直勝率）'], ['versus', '對立時（行的人命中率）']].map(([v, t]) => `<button class="chip${st.matrix === v ? ' on' : ''}" data-st="matrix" data-v="${v}">${t}</button>`).join('')}</div>`;
     html += `<div class="mx-legend"><span>低</span><span class="bar"></span><span>高</span><span>｜淡色＝少於 ${minN} 場</span></div>`;
     html += `<div class="mx"><div></div>${ANALYSTS.map((a) => `<div class="h">${SHORT[a]}</div>`).join('')}`;
     for (const x of ANALYSTS) {
@@ -607,27 +712,28 @@
       let openHere = null;
       for (const y of ANALYSTS) {
         if (x === y) { html += '<div style="background:var(--panel)">—</div>'; continue; }
-        let n = 0; let rate = null; let list = [];
+        let n = 0; let rate = null;
         if (st.matrix === 'same') {
           const k = ANALYSTS.indexOf(x) < ANALYSTS.indexOf(y) ? `${x}+${y}` : `${y}+${x}`;
           const v = same[k]; if (v) { n = v.games; rate = v.dirWins / v.games; }
-          list = ann.filter((r) => r.analyst === x && r.ctx.partners.includes(y));
         } else {
           const v = versus[`${x}>${y}`]; if (v) { n = v.games; rate = v.wins / v.games; }
-          list = ann.filter((r) => r.analyst === x && r.ctx.opponents.includes(y));
         }
         if (!n) { html += '<div style="background:var(--panel);color:var(--ink-dim)">—</div>'; continue; }
         const anchor = `mx:${st.matrix}:${x}:${y}`;
-        const title = `${x} ${st.matrix === 'same' ? '與' : '對'} ${y}${st.matrix === 'same' ? ' 同向' : ' 對立'}`;
-        if (drill && drill.anchor === anchor) openHere = { anchor, title, list };
+        if (drill && drill.anchor === anchor) {
+          const xs = ann.filter((r) => r.analyst === x && (st.matrix === 'same' ? r.ctx.partners.includes(y) : r.ctx.opponents.includes(y)));
+          const groups = xs.map((r) => { const yr = ann.find((z) => z.officialId === r.officialId && z.analyst === y); return st.matrix === 'same' ? { id: r.officialId, left: [r, yr].filter(Boolean), right: [] , note: `對面 ${r.ctx.oppCount} 人` } : { id: r.officialId, left: [r], right: yr ? [yr] : [] }; });
+          openHere = drillGamesHtml(anchor, `${x} ${st.matrix === 'same' ? '與' : '對'} ${y}${st.matrix === 'same' ? ' 同向' : ' 對立'}`, groups, st.matrix === 'same' ? `${SHORT[x]}・${SHORT[y]}` : SHORT[x], st.matrix === 'same' ? '' : SHORT[y]);
+        }
         html += `<div class="cell" data-anchor="${esc(anchor)}" style="${rateStyle(rate)};opacity:${n < minN ? 0.42 : 1}${drill && drill.anchor === anchor ? ';outline:2px solid var(--ink)' : ''}"><b>${Math.round(rate * 100)}%</b>${n} 場</div>`;
       }
-      if (openHere) html += drillHtml(openHere.anchor, openHere.title, openHere.list);
+      if (openHere) html += openHere;
     }
     html += '</div>';
-    // 2b. 自選組合：多選 ≥2 位，只看「這幾位全都有推薦」的比賽
+    // 自選組合
     const sel = (st.sel || []).filter((a) => ANALYSTS.includes(a));
-    html += `<div class="st-sec">自選組合</div><div class="st-help">選兩位以上，只看這幾位「全都有推薦」的比賽：同一邊時的球隊直勝，以及互相衝突時各自的命中率。</div>`;
+    html += `<div class="st-sec">自選組合</div><div class="st-help">選兩位以上，只看這幾位「全都有推薦」的比賽；明細只列這幾位。</div>`;
     html += `<div class="chips">${ANALYSTS.map((a) => `<button class="chip${sel.includes(a) ? ' on' : ''}" data-sel="${a}">${a}</button>`).join('')}</div>`;
     if (sel.length >= 2) {
       const byGame = new Map();
@@ -639,44 +745,49 @@
       const aligned = { all: [], unopp: [], opp: [], exact: [] }; const split = [];
       for (const list of byGame.values()) {
         if (list.length !== sel.length) continue;
+        list.sort((a, b) => ANALYSTS.indexOf(a.analyst) - ANALYSTS.indexOf(b.analyst));
         if (new Set(list.map((r) => r.side)).size === 1) {
           aligned.all.push(list);
           (list[0].ctx.oppCount > 0 ? aligned.opp : aligned.unopp).push(list);
           if (list[0].ctx.ownCount === sel.length) aligned.exact.push(list);
         } else split.push(list);
       }
-      const names = sel.map((a) => SHORT[a]).join('+');
+      const names = sel.map((a) => SHORT[a]).join('＋');
       html += `<div class="wrap-x"><table class="tbl"><tr><th>${names} 同一邊</th><th>場數</th><th>球隊直勝</th><th>全員過盤</th><th>收盤損益／ROI（張）</th></tr>`;
       for (const [k, label] of [['all', '全部同向'], ['unopp', '其中沒人反對'], ['opp', '其中有人反對'], ['exact', '同邊只有這幾位']]) {
         const games = aligned[k]; const n = games.length;
         const dir = games.filter((l) => l[0].direction === 'win').length; const allw = games.filter((l) => l.every((r) => r.result === 'win')).length;
-        const tickets = games.flat();
-        html += anchorRow(`sel:al:${sel.join('+')}:${k}`, `<td><b>${label}</b></td><td class="num">${n}</td><td>${n ? ratePill(dir / n, n, minN) : '—'}</td><td>${n ? ratePill(allw / n, n, minN) : '—'}</td><td>${roiTxt(Core.summarize(tickets))}</td>`, tickets, `${names}｜${label}`);
+        const anchor = `sel:al:${sel.join('+')}:${k}`;
+        html += anchorRow(anchor, `<td><b>${label}</b></td><td class="num">${n}</td><td>${n ? ratePill(dir / n, n, minN) : '—'}</td><td>${n ? ratePill(allw / n, n, minN) : '—'}</td><td>${roiTxt(Core.summarize(games.flat()))}</td>`,
+          () => drillGamesHtml(anchor, `${names}｜${label}`, games.map((l) => ({ id: l[0].officialId, left: l, right: [], note: `對面 ${l[0].ctx.oppCount} 人` })), names, '對面人數'));
       }
       html += '</table></div>';
+      const sideA = (l) => l.filter((r) => r.side === l[0].side); const sideB = (l) => l.filter((r) => r.side !== l[0].side);
       html += `<div class="wrap-x" style="margin-top:8px"><table class="tbl"><tr><th>${names} 互相衝突（${split.length} 場）</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>`;
       for (const a of sel) {
         const l = split.map((g) => g.find((r) => r.analyst === a));
-        html += anchorRow(`sel:cf:${sel.join('+')}:${a}`, statCells(a, Core.summarize(l), minN), l, `${a}｜與 ${names} 互相衝突時`);
+        const anchor = `sel:cf:${sel.join('+')}:${a}`;
+        html += anchorRow(anchor, statCells(a, Core.summarize(l), minN), () => drillGamesHtml(anchor, `${names}｜互相衝突`, split.map((g) => ({ id: g[0].officialId, left: sideA(g), right: sideB(g) })), '一邊', '另一邊'));
       }
       html += '</table></div>';
-    } else {
-      html += '<div class="st-help">再多選一位以上。</div>';
-    }
-    // 3. 精確組合排行
+    } else html += '<div class="st-help">再多選一位以上。</div>';
+    // 精確組合排行
     const board = Core.comboBoard(ann);
     const combos = Object.entries(board).filter(([k, b]) => k.includes('+') && b.games >= minN)
       .sort((a, b) => b[1].dirWins / b[1].games - a[1].dirWins / a[1].games || b[1].games - a[1].games).slice(0, 30);
     html += `<div class="st-sec">精確組合排行</div><div class="st-help">同一邊「正好是這幾位」；只列場數 ≥ ${minN}。</div><div class="wrap-x"><table class="tbl"><tr><th>組合</th><th>場數</th><th>球隊直勝</th><th>全員過盤</th><th>有人押對面</th></tr>`;
     html += combos.map(([k, b]) => {
-      const members = k.split('+');
-      const list = ann.filter((r) => r.analyst === members[0] && [r.analyst, ...r.ctx.partners].sort((a, c) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(c)).join('+') === k);
-      return anchorRow(`cb:${k}`, `<td><b>${members.map((a) => SHORT[a]).join('+')}</b></td><td class="num">${b.games}</td><td>${ratePill(b.dirWins / b.games, b.games, minN)}</td><td>${ratePill(b.allWin / b.games, b.games, minN)}</td><td class="num">${b.opposed}</td>`, list, `組合 ${k}`);
+      const members = k.split('+'); const anchor = `cb:${k}`;
+      return anchorRow(anchor, `<td><b>${members.map((a) => SHORT[a]).join('＋')}</b></td><td class="num">${b.games}</td><td>${ratePill(b.dirWins / b.games, b.games, minN)}</td><td>${ratePill(b.allWin / b.games, b.games, minN)}</td><td class="num">${b.opposed}</td>`, () => {
+        const firsts = ann.filter((r) => r.analyst === members[0] && [r.analyst, ...r.ctx.partners].sort((a, c) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(c)).join('+') === k);
+        return drillGamesHtml(anchor, `組合 ${k}`, firsts.map((r) => ({ id: r.officialId, left: ann.filter((z) => z.officialId === r.officialId && z.side === r.side), right: [], note: `對面 ${r.ctx.oppCount} 人` })), members.map((a) => SHORT[a]).join('＋'), '對面人數');
+      });
     }).join('') || `<tr><td colspan="5" style="color:var(--ink-dim)">沒有場數 ≥ ${minN} 的組合，可把最少樣本調低。</td></tr>`;
-    html += '</table></div>';
-    // 4. 表單 vs LOTTO
+    return `${html}</table></div>`;
+  }
+  function renderLottoTab(rows) {
     const settled = rows.filter((r) => r.result !== 'pending');
-    html += `<div class="st-sec">表單 vs LOTTO</div><div class="st-help">表單＝左鍵層；LOTTO 另計＝同場已有表單的 LOTTO 腿（不進主帳）；串關腿計入＝當天沒表單時的 LOTTO／串關腿。10/13 起才分得出來。</div>`;
+    let html = '<div class="st-sec">表單 vs LOTTO</div><div class="st-help">表單＝左鍵層；LOTTO 另計＝同場已有表單的 LOTTO 腿（不進主帳）；串關腿計入＝當天沒表單時的 LOTTO／串關腿。10/13 起才分得出來。</div>';
     html += '<div class="wrap-x"><table class="tbl"><tr><th>分析師｜分類</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>';
     for (const a of ANALYSTS) {
       const groups = [
@@ -684,21 +795,45 @@
         ['LOTTO 另計', settled.filter((r) => r.analyst === a && !r.countsInMain)],
         ['串關腿計入', settled.filter((r) => r.analyst === a && r.layer === 'lotto' && r.countsInMain)],
       ].filter(([, l]) => l.length);
-      html += groups.map(([t, l]) => anchorRow(`lt:${a}:${t}`, statCells(`${a}｜${t}`, Core.summarize(l), 0), l, `${a}｜${t}`)).join('');
+      html += groups.map(([t, l]) => anchorRow(`lt:${a}:${t}`, statCells(`${a}｜${t}`, Core.summarize(l), 0), () => drillGamesHtml(`lt:${a}:${t}`, `${a}｜${t}`, singles(l), a, '與表單關係'))).join('');
     }
     const extra = settled.filter((r) => !r.countsInMain);
     for (const rel of ['跟表單一樣', '同隊改盤口', '反向']) {
       const l = extra.filter((r) => r.relation === rel);
-      if (l.length) html += anchorRow(`lt:rel:${rel}`, statCells(`全部｜LOTTO・${rel}`, Core.summarize(l), 0), l, `LOTTO・${rel}`);
+      if (l.length) html += anchorRow(`lt:rel:${rel}`, statCells(`全部｜LOTTO・${rel}`, Core.summarize(l), 0), () => drillGamesHtml(`lt:rel:${rel}`, `LOTTO・${rel}`, singles(l), 'LOTTO 腿', '與表單關係'));
     }
-    html += '</table></div>';
+    return `${html}</table></div>`;
+  }
+
+  function renderStats() {
+    const st = view.st;
+    $('rail').innerHTML = ['ALL', ...LEAGUES].map((lg) => `<button class="lg${lg === st.league ? ' on' : ''}" data-sl="${lg}">${lg === 'ALL' ? '全部' : lg}</button>`).join('');
+    if (!HISTORY) { $('list').innerHTML = '<div class="empty">載入歷史紀錄中…</div>'; loadHistory(); return; }
+    const chips = (key, opts) => `<div class="chips">${opts.map(([v, t]) => `<button class="chip${String(st[key]) === v ? ' on' : ''}" data-st="${key}" data-v="${v}">${t}</button>`).join('')}</div>`;
+    const rows = Core.filterRows(statsLedger(), statsFilter());
+    const ann = Core.annotateContexts(rows);
+    const minN = Math.max(0, Number(st.min) || 0);
+    const tab = TABS.some((t) => t[0] === st.tab) ? st.tab : 'duel';
+    let html = `<div class="stabs">${TABS.map(([v, t]) => `<button class="stab${tab === v ? ' on' : ''}" data-st="tab" data-v="${v}">${t}</button>`).join('')}</div>`;
+    html += `<div class="filters">
+      ${chips('range', [['all', '全部日期'], ['30', '近 30 天'], ['7', '近 7 天'], ['custom', '自訂']])}
+      ${st.range === 'custom' ? `<label>從 <input type="date" id="fromIn" value="${esc(st.from)}"></label><label>到 <input type="date" id="toIn" value="${esc(st.to)}"></label>` : ''}
+      ${chips('phase', [['default', '例行＋季後'], ['withPre', '含季前'], ['post', '只季後'], ['pre', '只季前']])}
+      <label>最少樣本 <input type="number" id="minIn" min="0" step="1" value="${minN}" style="width:60px"></label>
+      </div>`;
+    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起；左側切換聯盟。損益用收盤賠率、每張 1 單位（Stake 優先，沒有才用 bet365）。顏色：灰＝低、金＝高；樣本少於 ${minN} 變淡。</div>`;
+    if (tab === 'duel') html += renderDuelTab(ann, minN);
+    else if (tab === 'overview') html += renderOverviewTab(rows, ann, minN);
+    else if (tab === 'pairs') html += renderPairsTab(ann, minN);
+    else html += renderLottoTab(rows);
     const box = $('list'); const keep = box.scrollTop;
     box.innerHTML = html;
     box.scrollTop = keep;   // 原地展開，不跳回頂端
-    $('summary').innerHTML = `<span>${st.league === 'ALL' ? '全部聯盟' : st.league}｜主帳已結算 <b>${Core.summarize(main).settled}</b> 張</span>`;
+    const main = rows.filter((r) => r.countsInMain && (r.result === 'win' || r.result === 'loss'));
+    $('summary').innerHTML = `<span>${st.league === 'ALL' ? '全部聯盟' : st.league}｜主帳已結算 <b>${main.length}</b> 張</span>`;
   }
 
-  /* ---------- 登錄頁：今天每場的組合，對照歷史 ---------- */
+  /* ---------- 登錄頁最下面：今天每場的對決卡 ---------- */
   let IDX_CACHE = {};
   function leagueIndex(league) {
     if (!HISTORY) return null;
@@ -706,10 +841,8 @@
     const key = `${Object.keys(RESULTS).length}|${settledLive}`;
     if (IDX_CACHE[league] && IDX_CACHE[league].key === key) return IDX_CACHE[league];
     const ann = Core.annotateContexts(Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES }));
-    const val = { key, idx: Core.sideIndex(ann), lone: Core.scenarioStats(ann, 'loneDissent'), solo: {}, byCount: {} };
+    const val = { key, ann, idx: Core.sideIndex(ann), lone: Core.scenarioStats(ann, 'loneDissent'), solo: {}, byCount: {} };
     for (const a of ANALYSTS) val.solo[a] = Core.summarize(ann.filter((r) => r.analyst === a && r.ctx.alignment === 'solo'));
-    val.noOpp = Core.scenarioStats(ann, 'noOpposition'); val.pairs = Core.pairMatrix(ann);
-    val.all = {}; for (const a of ANALYSTS) val.all[a] = Core.summarize(ann.filter((r) => r.analyst === a));
     for (const s of val.idx.sides) {
       if (s.oppKey !== '') continue;
       const n = s.key.split('+').length; const b = val.byCount[n] || (val.byCount[n] = { games: 0, dirWins: 0 });
@@ -719,73 +852,73 @@
     return val;
   }
   const sideKey = (list) => list.slice().sort((a, b) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(b)).join('+');
-  const shortKey = (k) => k.split('+').map((a) => SHORT[a]).join('+');
-  // 長條：label｜灰→金的條（寬＝命中率）｜數字；樣本少於 10 淡化
-  function barRow(label, wins, n, what) {
-    if (!n) return `<div class="bar-row none"><span class="bl">${label}</span><span class="bt"></span><span class="bn">過去沒出現過</span></div>`;
-    const rate = wins / n;
-    return `<div class="bar-row${n < 10 ? ' few' : ''}"><span class="bl">${label}</span><span class="bt"><span class="bf" style="width:${Math.max(3, Math.round(rate * 100))}%;${rateStyle(rate)}">${(rate * 100).toFixed(1)}%</span></span><span class="bn">${what} ${wins}/${n}</span></div>`;
+  const EXCL = {};   // 暫時排除的分析師（officialId → Set），只影響卡片數據，不動推薦
+  function oneSided(title, wins, n, what, note) {
+    if (!n) return `<div class="duel"><div class="d-title">${title}</div><div class="h-dim">過去沒出現過。${note ? `<br>${note}` : ''}</div></div>`;
+    const r = wins / n;
+    return `<div class="duel${n < 10 ? ' few' : ''}"><div class="d-title">${title}</div><div class="d-one"><span class="d-big" style="color:${rateText(r)}">${pctOf(wins, n)}</span><span class="d-sub">${what} ${wins}／${n}${n < 10 ? '｜<b>樣本少於 10 場</b>' : ''}</span></div>${note ? `<div class="d-note">${note}</div>` : ''}</div>`;
   }
-  const EXCL = {};   // 今日卡片：暫時排除的分析師（officialId → Set），只影響卡片數據，不動推薦
-  function todayCard(g, L) {
+  function todayCard(g, L, L2, league2) {
     const ex = EXCL[g.officialId] || new Set();
-    const sides = { away: [], home: [] };
-    for (const a of ANALYSTS) { const p = mainPick(a, g.officialId); if (p) sides[p.side].push(a); }
-    if (!sides.away.length && !sides.home.length) return '';
-    const chip = (a) => `<button class="tchip${ex.has(a) ? ' off' : ''}" data-ex="${esc(g.officialId)}|${a}" title="${ex.has(a) ? '加回' : '暫時排除'} ${a}">${a}</button>`;
-    const A = sides.away.filter((a) => !ex.has(a)); const H = sides.home.filter((a) => !ex.has(a));
-    const bars = [];
-    let tag = '';
+    const all = ANALYSTS.map((a) => mainPick(a, g.officialId)).filter(Boolean);
+    if (!all.length) return '';
+    const chip = (p) => `<button class="tchip${ex.has(p.analyst) ? ' off' : ''}" data-ex="${esc(g.officialId)}|${p.analyst}" title="${ex.has(p.analyst) ? '加回' : '暫時排除'} ${p.analyst}">${p.analyst} <small>${p.market === 'ML' ? 'ML' : signed(p.line)}</small></button>`;
+    const sideChips = (side) => all.filter((p) => p.side === side).map(chip).join('') || '<span class="h-dim">—</span>';
+    const live = all.filter((p) => !ex.has(p.analyst));
+    const A = live.filter((p) => p.side === 'away'); const H = live.filter((p) => p.side === 'home');
+    const names = (ps) => ps.map((p) => SHORT[p.analyst]).join('・');
+    const mkOf = (ps) => { const k = new Set(ps.map((p) => Core.marketKind(p))); return k.size === 1 ? [...k][0] : 'any'; };
+    const label = (p) => `${esc(p.team)} ${p.market === 'ML' ? 'ML' : signed(p.line)}`;
+    let tag = ''; let body = '';
     if (A.length && H.length) {
       const [maj, min] = A.length >= H.length ? [A, H] : [H, A];
-      const kMaj = sideKey(maj); const kMin = sideKey(min);
       tag = `<span class="tag c">衝突 ${maj.length}:${min.length}</span>`;
-      const m = L.idx.query({ key: kMaj, oppKey: kMin });
-      bars.push(barRow(`這個對局：${shortKey(kMaj)} 側（對 ${shortKey(kMin)}）`, m.dirWins, m.games, '直勝'));
-      const o = L.idx.query({ key: kMaj, opposed: true });
-      bars.push(barRow(`${shortKey(kMaj)} 遇到反對`, o.dirWins, o.games, '直勝'));
-      if (min.length === 1 && maj.length >= 2) { const s = L.lone[min[0]]; bars.push(barRow(`${SHORT[min[0]]} 單人反對`, s.wins, s.settled, '命中')); }
-      else { const q = L.idx.query({ key: kMin, opposed: true }); bars.push(barRow(`${shortKey(kMin)} 遇到反對`, q.dirWins, q.games, '直勝')); }
-      const pairs = [];
-      for (const x of maj) for (const y of min) pairs.push([x, y]);
-      for (const [x, y] of pairs.slice(0, 6)) {
-        const vx = L.pairs.versus[`${x}>${y}`]; const vy = L.pairs.versus[`${y}>${x}`];
-        if (vx) bars.push(barRow(`${SHORT[x]} 對上 ${SHORT[y]}：${SHORT[x]}`, vx.wins, vx.games, '命中'));
-        if (vy) bars.push(barRow(`${SHORT[x]} 對上 ${SHORT[y]}：${SHORT[y]}`, vy.wins, vy.games, '命中'));
+      const majM = mkOf(maj);
+      for (const m of min.slice(0, 2)) {
+        const q = { hero: m.analyst, heroMarket: Core.marketKind(m), oppMarket: majM, relation: 'oppose' };
+        const d = Core.duel(L.ann, q);
+        let note = '';
+        if (L2) { const d2 = Core.duel(L2.ann, q); note = d2.games ? `${league2} 同情境 ${d2.games} 場：${SHORT[m.analyst]} ${pctOf(d2.hero.wins, d2.hero.settled)} vs 對手 ${pctOf(d2.opp.wins, d2.opp.settled)}` : `${league2} 沒有同情境`; }
+        body += duelCard(d, `${SHORT[m.analyst]} ${MK_TXT[q.heroMarket]}`, `對手 ${MK_TXT[majM]}`, {
+          title: `過去 ${SHORT[m.analyst]} 押${MK_TXT[q.heroMarket]}、對面有人押${MK_TXT[majM]}（${g.league}）`, note,
+        });
       }
+      const o = L.idx.query({ key: sideKey(maj.map((p) => p.analyst)), opposed: true });
+      body += `<div class="d-extra">${names(maj)} 同一邊但有人反對時：${o.games ? `直勝 <b style="color:${rateText(o.dirWins / o.games)}">${pctOf(o.dirWins, o.games)}</b>（${o.dirWins}／${o.games}）` : '過去沒出現過'}</div>`;
     } else if (A.length + H.length >= 2) {
-      const side = A.length ? A : H; const k = sideKey(side);
+      const side = A.length ? A : H; const k = sideKey(side.map((p) => p.analyst));
       tag = `<span class="tag">同向 ${side.length}:0</span>`;
       const u = L.idx.query({ key: k, opposed: false });
-      bars.push(barRow(`${shortKey(k)} 同向、無人反對`, u.dirWins, u.games, '直勝'));
-      const all = L.idx.query({ key: k });
-      bars.push(barRow(`${shortKey(k)} 同一邊（不論有無反對）`, all.dirWins, all.games, '直勝'));
       const c = L.byCount[side.length] || { games: 0, dirWins: 0 };
-      bars.push(barRow(`任何 ${side.length} 人同向、無人反對`, c.dirWins, c.games, '直勝'));
-      for (const a of side) { const s = L.noOpp[a]; bars.push(barRow(`${SHORT[a]} 在無反方同向時`, s.wins, s.settled, '命中')); }
+      const anyNote = `任何 ${side.length} 人同向、沒人反對：${c.games ? `直勝 ${pctOf(c.dirWins, c.games)}（${c.dirWins}／${c.games}）` : '過去沒出現過'}`;
+      body += u.games ? oneSided(`${names(side)} 同向、沒人反對（${g.league}）`, u.dirWins, u.games, '球隊直勝', anyNote)
+        : oneSided(`任何 ${side.length} 人同向、沒人反對（${g.league}）`, c.dirWins, c.games, '球隊直勝', `${names(side)} 這個組合過去沒出現過，改看任何 ${side.length} 人`);
     } else if (A.length + H.length === 1) {
-      const a = A[0] || H[0]; tag = '<span class="tag">單人</span>';
-      const s = L.solo[a]; bars.push(barRow(`${SHORT[a]} 單獨推薦`, s.wins, s.settled, '命中'));
-      const t = L.all[a]; bars.push(barRow(`${SHORT[a]} 整體`, t.wins, t.settled, '命中'));
+      const p = live[0]; tag = '<span class="tag">單人</span>';
+      const s = L.solo[p.analyst];
+      body += oneSided(`${SHORT[p.analyst]} 單獨推薦（${g.league}）`, s.wins, s.settled, '命中');
     } else {
       tag = '<span class="tag">已全部排除</span>';
     }
     return `<div class="tcard">
       <div class="tc-head"><b>${esc(g.time)}</b> ${esc(g.away)} @ ${esc(g.home)} ${tag}</div>
-      <div class="tc-sides"><div><span class="tc-lab">客 ${esc(g.away)}</span>${sides.away.map(chip).join('') || '<span class="h-dim">—</span>'}</div><div><span class="tc-lab">主 ${esc(g.home)}</span>${sides.home.map(chip).join('') || '<span class="h-dim">—</span>'}</div></div>
-      <div class="bars">${bars.join('')}</div>
+      <div class="tc-sides"><div><span class="tc-lab">客 ${esc(g.away)}</span>${sideChips('away')}</div><div><span class="tc-lab">主 ${esc(g.home)}</span>${sideChips('home')}</div></div>
+      ${body}
     </div>`;
   }
   function renderToday(games) {
     if (!games.some((g) => ANALYSTS.some((a) => mainPick(a, g.officialId)))) return '';
-    if (games[0] && games[0].league === 'NBA' && games.every((g) => g.startMs < Date.parse('2026-10-20T04:00:00Z'))) {
-      return '<div class="today"><div class="st-sec">今日組合 vs 歷史</div><div class="st-help">NBA 季前賽不比對（例行賽 10/20 起才有歷史可對照）。</div></div>';
+    const head = `今日對決 vs 歷史（${view.league}｜${view.date.slice(5).replace('-', '/')}）`;
+    if (view.league === 'NBA' && games.every((g) => g.startMs < Date.parse('2026-10-20T04:00:00Z'))) {
+      return `<div class="today"><div class="st-sec">${head}</div><div class="st-help">NBA 季前賽不比對（例行賽 10/20 起才有歷史可對照）。</div></div>`;
     }
     const L = leagueIndex(view.league);
-    if (!L) return `<div class="today"><div class="st-sec">今日組合 vs 歷史</div><div class="st-help">${histLoading ? '載入歷史中…' : '歷史紀錄載入失敗'}</div></div>`;
-    return `<div class="today"><div class="st-sec">今日組合 vs 歷史（${view.league}｜${view.date.slice(5).replace('-', '/')}）</div>
-      <div class="st-help">依你目前的登錄即時計算，只看 ${view.league} 歷史（例行＋季後）。點分析師名字可暫時排除他、改看其餘人的組合（不會改到推薦）。長條寬度＝命中率，顏色灰→金；少於 10 場會變淡。</div>
-      <div class="tcards">${games.map((g) => todayCard(g, L)).join('')}</div></div>`;
+    if (!L) return `<div class="today"><div class="st-sec">${head}</div><div class="st-help">${histLoading ? '載入歷史中…' : '歷史紀錄載入失敗'}</div></div>`;
+    const league2 = view.league === 'NHL' ? 'MLB' : view.league === 'MLB' ? 'NHL' : null;
+    const L2 = league2 ? leagueIndex(league2) : null;
+    return `<div class="today"><div class="st-sec">${head}</div>
+      <div class="st-help">依你目前的登錄即時計算（${view.league} 歷史，例行＋季後）。點分析師名字可暫時排除他、改看其餘人的組合（不會改到推薦）。大數字＝過盤率，灰→金；少於 10 場會變淡。</div>
+      <div class="tcards">${games.map((g) => todayCard(g, L, L2, league2)).join('')}</div></div>`;
   }
 
   function render() {
@@ -811,12 +944,13 @@
     cycle(g, 'lotto', btn.dataset.s); render();
   }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-ex],[data-sel]');
+    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-ex],[data-sel],[data-opp]');
     if (!t) return;
     if (t.dataset.sl) { view.st.league = t.dataset.sl; drill = null; saveView(); render(); return; }
     if (t.dataset.st) { view.st[t.dataset.st] = t.dataset.v; if (t.dataset.st !== 'matrix') drill = null; saveView(); render(); return; }
     if (t.dataset.ex) { const [id, a] = t.dataset.ex.split('|'); const set = EXCL[id] || (EXCL[id] = new Set()); if (set.has(a)) set.delete(a); else set.add(a); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
     if (t.dataset.sel) { const sel = new Set(view.st.sel || []); if (sel.has(t.dataset.sel)) sel.delete(t.dataset.sel); else sel.add(t.dataset.sel); view.st.sel = ANALYSTS.filter((a) => sel.has(a)); drill = null; saveView(); render(); return; }
+    if (t.dataset.opp) { const o = new Set(view.st.opp || []); if (o.has(t.dataset.opp)) o.delete(t.dataset.opp); else o.add(t.dataset.opp); view.st.opp = ANALYSTS.filter((a) => o.has(a)); drill = null; saveView(); render(); return; }
     if (t.dataset.anchor) { drill = drill && drill.anchor === t.dataset.anchor ? null : { anchor: t.dataset.anchor }; render(); return; }
     if (t.dataset.a) { view.analyst = t.dataset.a; saveView(); render(); return; }
     if (t.dataset.d) { view.date = t.dataset.d; saveView(); render(); return; }

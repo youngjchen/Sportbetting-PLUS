@@ -69,6 +69,28 @@ test('spread orientation is checked against the moneyline (Stake favorite field 
   assert.equal(core.priceFrom({ spread: { line: 1.5, favorite: 'away', away: 3.05, home: 1.36 } }, pick({ side: 'home', market: 'SPREAD', line: 1.5 })), 1.36);
 });
 
+test('duel: hero +1.5 against opposing ML, specific opponents, same-side relation', () => {
+  const results = { A: game(3, 4), B: game(5, 1), C: game(2, 6) };
+  const rows = core.buildLedger([
+    // A：BAN 客 +1.5（輸 1 分→過），APE＋BOO 主 ML（贏）→ 兩邊都過
+    pick({ officialId: 'A', analyst: 'BANKROLL', market: 'SPREAD', line: 1.5 }),
+    pick({ officialId: 'A', analyst: 'APE', side: 'home' }), pick({ officialId: 'A', analyst: 'BOOKIE', side: 'home' }),
+    // B：BAN 主 +1.5（輸 4 分→不過），MONEY 客 ML（贏）
+    pick({ officialId: 'B', analyst: 'BANKROLL', side: 'home', market: 'SPREAD', line: 1.5 }), pick({ officialId: 'B', analyst: 'MONEY' }),
+    // C：BAN 主 ML，APE 主 ML（同隊）
+    pick({ officialId: 'C', analyst: 'BANKROLL', side: 'home' }), pick({ officialId: 'C', analyst: 'APE', side: 'home' }),
+  ], results);
+  const ann = core.annotateContexts(rows);
+  const d = core.duel(ann, { hero: 'BANKROLL', heroMarket: 'PLUS', oppMarket: 'ML' });
+  assert.deepEqual([d.games, d.hero.wins, d.opp.wins, d.both], [2, 1, 2, 1]);
+  assert.deepEqual(d.events.find((e) => e.officialId === 'A').opps.map((r) => r.analyst), ['APE', 'BOOKIE']);
+  assert.equal(core.duel(ann, { hero: 'BANKROLL', opp: ['APE', 'BOOKIE'] }).games, 1);
+  assert.equal(core.duel(ann, { hero: 'BANKROLL', opp: ['APE', 'MONEY'] }).games, 0, 'all named opponents must be present');
+  const same = core.duel(ann, { hero: 'BANKROLL', relation: 'same' });
+  assert.deepEqual([same.games, same.events[0].officialId], [1, 'C']);
+  assert.equal(core.marketKind({ market: 'SPREAD', line: -4.5 }), 'MINUS');
+});
+
 test('mergePicks keeps the newer copy and keeps tombstones', () => {
   const a = pick({ updatedAt: '2026-10-14T01:00:00Z' });
   const b = pick({ market: 'SPREAD', line: 1.5, updatedAt: '2026-10-14T02:00:00Z' });
