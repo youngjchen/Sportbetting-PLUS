@@ -81,7 +81,8 @@ for (const v of votes) {
       fixedResult: v.result, status: '回溯', source: `C:mlb season_vote ${v.source_ledger} 雙重賽未標`, expected: v.result });
     continue;
   }
-  const id = `MLB-${v.gamePk}`;
+  // 延賽改期沿用同一個 gamePk：原日期（退款）與改期後是兩個事件，編號要帶美國比賽日
+  const id = `MLB-${v.gamePk}-${v.us_game_date}`;
   const t = tw(v.official_start_utc);
   const isVoid = v.result === 'refund';
   const g = games[id] || (games[id] = { league: 'MLB', officialId: id, date: t.date, time: t.time, away: awayAbbr, home: homeAbbr,
@@ -97,7 +98,9 @@ for (const v of votes) {
     status: '回溯', source: `C:mlb season_vote ${v.source_ledger}${v.source_grade === 'legacy_import_unverifiable_deleted_account' ? ' 無法核對' : ''}`, expected: v.result });
 }
 
-/* ---------- 對帳：重算結果必須等於帳本原結果 ---------- */
+/* ---------- 對帳：每筆唯一（頁面會用 pickKey 合併）、重算結果必須等於帳本原結果 ---------- */
+const merged = Core.mergePicks(picks);
+if (merged.length !== picks.length) throw new Error(`${picks.length - merged.length} picks share analyst|officialId|layer and would be merged away`);
 const rows = Core.buildLedger(picks, games);
 const bad = rows.filter((r) => r.result !== r.expected);
 if (bad.length) {

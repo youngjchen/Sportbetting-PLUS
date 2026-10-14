@@ -83,6 +83,9 @@ test('absolute vs relative alignment and conflict', () => {
   assert.equal(ape.ctx.conflict, 'absolute');
   assert.equal(ape.ctx.shape, 'lone');
   assert.equal(ann.find((r) => r.analyst === 'MONEY').ctx.conflict, 'relative');
+  const bookieB = ann.find((r) => r.officialId === 'B' && r.analyst === 'BOOKIE');
+  assert.equal(core.inScenario(bookieB, 'majorityVsLone'), true);
+  assert.equal(core.inScenario(ape, 'majorityVsLone'), false);
 });
 
 test('acceptance: US 2026-10-13 NHL reproduces the C: tracker settlement and Stake ROI', () => {

@@ -190,6 +190,7 @@
     absoluteConflict: (r) => r.ctx.conflict === 'absolute',
     relativeConflict: (r) => r.ctx.conflict === 'relative',
     loneDissent: (r) => r.ctx.shape === 'lone',
+    majorityVsLone: (r) => r.ctx.shape === 'vsLone',
     multiConflict: (r) => r.ctx.shape === 'multi',
     tie: (r) => r.ctx.oppCount > 0 && r.ctx.side === 'tie',
   };
