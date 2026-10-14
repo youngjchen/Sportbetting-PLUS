@@ -1,0 +1,52 @@
+name: analyst-settle
+
+# 分析師推薦自動結算：analysts.html 存檔（推送 state/analyst_picks.json）時立刻跑，平時每 30 分補跑。
+# 只寫 data/analyst_results.json；單次執行（非迴圈），cron 遲到或漏跑只會延後結算，不會丟資料
+# （賽程檔保留數天，下一輪會補上）。
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths:
+      - state/analyst_picks.json
+      - analyst_settle.js
+      - analyst-core.js
+      - .github/workflows/analyst-settle.yml
+  schedule:
+    - cron: '17,47 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: analyst-settle
+  cancel-in-progress: false
+
+jobs:
+  settle:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 驗證結算程式
+        run: node --test tests/analyst_core.test.js tests/analyst_settle.test.js
+      - name: 結算並寫回 data/analyst_results.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            node analyst_settle.js
+            git add data/analyst_results.json 2>/dev/null || true
+            if git diff --cached --quiet; then echo "INFO 無變更"; exit 0; fi
+            git commit -m "analyst results $(date -u +%FT%TZ) [skip ci]"
+            if git push origin HEAD:main; then echo "OK 已推送"; exit 0; fi
+            echo "WARN 推送被拒（爬蟲同時提交），第 $i 次重試"
+            sleep $(( i * 7 ))
+          done
+          echo "ERROR 5 次都推不上去"
+          exit 1

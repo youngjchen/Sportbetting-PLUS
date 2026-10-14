@@ -94,4 +94,5 @@ analysts.html ──讀──> data/nhl_pregame.json、pregame_data.json、nba_p
 ## 進度
 
 - [x] 階段 1：`analyst-core.js`＋`tests/analyst_core.test.js`（7 項全過；10/13 主帳 46–16、LOTTO 10–0、各來源 Stake ROI 與 C 槽報告一致；9/29–10/13 衝突／單人反對／兩兩／組合數字與 10/14 分析一致）。測試資料 `tests/fixtures/analyst_core_nhl_*.json` 由 C 槽帳本產生。
-- [x] 階段 2：`analysts.html` 登錄頁（本機預覽驗證，尚未推送）。實測：左鍵三段循環、右鍵 LOTTO 三段循環（快速連按不漏）、表單＋LOTTO 同場並存、複製自、衝突／同向標示、NBA 預設 Stake 線＋鉛筆改線、完賽自動 ✅❌、手機 375px 無橫向溢出。GitHub 同步以模擬 API 測過：首次建檔、無變更不重傳、409 衝突重試且兩台裝置資料合併。未設權杖時唯讀、只存本機。
+- [x] 階段 2：`analysts.html` 登錄頁（本機預覽驗證，尚未推送）。實測：左鍵三段循環、右鍵 LOTTO 三段循環（快速連按不漏）、表單＋LOTTO 同場並存、複製自、衝突／同向標示、NBA 預設 Stake 線＋鉛筆改線、完賽自動 ✅❌、手機 375px 無橫向溢出。GitHub 同步以模擬 API 測過：首次建檔、無變更不重傳、409 衝突重試且兩台裝置資料合併。未設權杖時唯讀、只存本機。已推送上線（11e6df5473），各排盤板表頭加 🎯 入口。
+- [x] 階段 3：`analyst_settle.js`＋`.github/workflows/analyst-settle.yml`＋`tests/analyst_settle.test.js`（5 項，用 10/13 真實賽程／Stake／官方摘錄）。官方核對：NHL api-web（隊名經 nhl_bet365_core TEAM_ZH）、MLB statsapi（縮寫）；不一致標 review 不結算；連不上不擋。賽季階段：NHL／MLB 用官方 gameType，NBA 以美東 2026-10-20 開幕分界（BOS@DET，NBC／Fox 報導）。收盤價只收開賽前觀測值。頁面改讀 `data/analyst_results.json`，舊日期靠結算檔顯示。同時以「回溯」狀態寫入使用者 10/14 提供的 81 筆（NHL 主帳 62＋LOTTO 10、MLB 4、SNIPER NBA 季前 5）。

@@ -142,6 +142,7 @@
   /* ---------- 狀態 ---------- */
   const view = Object.assign({ analyst: 'APE', league: 'NHL', date: twToday(), retro: false }, readJson(VIEW_KEY) || {});
   const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
+  let RESULTS = {};   // data/analyst_results.json（analyst-settle 工作流寫）：官方核對後的比分、賽季階段、Stake 收盤價
   let picks = (readJson(LOCAL_KEY) || {}).picks || [];
 
   function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
@@ -315,7 +316,20 @@
   }
 
   /* ---------- 畫面 ---------- */
-  function gamesFor(league, date) { return DATA[league].games.filter((g) => g.date === date).sort((a, b) => a.startMs - b.startMs); }
+  // 賽程檔（滾動、只留幾天）∪ 結算檔（永久）：結算檔有結論時以它為準；舊日期靠結算檔才看得到
+  function gamesFor(league, date) {
+    const byId = new Map();
+    for (const g of DATA[league].games) if (g.date === date) byId.set(g.officialId, Object.assign({}, g));
+    for (const [id, r] of Object.entries(RESULTS)) {
+      if (r.league !== league || r.date !== date) continue;
+      const g = byId.get(id) || { league, officialId: id, date: r.date, time: r.time, away: r.away, home: r.home, startMs: startMs(r) };
+      if (r.final) Object.assign(g, { awayScore: r.awayScore, homeScore: r.homeScore, final: true });
+      Object.assign(g, { closing: r.closing || null, phase: r.phase || null, review: r.review || null, officialCheck: r.officialCheck || null });
+      if (r.review) g.final = false;
+      byId.set(id, g);
+    }
+    return [...byId.values()].sort((a, b) => a.startMs - b.startMs);
+  }
   function mainPick(analyst, officialId) { return findPick(analyst, officialId, 'card') || findPick(analyst, officialId, 'lotto'); }
 
   function renderTabs() {
@@ -383,8 +397,8 @@
     }
     $('list').innerHTML = '<div class="legend">左鍵＝表單、右鍵（手機長按）＝LOTTO；各點 1 下 ML、2 下讓分、3 下取消</div>'
       + games.map((g) => {
-        const snap = stakeSnapshot(g.league, g);
-        const state = g.final ? '完賽' : Date.now() >= g.startMs ? '進行中' : '';
+        const snap = stakeSnapshot(g.league, g) || g.closing;
+        const state = g.review ? '⚠ 待核對' : g.final ? (g.officialCheck === 'ok' ? '完賽 ✔官方' : '完賽') : Date.now() >= g.startMs ? '進行中' : '';
         return `<div class="game"><div class="gtime"><b>${esc(g.time)}</b>${state}</div>${teamButton(g, 'away', snap)}${teamButton(g, 'home', snap)}${infoCell(g)}</div>`;
       }).join('');
   }
@@ -396,7 +410,8 @@
       const s = Core.summarize(rows.filter((r) => r.analyst === a && r.countsInMain));
       const l = Core.summarize(rows.filter((r) => r.analyst === a && !r.countsInMain));
       if (!s.wins && !s.losses && !s.pending && !l.wins && !l.losses && !l.pending) return '';
-      return `<span><b>${a}</b> ${s.wins}–${s.losses}${s.pending ? `（未完${s.pending}）` : ''}${l.wins + l.losses + l.pending ? `｜L ${l.wins}–${l.losses}` : ''}</span>`;
+      const u = (x) => (x.priced ? ` ${x.profit >= 0 ? '+' : ''}${x.profit.toFixed(2)}u` : '');
+      return `<span><b>${a}</b> ${s.wins}–${s.losses}${u(s)}${s.pending ? `（未完${s.pending}）` : ''}${l.wins + l.losses + l.pending ? `｜L ${l.wins}–${l.losses}${u(l)}` : ''}</span>`;
     }).filter(Boolean);
     $('summary').innerHTML = parts.length ? `<span>${view.date} ${view.league} 主要命中：</span>${parts.join('')}` : `<span>${view.date} ${view.league} 尚無推薦</span>`;
   }
@@ -406,7 +421,7 @@
   }
 
   /* ---------- 事件 ---------- */
-  function gameById(id) { return DATA[view.league].games.find((g) => g.officialId === id); }
+  function gameById(id) { return gamesFor(view.league, view.date).find((g) => g.officialId === id); }
   // 手機長按只走計時器：觸控中收到的 contextmenu（Android 長按）一律忽略，放開後補發的 click 也擋掉；
   // 滑鼠右鍵不去重，快速連按兩下右鍵＝LOTTO 讓分。
   let touchActive = false; let suppressClick = { t: 0, key: '' }; let pressTimer = null;
@@ -458,8 +473,9 @@
   /* ---------- 啟動 ---------- */
   async function boot() {
     render();
-    const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]));
+    const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]).concat([fetchJson('data/analyst_results.json')]));
     LEAGUES.forEach((lg, i) => { DATA[lg].games = normalizeGames(lg, loaded[i * 2]); DATA[lg].stake = loaded[i * 2 + 1]; });
+    RESULTS = (loaded[LEAGUES.length * 2] && loaded[LEAGUES.length * 2].games) || {};
     render();
     syncNow();
   }
