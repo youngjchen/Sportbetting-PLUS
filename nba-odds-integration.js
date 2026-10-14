@@ -266,6 +266,8 @@
       } });
     }
     const taiwanChanged = !!((evidence && Number(evidence.taiwanFlipCount)) || taiwanEvents.some((event) => event && event.kind === 'favorite'));
+    const lineInfo = (evidence && evidence.lineInfo) || {};
+    const withLine = (key, details) => details.concat((lineInfo[key] && lineInfo[key].details) || []);
     return api.renderPlatformMonitor({
       documentRef,
       sources: [
@@ -273,20 +275,23 @@
           key: 'stake', label: 'STAKE', side: stakeMarket && stakeMarket.favorite,
           current: currentLabel(model, stake), available: !!stake,
           changed: stakeEvents.some((event) => event.kind === 'favorite'),
-          details: marketDetails(stake, model), events: stakeEvents,
+          move: lineInfo.stake && lineInfo.stake.move, stats: lineInfo.stake && lineInfo.stake.stats,
+          details: withLine('stake', marketDetails(stake, model)), events: stakeEvents,
           sourceLabel: stake ? 'Stake 官網' : null, controls,
         },
         {
           key: 'bet365', label: 'BET365', side: bet365Market && bet365Market.favorite,
           current: currentLabel(model, bet365), available: !!bet365,
           changed: bet365Events.some((event) => event.kind === 'favorite') || !!(evidence && Number(evidence.bet365FlipCount)),
-          details: marketDetails(bet365, model), events: bet365Events,
+          move: lineInfo.bet365 && lineInfo.bet365.move, stats: lineInfo.bet365 && lineInfo.bet365.stats,
+          details: withLine('bet365', marketDetails(bet365, model)), events: bet365Events,
           sourceLabel: bet365 ? sourceLabel('BET365', bet365) : null,
         },
         {
           key: 'taiwan', label: '台彩', side: taiwanMarket && taiwanMarket.favorite,
           current: currentLabel(model, taiwan), available: !!taiwan,
-          changed: taiwanChanged, details: marketDetails(taiwan, model), events: taiwanEvents,
+          changed: taiwanChanged, move: lineInfo.taiwan && lineInfo.taiwan.move, stats: lineInfo.taiwan && lineInfo.taiwan.stats,
+          details: withLine('taiwan', marketDetails(taiwan, model)), events: taiwanEvents,
           sourceLabel: taiwan ? '玩運彩開盤' : null,
         },
       ],

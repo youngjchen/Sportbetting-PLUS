@@ -25,12 +25,37 @@
     return source.changed ? '曾對調' : '未對調';
   }
 
+  // 籃球讓分級距（2026-10-15）：move＝開盤→現在＋所屬級距；stats＝這個級距過去的結果（金＝≥60% 且樣本 ≥10）
+  function addMove(cell, move) {
+    if (!move || !move.text) return;
+    const element = addText(cell, `market-move${move.tone ? ` ${move.tone}` : ''}`, '');
+    addText(element, 'market-move-line', move.text);
+    if (move.group) addText(element, 'market-move-group', move.group);
+  }
+
+  function addStats(cell, stats) {
+    if (!stats) return;
+    const row = cell.ownerDocument.createElement('span');
+    row.className = `market-stats${stats.few ? ' few' : ''}`;
+    if (stats.title) row.title = stats.title;
+    if (!stats.n) addText(row, 'market-stat-none', stats.emptyText || '此級距尚無紀錄');
+    else {
+      for (const pill of Array.isArray(stats.pills) ? stats.pills : []) {
+        if (pill && pill.text) addText(row, `market-stat${pill.hot ? ' hot' : ''}`, pill.text);
+      }
+      addText(row, 'market-stat-n', `${stats.n}場`);
+    }
+    cell.appendChild(row);
+  }
+
   function addSummary(head, source) {
     const cell = head.ownerDocument.createElement('span');
-    cell.className = `market-platform ${source.key || ''}${source.changed ? ' changed' : ''}`.trim();
+    cell.className = `market-platform ${source.key || ''}${source.changed ? ' changed' : ''}${source.move ? ' has-move' : ''}`.trim();
     addText(cell, 'market-source', source.label || source.key || '盤口');
     addText(cell, 'market-current', source.current || '未取得方向');
     addText(cell, 'market-state', stateText(source));
+    addMove(cell, source.move);
+    addStats(cell, source.stats);
     head.appendChild(cell);
   }
 

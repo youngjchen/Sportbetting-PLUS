@@ -12,7 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="sports-market-monitor.css?v=2026100901">
+<link rel="stylesheet" href="sports-market-monitor.css?v=20261015lm1">
 <style>
   :root{
     /* 棒球板同款調色盤（bcard CSS 原樣移植的前提） */
@@ -801,6 +801,7 @@ async function loadPregame(){
     if(r4.ok){ const j4 = await r4.json(); if(j4 && typeof j4==="object"){ nbaSeriesCache = j4; } }
   }catch(e){}
   autoSettleFromPregame();                              // 台彩序列到齊後補記讓分級距快照
+  render();                                             // 卡片上列的台彩級距要等序列到齊才算得出來
   setTimeout(autoSettleFromPregame, 8000);              // Stake／BET365 由三方整合非同步載入：稍後再補一次
 }
 setInterval(loadPregame, 5*60e3);
@@ -1406,6 +1407,41 @@ function bbMoveGroup(p){
   const d = p.closeLine - p.openLine;
   return d>=2 ? "deeper" : d<=-2 ? "shallower" : "small";
 }
+// 卡片上列（三平台）：各自「開盤→現在＋級距」與這個級距過去的結果（2026-10-15 使用者規格）。
+// 結算後用固定的 lineSnap；賽前／進行中用 bbLineSnap（只取開賽前盤口）。歷史＝collectLineMoves，與統計頁「讓分級距變化」同一份數字。
+const BB_GROUP_SHORT = { deeper:"加深", small:"微調", shallower:"縮小", swap:"換邊" };
+let __lmCardMemo = {};
+function lineMovesMemo(league){
+  let key=0; for(const d of Object.keys(doc.boards||{})) for(const it of ((doc.boards[d]||{}).items||[])) if(it.settled && it.lineSnap) key++;
+  const nGames=(doc.games||[]).length, m=__lmCardMemo[league];
+  if(m && m.key===key && m.nGames===nGames) return m.val;
+  const val=collectLineMoves(league); __lmCardMemo[league]={ key, nGames, val }; return val;
+}
+function bbCardLineInfo(model, it){
+  const snap = (it && it.settled && it.lineSnap) || bbLineSnap(model);
+  if(!snap) return null;
+  const hist = lineMovesMemo(model.league);
+  const team=(f)=> f==="home" ? model.home : model.away;
+  const pct=(x,n)=> Math.round(100*x/n);
+  const frac=(x,n)=> n ? `${x}/${n}（${pct(x,n)}%）` : "—";
+  const out={};
+  for(const [p] of BB_PLATFORMS){
+    const L=snap[p], g=bbMoveGroup(L); if(!g) continue;
+    const c=hist.out[p][g], pills=[];
+    // 每個市場只列歷史上佔優的那一邊：熱門／冷門、讓方／受讓、大／小
+    const pill=(x,n,a,b)=>{ if(!n) return; const r=pct(x,n), v=r>=50?r:100-r; pills.push({ text:`${r>=50?a:b} ${v}%`, hot:v>=60 && c.n>=10 }); };
+    pill(c.fw,c.fwN,"熱門","冷門"); pill(c.cov,c.covN,"讓方","受讓"); pill(c.ov,c.ovN,"大","小");
+    out[p]={
+      move:{ text: g==="swap" ? `原${team(L.openFav)}讓${L.openLine}` : L.openLine===L.closeLine ? "沒變" : `${L.openLine}→${L.closeLine}`,
+             group:BB_GROUP_SHORT[g], tone: g==="small" ? "" : "hot" },
+      stats:{ n:c.n, pills, few:c.n>0 && c.n<10, emptyText:"此級距尚無紀錄",
+              title:`${model.league}「${BB_GROUP_SHORT[g]}」過去 ${c.n} 場：熱門勝 ${frac(c.fw,c.fwN)}・讓方過盤 ${frac(c.cov,c.covN)}・開大 ${frac(c.ov,c.ovN)}` },
+      details:[["級距", `${(BB_GROUPS.find(x=>x[0]===g)||[])[1]}：開 ${team(L.openFav)}讓${L.openLine} → 現 ${team(L.closeFav)}讓${L.closeLine}`],
+               ["歷史", c.n ? `${c.n} 場｜熱門勝 ${frac(c.fw,c.fwN)}｜讓方過 ${frac(c.cov,c.covN)}｜開大 ${frac(c.ov,c.ovN)}` : "此級距尚無紀錄"]],
+    };
+  }
+  return out;
+}
 // ===== 統計列點擊展開比賽明細（棒球 drillBlock／toggleDrillById 移植，2026-10-09）=====
 let _drillSeq = 0;
 function rvTodayTW(){ return new Date(Date.now()+8*3600e3).toISOString().slice(0,10); }
@@ -2006,7 +2042,8 @@ function renderCardW(model){
       bet365Fallback:intl?{favorite:intl.fav,line:intl.il,provider:"betexplorer"}:null,
       taiwanFavorite:model._officialHdFav||model.hdFav,
       taiwanFlipCount:lsw,
-      taiwanEvents:lsw?[{displayTime:"",kind:"favorite",text:`台彩讓分方曾對調 ${lsw} 次`}]:[]
+      taiwanEvents:lsw?[{displayTime:"",kind:"favorite",text:`台彩讓分方曾對調 ${lsw} 次`}]:[],
+      lineInfo:(()=>{ try{ return bbCardLineInfo(model,it); }catch(_){ return null; } })()
     });
     if(monitor) el.appendChild(monitor);
   }
@@ -2627,7 +2664,7 @@ loadPregame();
 <script src="wnba-picks-addon.js?v=20261009ui1"></script>
 <script src="wnba-divination-addon.js?v=20260924idb1"></script>
 <script src="oddsportal-integration.js?v=20260902dedupe2"></script>
-<script src="sports-market-monitor.js?v=2026100901"></script>
-<script src="nba-odds-integration.js?v=20261011be1"></script>
+<script src="sports-market-monitor.js?v=20261015lm1"></script>
+<script src="nba-odds-integration.js?v=20261015lm1"></script>
 </body>
 </html>
