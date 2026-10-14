@@ -102,9 +102,34 @@
   .mx-legend .bar{width:140px;height:10px;border-radius:5px;background:linear-gradient(90deg,rgb(84,92,106),rgb(214,168,40))}
   .drill{border:1px solid var(--lit);border-radius:10px;padding:8px 10px;margin:4px 0 2px;background:var(--panel)}
   .drill .dh{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px;font-size:15px}
-  .drill .dr{display:grid;grid-template-columns:96px minmax(0,1.3fr) minmax(0,1fr) 34px minmax(0,1.2fr) 70px;gap:8px;font-size:14px;padding:5px 0;border-top:1px solid var(--line);align-items:center}
+  .drill .dr{display:grid;grid-template-columns:96px minmax(0,1.3fr) minmax(0,1fr) 34px minmax(0,1.2fr) 118px;gap:8px;font-size:14px;padding:5px 0;border-top:1px solid var(--line);align-items:center}
   .drill .dr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .wrap-x{overflow-x:auto}
+  /* ---------- 登錄頁底部：今日組合 vs 歷史 ---------- */
+  .today{margin-top:22px;padding-top:6px;border-top:2px solid var(--line)}
+  .tcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}
+  .tcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px}
+  .tc-head{font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .tc-head b{font-size:17px}
+  .tc-head .tag{font-weight:700;font-size:15px}
+  .tc-head .tag.c{color:var(--conflict)}
+  .tc-sides{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;font-size:14px}
+  .tc-lab{color:var(--ink-dim);display:inline-block;min-width:96px}
+  .tchip{padding:4px 11px;margin:2px 5px 2px 0;border:1px solid var(--lit);border-radius:8px;background:rgba(255,176,46,.12);color:var(--ink);font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit}
+  .tchip.off{border-color:var(--line);background:transparent;color:var(--ink-dim);text-decoration:line-through}
+  .bars{display:flex;flex-direction:column;gap:8px}
+  .bar-row{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr) 96px;gap:10px;align-items:center;font-size:14.5px}
+  .bar-row .bl{line-height:1.35}
+  .bar-row .bt{height:26px;background:var(--panel-2);border-radius:6px;overflow:hidden}
+  .bar-row .bf{display:flex;align-items:center;justify-content:flex-end;height:100%;padding-right:7px;font-weight:700;font-size:14px;border-radius:6px;white-space:nowrap}
+  .bar-row .bn{color:var(--ink-dim);font-size:13.5px;text-align:right}
+  .bar-row.few{opacity:.5}
+  .h-dim{color:var(--ink-dim)}
+  @media (max-width:720px){
+    .tcards{grid-template-columns:1fr}
+    .bar-row{grid-template-columns:minmax(0,1fr) 84px;grid-template-areas:"l l" "t n";gap:3px 8px}
+    .bar-row .bl{grid-area:l;white-space:normal}.bar-row .bt{grid-area:t}.bar-row .bn{grid-area:n}
+  }
   #toast{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--lit);color:var(--ink);padding:8px 15px;border-radius:10px;font-size:14.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
   #toast.show{opacity:1}
   @media (max-width:720px){
@@ -159,7 +184,7 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261015a"></script>
+<script src="./analyst-core.js?v=20261015c"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
 <script>
 (function () {
@@ -191,7 +216,7 @@
 
   /* ---------- 狀態 ---------- */
   const view = Object.assign({ analyst: 'APE', league: 'NHL', date: twToday(), retro: false, mode: 'entry' }, readJson(VIEW_KEY) || {});
-  view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20 }, view.st || {});
+  view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [] }, view.st || {});
   const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
   let RESULTS = {};   // data/analyst_results.json（analyst-settle 工作流寫）：官方核對後的比分、賽季階段、Stake 收盤價
   let picks = (readJson(LOCAL_KEY) || {}).picks || [];
@@ -202,7 +227,10 @@
 
   /* ---------- 資料載入：raw GitHub（最新）→ 本站 data/ 後備 ---------- */
   async function fetchJson(rel) {
-    for (const url of [`${RAW}${rel}?t=${Date.now()}`, `./${rel}?t=${Date.now()}`]) {
+    // 本機預覽（localhost）先讀工作目錄的檔案，方便驗證還沒推送的資料；線上一律先讀 raw GitHub（最新）
+    const urls = [`${RAW}${rel}?t=${Date.now()}`, `./${rel}?t=${Date.now()}`];
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) urls.reverse();
+    for (const url of urls) {
       try { const r = await fetch(url, { cache: 'no-store' }); if (r.ok) return await r.json(); } catch (e) {}
     }
     return null;
@@ -438,7 +466,7 @@
     else if (na + nh >= 2) tag = `<span class="tag">同向 ${na + nh}:0</span>`;
     else if (na + nh === 1) tag = '<span class="tag">單人</span>';
     const pen = g.league === 'NBA' ? ` <button class="pen" data-pen="${esc(g.officialId)}" title="改讓分線">✎</button>` : '';
-    return `<div class="info"><div class="who">客 ${sides.away.map(chip).join('') || '—'}</div><div class="who">主 ${sides.home.map(chip).join('') || '—'}</div><div>${tag}${pen}</div>${gameInsight(g)}</div>`;
+    return `<div class="info"><div class="who">客 ${sides.away.map(chip).join('') || '—'}</div><div class="who">主 ${sides.home.map(chip).join('') || '—'}</div><div>${tag}${pen}</div></div>`;
   }
   function renderList() {
     const games = gamesFor(view.league, view.date);
@@ -452,6 +480,7 @@
         const state = g.review ? '⚠ 待核對' : g.final ? (g.officialCheck === 'ok' ? '完賽 ✔官方' : '完賽') : Date.now() >= g.startMs ? '進行中' : '';
         return `<div class="game"><div class="gtime"><b>${esc(g.time)}</b>${state}</div>${teamButton(g, 'away', snap)}${teamButton(g, 'home', snap)}${infoCell(g)}</div>`;
       }).join('');
+    $('list').insertAdjacentHTML('beforeend', renderToday(games));
   }
   function renderSummary() {
     const games = gamesFor(view.league, view.date);
@@ -534,7 +563,7 @@
     return `<div class="drill"><div class="dh"><span>${esc(title)}｜${rows.length} 筆${rows.length > 300 ? '（顯示最近 300）' : ''}</span><button class="hbtn" data-anchor="${esc(anchor)}">收起</button></div>`
       + (list.length ? list.map((r) => {
         const ctx = r.ctx ? `同側 ${r.ctx.partners.map((a) => SHORT[a]).join('+') || '—'}｜對側 ${r.ctx.opponents.map((a) => SHORT[a]).join('+') || '—'}` : (r.relation || '');
-        return `<div class="dr"><span>${esc((r.date || '').slice(5).replace('-', '/'))} ${esc(r.league)}</span><span>${esc(r.away || '')}@${esc(r.home || '')}</span><span><b>${SHORT[r.analyst]}</b> ${pickText(r)}</span><span>${icon[r.result] || ''}</span><span class="x">${esc(ctx)}</span><span class="x">${r.profit == null ? '' : `${r.profit >= 0 ? '+' : ''}${r.profit.toFixed(2)}u`}</span></div>`;
+        return `<div class="dr"><span>${esc((r.date || '').slice(5).replace('-', '/'))} ${esc(r.league)}</span><span>${esc(r.away || '')}@${esc(r.home || '')}</span><span><b>${SHORT[r.analyst]}</b> ${pickText(r)}</span><span>${icon[r.result] || ''}</span><span class="x">${esc(ctx)}</span><span class="x">${r.odds == null ? '' : `${r.odds.toFixed(2)}<small style="color:var(--ink-dim)">${r.oddsBook === 'bet365' ? 'b' : 'S'}</small> `}${r.profit == null ? '' : `${r.profit >= 0 ? '+' : ''}${r.profit.toFixed(2)}u`}</span></div>`;
       }).join('') : '<div class="st-help">沒有資料</div>') + '</div>';
   }
   function anchorRow(anchor, cells, rows, title, cols = 5) {
@@ -545,7 +574,7 @@
   function statCells(label, s, minN) {
     return `<td><b>${label}</b></td><td class="num">${s.wins}–${s.losses}${s.refunds ? `<small style="color:var(--ink-dim);font-weight:400"> 退${s.refunds}</small>` : ''}</td><td>${ratePill(s.hitRate, s.settled, minN)}</td><td>${ratePill(s.dirRate, s.dirSettled, minN)}</td><td>${roiTxt(s)}</td>`;
   }
-  const TH = '<tr><th>分析師</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>Stake 損益／ROI（張）</th></tr>';
+  const TH = '<tr><th>分析師</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>';
 
   function renderStats() {
     const st = view.st;
@@ -562,7 +591,7 @@
       ${chips('phase', [['default', '例行＋季後'], ['withPre', '含季前'], ['post', '只季後'], ['pre', '只季前']])}
       <label>最少樣本 <input type="number" id="minIn" min="0" step="1" value="${minN}" style="width:60px"></label>
       </div>`;
-    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起。命中率顏色：灰＝低、金＝高；樣本少於 ${minN} 會變淡。點任一列或格子，明細在下方展開。</div>`;
+    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起。損益用收盤賠率、每張 1 單位（Stake 優先，沒有才用 bet365；讓分推薦對不到盤口就不算）。命中率顏色：灰＝低、金＝高；樣本少於 ${minN} 會變淡。點任一列或格子，明細在下方展開。</div>`;
     // 1. 情境
     const sc = SCEN.find((x) => x[0] === st.scenario) || SCEN[0];
     html += `<div class="st-sec">情境命中率</div>${chips('scenario', SCEN.map((x) => [x[0], x[1]]))}<div class="st-help">${sc[2]}</div>`;
@@ -596,6 +625,44 @@
       if (openHere) html += drillHtml(openHere.anchor, openHere.title, openHere.list);
     }
     html += '</div>';
+    // 2b. 自選組合：多選 ≥2 位，只看「這幾位全都有推薦」的比賽
+    const sel = (st.sel || []).filter((a) => ANALYSTS.includes(a));
+    html += `<div class="st-sec">自選組合</div><div class="st-help">選兩位以上，只看這幾位「全都有推薦」的比賽：同一邊時的球隊直勝，以及互相衝突時各自的命中率。</div>`;
+    html += `<div class="chips">${ANALYSTS.map((a) => `<button class="chip${sel.includes(a) ? ' on' : ''}" data-sel="${a}">${a}</button>`).join('')}</div>`;
+    if (sel.length >= 2) {
+      const byGame = new Map();
+      for (const r of ann) {
+        if (!sel.includes(r.analyst)) continue;
+        if (!byGame.has(r.officialId)) byGame.set(r.officialId, []);
+        byGame.get(r.officialId).push(r);
+      }
+      const aligned = { all: [], unopp: [], opp: [], exact: [] }; const split = [];
+      for (const list of byGame.values()) {
+        if (list.length !== sel.length) continue;
+        if (new Set(list.map((r) => r.side)).size === 1) {
+          aligned.all.push(list);
+          (list[0].ctx.oppCount > 0 ? aligned.opp : aligned.unopp).push(list);
+          if (list[0].ctx.ownCount === sel.length) aligned.exact.push(list);
+        } else split.push(list);
+      }
+      const names = sel.map((a) => SHORT[a]).join('+');
+      html += `<div class="wrap-x"><table class="tbl"><tr><th>${names} 同一邊</th><th>場數</th><th>球隊直勝</th><th>全員過盤</th><th>收盤損益／ROI（張）</th></tr>`;
+      for (const [k, label] of [['all', '全部同向'], ['unopp', '其中沒人反對'], ['opp', '其中有人反對'], ['exact', '同邊只有這幾位']]) {
+        const games = aligned[k]; const n = games.length;
+        const dir = games.filter((l) => l[0].direction === 'win').length; const allw = games.filter((l) => l.every((r) => r.result === 'win')).length;
+        const tickets = games.flat();
+        html += anchorRow(`sel:al:${sel.join('+')}:${k}`, `<td><b>${label}</b></td><td class="num">${n}</td><td>${n ? ratePill(dir / n, n, minN) : '—'}</td><td>${n ? ratePill(allw / n, n, minN) : '—'}</td><td>${roiTxt(Core.summarize(tickets))}</td>`, tickets, `${names}｜${label}`);
+      }
+      html += '</table></div>';
+      html += `<div class="wrap-x" style="margin-top:8px"><table class="tbl"><tr><th>${names} 互相衝突（${split.length} 場）</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>`;
+      for (const a of sel) {
+        const l = split.map((g) => g.find((r) => r.analyst === a));
+        html += anchorRow(`sel:cf:${sel.join('+')}:${a}`, statCells(a, Core.summarize(l), minN), l, `${a}｜與 ${names} 互相衝突時`);
+      }
+      html += '</table></div>';
+    } else {
+      html += '<div class="st-help">再多選一位以上。</div>';
+    }
     // 3. 精確組合排行
     const board = Core.comboBoard(ann);
     const combos = Object.entries(board).filter(([k, b]) => k.includes('+') && b.games >= minN)
@@ -610,7 +677,7 @@
     // 4. 表單 vs LOTTO
     const settled = rows.filter((r) => r.result !== 'pending');
     html += `<div class="st-sec">表單 vs LOTTO</div><div class="st-help">表單＝左鍵層；LOTTO 另計＝同場已有表單的 LOTTO 腿（不進主帳）；串關腿計入＝當天沒表單時的 LOTTO／串關腿。10/13 起才分得出來。</div>`;
-    html += '<div class="wrap-x"><table class="tbl"><tr><th>分析師｜分類</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>Stake 損益／ROI（張）</th></tr>';
+    html += '<div class="wrap-x"><table class="tbl"><tr><th>分析師｜分類</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>';
     for (const a of ANALYSTS) {
       const groups = [
         ['表單', settled.filter((r) => r.analyst === a && r.layer === 'card')],
@@ -641,6 +708,8 @@
     const ann = Core.annotateContexts(Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES }));
     const val = { key, idx: Core.sideIndex(ann), lone: Core.scenarioStats(ann, 'loneDissent'), solo: {}, byCount: {} };
     for (const a of ANALYSTS) val.solo[a] = Core.summarize(ann.filter((r) => r.analyst === a && r.ctx.alignment === 'solo'));
+    val.noOpp = Core.scenarioStats(ann, 'noOpposition'); val.pairs = Core.pairMatrix(ann);
+    val.all = {}; for (const a of ANALYSTS) val.all[a] = Core.summarize(ann.filter((r) => r.analyst === a));
     for (const s of val.idx.sides) {
       if (s.oppKey !== '') continue;
       const n = s.key.split('+').length; const b = val.byCount[n] || (val.byCount[n] = { games: 0, dirWins: 0 });
@@ -651,43 +720,72 @@
   }
   const sideKey = (list) => list.slice().sort((a, b) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(b)).join('+');
   const shortKey = (k) => k.split('+').map((a) => SHORT[a]).join('+');
-  function histLine(label, wins, n, what) {
-    if (!n) return `<div class="h-dim">${label}：過去沒出現過</div>`;
-    return `<div>${label} ${ratePill(wins / n, n, 10)} <span class="h-dim">${what} ${wins}/${n}</span></div>`;
+  // 長條：label｜灰→金的條（寬＝命中率）｜數字；樣本少於 10 淡化
+  function barRow(label, wins, n, what) {
+    if (!n) return `<div class="bar-row none"><span class="bl">${label}</span><span class="bt"></span><span class="bn">過去沒出現過</span></div>`;
+    const rate = wins / n;
+    return `<div class="bar-row${n < 10 ? ' few' : ''}"><span class="bl">${label}</span><span class="bt"><span class="bf" style="width:${Math.max(3, Math.round(rate * 100))}%;${rateStyle(rate)}">${(rate * 100).toFixed(1)}%</span></span><span class="bn">${what} ${wins}/${n}</span></div>`;
   }
-  function gameInsight(g) {
-    if (g.league === 'NBA' && g.startMs < Date.parse('2026-10-20T04:00:00Z')) return '';   // 季前賽不比對
-    const L = leagueIndex(g.league);
-    if (!L) return histLoading ? '<div class="hist h-dim">載入歷史中…</div>' : '';
+  const EXCL = {};   // 今日卡片：暫時排除的分析師（officialId → Set），只影響卡片數據，不動推薦
+  function todayCard(g, L) {
+    const ex = EXCL[g.officialId] || new Set();
     const sides = { away: [], home: [] };
     for (const a of ANALYSTS) { const p = mainPick(a, g.officialId); if (p) sides[p.side].push(a); }
-    const A = sides.away; const H = sides.home;
-    const out = [];
+    if (!sides.away.length && !sides.home.length) return '';
+    const chip = (a) => `<button class="tchip${ex.has(a) ? ' off' : ''}" data-ex="${esc(g.officialId)}|${a}" title="${ex.has(a) ? '加回' : '暫時排除'} ${a}">${a}</button>`;
+    const A = sides.away.filter((a) => !ex.has(a)); const H = sides.home.filter((a) => !ex.has(a));
+    const bars = [];
+    let tag = '';
     if (A.length && H.length) {
       const [maj, min] = A.length >= H.length ? [A, H] : [H, A];
       const kMaj = sideKey(maj); const kMin = sideKey(min);
+      tag = `<span class="tag c">衝突 ${maj.length}:${min.length}</span>`;
       const m = L.idx.query({ key: kMaj, oppKey: kMin });
-      out.push(histLine(`這個對局 ${shortKey(kMaj)} 對 ${shortKey(kMin)}：${shortKey(kMaj)} 側`, m.dirWins, m.games, '直勝'));
+      bars.push(barRow(`這個對局：${shortKey(kMaj)} 側（對 ${shortKey(kMin)}）`, m.dirWins, m.games, '直勝'));
       const o = L.idx.query({ key: kMaj, opposed: true });
-      out.push(histLine(`${shortKey(kMaj)} 遇反對`, o.dirWins, o.games, '直勝'));
-      if (min.length === 1 && maj.length >= 2) {
-        const s = L.lone[min[0]];
-        out.push(histLine(`${SHORT[min[0]]} 單人反對`, s.wins, s.settled, '命中'));
-      } else {
-        const q = L.idx.query({ key: kMin, opposed: true });
-        out.push(histLine(`${shortKey(kMin)} 遇反對`, q.dirWins, q.games, '直勝'));
+      bars.push(barRow(`${shortKey(kMaj)} 遇到反對`, o.dirWins, o.games, '直勝'));
+      if (min.length === 1 && maj.length >= 2) { const s = L.lone[min[0]]; bars.push(barRow(`${SHORT[min[0]]} 單人反對`, s.wins, s.settled, '命中')); }
+      else { const q = L.idx.query({ key: kMin, opposed: true }); bars.push(barRow(`${shortKey(kMin)} 遇到反對`, q.dirWins, q.games, '直勝')); }
+      const pairs = [];
+      for (const x of maj) for (const y of min) pairs.push([x, y]);
+      for (const [x, y] of pairs.slice(0, 6)) {
+        const vx = L.pairs.versus[`${x}>${y}`]; const vy = L.pairs.versus[`${y}>${x}`];
+        if (vx) bars.push(barRow(`${SHORT[x]} 對上 ${SHORT[y]}：${SHORT[x]}`, vx.wins, vx.games, '命中'));
+        if (vy) bars.push(barRow(`${SHORT[x]} 對上 ${SHORT[y]}：${SHORT[y]}`, vy.wins, vy.games, '命中'));
       }
     } else if (A.length + H.length >= 2) {
-      const k = sideKey(A.length ? A : H); const n = A.length + H.length;
+      const side = A.length ? A : H; const k = sideKey(side);
+      tag = `<span class="tag">同向 ${side.length}:0</span>`;
       const u = L.idx.query({ key: k, opposed: false });
-      out.push(histLine(`${shortKey(k)} 同向無反方`, u.dirWins, u.games, '直勝'));
-      const c = L.byCount[n] || { games: 0, dirWins: 0 };
-      out.push(histLine(`任何 ${n} 人同向無反方`, c.dirWins, c.games, '直勝'));
+      bars.push(barRow(`${shortKey(k)} 同向、無人反對`, u.dirWins, u.games, '直勝'));
+      const all = L.idx.query({ key: k });
+      bars.push(barRow(`${shortKey(k)} 同一邊（不論有無反對）`, all.dirWins, all.games, '直勝'));
+      const c = L.byCount[side.length] || { games: 0, dirWins: 0 };
+      bars.push(barRow(`任何 ${side.length} 人同向、無人反對`, c.dirWins, c.games, '直勝'));
+      for (const a of side) { const s = L.noOpp[a]; bars.push(barRow(`${SHORT[a]} 在無反方同向時`, s.wins, s.settled, '命中')); }
     } else if (A.length + H.length === 1) {
-      const a = A[0] || H[0]; const s = L.solo[a];
-      out.push(histLine(`${SHORT[a]} 單獨推薦`, s.wins, s.settled, '命中'));
+      const a = A[0] || H[0]; tag = '<span class="tag">單人</span>';
+      const s = L.solo[a]; bars.push(barRow(`${SHORT[a]} 單獨推薦`, s.wins, s.settled, '命中'));
+      const t = L.all[a]; bars.push(barRow(`${SHORT[a]} 整體`, t.wins, t.settled, '命中'));
+    } else {
+      tag = '<span class="tag">已全部排除</span>';
     }
-    return out.length ? `<div class="hist">${out.join('')}</div>` : '';
+    return `<div class="tcard">
+      <div class="tc-head"><b>${esc(g.time)}</b> ${esc(g.away)} @ ${esc(g.home)} ${tag}</div>
+      <div class="tc-sides"><div><span class="tc-lab">客 ${esc(g.away)}</span>${sides.away.map(chip).join('') || '<span class="h-dim">—</span>'}</div><div><span class="tc-lab">主 ${esc(g.home)}</span>${sides.home.map(chip).join('') || '<span class="h-dim">—</span>'}</div></div>
+      <div class="bars">${bars.join('')}</div>
+    </div>`;
+  }
+  function renderToday(games) {
+    if (!games.some((g) => ANALYSTS.some((a) => mainPick(a, g.officialId)))) return '';
+    if (games[0] && games[0].league === 'NBA' && games.every((g) => g.startMs < Date.parse('2026-10-20T04:00:00Z'))) {
+      return '<div class="today"><div class="st-sec">今日組合 vs 歷史</div><div class="st-help">NBA 季前賽不比對（例行賽 10/20 起才有歷史可對照）。</div></div>';
+    }
+    const L = leagueIndex(view.league);
+    if (!L) return `<div class="today"><div class="st-sec">今日組合 vs 歷史</div><div class="st-help">${histLoading ? '載入歷史中…' : '歷史紀錄載入失敗'}</div></div>`;
+    return `<div class="today"><div class="st-sec">今日組合 vs 歷史（${view.league}｜${view.date.slice(5).replace('-', '/')}）</div>
+      <div class="st-help">依你目前的登錄即時計算，只看 ${view.league} 歷史（例行＋季後）。點分析師名字可暫時排除他、改看其餘人的組合（不會改到推薦）。長條寬度＝命中率，顏色灰→金；少於 10 場會變淡。</div>
+      <div class="tcards">${games.map((g) => todayCard(g, L)).join('')}</div></div>`;
   }
 
   function render() {
@@ -713,10 +811,12 @@
     cycle(g, 'lotto', btn.dataset.s); render();
   }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor]');
+    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-ex],[data-sel]');
     if (!t) return;
     if (t.dataset.sl) { view.st.league = t.dataset.sl; drill = null; saveView(); render(); return; }
     if (t.dataset.st) { view.st[t.dataset.st] = t.dataset.v; if (t.dataset.st !== 'matrix') drill = null; saveView(); render(); return; }
+    if (t.dataset.ex) { const [id, a] = t.dataset.ex.split('|'); const set = EXCL[id] || (EXCL[id] = new Set()); if (set.has(a)) set.delete(a); else set.add(a); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
+    if (t.dataset.sel) { const sel = new Set(view.st.sel || []); if (sel.has(t.dataset.sel)) sel.delete(t.dataset.sel); else sel.add(t.dataset.sel); view.st.sel = ANALYSTS.filter((a) => sel.has(a)); drill = null; saveView(); render(); return; }
     if (t.dataset.anchor) { drill = drill && drill.anchor === t.dataset.anchor ? null : { anchor: t.dataset.anchor }; render(); return; }
     if (t.dataset.a) { view.analyst = t.dataset.a; saveView(); render(); return; }
     if (t.dataset.d) { view.date = t.dataset.d; saveView(); render(); return; }

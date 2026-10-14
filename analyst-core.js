@@ -57,26 +57,46 @@
   }
 
   // Stake 賠率：closing＝收盤（結算工作流寫入）；spread 以 favorite＋line 表示，隊伍視角線＝讓方 -line、受讓方 +line
-  function priceFrom(snapshot, p) {
+  // 用獨贏校正讓分方向：受讓那邊的讓分隱含機率必高於它的獨贏隱含機率，讓分那邊必低於。
+  // Stake 的 favorite 欄位有時是「獨贏熱門」而非「讓分方」（另開盤），不能直接信；兩種方向都對不上就不用這組。
+  function orientSpread(s, ml) {
+    const n = (v) => Number(v);
+    if (!ml || !(n(ml.away) > 1 && n(ml.home) > 1) || !(n(s.away) > 1 && n(s.home) > 1)) return s;
+    const pa = 1 / n(ml.away); const ph = 1 / n(ml.home); const sa = 1 / n(s.away); const sh = 1 / n(s.home);
+    const homeLays = sh < ph && sa > pa; const awayLays = sa < pa && sh > ph;
+    if (homeLays && !awayLays) return s.favorite === 'home' ? s : Object.assign({}, s, { favorite: 'home' });
+    if (awayLays && !homeLays) return s.favorite === 'away' ? s : Object.assign({}, s, { favorite: 'away' });
+    return null;
+  }
+  function spreadQuote(raw, p, ml) {
+    const s = raw && orientSpread(raw, ml);
+    if (!s || !Number.isFinite(Number(s.line))) return null;
+    const teamLine = s.favorite === p.side ? -Number(s.line) : Number(s.line);
+    if (Math.abs(teamLine - pickLine(p)) > 1e-9) return null;   // 熱門隊 +1.5 等另開盤口：這組沒有價
+    const v = s[p.side];
+    return Number.isFinite(Number(v)) && Number(v) > 1 ? { odds: Number(v), book: s.book || null } : null;
+  }
+  // 收盤快照：ml 一組；讓分可為 spread（一組）或 spreads（多組，依優先序；例 Stake 另開盤＋bet365 主盤）
+  function priceQuote(snapshot, p) {
     if (!snapshot) return null;
     if (p.market === 'ML') {
       const v = snapshot.ml && snapshot.ml[p.side];
-      return Number.isFinite(Number(v)) && Number(v) > 1 ? Number(v) : null;
+      return Number.isFinite(Number(v)) && Number(v) > 1 ? { odds: Number(v), book: snapshot.ml.book || null } : null;
     }
-    const s = snapshot.spread;
-    if (!s || !Number.isFinite(Number(s.line))) return null;
-    const teamLine = s.favorite === p.side ? -Number(s.line) : Number(s.line);
-    if (Math.abs(teamLine - pickLine(p)) > 1e-9) return null;   // 熱門隊 +1.5 等另開盤口：無價
-    const v = s[p.side];
-    return Number.isFinite(Number(v)) && Number(v) > 1 ? Number(v) : null;
+    for (const s of [].concat(snapshot.spread || [], snapshot.spreads || [])) {
+      const q = spreadQuote(s, p, snapshot.ml);
+      if (q) return q;
+    }
+    return null;
   }
+  function priceFrom(snapshot, p) { const q = priceQuote(snapshot, p); return q ? q.odds : null; }
 
   function priceFor(p, game) {
-    const closing = priceFrom(game && game.closing, p);
-    if (closing != null) return { odds: closing, oddsSource: 'closing' };
+    const closing = priceQuote(game && game.closing, p);
+    if (closing) return { odds: closing.odds, oddsSource: 'closing', book: closing.book || (game.closing && game.closing.source === 'stake' ? 'stake' : null) };
     const entry = Number(p.entryOdds);
-    if (Number.isFinite(entry) && entry > 1) return { odds: entry, oddsSource: 'entry' };
-    return { odds: null, oddsSource: null };
+    if (Number.isFinite(entry) && entry > 1) return { odds: entry, oddsSource: 'entry', book: 'stake' };
+    return { odds: null, oddsSource: null, book: null };
   }
 
   function relationToCard(lotto, card) {
@@ -111,6 +131,7 @@
         phase: (game && game.phase) || null,
         odds: price.odds,
         oddsSource: price.oddsSource,
+        oddsBook: price.book,
         profit,
       });
     }
@@ -290,7 +311,7 @@
 
   return {
     ANALYSTS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex,
-    pickKey, pickLine, mergePicks, livePicks, settlePick, priceFrom, priceFor, relationToCard,
+    pickKey, pickLine, mergePicks, livePicks, settlePick, priceQuote, priceFrom, priceFor, relationToCard,
     buildLedger, summarize, filterRows, annotateContexts, inScenario, scenarioStats, pairMatrix, comboBoard,
   };
 });

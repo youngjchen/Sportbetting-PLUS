@@ -44,6 +44,31 @@ test('priceFrom: favourite +1.5 has no Stake price; underdog +1.5 and NBA favour
   assert.equal(core.priceFrom(nba, pick({ side: 'home', market: 'SPREAD', line: -5.5 })), null);
 });
 
+test('spreads list: picks the pair matching the pick (Stake alternate line first, bet365 main line second)', () => {
+  // 客隊是熱門：Stake 存另開盤（主 -1.5／客 +1.5），bet365 存主盤（客 -1.5／主 +1.5）
+  const snap = { ml: { away: 1.6, home: 2.4, book: 'stake' }, spreads: [
+    { line: 1.5, favorite: 'home', away: 1.28, home: 3.4, book: 'stake' },
+    { line: 1.5, favorite: 'away', away: 2.3, home: 1.62, book: 'bet365' },
+  ] };
+  assert.deepEqual(core.priceQuote(snap, pick({ market: 'SPREAD', line: 1.5 })), { odds: 1.28, book: 'stake' });
+  assert.deepEqual(core.priceQuote(snap, pick({ side: 'home', market: 'SPREAD', line: 1.5 })), { odds: 1.62, book: 'bet365' });
+  assert.deepEqual(core.priceQuote(snap, pick({ side: 'home' })), { odds: 2.4, book: 'stake' });
+  const row = core.buildLedger([pick({ side: 'home', market: 'SPREAD', line: 1.5 })], { G1: { awayScore: 3, homeScore: 2, final: true, closing: snap } })[0];
+  assert.deepEqual([row.result, row.odds, row.oddsBook, row.profit], ['win', 1.62, 'bet365', 0.62]);
+});
+
+test('spread orientation is checked against the moneyline (Stake favorite field can be the ML favourite)', () => {
+  // 真實案例 US 10/06 LAD@ATL：ML 1.91／1.94，Stake 記 favorite=away 但價是「主 -1.5 2.90／客 +1.5 1.42」
+  const snap = { ml: { away: 1.91, home: 1.94 }, spreads: [{ line: 1.5, favorite: 'away', away: 1.42, home: 2.9, book: 'stake' }] };
+  assert.equal(core.priceFrom(snap, pick({ side: 'home', market: 'SPREAD', line: 1.5 })), null, 'ATL +1.5 must not be priced at 2.90');
+  assert.equal(core.priceFrom(snap, pick({ side: 'away', market: 'SPREAD', line: 1.5 })), 1.42);
+  // 兩種方向都說不通（兩邊讓分價都比獨贏還難中）→ 不用
+  const bad = { ml: { away: 1.5, home: 2.6 }, spread: { line: 1.5, favorite: 'away', away: 3.2, home: 3.0 } };
+  assert.equal(core.priceFrom(bad, pick({ side: 'home', market: 'SPREAD', line: 1.5 })), null);
+  // 沒有獨贏可校正時照原樣
+  assert.equal(core.priceFrom({ spread: { line: 1.5, favorite: 'away', away: 3.05, home: 1.36 } }, pick({ side: 'home', market: 'SPREAD', line: 1.5 })), 1.36);
+});
+
 test('mergePicks keeps the newer copy and keeps tombstones', () => {
   const a = pick({ updatedAt: '2026-10-14T01:00:00Z' });
   const b = pick({ market: 'SPREAD', line: 1.5, updatedAt: '2026-10-14T02:00:00Z' });
