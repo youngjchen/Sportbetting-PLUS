@@ -46,6 +46,7 @@
   }
 
   function settlePick(p, game) {
+    if (game && game.void) return { result: 'refund', direction: 'refund' };   // 延賽／取消：退款，不進分母
     if (!game || !game.final) return { result: 'pending', direction: 'pending' };
     const margin = gameMargin(game, p.side);
     const adj = margin + pickLine(p);
@@ -94,9 +95,10 @@
       const game = results && results[p.officialId];
       const card = cards.get(`${p.analyst}|${p.officialId}`);
       const isCard = p.layer === 'card';
-      const settled = settlePick(p, game);
+      // fixedResult：歷史帳本已判定、但無法對到單一場次的票（例：雙重賽未標場次、兩場皆敗）
+      const settled = p.fixedResult ? { result: p.fixedResult, direction: p.fixedResult } : settlePick(p, game);
       const price = priceFor(p, game);
-      const profit = price.odds == null || settled.result === 'pending' ? null
+      const profit = price.odds == null || settled.result === 'pending' || settled.result === 'refund' ? null
         : settled.result === 'win' ? Math.round((price.odds - 1) * 10000) / 10000
           : settled.result === 'loss' ? -1 : 0;
       rows.push({
@@ -116,7 +118,7 @@
   }
 
   function emptyStats() {
-    return { wins: 0, losses: 0, pushes: 0, pending: 0, settled: 0, hitRate: null, dirWins: 0, dirSettled: 0, dirRate: null, priced: 0, profit: 0, roi: null };
+    return { wins: 0, losses: 0, pushes: 0, refunds: 0, pending: 0, settled: 0, hitRate: null, dirWins: 0, dirSettled: 0, dirRate: null, priced: 0, profit: 0, roi: null };
   }
 
   function summarize(rows) {
@@ -125,6 +127,7 @@
       if (r.result === 'win') s.wins++;
       else if (r.result === 'loss') s.losses++;
       else if (r.result === 'push') s.pushes++;
+      else if (r.result === 'refund') s.refunds++;
       else s.pending++;
       if (r.direction === 'win' || r.direction === 'loss') { s.dirSettled++; if (r.direction === 'win') s.dirWins++; }
       if (r.profit != null) { s.priced++; s.profit += r.profit; }
@@ -147,7 +150,7 @@
 
   // 主帳每張票標上情境（只看主帳票；同場對面的票才算衝突）
   function annotateContexts(rows) {
-    const main = rows.filter((r) => r.countsInMain && r.result !== 'pending');
+    const main = rows.filter((r) => r.countsInMain && r.result !== 'pending' && r.result !== 'refund');
     const byGame = new Map();
     for (const r of main) {
       if (!byGame.has(r.officialId)) byGame.set(r.officialId, []);
@@ -190,6 +193,12 @@
     multiConflict: (r) => r.ctx.shape === 'multi',
     tie: (r) => r.ctx.oppCount > 0 && r.ctx.side === 'tie',
   };
+
+  function inScenario(r, scenario) {
+    const test = SCENARIOS[scenario];
+    if (!test) throw new Error(`Unknown scenario ${scenario}`);
+    return test(r);
+  }
 
   function scenarioStats(annotated, scenario) {
     const test = SCENARIOS[scenario];
@@ -254,6 +263,6 @@
   return {
     ANALYSTS, LAYERS, SCENARIOS: Object.keys(SCENARIOS),
     pickKey, pickLine, mergePicks, livePicks, settlePick, priceFrom, priceFor, relationToCard,
-    buildLedger, summarize, filterRows, annotateContexts, scenarioStats, pairMatrix, comboBoard,
+    buildLedger, summarize, filterRows, annotateContexts, inScenario, scenarioStats, pairMatrix, comboBoard,
   };
 });

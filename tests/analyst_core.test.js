@@ -21,6 +21,19 @@ test('settlePick: ML, +1.5 one-goal loss, NBA spread push', () => {
   assert.equal(core.settlePick(pick(), { awayScore: 1, homeScore: 0, final: false }).result, 'pending');
 });
 
+test('void (postponed) game is a refund: not settled, not pending, no profit, no context', () => {
+  const rows = core.buildLedger([pick({ entryOdds: 1.9 }), pick({ analyst: 'BOOKIE', side: 'home' })], { G1: { void: true } });
+  assert.deepEqual(rows.map((r) => r.result), ['refund', 'refund']);
+  assert.equal(rows[0].profit, null);
+  const s = core.summarize(rows);
+  assert.deepEqual([s.settled, s.refunds, s.pending], [0, 2, 0]);
+  assert.equal(core.annotateContexts(rows).length, 0);
+  assert.equal(core.inScenario({ ctx: { oppCount: 2, ownCount: 1, shape: 'lone' } }, 'loneDissent'), true);
+  // 歷史帳本已判定、但對不到單一場次（雙重賽未標）：照原判定，不需要比分
+  const fixed = core.buildLedger([pick({ officialId: 'DH', fixedResult: 'loss' })], {});
+  assert.deepEqual([fixed[0].result, fixed[0].direction], ['loss', 'loss']);
+});
+
 test('priceFrom: favourite +1.5 has no Stake price; underdog +1.5 and NBA favourite spread do', () => {
   const snap = { ml: { away: 1.89, home: 1.92 }, spread: { line: 1.5, favorite: 'away', away: 3.05, home: 1.36 } };
   assert.equal(core.priceFrom(snap, pick({ market: 'SPREAD', line: 1.5 })), null);
