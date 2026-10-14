@@ -15,104 +15,126 @@
 <style>
   :root{
     --bg:#0c0f14; --panel:#151a22; --panel-2:#1b222c; --line:#2a3340;
-    --ink:#e9eef5; --ink-dim:#8a96a6; --lit:#ffb02e;
+    --ink:#e9eef5; --ink-dim:#97a3b3; --lit:#ffb02e;
     --ml:#2f6fb5; --ml-bg:rgba(47,111,181,.28); --sp:#2f9b6a; --sp-bg:rgba(47,155,106,.28);
     --lotto:#ffb02e; --win:#3ecf7a; --loss:#ff5b6e; --conflict:#ff3b5c;
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{height:100%;height:100dvh;overflow:hidden}
-  body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;display:flex;flex-direction:column;font-size:14px}
+  body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;display:flex;flex-direction:column;font-size:16px}
   header,.tabs,.datebar{flex:0 0 auto}   /* 有 overflow 的列在 flex 欄裡會被壓扁蓋到下一列 */
   header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
-  .logo{font-size:18px;font-weight:700;margin-right:6px}
-  .pill{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-dim);text-decoration:none;white-space:nowrap}
-  .hbtn{padding:5px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .logo{font-size:20px;font-weight:700;margin-right:6px}
+  .pill{display:inline-flex;align-items:center;gap:4px;padding:5px 12px;border:1px solid var(--line);border-radius:999px;font-size:14.5px;font-weight:700;color:var(--ink-dim);text-decoration:none;white-space:nowrap}
+  .hbtn{padding:6px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--ink);font-size:14.5px;font-weight:700;cursor:pointer;white-space:nowrap}
   .hbtn.on{border-color:var(--lit);color:var(--lit)}
-  #sync{margin-left:auto;color:var(--ink-dim);font-size:12.5px;white-space:nowrap}
+  #sync{margin-left:auto;color:var(--ink-dim);font-size:13.5px;white-space:nowrap}
   #sync.err{color:var(--loss)}
   .tabs{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--line);overflow-x:auto;align-items:center}
-  .tab{min-width:92px;padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink-dim);font-weight:700;cursor:pointer;text-align:center;white-space:nowrap}
+  .tab{min-width:104px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink-dim);font-size:15.5px;font-weight:700;cursor:pointer;text-align:center;white-space:nowrap}
   .tab.on{color:#151006;background:var(--lit);border-color:var(--lit)}
-  .tab small{font-weight:500;opacity:.8;margin-left:4px}
+  .tab small{font-weight:500;opacity:.8;margin-left:4px;font-size:13px}
   select.hbtn{appearance:auto}
   .datebar{display:flex;gap:6px;padding:7px 14px;border-bottom:1px solid var(--line);overflow-x:auto;align-items:center}
-  .dbtn{padding:4px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .dbtn{padding:5px 12px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--ink);font-size:14.5px;font-weight:700;cursor:pointer;white-space:nowrap}
   .dbtn.on{background:var(--ink);color:var(--bg)}
   .body{flex:1 1 auto;display:flex;min-height:0}
-  nav.rail{flex:0 0 72px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;padding:8px 6px;background:var(--panel)}
-  .lg{padding:9px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink-dim);font-weight:700;cursor:pointer;text-align:center;line-height:1.3}
+  nav.rail{flex:0 0 82px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;padding:8px 6px;background:var(--panel)}
+  .lg{padding:10px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink-dim);font-size:15.5px;font-weight:700;cursor:pointer;text-align:center;line-height:1.3}
   .lg.on{color:var(--ink);border-color:var(--lit)}
-  .lg small{display:block;font-weight:500;font-size:11.5px}
-  main{flex:1 1 auto;overflow:auto;padding:8px 12px 24px}
-  .legend{color:var(--ink-dim);font-size:12px;padding:2px 2px 8px}
-  .game{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) 190px;gap:8px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line)}
-  .gtime{color:var(--ink-dim);font-size:12.5px;text-align:center;line-height:1.35}
-  .gtime b{display:block;color:var(--ink);font-size:13px}
-  .team{position:relative;height:58px;padding:6px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);text-align:left;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden}
-  .team .nm{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .team.hasb .nm{padding-right:46px}
-  .team .od{color:var(--ink-dim);font-size:12px;margin-top:3px;white-space:nowrap}
+  .lg small{display:block;font-weight:500;font-size:12.5px}
+  main{flex:1 1 auto;overflow:auto;padding:10px 14px 28px}
+  .legend{color:var(--ink-dim);font-size:13.5px;padding:2px 2px 8px}
+  .game{display:grid;grid-template-columns:62px minmax(0,1fr) minmax(0,1fr) minmax(220px,0.95fr);gap:10px;align-items:center;padding:10px 2px;border-bottom:1px solid var(--line)}
+  .gtime{color:var(--ink-dim);font-size:13.5px;text-align:center;line-height:1.4}
+  .gtime b{display:block;color:var(--ink);font-size:15.5px}
+  .team{position:relative;height:68px;padding:7px 11px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);text-align:left;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden;font-family:inherit}
+  .team .nm{font-weight:700;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .team.hasb .nm{padding-right:54px}
+  .team .od{color:var(--ink-dim);font-size:13.5px;margin-top:4px;white-space:nowrap}
   .team.ml{background:var(--ml-bg);border-color:var(--ml)}
   .team.sp{background:var(--sp-bg);border-color:var(--sp)}
   .team.lot{outline:2px dashed var(--lotto);outline-offset:-5px}
-  .badge{position:absolute;top:5px;right:6px;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:rgba(0,0,0,.35)}
-  .badge2{position:absolute;bottom:5px;right:6px;font-size:11px;font-weight:700;color:var(--lotto)}
-  .res{font-size:12px;margin-left:4px}
-  .info{font-size:12px;color:var(--ink-dim);line-height:1.5;min-width:0}
-  .info .who span{display:inline-block;padding:0 5px;margin:1px 2px 1px 0;border-radius:5px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
+  .badge{position:absolute;top:6px;right:7px;font-size:12.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:rgba(0,0,0,.35)}
+  .badge2{position:absolute;bottom:6px;right:7px;font-size:12.5px;font-weight:700;color:var(--lotto)}
+  .res{font-size:14px;margin-left:5px}
+  .info{font-size:13.5px;color:var(--ink-dim);line-height:1.55;min-width:0}
+  .info .who span{display:inline-block;padding:0 6px;margin:1px 3px 1px 0;border-radius:5px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
   .info .who span.l{border-style:dashed;border-color:var(--lotto)}
-  .info .tag{font-weight:700;color:var(--ink)}
+  .info .tag{font-weight:700;color:var(--ink);font-size:14px}
   .info .tag.c{color:var(--conflict)}
-  .pen{border:none;background:none;color:var(--ink-dim);cursor:pointer;font-size:13px;padding:0 2px}
+  .info .hist{margin-top:4px;color:var(--ink);font-size:13.5px;line-height:1.6}
+  .info .hist .h-dim{color:var(--ink-dim)}
+  .pen{border:none;background:none;color:var(--ink-dim);cursor:pointer;font-size:15px;padding:0 3px}
   .empty{color:var(--ink-dim);text-align:center;padding:40px 10px;line-height:2}
-  footer{flex:0 0 auto;border-top:1px solid var(--line);background:var(--panel);padding:7px 14px;font-size:12.5px;color:var(--ink-dim);display:flex;gap:14px;flex-wrap:wrap}
+  footer{flex:0 0 auto;border-top:1px solid var(--line);background:var(--panel);padding:8px 14px;font-size:14px;color:var(--ink-dim);display:flex;gap:16px;flex-wrap:wrap}
   footer b{color:var(--ink)}
+  /* 命中率色階：45% 以下灰 → 80% 以上金（rateStyle()），樣本不足淡化 */
+  .rate{display:inline-block;min-width:58px;padding:1px 7px;border-radius:6px;font-weight:700;text-align:center}
+  .rate.few{opacity:.45}
   /* ---------- 分析頁 ---------- */
-  .st-sec{margin:14px 0 6px;font-weight:700;font-size:15px}
-  .st-help{color:var(--ink-dim);font-size:12px;margin:0 0 8px;line-height:1.6}
-  .chips{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0}
-  .chip{padding:4px 10px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:var(--ink-dim);font-size:12.5px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .st-sec{margin:18px 0 6px;font-weight:700;font-size:18px}
+  .st-help{color:var(--ink-dim);font-size:13.5px;margin:0 0 8px;line-height:1.65}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin:6px 0}
+  .chip{padding:5px 12px;border:1px solid var(--line);border-radius:999px;background:var(--panel-2);color:var(--ink-dim);font-size:14px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit}
   .chip.on{color:#151006;background:var(--lit);border-color:var(--lit)}
-  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
-  .filters label{color:var(--ink-dim);font-size:12px}
-  .filters input{background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:3px 6px;font-size:12.5px}
-  .tbl{width:100%;border-collapse:collapse;font-size:13px}
-  .tbl th{color:var(--ink-dim);font-weight:500;text-align:right;padding:5px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;padding:9px 11px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
+  .filters label{color:var(--ink-dim);font-size:13.5px}
+  .filters input{background:var(--panel-2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:4px 7px;font-size:14px}
+  .tbl{width:100%;border-collapse:collapse;font-size:16px}
+  .tbl th{color:var(--ink-dim);font-weight:500;font-size:13.5px;text-align:right;padding:6px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
   .tbl th:first-child,.tbl td:first-child{text-align:left}
-  .tbl td{text-align:right;padding:6px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .tbl td{text-align:right;padding:8px;border-bottom:1px solid var(--line);white-space:nowrap}
+  .tbl td.num{font-size:17px;font-weight:700}
   .tbl tr[data-drill]{cursor:pointer}
   .tbl tr[data-drill]:hover td{background:var(--panel-2)}
-  .tbl .thin{opacity:.42}
+  .tbl tr.open td{background:var(--panel-2)}
+  .tbl .thin td{opacity:.5}
+  .tbl tr.drill-row td{padding:0 0 8px;background:transparent;white-space:normal;text-align:left}
   .pos{color:var(--win)} .neg{color:var(--loss)}
-  .mx{display:grid;grid-template-columns:72px repeat(5,minmax(0,1fr));gap:4px;font-size:12px}
-  .mx div{padding:6px 2px;text-align:center;border-radius:6px;line-height:1.35}
-  .mx .h{color:var(--ink-dim)}
+  .mx{display:grid;grid-template-columns:78px repeat(5,minmax(0,1fr));gap:5px;font-size:13.5px}
+  .mx > div{padding:8px 2px;text-align:center;border-radius:7px;line-height:1.35}
+  .mx .h{color:var(--ink-dim);font-weight:700}
+  .mx .cell b{display:block;font-size:17px}
   .mx [data-drill]{cursor:pointer}
-  .drill{border:1px solid var(--lit);border-radius:10px;padding:8px 10px;margin:10px 0;background:var(--panel)}
-  .drill .dh{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px}
-  .drill .dr{display:grid;grid-template-columns:82px minmax(0,1.3fr) minmax(0,1fr) 36px minmax(0,1.2fr) 64px;gap:6px;font-size:12px;padding:4px 0;border-top:1px solid var(--line);align-items:center}
+  .mx .drill{grid-column:1 / -1;text-align:left;padding:8px 10px}
+  .mx-legend{display:flex;align-items:center;gap:8px;color:var(--ink-dim);font-size:13px;margin:6px 0}
+  .mx-legend .bar{width:140px;height:10px;border-radius:5px;background:linear-gradient(90deg,rgb(84,92,106),rgb(214,168,40))}
+  .drill{border:1px solid var(--lit);border-radius:10px;padding:8px 10px;margin:4px 0 2px;background:var(--panel)}
+  .drill .dh{display:flex;justify-content:space-between;align-items:center;font-weight:700;margin-bottom:6px;font-size:15px}
+  .drill .dr{display:grid;grid-template-columns:96px minmax(0,1.3fr) minmax(0,1fr) 34px minmax(0,1.2fr) 70px;gap:8px;font-size:14px;padding:5px 0;border-top:1px solid var(--line);align-items:center}
   .drill .dr span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .wrap-x{overflow-x:auto}
-  @media (max-width:720px){ .drill .dr{grid-template-columns:70px minmax(0,1fr) minmax(0,1fr) 30px;} .drill .dr .x{display:none} .mx{grid-template-columns:52px repeat(5,minmax(0,1fr));font-size:11px} }
-  #toast{position:fixed;left:50%;bottom:54px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--lit);color:var(--ink);padding:7px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+  #toast{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--lit);color:var(--ink);padding:8px 15px;border-radius:10px;font-size:14.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
   #toast.show{opacity:1}
   @media (max-width:720px){
+    body{font-size:15px}
     header{padding:7px 10px;gap:6px}
-    .logo{font-size:16px}
+    .logo{font-size:17px}
     .pill .t{display:none}
-    .pill{padding:4px 8px}
-    #sync{flex-basis:100%;text-align:right;font-size:11.5px}
-    nav.rail{flex-basis:58px}
-    .game{grid-template-columns:44px minmax(0,1fr) minmax(0,1fr);grid-template-areas:"t a h" "i i i"}
-    .gtime{grid-area:t}.game .info{grid-area:i;padding-left:52px}
+    .pill{padding:4px 9px}
+    #sync{flex-basis:100%;text-align:right;font-size:12.5px}
+    nav.rail{flex-basis:60px}
+    .lg{font-size:14px}
+    .game{grid-template-columns:46px minmax(0,1fr) minmax(0,1fr);grid-template-areas:"t a h" "i i i"}
+    .gtime{grid-area:t}.game .info{grid-area:i;padding-left:56px}
     .tabs{flex-wrap:wrap;padding:7px 10px}
-    .tab{flex:1 1 0;min-width:0;padding:7px 2px;font-size:12px}
+    .tab{flex:1 1 0;min-width:0;padding:8px 2px;font-size:13px}
     .tab small{display:block;margin:0}
     #copySel{flex-basis:100%}
-    .team{padding:6px 8px}
-    .team.hasb .nm{padding-right:44px}
-    .badge{font-size:10px;padding:1px 4px}
-    .team .nm{font-size:14px}
+    .team{padding:6px 8px;height:64px}
+    .team .nm{font-size:15.5px}
+    .team .od{font-size:12.5px}
+    .team.hasb .nm{padding-right:46px}
+    .badge{font-size:11px;padding:1px 4px}
+    .tbl{font-size:14.5px}
+    .tbl td.num{font-size:15.5px}
+    .tbl td,.tbl th{padding:6px 5px}
+    .rate{min-width:50px;padding:1px 4px}
+    .mx{grid-template-columns:50px repeat(5,minmax(0,1fr));font-size:12px;gap:3px}
+    .mx .cell b{font-size:14.5px}
+    .drill .dr{grid-template-columns:78px minmax(0,1fr) minmax(0,1fr) 28px;font-size:13px}
+    .drill .dr .x{display:none}
   }
 </style>
 </head>
@@ -137,7 +159,7 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261014c"></script>
+<script src="./analyst-core.js?v=20261015a"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
 <script>
 (function () {
@@ -416,7 +438,7 @@
     else if (na + nh >= 2) tag = `<span class="tag">同向 ${na + nh}:0</span>`;
     else if (na + nh === 1) tag = '<span class="tag">單人</span>';
     const pen = g.league === 'NBA' ? ` <button class="pen" data-pen="${esc(g.officialId)}" title="改讓分線">✎</button>` : '';
-    return `<div class="info"><div class="who">客 ${sides.away.map(chip).join('') || '—'}</div><div class="who">主 ${sides.home.map(chip).join('') || '—'}</div><div>${tag}${pen}</div></div>`;
+    return `<div class="info"><div class="who">客 ${sides.away.map(chip).join('') || '—'}</div><div class="who">主 ${sides.home.map(chip).join('') || '—'}</div><div>${tag}${pen}</div>${gameInsight(g)}</div>`;
   }
   function renderList() {
     const games = gamesFor(view.league, view.date);
@@ -447,7 +469,8 @@
   /* ================= 分析頁 =================
      資料＝data/analyst_history.json（匯入的歷史，唯讀）∪ 推薦主帳（10/13 起）；
      比賽＝歷史 games ∪ 賽程檔 ∪ analyst_results.json（結算檔優先）。
-     情境、兩兩、組合一律只用主帳票，且以「場」為單位（3 人同向＝1 場）。 */
+     情境、兩兩、組合一律只用主帳票，且以「場」為單位（3 人同向＝1 場）。
+     明細在被點的那一列下方原地展開（drill.anchor），再點一次收起。 */
   const SCEN = [
     ['all', '全部', '主帳每一張已結算的票。'],
     ['absoluteAligned', '絕對同向', '同一場有推薦的人全押同一隊、同盤口同線（至少 2 人、沒人押對面）。'],
@@ -461,7 +484,8 @@
     ['relativeConflict', '相對衝突', '有人押對面，但輸 1 分時可能兩邊都過（例 ML 對 +1.5）。'],
     ['conflict', '所有衝突', '同一場兩邊都有人押。'],
   ];
-  let HISTORY = null; let histLoading = false; let drill = null; let DRILLS = [];
+  const DEFAULT_PHASES = ['regular', 'postseason', null];
+  let HISTORY = null; let histLoading = false; let drill = null;   // drill = { anchor }
   async function loadHistory() {
     if (HISTORY || histLoading) return;
     histLoading = true;
@@ -488,59 +512,70 @@
     const f = { league: st.league === 'ALL' ? undefined : st.league };
     if (st.range === '7' || st.range === '30') f.from = addDays(twToday(), -Number(st.range));
     if (st.range === 'custom') { f.from = st.from || undefined; f.to = st.to || undefined; }
-    f.phases = { default: ['regular', 'postseason', null], withPre: ['preseason', 'regular', 'postseason', null], post: ['postseason'], pre: ['preseason'] }[st.phase];
+    f.phases = { default: DEFAULT_PHASES, withPre: ['preseason', 'regular', 'postseason', null], post: ['postseason'], pre: ['preseason'] }[st.phase];
     return f;
   }
-  const pctTxt = (x) => (x == null ? '—' : `${(x * 100).toFixed(1)}%`);
+  // 命中率色階：45% 以下灰 → 80% 以上金；樣本少於門檻淡化（超過門檻就不再隨場數變色）
+  function rateStyle(rate) {
+    const t = Math.max(0, Math.min(1, (rate - 0.45) / 0.35));
+    const gray = [84, 92, 106]; const gold = [214, 168, 40];
+    const c = gray.map((g, i) => Math.round(g + (gold[i] - g) * t));
+    return `background:rgb(${c.join(',')});color:${t > 0.55 ? '#1b1405' : '#eef2f7'}`;
+  }
+  function ratePill(rate, n, minN) {
+    if (rate == null) return '<span style="color:var(--ink-dim)">—</span>';
+    return `<span class="rate${n < minN ? ' few' : ''}" style="${rateStyle(rate)}">${(rate * 100).toFixed(1)}%</span>`;
+  }
   const roiTxt = (s) => (s.priced ? `<span class="${s.profit >= 0 ? 'pos' : 'neg'}">${s.profit >= 0 ? '+' : ''}${s.profit.toFixed(2)}u／${(s.roi * 100).toFixed(1)}%</span><small style="color:var(--ink-dim)">（${s.priced}）</small>` : '<span style="color:var(--ink-dim)">—</span>');
-  function addDrill(title, rows) { DRILLS.push({ title, rows }); return DRILLS.length - 1; }
-  function statRow(label, s, rows, title, minN) {
-    const i = addDrill(title, rows);
-    return `<tr data-drill="${i}" class="${s.settled < minN ? 'thin' : ''}"><td><b>${label}</b></td><td>${s.wins}–${s.losses}${s.refunds ? `<small style="color:var(--ink-dim)"> 退${s.refunds}</small>` : ''}</td><td>${pctTxt(s.hitRate)}</td><td>${pctTxt(s.dirRate)}</td><td>${roiTxt(s)}</td></tr>`;
+  function pickText(r) { return `${esc(r.team)} ${r.market === 'ML' ? 'ML' : signed(r.line)}${r.layer === 'lotto' ? ' <small style="color:var(--lotto)">L</small>' : ''}`; }
+  function drillHtml(anchor, title, rows) {
+    const icon = { win: '✅', loss: '❌', push: '➖', refund: '↩', pending: '…' };
+    const list = rows.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 300);
+    return `<div class="drill"><div class="dh"><span>${esc(title)}｜${rows.length} 筆${rows.length > 300 ? '（顯示最近 300）' : ''}</span><button class="hbtn" data-anchor="${esc(anchor)}">收起</button></div>`
+      + (list.length ? list.map((r) => {
+        const ctx = r.ctx ? `同側 ${r.ctx.partners.map((a) => SHORT[a]).join('+') || '—'}｜對側 ${r.ctx.opponents.map((a) => SHORT[a]).join('+') || '—'}` : (r.relation || '');
+        return `<div class="dr"><span>${esc((r.date || '').slice(5).replace('-', '/'))} ${esc(r.league)}</span><span>${esc(r.away || '')}@${esc(r.home || '')}</span><span><b>${SHORT[r.analyst]}</b> ${pickText(r)}</span><span>${icon[r.result] || ''}</span><span class="x">${esc(ctx)}</span><span class="x">${r.profit == null ? '' : `${r.profit >= 0 ? '+' : ''}${r.profit.toFixed(2)}u`}</span></div>`;
+      }).join('') : '<div class="st-help">沒有資料</div>') + '</div>';
+  }
+  function anchorRow(anchor, cells, rows, title, cols = 5) {
+    const open = drill && drill.anchor === anchor;
+    return `<tr data-anchor="${esc(anchor)}"${open ? ' class="open"' : ''}>${cells}</tr>`
+      + (open ? `<tr class="drill-row"><td colspan="${cols}">${drillHtml(anchor, title, rows)}</td></tr>` : '');
+  }
+  function statCells(label, s, minN) {
+    return `<td><b>${label}</b></td><td class="num">${s.wins}–${s.losses}${s.refunds ? `<small style="color:var(--ink-dim);font-weight:400"> 退${s.refunds}</small>` : ''}</td><td>${ratePill(s.hitRate, s.settled, minN)}</td><td>${ratePill(s.dirRate, s.dirSettled, minN)}</td><td>${roiTxt(s)}</td>`;
   }
   const TH = '<tr><th>分析師</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>Stake 損益／ROI（張）</th></tr>';
-  function pickText(r) { return `${esc(r.team)} ${r.market === 'ML' ? 'ML' : signed(r.line)}${r.layer === 'lotto' ? ' <small style="color:var(--lotto)">L</small>' : ''}`; }
-  function renderDrill() {
-    if (!drill) return '';
-    const icon = { win: '✅', loss: '❌', push: '➖', refund: '↩', pending: '…' };
-    const list = drill.rows.slice().sort((a, b) => (a.date < b.date ? 1 : -1)).slice(0, 300);
-    return `<div class="drill" id="drillBox"><div class="dh"><span>${esc(drill.title)}｜${drill.rows.length} 筆${drill.rows.length > 300 ? '（顯示最近 300）' : ''}</span><button class="hbtn" data-close="1">✕</button></div>`
-      + list.map((r) => {
-        const g = `${esc(r.away || '')}@${esc(r.home || '')}`;
-        const ctx = r.ctx ? `同側 ${r.ctx.partners.map((a) => SHORT[a]).join('+') || '—'}｜對側 ${r.ctx.opponents.map((a) => SHORT[a]).join('+') || '—'}` : (r.relation || '');
-        return `<div class="dr"><span>${esc(r.date || '')} ${esc(r.league)}</span><span>${g}</span><span><b>${SHORT[r.analyst]}</b> ${pickText(r)}</span><span>${icon[r.result] || ''}</span><span class="x">${esc(ctx)}</span><span class="x">${r.profit == null ? '' : `${r.profit >= 0 ? '+' : ''}${r.profit.toFixed(2)}u`}</span></div>`;
-      }).join('') + '</div>';
-  }
+
   function renderStats() {
-    DRILLS = [];
     const st = view.st;
     $('rail').innerHTML = ['ALL', ...LEAGUES].map((lg) => `<button class="lg${lg === st.league ? ' on' : ''}" data-sl="${lg}">${lg === 'ALL' ? '全部' : lg}</button>`).join('');
     if (!HISTORY) { $('list').innerHTML = '<div class="empty">載入歷史紀錄中…</div>'; loadHistory(); return; }
     const chips = (key, opts) => `<div class="chips">${opts.map(([v, t]) => `<button class="chip${String(st[key]) === v ? ' on' : ''}" data-st="${key}" data-v="${v}">${t}</button>`).join('')}</div>`;
-    const all = statsLedger();
-    const rows = Core.filterRows(all, statsFilter());
-    const main = rows.filter((r) => r.countsInMain && (r.result === 'win' || r.result === 'loss' || r.result === 'push' || r.result === 'refund'));
+    const rows = Core.filterRows(statsLedger(), statsFilter());
+    const main = rows.filter((r) => r.countsInMain && ['win', 'loss', 'push', 'refund'].includes(r.result));
     const ann = Core.annotateContexts(rows);
     const minN = Math.max(0, Number(st.min) || 0);
     let html = `<div class="filters">
       ${chips('range', [['all', '全部日期'], ['30', '近 30 天'], ['7', '近 7 天'], ['custom', '自訂']])}
       ${st.range === 'custom' ? `<label>從 <input type="date" id="fromIn" value="${esc(st.from)}"></label><label>到 <input type="date" id="toIn" value="${esc(st.to)}"></label>` : ''}
       ${chips('phase', [['default', '例行＋季後'], ['withPre', '含季前'], ['post', '只季後'], ['pre', '只季前']])}
-      <label>最少樣本 <input type="number" id="minIn" min="0" step="1" value="${minN}" style="width:56px"></label>
+      <label>最少樣本 <input type="number" id="minIn" min="0" step="1" value="${minN}" style="width:60px"></label>
       </div>`;
-    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起；Stake 損益只從 10/13 起有。淡色＝樣本少於 ${minN}。點任一列或格子看逐場。</div>`;
-    html += renderDrill();
+    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起。命中率顏色：灰＝低、金＝高；樣本少於 ${minN} 會變淡。點任一列或格子，明細在下方展開。</div>`;
     // 1. 情境
     const sc = SCEN.find((x) => x[0] === st.scenario) || SCEN[0];
     html += `<div class="st-sec">情境命中率</div>${chips('scenario', SCEN.map((x) => [x[0], x[1]]))}<div class="st-help">${sc[2]}</div>`;
     const scRows = (a) => (sc[0] === 'all' ? main.filter((r) => r.analyst === a) : ann.filter((r) => r.analyst === a && Core.inScenario(r, sc[0])));
-    html += `<div class="wrap-x"><table class="tbl">${TH}${ANALYSTS.map((a) => { const list = scRows(a); return statRow(a, Core.summarize(list), list, `${a}｜${sc[1]}`, minN); }).join('')}</table></div>`;
-    // 2. 兩兩矩陣
+    html += `<div class="wrap-x"><table class="tbl">${TH}${ANALYSTS.map((a) => { const list = scRows(a); return anchorRow(`sc:${sc[0]}:${a}`, statCells(a, Core.summarize(list), minN), list, `${a}｜${sc[1]}`); }).join('')}</table></div>`;
+    // 2. 兩兩矩陣（灰→金；少於門檻淡化）
     const { same, versus } = Core.pairMatrix(ann);
     html += `<div class="st-sec">兩兩組合</div>${chips('matrix', [['same', '同向時（球隊直勝率）'], ['versus', '對立時（行的人命中率）']])}`;
+    html += `<div class="mx-legend"><span>低</span><span class="bar"></span><span>高</span><span>｜淡色＝少於 ${minN} 場</span></div>`;
     html += `<div class="mx"><div></div>${ANALYSTS.map((a) => `<div class="h">${SHORT[a]}</div>`).join('')}`;
     for (const x of ANALYSTS) {
       html += `<div class="h" style="text-align:left">${SHORT[x]}</div>`;
+      let openHere = null;
       for (const y of ANALYSTS) {
         if (x === y) { html += '<div style="background:var(--panel)">—</div>'; continue; }
         let n = 0; let rate = null; let list = [];
@@ -553,10 +588,12 @@
           list = ann.filter((r) => r.analyst === x && r.ctx.opponents.includes(y));
         }
         if (!n) { html += '<div style="background:var(--panel);color:var(--ink-dim)">—</div>'; continue; }
-        const t = Math.max(0, Math.min(1, (rate - 0.4) / 0.4));
-        const i = addDrill(`${x} ${st.matrix === 'same' ? '與' : '對'} ${y}${st.matrix === 'same' ? ' 同向' : ' 對立'}`, list);
-        html += `<div data-drill="${i}" style="background:rgba(47,111,181,${(0.15 + t * 0.6).toFixed(2)});opacity:${n < Math.min(minN, 10) ? 0.45 : 1}">${Math.round(rate * 100)}%<br><small style="color:var(--ink-dim)">${n} 場</small></div>`;
+        const anchor = `mx:${st.matrix}:${x}:${y}`;
+        const title = `${x} ${st.matrix === 'same' ? '與' : '對'} ${y}${st.matrix === 'same' ? ' 同向' : ' 對立'}`;
+        if (drill && drill.anchor === anchor) openHere = { anchor, title, list };
+        html += `<div class="cell" data-anchor="${esc(anchor)}" style="${rateStyle(rate)};opacity:${n < minN ? 0.42 : 1}${drill && drill.anchor === anchor ? ';outline:2px solid var(--ink)' : ''}"><b>${Math.round(rate * 100)}%</b>${n} 場</div>`;
       }
+      if (openHere) html += drillHtml(openHere.anchor, openHere.title, openHere.list);
     }
     html += '</div>';
     // 3. 精確組合排行
@@ -567,8 +604,7 @@
     html += combos.map(([k, b]) => {
       const members = k.split('+');
       const list = ann.filter((r) => r.analyst === members[0] && [r.analyst, ...r.ctx.partners].sort((a, c) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(c)).join('+') === k);
-      const i = addDrill(`組合 ${k}`, list);
-      return `<tr data-drill="${i}"><td>${members.map((a) => SHORT[a]).join('+')}</td><td>${b.games}</td><td>${pctTxt(b.dirWins / b.games)}</td><td>${pctTxt(b.allWin / b.games)}</td><td>${b.opposed}</td></tr>`;
+      return anchorRow(`cb:${k}`, `<td><b>${members.map((a) => SHORT[a]).join('+')}</b></td><td class="num">${b.games}</td><td>${ratePill(b.dirWins / b.games, b.games, minN)}</td><td>${ratePill(b.allWin / b.games, b.games, minN)}</td><td class="num">${b.opposed}</td>`, list, `組合 ${k}`);
     }).join('') || `<tr><td colspan="5" style="color:var(--ink-dim)">沒有場數 ≥ ${minN} 的組合，可把最少樣本調低。</td></tr>`;
     html += '</table></div>';
     // 4. 表單 vs LOTTO
@@ -581,17 +617,77 @@
         ['LOTTO 另計', settled.filter((r) => r.analyst === a && !r.countsInMain)],
         ['串關腿計入', settled.filter((r) => r.analyst === a && r.layer === 'lotto' && r.countsInMain)],
       ].filter(([, l]) => l.length);
-      html += groups.map(([t, l]) => statRow(`${a}｜${t}`, Core.summarize(l), l, `${a}｜${t}`, 0)).join('');
+      html += groups.map(([t, l]) => anchorRow(`lt:${a}:${t}`, statCells(`${a}｜${t}`, Core.summarize(l), 0), l, `${a}｜${t}`)).join('');
     }
     const extra = settled.filter((r) => !r.countsInMain);
     for (const rel of ['跟表單一樣', '同隊改盤口', '反向']) {
       const l = extra.filter((r) => r.relation === rel);
-      if (l.length) html += statRow(`全部｜LOTTO・${rel}`, Core.summarize(l), l, `LOTTO・${rel}`, 0);
+      if (l.length) html += anchorRow(`lt:rel:${rel}`, statCells(`全部｜LOTTO・${rel}`, Core.summarize(l), 0), l, `LOTTO・${rel}`);
     }
     html += '</table></div>';
-    $('list').innerHTML = html;
-    $('summary').innerHTML = `<span>${st.league === 'ALL' ? '全部聯盟' : st.league}｜主帳已結算 <b>${Core.summarize(main).settled}</b> 張｜${ann.length ? `情境可用 ${ann.length} 張` : ''}</span>`;
-    if (drill && drill.scroll) { drill.scroll = false; const box = $('drillBox'); if (box) box.scrollIntoView({ block: 'nearest' }); }
+    const box = $('list'); const keep = box.scrollTop;
+    box.innerHTML = html;
+    box.scrollTop = keep;   // 原地展開，不跳回頂端
+    $('summary').innerHTML = `<span>${st.league === 'ALL' ? '全部聯盟' : st.league}｜主帳已結算 <b>${Core.summarize(main).settled}</b> 張</span>`;
+  }
+
+  /* ---------- 登錄頁：今天每場的組合，對照歷史 ---------- */
+  let IDX_CACHE = {};
+  function leagueIndex(league) {
+    if (!HISTORY) return null;
+    const settledLive = Core.livePicks(picks).filter((p) => RESULTS[p.officialId] && RESULTS[p.officialId].final).length;
+    const key = `${Object.keys(RESULTS).length}|${settledLive}`;
+    if (IDX_CACHE[league] && IDX_CACHE[league].key === key) return IDX_CACHE[league];
+    const ann = Core.annotateContexts(Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES }));
+    const val = { key, idx: Core.sideIndex(ann), lone: Core.scenarioStats(ann, 'loneDissent'), solo: {}, byCount: {} };
+    for (const a of ANALYSTS) val.solo[a] = Core.summarize(ann.filter((r) => r.analyst === a && r.ctx.alignment === 'solo'));
+    for (const s of val.idx.sides) {
+      if (s.oppKey !== '') continue;
+      const n = s.key.split('+').length; const b = val.byCount[n] || (val.byCount[n] = { games: 0, dirWins: 0 });
+      b.games++; if (s.dirWin) b.dirWins++;
+    }
+    IDX_CACHE[league] = val;
+    return val;
+  }
+  const sideKey = (list) => list.slice().sort((a, b) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(b)).join('+');
+  const shortKey = (k) => k.split('+').map((a) => SHORT[a]).join('+');
+  function histLine(label, wins, n, what) {
+    if (!n) return `<div class="h-dim">${label}：過去沒出現過</div>`;
+    return `<div>${label} ${ratePill(wins / n, n, 10)} <span class="h-dim">${what} ${wins}/${n}</span></div>`;
+  }
+  function gameInsight(g) {
+    if (g.league === 'NBA' && g.startMs < Date.parse('2026-10-20T04:00:00Z')) return '';   // 季前賽不比對
+    const L = leagueIndex(g.league);
+    if (!L) return histLoading ? '<div class="hist h-dim">載入歷史中…</div>' : '';
+    const sides = { away: [], home: [] };
+    for (const a of ANALYSTS) { const p = mainPick(a, g.officialId); if (p) sides[p.side].push(a); }
+    const A = sides.away; const H = sides.home;
+    const out = [];
+    if (A.length && H.length) {
+      const [maj, min] = A.length >= H.length ? [A, H] : [H, A];
+      const kMaj = sideKey(maj); const kMin = sideKey(min);
+      const m = L.idx.query({ key: kMaj, oppKey: kMin });
+      out.push(histLine(`這個對局 ${shortKey(kMaj)} 對 ${shortKey(kMin)}：${shortKey(kMaj)} 側`, m.dirWins, m.games, '直勝'));
+      const o = L.idx.query({ key: kMaj, opposed: true });
+      out.push(histLine(`${shortKey(kMaj)} 遇反對`, o.dirWins, o.games, '直勝'));
+      if (min.length === 1 && maj.length >= 2) {
+        const s = L.lone[min[0]];
+        out.push(histLine(`${SHORT[min[0]]} 單人反對`, s.wins, s.settled, '命中'));
+      } else {
+        const q = L.idx.query({ key: kMin, opposed: true });
+        out.push(histLine(`${shortKey(kMin)} 遇反對`, q.dirWins, q.games, '直勝'));
+      }
+    } else if (A.length + H.length >= 2) {
+      const k = sideKey(A.length ? A : H); const n = A.length + H.length;
+      const u = L.idx.query({ key: k, opposed: false });
+      out.push(histLine(`${shortKey(k)} 同向無反方`, u.dirWins, u.games, '直勝'));
+      const c = L.byCount[n] || { games: 0, dirWins: 0 };
+      out.push(histLine(`任何 ${n} 人同向無反方`, c.dirWins, c.games, '直勝'));
+    } else if (A.length + H.length === 1) {
+      const a = A[0] || H[0]; const s = L.solo[a];
+      out.push(histLine(`${SHORT[a]} 單獨推薦`, s.wins, s.settled, '命中'));
+    }
+    return out.length ? `<div class="hist">${out.join('')}</div>` : '';
   }
 
   function render() {
@@ -617,12 +713,11 @@
     cycle(g, 'lotto', btn.dataset.s); render();
   }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-drill],[data-close]');
+    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor]');
     if (!t) return;
     if (t.dataset.sl) { view.st.league = t.dataset.sl; drill = null; saveView(); render(); return; }
     if (t.dataset.st) { view.st[t.dataset.st] = t.dataset.v; if (t.dataset.st !== 'matrix') drill = null; saveView(); render(); return; }
-    if (t.dataset.drill) { const d = DRILLS[Number(t.dataset.drill)]; if (d) { drill = Object.assign({ scroll: true }, d); render(); } return; }
-    if (t.dataset.close) { drill = null; render(); return; }
+    if (t.dataset.anchor) { drill = drill && drill.anchor === t.dataset.anchor ? null : { anchor: t.dataset.anchor }; render(); return; }
     if (t.dataset.a) { view.analyst = t.dataset.a; saveView(); render(); return; }
     if (t.dataset.d) { view.date = t.dataset.d; saveView(); render(); return; }
     if (t.dataset.l) { view.league = t.dataset.l; saveView(); render(); return; }
@@ -670,6 +765,7 @@
     RESULTS = (loaded[LEAGUES.length * 2] && loaded[LEAGUES.length * 2].games) || {};
     render();
     syncNow();
+    loadHistory();
   }
   boot();
 })();

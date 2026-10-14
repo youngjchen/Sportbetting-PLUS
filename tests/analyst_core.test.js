@@ -133,6 +133,12 @@ test('acceptance: NHL 9/29-10/13 consensus and conflict numbers match the 10/14 
   assert.deepEqual([same['BOOKIE+MONEY'].games, same['BOOKIE+MONEY'].dirWins], [47, 37]);
   assert.deepEqual([same['BANKROLL+MONEY'].games, same['BANKROLL+MONEY'].dirWins], [39, 25]);
   assert.deepEqual([versus['BOOKIE>MONEY'].games, versus['BOOKIE>MONEY'].wins, versus['MONEY>BOOKIE'].wins], [30, 20, 14]);
+  const idx = core.sideIndex(ann);
+  assert.deepEqual([idx.query({ key: 'APE+BOOKIE+MONEY', opposed: false }).games, idx.query({ key: 'APE+BOOKIE+MONEY', opposed: false }).dirWins], [11, 10]);
+  assert.equal(idx.query({ key: 'APE+BOOKIE+MONEY', opposed: true }).games, 0);
+  const vsMoney = idx.query({ key: 'APE+BOOKIE', oppKey: 'MONEY' });
+  assert.equal(vsMoney.games, idx.sides.filter((s) => s.key === 'APE+BOOKIE' && s.oppKey === 'MONEY').length);
+  assert.equal(idx.query({}).games, idx.sides.length);
   const board = core.comboBoard(ann);
   assert.deepEqual([board['APE+BOOKIE+MONEY'].games, board['APE+BOOKIE+MONEY'].dirWins], [11, 10]);
   assert.deepEqual([board['APE+BOOKIE+BANKROLL+MONEY'].games, board['APE+BOOKIE+BANKROLL+MONEY'].dirWins], [11, 10]);

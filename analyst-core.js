@@ -261,8 +261,35 @@
     return board;
   }
 
+  // 「側」索引：同一場同一邊＝一側；key＝這側正好哪幾位，oppKey＝對面正好哪幾位（''＝無反方）。
+  // query({ key, oppKey, opposed }) 回傳場數、球隊直勝、全員過盤與明細（給登錄頁「今天這種組合」的歷史）。
+  function sideIndex(annotated) {
+    const order = (list) => list.map((r) => r.analyst).sort((a, b) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(b)).join('+');
+    const bySide = new Map();
+    for (const r of annotated) {
+      const k = `${r.officialId}|${r.side}`;
+      if (!bySide.has(k)) bySide.set(k, []);
+      bySide.get(k).push(r);
+    }
+    const sides = [];
+    for (const [k, list] of bySide) {
+      const cut = k.lastIndexOf('|');
+      const officialId = k.slice(0, cut); const side = k.slice(cut + 1);
+      const opp = bySide.get(`${officialId}|${side === 'away' ? 'home' : 'away'}`) || [];
+      sides.push({ officialId, side, key: order(list), oppKey: order(opp), dirWin: list[0].direction === 'win', allWin: list.every((r) => r.result === 'win'), rows: list });
+    }
+    function query({ key, oppKey, opposed } = {}) {
+      const hit = sides.filter((s) => (key == null || s.key === key) && (oppKey == null || s.oppKey === oppKey)
+        && (opposed == null || (opposed ? s.oppKey !== '' : s.oppKey === '')));
+      const games = hit.length;
+      const dirWins = hit.filter((s) => s.dirWin).length;
+      return { games, dirWins, dirRate: games ? dirWins / games : null, allWin: hit.filter((s) => s.allWin).length, rows: hit.flatMap((s) => s.rows) };
+    }
+    return { sides, query, keyOf: order };
+  }
+
   return {
-    ANALYSTS, LAYERS, SCENARIOS: Object.keys(SCENARIOS),
+    ANALYSTS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex,
     pickKey, pickLine, mergePicks, livePicks, settlePick, priceFrom, priceFor, relationToCard,
     buildLedger, summarize, filterRows, annotateContexts, inScenario, scenarioStats, pairMatrix, comboBoard,
   };
