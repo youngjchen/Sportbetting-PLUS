@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>分析師推薦</title>
+<!-- 分析師推薦登錄頁（計畫：docs/plans/2026-10-14-analyst-picks-page.md）
+     上方橫排五位分析師、左側豎排聯盟；每場兩顆隊伍鈕：
+       左鍵＝表單層：ML → 讓分 → 取消；右鍵／長按＝LOTTO 層：同樣循環。
+     推薦只存 state/analyst_picks.json（本頁唯一寫手，沿用 github-sync 的權杖 gh_sync_pat）；
+     不讀寫盤面 doc（sportbetting_plus_doc_v2），異常統計／七類零接觸。 -->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0c0f14; --panel:#151a22; --panel-2:#1b222c; --line:#2a3340;
+    --ink:#e9eef5; --ink-dim:#8a96a6; --lit:#ffb02e;
+    --ml:#2f6fb5; --ml-bg:rgba(47,111,181,.28); --sp:#2f9b6a; --sp-bg:rgba(47,155,106,.28);
+    --lotto:#ffb02e; --win:#3ecf7a; --loss:#ff5b6e; --conflict:#ff3b5c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;height:100dvh;overflow:hidden}
+  body{background:var(--bg);color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif;display:flex;flex-direction:column;font-size:14px}
+  header,.tabs,.datebar{flex:0 0 auto}   /* 有 overflow 的列在 flex 欄裡會被壓扁蓋到下一列 */
+  header{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+  .logo{font-size:18px;font-weight:700;margin-right:6px}
+  .pill{display:inline-flex;align-items:center;gap:4px;padding:4px 11px;border:1px solid var(--line);border-radius:999px;font-size:13px;font-weight:700;color:var(--ink-dim);text-decoration:none;white-space:nowrap}
+  .hbtn{padding:5px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .hbtn.on{border-color:var(--lit);color:var(--lit)}
+  #sync{margin-left:auto;color:var(--ink-dim);font-size:12.5px;white-space:nowrap}
+  #sync.err{color:var(--loss)}
+  .tabs{display:flex;gap:6px;padding:8px 14px;border-bottom:1px solid var(--line);overflow-x:auto;align-items:center}
+  .tab{min-width:92px;padding:7px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink-dim);font-weight:700;cursor:pointer;text-align:center;white-space:nowrap}
+  .tab.on{color:#151006;background:var(--lit);border-color:var(--lit)}
+  .tab small{font-weight:500;opacity:.8;margin-left:4px}
+  select.hbtn{appearance:auto}
+  .datebar{display:flex;gap:6px;padding:7px 14px;border-bottom:1px solid var(--line);overflow-x:auto;align-items:center}
+  .dbtn{padding:4px 11px;border:1px solid var(--line);border-radius:9px;background:var(--panel-2);color:var(--ink);font-size:13px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .dbtn.on{background:var(--ink);color:var(--bg)}
+  .body{flex:1 1 auto;display:flex;min-height:0}
+  nav.rail{flex:0 0 72px;border-right:1px solid var(--line);display:flex;flex-direction:column;gap:6px;padding:8px 6px;background:var(--panel)}
+  .lg{padding:9px 0;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink-dim);font-weight:700;cursor:pointer;text-align:center;line-height:1.3}
+  .lg.on{color:var(--ink);border-color:var(--lit)}
+  .lg small{display:block;font-weight:500;font-size:11.5px}
+  main{flex:1 1 auto;overflow:auto;padding:8px 12px 24px}
+  .legend{color:var(--ink-dim);font-size:12px;padding:2px 2px 8px}
+  .game{display:grid;grid-template-columns:52px minmax(0,1fr) minmax(0,1fr) 190px;gap:8px;align-items:center;padding:8px 2px;border-bottom:1px solid var(--line)}
+  .gtime{color:var(--ink-dim);font-size:12.5px;text-align:center;line-height:1.35}
+  .gtime b{display:block;color:var(--ink);font-size:13px}
+  .team{position:relative;height:58px;padding:6px 10px;border:1.5px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink);text-align:left;cursor:pointer;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;overflow:hidden}
+  .team .nm{font-weight:700;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .team.hasb .nm{padding-right:46px}
+  .team .od{color:var(--ink-dim);font-size:12px;margin-top:3px;white-space:nowrap}
+  .team.ml{background:var(--ml-bg);border-color:var(--ml)}
+  .team.sp{background:var(--sp-bg);border-color:var(--sp)}
+  .team.lot{outline:2px dashed var(--lotto);outline-offset:-5px}
+  .badge{position:absolute;top:5px;right:6px;font-size:11px;font-weight:700;padding:1px 6px;border-radius:6px;background:rgba(0,0,0,.35)}
+  .badge2{position:absolute;bottom:5px;right:6px;font-size:11px;font-weight:700;color:var(--lotto)}
+  .res{font-size:12px;margin-left:4px}
+  .info{font-size:12px;color:var(--ink-dim);line-height:1.5;min-width:0}
+  .info .who span{display:inline-block;padding:0 5px;margin:1px 2px 1px 0;border-radius:5px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
+  .info .who span.l{border-style:dashed;border-color:var(--lotto)}
+  .info .tag{font-weight:700;color:var(--ink)}
+  .info .tag.c{color:var(--conflict)}
+  .pen{border:none;background:none;color:var(--ink-dim);cursor:pointer;font-size:13px;padding:0 2px}
+  .empty{color:var(--ink-dim);text-align:center;padding:40px 10px;line-height:2}
+  footer{flex:0 0 auto;border-top:1px solid var(--line);background:var(--panel);padding:7px 14px;font-size:12.5px;color:var(--ink-dim);display:flex;gap:14px;flex-wrap:wrap}
+  footer b{color:var(--ink)}
+  #toast{position:fixed;left:50%;bottom:54px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--lit);color:var(--ink);padding:7px 14px;border-radius:10px;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
+  #toast.show{opacity:1}
+  @media (max-width:720px){
+    header{padding:7px 10px;gap:6px}
+    .logo{font-size:16px}
+    .pill .t{display:none}
+    .pill{padding:4px 8px}
+    #sync{flex-basis:100%;text-align:right;font-size:11.5px}
+    nav.rail{flex-basis:58px}
+    .game{grid-template-columns:44px minmax(0,1fr) minmax(0,1fr);grid-template-areas:"t a h" "i i i"}
+    .gtime{grid-area:t}.game .info{grid-area:i;padding-left:52px}
+    .tabs{flex-wrap:wrap;padding:7px 10px}
+    .tab{flex:1 1 0;min-width:0;padding:7px 2px;font-size:12px}
+    .tab small{display:block;margin:0}
+    #copySel{flex-basis:100%}
+    .team{padding:6px 8px}
+    .team.hasb .nm{padding-right:44px}
+    .badge{font-size:10px;padding:1px 4px}
+    .team .nm{font-size:14px}
+  }
+</style>
+</head>
+<body>
+<header>
+  <span class="logo">🎯 分析師推薦</span>
+  <a class="pill" href="index.html" title="棒球排盤板">⚾<span class="t"> 棒球</span></a>
+  <a class="pill" href="nba.html" title="籃球排盤板">🏀<span class="t"> 籃球</span></a>
+  <a class="pill" href="nhl.html" title="冰球排盤板">🏒<span class="t"> 冰球</span></a>
+  <button class="hbtn" id="retroBtn" title="補登過去的推薦：不提示開賽，狀態標「回溯」">回溯模式</button>
+  <button class="hbtn" id="patBtn" title="設定 GitHub 權杖（與盤面同步共用）">🔑</button>
+  <button class="hbtn" id="syncBtn" title="立即與 GitHub 同步">↻</button>
+  <span id="sync">載入中…</span>
+</header>
+<div class="tabs" id="tabs"></div>
+<div class="datebar" id="dates"></div>
+<div class="body">
+  <nav class="rail" id="rail"></nav>
+  <main id="list"></main>
+</div>
+<footer id="summary"></footer>
+<div id="toast"></div>
+
+<script src="./analyst-core.js?v=20261014a"></script>
+<script src="./nhl_stake_core.js?v=20261004total2"></script>
+<script>
+(function () {
+  'use strict';
+  const Core = window.AnalystCore;
+  const ANALYSTS = Core.ANALYSTS;
+  const SHORT = { APE: 'APE', BOOKIE: 'BOO', BANKROLL: 'BAN', SNIPER: 'SNI', MONEY: 'MON' };
+  const LEAGUES = ['NHL', 'MLB', 'NBA'];
+  const REPO = 'youngjchen/Sportbetting-PLUS';
+  const RAW = `https://raw.githubusercontent.com/${REPO}/main/`;
+  const PICKS_PATH = 'state/analyst_picks.json';
+  const API = `https://api.github.com/repos/${REPO}/contents/${PICKS_PATH}`;
+  const LOCAL_KEY = 'analyst_picks_v1';
+  const VIEW_KEY = 'analyst_picks_view_v1';
+  const PAT_KEY = 'gh_sync_pat';   // 與 github-sync.js 共用
+  const SRC = {
+    NHL: { pregame: 'data/nhl_pregame.json', stake: 'data/stake_api_odds.json' },
+    MLB: { pregame: 'data/pregame_data.json', stake: 'data/baseball_stake_odds.json' },
+    NBA: { pregame: 'data/nba_pregame.json', stake: 'data/nba_stake_odds.json' },
+  };
+
+  const $ = (id) => document.getElementById(id);
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+  const fmtOdds = (v) => (v == null ? '—' : Number(v).toFixed(2));
+  const signed = (n) => (n > 0 ? `+${n}` : `${n}`);
+  function twToday() { return new Date(Date.now() + 8 * 3600e3).toISOString().slice(0, 10); }
+  function nowIso() { return new Date().toISOString(); }
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove('show'), 2200); }
+
+  /* ---------- 狀態 ---------- */
+  const view = Object.assign({ analyst: 'APE', league: 'NHL', date: twToday(), retro: false }, readJson(VIEW_KEY) || {});
+  const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
+  let picks = (readJson(LOCAL_KEY) || {}).picks || [];
+
+  function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
+  function saveView() { try { localStorage.setItem(VIEW_KEY, JSON.stringify(view)); } catch (e) {} }
+  function saveLocal() { try { localStorage.setItem(LOCAL_KEY, JSON.stringify({ version: 1, savedAt: nowIso(), picks })); } catch (e) { toast('本機儲存失敗：' + e.message); } }
+
+  /* ---------- 資料載入：raw GitHub（最新）→ 本站 data/ 後備 ---------- */
+  async function fetchJson(rel) {
+    for (const url of [`${RAW}${rel}?t=${Date.now()}`, `./${rel}?t=${Date.now()}`]) {
+      try { const r = await fetch(url, { cache: 'no-store' }); if (r.ok) return await r.json(); } catch (e) {}
+    }
+    return null;
+  }
+  function startMs(g) { return Date.parse(`${g.date}T${String(g.time || '00:00').padStart(5, '0')}:00+08:00`); }
+  function normalizeGames(league, feed) {
+    const list = Array.isArray(feed) ? feed : (feed && feed.games) || [];
+    return list.filter((g) => !g.league || g.league === league).map((g) => {
+      const away = g.away || g.awayTeam; const home = g.home || g.homeTeam;
+      const out = { league, officialId: g.officialId, date: g.date, time: g.time, away, home,
+        awayScore: g.awayScore, homeScore: g.homeScore, final: g.status === 'finished', status: g.status };
+      out.startMs = startMs(out);
+      return out;
+    }).filter((g) => g.officialId && g.away && g.home);
+  }
+  // 各聯盟 Stake → core.priceFrom 用的 {ml:{away,home}, spread:{line,favorite,away,home}}
+  function stakeSnapshot(league, g) {
+    const feed = DATA[league].stake;
+    if (!feed) return null;
+    if (league === 'NHL') {
+      const hit = window.NhlStake && window.NhlStake.findStakeGame(feed, { date: g.date, time: g.time, away: g.away, home: g.home });
+      if (!hit) return null;
+      return { ml: hit.ml && { away: hit.ml.away, home: hit.ml.home },
+        spread: hit.hd && { line: hit.hd.line, favorite: hit.hd.favorite, away: hit.hd.away, home: hit.hd.home } };
+    }
+    if (league === 'MLB') {
+      const m = feed.matches && feed.matches[g.officialId];
+      if (!m) return null;
+      return { ml: m.moneyline, spread: m.handicapOdds && { line: m.canonicalLine, favorite: m.favorite, away: m.handicapOdds.away, home: m.handicapOdds.home } };
+    }
+    const list = Array.isArray(feed.matches) ? feed.matches : Object.values(feed.matches || {});
+    const m = list.filter((x) => x.away === g.away && x.home === g.home && Math.abs(Date.parse(x.scheduledStart) - g.startMs) < 12 * 3600e3)
+      .sort((a, b) => Math.abs(Date.parse(a.scheduledStart) - g.startMs) - Math.abs(Date.parse(b.scheduledStart) - g.startMs))[0];
+    if (!m) return null;
+    return { ml: m.moneyline, spread: m.handicapOdds && m.line != null && { line: m.line, favorite: m.favorite, away: m.handicapOdds.away, home: m.handicapOdds.home } };
+  }
+  // 第 2 下的讓分線：NHL／MLB 固定 +1.5；NBA 用當下 Stake 該隊的線
+  function defaultSpreadLine(league, snap, side) {
+    if (league !== 'NBA') return 1.5;
+    const s = snap && snap.spread;
+    if (!s || s.line == null) return null;
+    return s.favorite === side ? -Number(s.line) : Number(s.line);
+  }
+
+  /* ---------- 推薦操作 ---------- */
+  function findPick(analyst, officialId, layer) {
+    return picks.find((p) => p.analyst === analyst && p.officialId === officialId && p.layer === layer && !p.deleted);
+  }
+  function upsert(fields) {
+    const key = Core.pickKey(fields);
+    const i = picks.findIndex((p) => Core.pickKey(p) === key);
+    const next = Object.assign({}, i >= 0 ? picks[i] : {}, fields, { updatedAt: nowIso() });
+    if (i >= 0) picks[i] = next; else picks.push(next);
+    saveLocal();
+    scheduleUpload();
+  }
+  function statusFor(g) {
+    if (view.retro) return '回溯';
+    return Date.now() >= g.startMs ? '賽後補登' : '賽前';
+  }
+  function setPick(g, layer, side, market, line) {
+    const snap = stakeSnapshot(g.league, g);
+    const base = { analyst: view.analyst, officialId: g.officialId, layer, league: g.league, date: g.date, time: g.time,
+      away: g.away, home: g.home, deleted: false };
+    if (!side) { upsert(Object.assign(base, { deleted: true })); return; }
+    const pick = Object.assign(base, { side, team: side === 'away' ? g.away : g.home, market, line: market === 'ML' ? 0 : line,
+      enteredAt: nowIso(), status: statusFor(g) });
+    pick.entryOdds = Core.priceFrom(snap, pick);
+    upsert(pick);
+    if (pick.status === '賽後補登') toast('已開賽：這筆標為「賽後補登」');
+  }
+  function cycle(g, layer, side) {
+    const cur = findPick(view.analyst, g.officialId, layer);
+    if (!cur || cur.side !== side) return setPick(g, layer, side, 'ML', 0);
+    if (cur.market === 'ML') {
+      let line = defaultSpreadLine(g.league, stakeSnapshot(g.league, g), side);
+      if (line == null) {
+        const v = window.prompt(`Stake 沒有這場的讓分線，請輸入 ${side === 'away' ? g.away : g.home} 的讓分（例：+6.5 或 -4.5）`);
+        if (v == null || !Number.isFinite(Number(v))) return;
+        line = Number(v);
+      }
+      return setPick(g, layer, side, 'SPREAD', line);
+    }
+    return setPick(g, layer, null);
+  }
+  function editLine(g) {
+    const p = [findPick(view.analyst, g.officialId, 'card'), findPick(view.analyst, g.officialId, 'lotto')].find((x) => x && x.market === 'SPREAD');
+    if (!p) { toast('先在隊伍上點兩下選讓分，再改線'); return; }
+    const v = window.prompt(`改 ${view.analyst} 的讓分線（${p.team}，目前 ${signed(p.line)}）`, signed(p.line));
+    if (v == null || !Number.isFinite(Number(v))) return;
+    setPick(g, p.layer, p.side, 'SPREAD', Number(v));
+    render();
+  }
+  function copyFrom(src) {
+    const games = gamesFor(view.league, view.date);
+    const n = picks.filter((p) => p.analyst === src && !p.deleted && games.some((g) => g.officialId === p.officialId)).length;
+    if (!n) { toast(`${src} 在這天的 ${view.league} 沒有推薦`); return; }
+    if (!window.confirm(`把 ${src} 的 ${n} 筆推薦複製給 ${view.analyst}？（同場同層會被覆蓋）`)) return;
+    for (const g of games) {
+      for (const layer of Core.LAYERS) {
+        const s = findPick(src, g.officialId, layer);
+        if (s) setPick(g, layer, s.side, s.market, s.line);
+      }
+    }
+    render();
+  }
+
+  /* ---------- GitHub 同步（本頁唯一寫 state/analyst_picks.json） ---------- */
+  function getPAT() { try { return localStorage.getItem(PAT_KEY) || ''; } catch (e) { return ''; } }
+  function b64ToUtf8(b64) { const bin = atob(b64.replace(/\n/g, '')); const bytes = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i); return new TextDecoder().decode(bytes); }
+  function utf8ToB64(str) { const bytes = new TextEncoder().encode(str); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000)); return btoa(bin); }
+  const ORDER = (p) => [p.date, p.league, p.time || '', p.officialId, ANALYSTS.indexOf(p.analyst), p.layer].join('|');
+  function serialize(list) {
+    const sorted = list.slice().sort((a, b) => (ORDER(a) < ORDER(b) ? -1 : ORDER(a) > ORDER(b) ? 1 : 0));
+    return `{"version":1,"updatedAt":"${nowIso()}","picks":[\n${sorted.map((p) => JSON.stringify(p)).join(',\n')}\n]}\n`;
+  }
+  async function remoteGet() {
+    const pat = getPAT();
+    const headers = { Accept: 'application/vnd.github+json' };
+    if (pat) headers.Authorization = `Bearer ${pat}`;
+    const r = await fetch(`${API}?ref=main&t=${Date.now()}`, { headers, cache: 'no-store' });
+    if (r.status === 404) return { sha: null, picks: [] };
+    if (!r.ok) {
+      if (!pat) { const raw = await fetchJson(PICKS_PATH); return { sha: null, picks: (raw && raw.picks) || [], readOnly: true }; }
+      throw new Error(`讀取失敗 HTTP ${r.status}`);
+    }
+    const meta = await r.json();
+    const doc = JSON.parse(b64ToUtf8(meta.content || ''));
+    return { sha: meta.sha, picks: doc.picks || [] };
+  }
+  async function remotePut(list, sha) {
+    const body = { message: `analyst picks ${view.date} ${view.league}`, content: utf8ToB64(serialize(list)), branch: 'main' };
+    if (sha) body.sha = sha;
+    const r = await fetch(API, { method: 'PUT', headers: { Accept: 'application/vnd.github+json', Authorization: `Bearer ${getPAT()}` }, body: JSON.stringify(body) });
+    if (!r.ok) { const e = new Error(`上傳失敗 HTTP ${r.status}`); e.status = r.status; throw e; }
+  }
+  const same = (a, b) => JSON.stringify(a.map(ORDER_FULL).sort()) === JSON.stringify(b.map(ORDER_FULL).sort());
+  function ORDER_FULL(p) { return JSON.stringify(Object.keys(p).sort().reduce((o, k) => { o[k] = p[k]; return o; }, {})); }
+  let syncing = false; let again = false; let timer = null;
+  function setSync(text, err) { const el = $('sync'); el.textContent = text; el.classList.toggle('err', !!err); }
+  function scheduleUpload() { setSync('已存本機，等待上傳…'); clearTimeout(timer); timer = setTimeout(syncNow, 3000); }
+  async function syncNow() {
+    if (syncing) { again = true; return; }
+    syncing = true;
+    try {
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        const remote = await remoteGet();
+        const merged = Core.mergePicks(remote.picks, picks);
+        picks = merged; saveLocal();
+        if (!getPAT() || remote.readOnly) { setSync('唯讀（未設權杖，只存在這台裝置）', !getPAT()); break; }
+        if (same(merged, remote.picks)) { setSync(`已同步 ${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`); break; }
+        try { await remotePut(merged, remote.sha); setSync(`已上傳 ${new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' })}`); break; }
+        catch (e) { if ((e.status === 409 || e.status === 422) && attempt < 3) continue; throw e; }
+      }
+    } catch (e) {
+      setSync(`同步失敗：${e.message}（資料仍在本機）`, true);
+    } finally {
+      syncing = false;
+      render();
+      if (again) { again = false; syncNow(); }
+    }
+  }
+
+  /* ---------- 畫面 ---------- */
+  function gamesFor(league, date) { return DATA[league].games.filter((g) => g.date === date).sort((a, b) => a.startMs - b.startMs); }
+  function mainPick(analyst, officialId) { return findPick(analyst, officialId, 'card') || findPick(analyst, officialId, 'lotto'); }
+
+  function renderTabs() {
+    const ids = new Set(gamesFor(view.league, view.date).map((g) => g.officialId));
+    $('tabs').innerHTML = ANALYSTS.map((a) => {
+      const n = picks.filter((p) => p.analyst === a && !p.deleted && ids.has(p.officialId)).length;
+      return `<button class="tab${a === view.analyst ? ' on' : ''}" data-a="${a}">${a}<small>${n || ''}</small></button>`;
+    }).join('') + `<select class="hbtn" id="copySel" title="把另一位分析師在這天這聯盟的推薦複製過來"><option value="">⧉ 複製自…</option>${ANALYSTS.filter((a) => a !== view.analyst).map((a) => `<option>${a}</option>`).join('')}</select>`;
+  }
+  function renderDates() {
+    const set = new Set([twToday(), view.date]);
+    for (const lg of LEAGUES) DATA[lg].games.forEach((g) => set.add(g.date));
+    picks.forEach((p) => { if (!p.deleted) set.add(p.date); });
+    const dates = [...set].sort();
+    $('dates').innerHTML = dates.map((d) => `<button class="dbtn${d === view.date ? ' on' : ''}" data-d="${d}">${d.slice(5).replace('-', '/')}${d === twToday() ? ' 今' : ''}</button>`).join('');
+    const on = $('dates').querySelector('.on'); if (on) on.scrollIntoView({ inline: 'center', block: 'nearest' });
+  }
+  function renderRail() {
+    $('rail').innerHTML = LEAGUES.map((lg) => `<button class="lg${lg === view.league ? ' on' : ''}" data-l="${lg}">${lg}<small>${gamesFor(lg, view.date).length} 場</small></button>`).join('');
+  }
+  function teamButton(g, side, snap) {
+    const card = findPick(view.analyst, g.officialId, 'card');
+    const lotto = findPick(view.analyst, g.officialId, 'lotto');
+    const sp = defaultSpreadLine(g.league, snap, side);
+    const mlOdds = snap && snap.ml ? snap.ml[side] : null;
+    const spOdds = sp == null ? null : Core.priceFrom(snap, { side, market: 'SPREAD', line: sp });
+    let cls = 'team'; let badge = ''; let badge2 = '';
+    if (card && card.side === side) {
+      cls += card.market === 'ML' ? ' ml' : ' sp';
+      badge = card.market === 'ML' ? 'ML' : signed(card.line);
+      if (card.status === '賽後補登') badge += ' 🕘';
+    }
+    if (lotto && lotto.side === side) { cls += ' lot'; badge2 = `L ${lotto.market === 'ML' ? 'ML' : signed(lotto.line)}`; }
+    let res = '';
+    if (g.final) {
+      const mine = [card, lotto].filter((p) => p && p.side === side);
+      if (mine.length) res = mine.map((p) => (Core.settlePick(p, g).result === 'win' ? '✅' : Core.settlePick(p, g).result === 'loss' ? '❌' : '➖')).join('');
+    }
+    const name = side === 'away' ? g.away : g.home;
+    const score = g.final ? ` ${side === 'away' ? g.awayScore : g.homeScore}` : '';
+    if (badge) cls += ' hasb';
+    return `<button class="${cls}" data-g="${esc(g.officialId)}" data-s="${side}" title="左鍵：表單 ML→讓分→取消｜右鍵／長按：LOTTO">
+      <div class="nm">${esc(name)}${score}${res ? `<span class="res">${res}</span>` : ''}</div>
+      <div class="od">ML ${fmtOdds(mlOdds)} · ${sp == null ? '讓分 —' : `${signed(sp)} ${fmtOdds(spOdds)}`}</div>
+      ${badge ? `<span class="badge">${badge}</span>` : ''}${badge2 ? `<span class="badge2">${badge2}</span>` : ''}
+    </button>`;
+  }
+  function infoCell(g) {
+    const sides = { away: [], home: [] };
+    for (const a of ANALYSTS) { const p = mainPick(a, g.officialId); if (p) sides[p.side].push({ a, lotto: p.layer === 'lotto' }); }
+    const chip = (x) => `<span class="${x.lotto ? 'l' : ''}">${SHORT[x.a]}</span>`;
+    const na = sides.away.length; const nh = sides.home.length;
+    let tag = '';
+    if (na && nh) tag = `<span class="tag c">衝突 ${Math.max(na, nh)}:${Math.min(na, nh)}</span>`;
+    else if (na + nh >= 2) tag = `<span class="tag">同向 ${na + nh}:0</span>`;
+    else if (na + nh === 1) tag = '<span class="tag">單人</span>';
+    const pen = g.league === 'NBA' ? ` <button class="pen" data-pen="${esc(g.officialId)}" title="改讓分線">✎</button>` : '';
+    return `<div class="info"><div class="who">客 ${sides.away.map(chip).join('') || '—'}</div><div class="who">主 ${sides.home.map(chip).join('') || '—'}</div><div>${tag}${pen}</div></div>`;
+  }
+  function renderList() {
+    const games = gamesFor(view.league, view.date);
+    if (!games.length) {
+      $('list').innerHTML = `<div class="empty">${view.date} 沒有 ${view.league} 賽程。<br>賽程檔只保留最近幾天；更早的歷史會由匯入程式補進來。</div>`;
+      return;
+    }
+    $('list').innerHTML = '<div class="legend">左鍵＝表單、右鍵（手機長按）＝LOTTO；各點 1 下 ML、2 下讓分、3 下取消</div>'
+      + games.map((g) => {
+        const snap = stakeSnapshot(g.league, g);
+        const state = g.final ? '完賽' : Date.now() >= g.startMs ? '進行中' : '';
+        return `<div class="game"><div class="gtime"><b>${esc(g.time)}</b>${state}</div>${teamButton(g, 'away', snap)}${teamButton(g, 'home', snap)}${infoCell(g)}</div>`;
+      }).join('');
+  }
+  function renderSummary() {
+    const games = gamesFor(view.league, view.date);
+    const results = {}; games.forEach((g) => { results[g.officialId] = g; });
+    const rows = Core.buildLedger(picks.filter((p) => p.league === view.league && p.date === view.date), results);
+    const parts = ANALYSTS.map((a) => {
+      const s = Core.summarize(rows.filter((r) => r.analyst === a && r.countsInMain));
+      const l = Core.summarize(rows.filter((r) => r.analyst === a && !r.countsInMain));
+      if (!s.wins && !s.losses && !s.pending && !l.wins && !l.losses && !l.pending) return '';
+      return `<span><b>${a}</b> ${s.wins}–${s.losses}${s.pending ? `（未完${s.pending}）` : ''}${l.wins + l.losses + l.pending ? `｜L ${l.wins}–${l.losses}` : ''}</span>`;
+    }).filter(Boolean);
+    $('summary').innerHTML = parts.length ? `<span>${view.date} ${view.league} 主要命中：</span>${parts.join('')}` : `<span>${view.date} ${view.league} 尚無推薦</span>`;
+  }
+  function render() {
+    renderTabs(); renderDates(); renderRail(); renderList(); renderSummary();
+    $('retroBtn').classList.toggle('on', view.retro);
+  }
+
+  /* ---------- 事件 ---------- */
+  function gameById(id) { return DATA[view.league].games.find((g) => g.officialId === id); }
+  // 手機長按只走計時器：觸控中收到的 contextmenu（Android 長按）一律忽略，放開後補發的 click 也擋掉；
+  // 滑鼠右鍵不去重，快速連按兩下右鍵＝LOTTO 讓分。
+  let touchActive = false; let suppressClick = { t: 0, key: '' }; let pressTimer = null;
+  const btnKey = (btn) => `${btn.dataset.g}|${btn.dataset.s}`;
+  function doLotto(btn, viaTouch) {
+    if (viaTouch) suppressClick = { t: Date.now(), key: btnKey(btn) };
+    const g = gameById(btn.dataset.g); if (!g) return;
+    cycle(g, 'lotto', btn.dataset.s); render();
+  }
+  document.addEventListener('click', (e) => {
+    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen]');
+    if (!t) return;
+    if (t.dataset.a) { view.analyst = t.dataset.a; saveView(); render(); return; }
+    if (t.dataset.d) { view.date = t.dataset.d; saveView(); render(); return; }
+    if (t.dataset.l) { view.league = t.dataset.l; saveView(); render(); return; }
+    if (t.dataset.pen) { const g = gameById(t.dataset.pen); if (g) editLine(g); return; }
+    if (t.classList.contains('team')) {
+      if (suppressClick.key === btnKey(t) && Date.now() - suppressClick.t < 800) return;   // 長按放開的補發 click
+      const g = gameById(t.dataset.g); if (!g) return;
+      cycle(g, 'card', t.dataset.s); render();
+    }
+  });
+  document.addEventListener('contextmenu', (e) => {
+    const t = e.target.closest('.team'); if (!t) return;
+    e.preventDefault();
+    if (touchActive) return;
+    doLotto(t, false);
+  });
+  document.addEventListener('touchstart', (e) => {
+    const t = e.target.closest('.team'); if (!t) return;
+    touchActive = true;
+    clearTimeout(pressTimer);
+    pressTimer = setTimeout(() => doLotto(t, true), 500);
+  }, { passive: true });
+  for (const ev of ['touchend', 'touchmove', 'touchcancel']) {
+    document.addEventListener(ev, () => { clearTimeout(pressTimer); setTimeout(() => { touchActive = false; }, 50); }, { passive: true });
+  }
+  document.addEventListener('change', (e) => {
+    if (e.target.id === 'copySel' && e.target.value) { const src = e.target.value; e.target.value = ''; copyFrom(src); }
+  });
+  $('retroBtn').onclick = () => { view.retro = !view.retro; saveView(); render(); toast(view.retro ? '回溯模式：新登錄標「回溯」' : '回溯模式已關閉'); };
+  $('syncBtn').onclick = () => syncNow();
+  $('patBtn').onclick = () => {
+    const t = window.prompt('貼上 GitHub 權杖（fine-grained PAT，只需本 repo 的 Contents 讀寫；與盤面同步共用，只存在這台裝置）。留空＝不變更：');
+    if (t && t.trim()) { try { localStorage.setItem(PAT_KEY, t.trim()); } catch (e) {} toast('權杖已更新'); syncNow(); }
+  };
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden' && timer) { clearTimeout(timer); syncNow(); } });
+
+  /* ---------- 啟動 ---------- */
+  async function boot() {
+    render();
+    const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]));
+    LEAGUES.forEach((lg, i) => { DATA[lg].games = normalizeGames(lg, loaded[i * 2]); DATA[lg].stake = loaded[i * 2 + 1]; });
+    render();
+    syncNow();
+  }
+  boot();
+})();
+</script>
+</body>
+</html>

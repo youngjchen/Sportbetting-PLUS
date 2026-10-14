@@ -1,0 +1,128 @@
+'use strict';
+
+const assert = require('node:assert/strict');
+const test = require('node:test');
+const path = require('node:path');
+const fs = require('node:fs');
+
+const core = require('../analyst-core.js');
+
+const load = (name) => JSON.parse(fs.readFileSync(path.join(__dirname, 'fixtures', name), 'utf8'));
+const game = (awayScore, homeScore, extra = {}) => ({ awayScore, homeScore, final: true, phase: 'regular', ...extra });
+const pick = (over) => ({ analyst: 'APE', officialId: 'G1', league: 'NHL', date: '2026-10-14', layer: 'card', side: 'away', market: 'ML', line: 0, ...over });
+
+test('settlePick: ML, +1.5 one-goal loss, NBA spread push', () => {
+  assert.equal(core.settlePick(pick(), game(3, 2)).result, 'win');
+  assert.equal(core.settlePick(pick(), game(2, 3)).result, 'loss');
+  const plus = core.settlePick(pick({ market: 'SPREAD', line: 1.5 }), game(3, 4));
+  assert.deepEqual(plus, { result: 'win', direction: 'loss' });
+  assert.equal(core.settlePick(pick({ market: 'SPREAD', line: -4 }), game(104, 100)).result, 'push');
+  assert.equal(core.settlePick(pick({ market: 'SPREAD', line: -4.5 }), game(104, 100)).result, 'loss');
+  assert.equal(core.settlePick(pick(), { awayScore: 1, homeScore: 0, final: false }).result, 'pending');
+});
+
+test('priceFrom: favourite +1.5 has no Stake price; underdog +1.5 and NBA favourite spread do', () => {
+  const snap = { ml: { away: 1.89, home: 1.92 }, spread: { line: 1.5, favorite: 'away', away: 3.05, home: 1.36 } };
+  assert.equal(core.priceFrom(snap, pick({ market: 'SPREAD', line: 1.5 })), null);
+  assert.equal(core.priceFrom(snap, pick({ side: 'home', market: 'SPREAD', line: 1.5 })), 1.36);
+  assert.equal(core.priceFrom(snap, pick({ side: 'home' })), 1.92);
+  const nba = { spread: { line: 4.5, favorite: 'home', away: 1.9, home: 1.92 } };
+  assert.equal(core.priceFrom(nba, pick({ side: 'home', market: 'SPREAD', line: -4.5 })), 1.92);
+  assert.equal(core.priceFrom(nba, pick({ side: 'home', market: 'SPREAD', line: -5.5 })), null);
+});
+
+test('mergePicks keeps the newer copy and keeps tombstones', () => {
+  const a = pick({ updatedAt: '2026-10-14T01:00:00Z' });
+  const b = pick({ market: 'SPREAD', line: 1.5, updatedAt: '2026-10-14T02:00:00Z' });
+  const gone = pick({ layer: 'lotto', deleted: true, updatedAt: '2026-10-14T03:00:00Z' });
+  const old = pick({ layer: 'lotto', updatedAt: '2026-10-14T00:00:00Z' });
+  const merged = core.mergePicks([a, old], [b, gone]);
+  assert.equal(merged.length, 2);
+  assert.equal(merged.find((p) => p.layer === 'card').market, 'SPREAD');
+  assert.equal(core.livePicks(merged).length, 1);
+});
+
+test('lotto relation and main-ledger rule', () => {
+  const results = { G1: game(4, 1), G2: game(2, 5) };
+  const rows = core.buildLedger([
+    pick({ market: 'SPREAD', line: 1.5 }),
+    pick({ layer: 'lotto' }),
+    pick({ officialId: 'G2', layer: 'lotto', side: 'home' }),
+  ], results);
+  const lottoOnCard = rows.find((r) => r.officialId === 'G1' && r.layer === 'lotto');
+  assert.equal(lottoOnCard.relation, '同隊改盤口');
+  assert.equal(lottoOnCard.countsInMain, false);
+  const lottoOnly = rows.find((r) => r.officialId === 'G2');
+  assert.equal(lottoOnly.relation, '表單沒有');
+  assert.equal(lottoOnly.countsInMain, true);
+  assert.equal(core.relationToCard(pick({ layer: 'lotto', side: 'home' }), pick()), '反向');
+});
+
+test('absolute vs relative alignment and conflict', () => {
+  const results = { A: game(3, 1), B: game(3, 2) };
+  const ann = core.annotateContexts(core.buildLedger([
+    pick({ officialId: 'A' }), pick({ officialId: 'A', analyst: 'BOOKIE' }),
+    pick({ officialId: 'B' }), pick({ officialId: 'B', analyst: 'BOOKIE', side: 'home' }),
+    pick({ officialId: 'B', analyst: 'MONEY', side: 'home', market: 'SPREAD', line: 1.5 }),
+  ], results));
+  assert.equal(ann.find((r) => r.officialId === 'A').ctx.alignment, 'absolute');
+  const ape = ann.find((r) => r.officialId === 'B' && r.analyst === 'APE');
+  assert.equal(ape.ctx.conflict, 'absolute');
+  assert.equal(ape.ctx.shape, 'lone');
+  assert.equal(ann.find((r) => r.analyst === 'MONEY').ctx.conflict, 'relative');
+});
+
+test('acceptance: US 2026-10-13 NHL reproduces the C: tracker settlement and Stake ROI', () => {
+  const fx = load('analyst_core_nhl_20261013.json');
+  const rows = core.buildLedger(fx.picks, fx.results);
+  const main = rows.filter((r) => r.countsInMain);
+  const sMain = core.summarize(main);
+  assert.equal(sMain.wins, fx.expected.main.wins);
+  assert.equal(sMain.losses, fx.expected.main.losses);
+  for (const a of core.ANALYSTS) {
+    const s = core.summarize(main.filter((r) => r.analyst === a));
+    assert.equal(`${s.wins}-${s.losses}`, `${fx.expected.analysts[a].wins}-${fx.expected.analysts[a].losses}`, a);
+  }
+  const extra = rows.filter((r) => !r.countsInMain);
+  assert.equal(core.summarize(extra).wins, 10);
+  assert.equal(core.summarize(extra).losses, 0);
+  const sourceOf = (r) => (r.layer === 'card' ? '表單' : r.countsInMain ? { BANKROLL: 'HAIL MARY', SNIPER: 'RENT PARLAY' }[r.analyst] : 'LOTTO');
+  for (const [a, kinds] of Object.entries(fx.expected.sources)) {
+    for (const [kind, want] of Object.entries(kinds)) {
+      if (kind === '主要命中率') continue;
+      const s = core.summarize(rows.filter((r) => r.analyst === a && sourceOf(r) === kind));
+      assert.equal(s.priced, want.odds_tickets, `${a} ${kind} priced`);
+      assert.ok(Math.abs(s.profit - want.profit_units) < 1e-6, `${a} ${kind} profit ${s.profit} vs ${want.profit_units}`);
+    }
+  }
+  for (const [rel, want] of Object.entries(fx.expected.lottoByRelation)) {
+    const s = core.summarize(extra.filter((r) => r.relation === rel));
+    assert.equal(s.wins, want.wins, rel);
+    assert.ok(Math.abs(s.profit - want.profit_units) < 1e-6, rel);
+  }
+});
+
+test('acceptance: NHL 9/29-10/13 consensus and conflict numbers match the 10/14 analysis', () => {
+  const fx = load('analyst_core_nhl_history.json');
+  const rows = core.buildLedger(fx.picks, fx.results);
+  const sMain = core.summarize(rows.filter((r) => r.countsInMain));
+  assert.equal(`${sMain.wins}-${sMain.losses}`, '221-98');
+  const ann = core.annotateContexts(rows);
+  const rec = (stats) => Object.fromEntries(Object.entries(stats).map(([a, s]) => [a, `${s.wins}/${s.settled}`]));
+  assert.deepEqual(rec(core.scenarioStats(ann, 'conflict')), { APE: '21/37', BOOKIE: '29/43', BANKROLL: '19/31', SNIPER: '3/3', MONEY: '26/47' });
+  assert.deepEqual(rec(core.scenarioStats(ann, 'loneDissent')), { APE: '5/13', BOOKIE: '4/6', BANKROLL: '1/2', SNIPER: '0/0', MONEY: '5/14' });
+  assert.deepEqual(rec(core.scenarioStats(ann, 'noOpposition')), { APE: '28/35', BOOKIE: '32/39', BANKROLL: '19/28', SNIPER: '2/3', MONEY: '36/45' });
+  const { same, versus } = core.pairMatrix(ann);
+  assert.deepEqual([same['APE+BOOKIE'].games, same['APE+BOOKIE'].dirWins], [45, 34]);
+  assert.deepEqual([same['BOOKIE+MONEY'].games, same['BOOKIE+MONEY'].dirWins], [47, 37]);
+  assert.deepEqual([same['BANKROLL+MONEY'].games, same['BANKROLL+MONEY'].dirWins], [39, 25]);
+  assert.deepEqual([versus['BOOKIE>MONEY'].games, versus['BOOKIE>MONEY'].wins, versus['MONEY>BOOKIE'].wins], [30, 20, 14]);
+  const board = core.comboBoard(ann);
+  assert.deepEqual([board['APE+BOOKIE+MONEY'].games, board['APE+BOOKIE+MONEY'].dirWins], [11, 10]);
+  assert.deepEqual([board['APE+BOOKIE+BANKROLL+MONEY'].games, board['APE+BOOKIE+BANKROLL+MONEY'].dirWins], [11, 10]);
+  const abs = core.scenarioStats(ann, 'absoluteAligned');
+  const rel = core.scenarioStats(ann, 'relativeAligned');
+  for (const a of core.ANALYSTS) {
+    assert.equal(abs[a].settled + rel[a].settled, core.scenarioStats(ann, 'noOpposition')[a].settled, a);
+  }
+});
