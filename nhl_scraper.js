@@ -111,6 +111,25 @@ function extractLive(html, date) {
   return out;
 }
 
+// 同一場＝同日、同客隊、同主隊（NHL 沒有同日同組合的雙重賽）。
+const matchKey = (date, away, home) => `${date}|${away}@${home}`;
+
+// officialId 尾碼是玩運彩顯示的開賽時間；開賽後它偶爾改成實際開打時間又改回（2026-10-09 雪崩@火焰 09:00→09:04→09:00），
+// 代號跟著變會讓整季檔多一筆、排盤卡片與推薦對不上。同日同對戰一律沿用先前的代號；只有先前是缺時間的 _0000 才換成有時間的。
+function stabilizeIds(fresh, previous) {
+  const known = new Map();
+  for (const game of Array.isArray(previous) ? previous : []) {
+    if (!game || !game.officialId) continue;
+    const key = matchKey(game.date, game.away, game.home);
+    if (!known.has(key) || /_0000$/.test(known.get(key))) known.set(key, game.officialId);
+  }
+  for (const game of Array.isArray(fresh) ? fresh : []) {
+    const id = game && known.get(matchKey(game.date, game.away, game.home));
+    if (id && id !== game.officialId && !/_0000$/.test(id)) game.officialId = id;
+  }
+  return fresh;
+}
+
 function mergeGames(previous, fresh, scannedDates, cutoff) {
   const oldByDate = {};
   const newByDate = {};
@@ -127,14 +146,21 @@ function mergeGames(previous, fresh, scannedDates, cutoff) {
   return out.sort((a, b) => `${a.date}${a.time || ''}`.localeCompare(`${b.date}${b.time || ''}`));
 }
 
+// 整季檔以「同日同對戰」為一場：已有的那筆保留原代號、只更新內容；舊檔若已重複（代號不同的同一場），只留排序在前的那筆。
 function mergeSeasonGames(previous, fresh) {
-  const byId = new Map((Array.isArray(previous) ? previous : [])
-    .filter(game => game && game.date >= SEASON_START)
-    .map(game => [game.sid, game]));
+  const byKey = new Map();
+  const sorted = (Array.isArray(previous) ? previous : []).filter(game => game && game.date >= SEASON_START)
+    .sort((a, b) => `${a.date}${a.sid}`.localeCompare(`${b.date}${b.sid}`));
+  for (const game of sorted) {
+    const key = matchKey(game.date, game.awayTeam, game.homeTeam);
+    if (!byKey.has(key)) byKey.set(key, game);
+  }
   for (const game of Array.isArray(fresh) ? fresh : []) {
     if (!game || game.date < SEASON_START || game.status !== 'finished' || game.awayScore == null || game.homeScore == null || !game.officialId) continue;
-    byId.set(game.officialId, {
-      sid: game.officialId, date: game.date, league: 'NHL',
+    const key = matchKey(game.date, game.away, game.home);
+    const old = byKey.get(key);
+    byKey.set(key, {
+      sid: old ? old.sid : game.officialId, date: game.date, league: 'NHL',
       awayTeam: game.away, homeTeam: game.home,
       awayScore: game.awayScore, homeScore: game.homeScore,
       hdFav: game.hdSrc === '運彩' ? game.hdFav : null,
@@ -144,7 +170,7 @@ function mergeSeasonGames(previous, fresh) {
       decidedBy: game.decidedBy || null
     });
   }
-  return [...byId.values()].sort((a, b) => `${a.date}${a.sid}`.localeCompare(`${b.date}${b.sid}`));
+  return [...byKey.values()].sort((a, b) => `${a.date}${a.sid}`.localeCompare(`${b.date}${b.sid}`));
 }
 
 function loadJSON(file, fallback) { try { return JSON.parse(fs.readFileSync(file, 'utf8')); } catch (_) { return fallback; } }
@@ -227,6 +253,7 @@ async function run() {
     return all;
   }
   const previousFile = loadJSON(OUT, { games: [] });
+  stabilizeIds(all, previousFile.games);
   const merged = mergeGames(previousFile.games, all, new Set([twoDaysAgo, yesterday, today, tomorrow]), twDate(-KEEP_DAYS));
   const seriesChanged = recordSeries(all, observedAt);
   saveAtomic(OUT, { updated: observedAt, seasonStart: SEASON_START, count: merged.length, rules: { pregameIncludesOvertimeAndShootout: true }, games: merged });
@@ -237,7 +264,7 @@ async function run() {
   return merged;
 }
 
-module.exports = { extractLive, mergeGames, mergeSeasonGames, decidedByText, recordSeries, run };
+module.exports = { extractLive, mergeGames, mergeSeasonGames, stabilizeIds, decidedByText, recordSeries, run };
 
 if (require.main === module) run().catch(error => {
   console.error(error);
