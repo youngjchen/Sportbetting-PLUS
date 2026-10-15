@@ -1,11 +1,13 @@
 {
  "schemaVersion": 2,
  "provider": "bet365-official-first",
- "updated": "2026-10-15T23:20:57.743Z",
+ "updated": "2026-10-15T23:25:57.164Z",
  "source": "https://www.bet365.com/",
  "health": {
-  "status": "ok",
-  "errors": []
+  "status": "partial",
+  "errors": [
+   "sidecar 請求逾時"
+  ]
  },
  "leagues": {
   "NBA": {
@@ -14,19 +16,23 @@
    "officialMatched": 0,
    "fallbackMatched": 2,
    "matched": 2,
-   "lastAttemptAt": "2026-10-15T23:20:57.743Z",
-   "lastSuccessAt": "2026-10-15T23:20:57.743Z",
-   "errors": []
+   "lastAttemptAt": "2026-10-15T23:25:57.164Z",
+   "lastSuccessAt": "2026-10-15T23:25:57.164Z",
+   "errors": [
+    "sidecar 請求逾時"
+   ]
   },
   "WNBA": {
-   "status": "empty",
+   "status": "error",
    "scheduled": 0,
    "officialMatched": 0,
    "fallbackMatched": 0,
    "matched": 0,
-   "lastAttemptAt": "2026-10-15T23:20:57.743Z",
+   "lastAttemptAt": "2026-10-15T23:25:57.164Z",
    "lastSuccessAt": "2026-10-10T01:27:24.068Z",
-   "errors": []
+   "errors": [
+    "sidecar 請求逾時"
+   ]
   }
  },
  "matches": {
@@ -58767,7 +58773,7 @@
    "away": "暴龍",
    "home": "尼克",
    "provider": "betexplorer-bet365",
-   "observedAt": "2026-10-15T23:20:57.743Z",
+   "observedAt": "2026-10-15T23:25:57.164Z",
    "favorite": "home",
    "line": 5.5,
    "moneyline": {
@@ -61928,7 +61934,7 @@
    "away": "雷霆",
    "home": "火箭",
    "provider": "betexplorer-bet365",
-   "observedAt": "2026-10-15T23:20:57.743Z",
+   "observedAt": "2026-10-15T23:25:57.164Z",
    "favorite": "away",
    "line": 3.5,
    "moneyline": {
