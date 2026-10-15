@@ -922,8 +922,12 @@ function stakeOddsFor(g){
   const match=window.NhlStake.findStakeGame(stakeOddsCache,g);
   if(!match) return null;
   const updated=match.game.lastPregameAt||stakeOddsCache.updated||stakeOddsCache.updatedAt||null;
-  return { ...match, updated,
-    stale:!window.NhlStake.isFeedFresh({updated}) };
+  // Stake 爬蟲只抓 Stake 開賽時間之前的盤（最後一筆＝收盤）。過了開賽時間、且最後一筆在開賽前 30 分內＝「收盤」，
+  // 照常用 Stake 收盤盤口，不算停更；只有還沒開賽卻超過 30 分沒更新、或收盤前 30 分都沒抓到，才是真的停更（2026-10-15 使用者規格）。
+  const startMs=Date.parse(match.game.startISO||""), lastMs=Date.parse(match.game.lastPregameAt||"");
+  const closed=Number.isFinite(startMs) && Number.isFinite(lastMs) && Date.now()>=startMs && startMs-lastMs<=30*60e3;
+  return { ...match, updated, closed,
+    stale:!closed && !window.NhlStake.isFeedFresh({updated}) };
 }
 function bet365OddsFor(g){
   if(!window.NhlBet365) return null;
@@ -2102,11 +2106,12 @@ function renderCardW(model){
   if(model.status==="postponed"){ const pd=document.createElement("span"); pd.className="bbadge ppd"; pd.textContent="⏸ 延賽"; pd.title="來源判定延賽,此卡不會結算"; head.appendChild(pd); }
   const hasStake = !!(stake && (stake.ml||stake.hd||stake.ou));
   const stakeStale = !!(stakeObserved&&stakeObserved.stale&&!model.stake);
+  const stakeClosed = !!(hasStake && stakeObserved && stakeObserved.closed);
   const hasLine = model.hdVal!=null && (model.hdSrc==="STAKE" || model.hdSrc==="BET365");
   const sourceName = hasStake ? "STAKE" : (hasLine ? "BET365" : "STAKE");
   const preB = document.createElement("button"); preB.className="bbadge"+((hasStake||hasLine)?" done":"");
-  preB.textContent = stakeStale ? (hasLine?`${sourceName} ✓ · STAKE 停更`:"STAKE 停更") : ((hasStake||hasLine)?`${sourceName} ✓`:"STAKE 待盤");
-  preB.title = hasStake?"Stake 官方主盤已到位 / 點開結算視窗":(hasLine?(stakeStale?"Stake 資料已停更，當前改用 Bet365 官方盤 / 點開歷史":"Stake 缺盤，暫用 Bet365 官方備援 / 點開結算視窗"):"Stake 官方主盤尚未配對 / 點開結算視窗"); preB.onclick=()=>openSettleModal(model);
+  preB.textContent = stakeStale ? (hasLine?`${sourceName} ✓ · STAKE 停更`:"STAKE 停更") : stakeClosed ? "STAKE 收盤" : ((hasStake||hasLine)?`${sourceName} ✓`:"STAKE 待盤");
+  preB.title = stakeClosed?"已過 Stake 開賽時間，顯示的是 Stake 收盤盤口 / 點開結算視窗":hasStake?"Stake 官方主盤已到位 / 點開結算視窗":(hasLine?(stakeStale?"Stake 資料已停更，當前改用 Bet365 官方盤 / 點開歷史":"Stake 缺盤，暫用 Bet365 官方備援 / 點開結算視窗"):"Stake 官方主盤尚未配對 / 點開結算視窗"); preB.onclick=()=>openSettleModal(model);
   const colB = document.createElement("span"); colB.className="bico"; colB.textContent = it.collapsed?"▸":"▾"; colB.title=it.collapsed?"展開":"收合"; colB.onclick=()=>{ snapshot(); it.collapsed=!it.collapsed; saveDoc(doc); render(); };
   const delB = document.createElement("span"); delB.className="bico bdel"; delB.textContent="✕"; delB.title="刪除（此日期不再顯示這張卡）"; delB.onclick=()=>{ snapshot(); it.hidden=true; saveDoc(doc); render(); };
   head.append(preB, colB, delB);
