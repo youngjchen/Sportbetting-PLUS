@@ -223,3 +223,28 @@ test('all league failures with no prior valid feed fail closed instead of produc
     fetchPage: async () => { throw new Error('network down'); }, officialRows: officialRows(), previous: null,
   }), /沒有任何有效聯盟資料/);
 });
+
+// Stake 賽程只給整點：17:30 開打的阪神@橫濱，Stake 寫 17:00（09:00Z）。17:10 仍要抓、存 17:30；Stake 標場中或真正開賽後就不抓。
+test('keeps collecting after Stake hour-floored time until the official first pitch', async () => {
+  const floored = Date.parse('2026-10-04T09:00:00Z');
+  const rows = [{ ...officialRows()[0], officialId: 'NPB_20261004_Tigers@DeNA_1730', time: '17:30' }];
+  const run = (now, status = 'active') => collectBaseballStakeOdds({
+    leagues: ['NPB'], now, clock: () => now, officialRows: rows, previous: { matches: {} },
+    betExplorer: { bookmaker: 'Stake.com', games: {} }, fetchPage: async () => { throw new Error('no page'); },
+    request: async (route) => {
+      const one = fixture(undefined, { startTime: floored, date: floored, status });
+      if (route.includes('/schedule/')) return { schedule: [{ fixtures: [one] }] };
+      if (route.includes('/odds/')) return { fixture: one, groups: apiGroups() };
+      throw new Error(`unexpected route ${route}`);
+    },
+  });
+
+  const during = await run(Date.parse('2026-10-04T09:10:00Z'));
+  const game = during.matches['NPB_20261004_Tigers@DeNA_1730'];
+  assert.ok(game, 'between the Stake hour and the real start the fixture is still collected');
+  assert.equal(game.scheduledStart, '2026-10-04T09:30:00.000Z');
+  assert.equal(during.leagues.NPB.health.shiftedStarts, 1);
+
+  assert.equal(Object.keys((await run(Date.parse('2026-10-04T09:10:00Z'), 'live')).matches).length, 0);
+  assert.equal(Object.keys((await run(Date.parse('2026-10-04T09:31:00Z'))).matches).length, 0);
+});

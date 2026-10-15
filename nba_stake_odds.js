@@ -6,11 +6,16 @@ const {
   parseStakeMarkets,
   matchPregameGame,
   mergeStakeObservation,
+  pregameStartMs,
 } = require('./nba_odds_core.js');
 
 const BASE_URL = 'https://odds-data.stake.com';
 const OUT = path.join(__dirname, 'data', 'nba_stake_odds.json');
 const PREGAME = path.join(__dirname, 'data', 'nba_pregame.json');
+// Stake 賽程時間只到整點（07:30 開打寫 07:00；2026-10-15 查證）。整點過後一小時內仍抓，是否已開賽改看玩運彩的開賽時間
+// （玩運彩對 ESPN 42 場有 41 場一致）。
+const FLOOR_SLACK_MS = 60 * 60 * 1000;
+const START_MATCH_MS = 2 * 3600000;
 const SCHEDULES = Object.freeze({
   preseason: '/schedule/sport/basketball/usa/tournament/nba-preseason',
   regular: '/schedule/sport/basketball/usa/tournament/nba',
@@ -81,11 +86,14 @@ async function collectStakeNbaOdds(options = {}) {
   }
   const fixtures = flattenSchedule(payloads).filter((fixture) => {
     const start = Number(fixture && (fixture.date || fixture.startTime || 0));
-    return fixture && fixture.preMatchEnabled !== false && start > now && start <= now + 21 * 86400000;
+    const status = String(fixture && fixture.status || '').toLowerCase();
+    return fixture && fixture.preMatchEnabled !== false && status !== 'live' && status !== 'ended'
+      && start > now - FLOOR_SLACK_MS && start <= now + 21 * 86400000;
   });
   const matches = { ...(previous.matches || {}) };
   const failures = [];
   let succeeded = 0;
+  let shiftedStarts = 0;
   for (const fixture of fixtures) {
     try {
       const body = await request(`/odds/${encodeURIComponent(fixture.slug)}`);
@@ -109,10 +117,18 @@ async function collectStakeNbaOdds(options = {}) {
         sourceUrl: `https://stake.com/sports/basketball/usa/${fixture.slug}`,
       };
       const card = matchPregameGame(normalized, pregame.games || []);
-      normalized.officialId = card && card.officialId || fallbackKey(normalized);
+      const tempKey = fallbackKey(normalized);   // 臨時鍵沿用 Stake 原始時間（舊資料就是這樣存的）
+      const cardStart = card ? pregameStartMs(card) : NaN;
+      const realStart = Number.isFinite(cardStart) && Math.abs(cardStart - startTime) <= START_MATCH_MS ? cardStart : startTime;
+      if (realStart <= now || String(detail && detail.status || '').toLowerCase() === 'live') continue;
+      if (realStart !== startTime) {
+        normalized.scheduledStart = new Date(realStart).toISOString();
+        normalized.stakeDate = new Date(startTime).toISOString();
+        shiftedStarts++;
+      }
+      normalized.officialId = card && card.officialId || tempKey;
       let old = matches[normalized.officialId] || null;
       // 之前配不上賽程時用臨時鍵存的同一場：歷史搬到正式編號下，臨時鍵刪掉（免得同一場兩筆）
-      const tempKey = fallbackKey(normalized);
       if (normalized.officialId !== tempKey && matches[tempKey] && matches[tempKey].slug === normalized.slug) {
         if (!old) old = matches[tempKey];
         delete matches[tempKey];
@@ -128,14 +144,15 @@ async function collectStakeNbaOdds(options = {}) {
     const start = Date.parse(game && game.scheduledStart || '');
     if (Number.isFinite(start) && start < cutoff) delete matches[key];
   }
-  if (fixtures.length && !succeeded && !Object.keys(previous.matches || {}).length) {
+  // 整點過後才發現已開賽而跳過的不算失敗；真的有抓失敗、又一場都沒成功才報錯
+  if (failures.length && !succeeded && !Object.keys(previous.matches || {}).length) {
     throw new Error(`STAKE NBA 全部失敗：${failures[0] ? failures[0].error : '未知錯誤'}`);
   }
   return {
     schemaVersion: 1,
     provider: 'stake-official',
     updated: observedAt,
-    health: { ...health, targeted: fixtures.length, succeeded, failures },
+    health: { ...health, targeted: fixtures.length, shiftedStarts, succeeded, failures },
     matches,
   };
 }

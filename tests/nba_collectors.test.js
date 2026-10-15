@@ -421,3 +421,30 @@ test('官網紀錄只有獨贏（WNBA 官網頁沒有讓分）時，已開賽場
   assert.equal(game.markets.hd.provider, 'betexplorer-bet365');
   assert.equal(output.leagues.WNBA.backfilled, 1);
 });
+
+// Stake 賽程只給整點：07:30 開打的熱火@暴龍，Stake 寫 07:00（23:00Z）。07:10 仍要抓、存 07:30；場中或真正開賽後不抓。
+test('STAKE NBA 整點時間過後仍抓到玩運彩的正式開賽時間，場中不抓', async () => {
+  const floored = Date.parse('2026-10-03T23:00:00Z');
+  const pregame = { games: [{ officialId: 'NBA_20261004_MIA@TOR', league: 'NBA', date: '2026-10-04', time: '07:30', away: '熱火', home: '暴龍' }] };
+  const run = (now, status = 'active') => collectStakeNbaOdds({
+    pregame, previous: { matches: {} }, now,
+    request: async (path) => {
+      const fixture = { slug: 'heat-raptors', name: 'Toronto Raptors - Miami Heat', date: floored, status };
+      if (path.endsWith('/nba-preseason')) return { schedule: [{ fixtures: [fixture] }] };
+      if (path.endsWith('/nba')) return { schedule: [] };
+      if (path === '/odds/heat-raptors') return { fixture, groups: groups() };
+      throw new Error(`unexpected ${path}`);
+    },
+  });
+
+  const during = await run(Date.parse('2026-10-03T23:10:00Z'));
+  const game = during.matches['NBA_20261004_MIA@TOR'];
+  assert.ok(game);
+  assert.equal(game.scheduledStart, '2026-10-03T23:30:00.000Z');
+  assert.equal(game.stakeDate, '2026-10-03T23:00:00.000Z');
+  assert.equal(game.frozenAt, null);
+  assert.equal(during.health.shiftedStarts, 1);
+
+  assert.equal(Object.keys((await run(Date.parse('2026-10-03T23:10:00Z'), 'live')).matches).length, 0);
+  assert.equal(Object.keys((await run(Date.parse('2026-10-03T23:31:00Z'))).matches).length, 0);
+});

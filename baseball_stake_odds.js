@@ -16,6 +16,8 @@ const {
 const BASE_URL = 'https://odds-data.stake.com';
 const STAKE_URL = 'https://stake.com';
 const OUT = path.join('data', 'baseball_stake_odds.json');
+// Stake 賽程時間只到整點（2026-10-15 查證：四聯盟、NHL、NBA 的 fixture 分鐘數全是 0），最多比真正開賽早 59 分。
+const FLOOR_SLACK_MS = 60 * 60 * 1000;
 
 const LEAGUES = {
   MLB: {
@@ -281,10 +283,17 @@ async function collectLeague(config, context) {
   const failures = [];
   let unmatched = 0;
   let attempted = 0;
+  let shiftedStarts = 0;
   for (const fixture of discovered) {
-    if (!fixture || fixture.preMatchEnabled === false || String(fixture.status || '').toLowerCase() === 'ended') continue;
+    const status = String(fixture && fixture.status || '').toLowerCase();
+    if (!fixture || fixture.preMatchEnabled === false || status === 'ended' || status === 'live') continue;   // 場中不抓
     const startTime = Number(fixture.startTime || fixture.date || 0);
-    if (!Number.isFinite(startTime) || startTime <= context.now) continue;
+    if (!Number.isFinite(startTime)) continue;
+    // 先用賽程名稱對玩運彩：對到就以正式開賽時間判斷是否已開賽（Stake 的整點過了、正式開賽還沒到，照抓）。
+    // 對不到（季後賽名稱還是佔位字）時，整點過後一小時內仍抓明細，用明細的隊名再對一次。
+    const early = matchOfficialGame({ ...fixture, league: context.league, startTime }, context.officialGames);
+    const realStart = early ? early.scheduledMs : startTime;
+    if (realStart <= context.now && !(early == null && startTime > context.now - FLOOR_SLACK_MS)) continue;
     attempted++;
     try {
       const body = await context.request(`/odds/${encodeURIComponent(fixture.slug)}`, context.apiKey);
@@ -302,6 +311,8 @@ async function collectLeague(config, context) {
         unmatched++;
         continue;
       }
+      if (official.scheduledMs <= context.now || String(detail.status || '').toLowerCase() === 'live') continue;
+      if (official.scheduledMs !== startTime) shiftedStarts++;
       let markets = parseStakeApiMarkets(body && body.groups, resolvedDetail);
       if (!markets.ml || !markets.hd || !markets.total) {
         try {
@@ -334,7 +345,7 @@ async function collectLeague(config, context) {
   if (failures.length && !observations.length && failures.length === attempted) {
     throw new Error(failures[0].error);
   }
-  return { observations, health: { discovered: discovered.length, matched: observations.length, unmatched, failed: failures.length, failures } };
+  return { observations, health: { discovered: discovered.length, matched: observations.length, unmatched, shiftedStarts, failed: failures.length, failures } };
 }
 
 async function collectBaseballStakeOdds(options = {}) {
