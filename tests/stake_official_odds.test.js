@@ -8,6 +8,7 @@ const test = require('node:test');
 const {
   parseStakeOfficialPage,
   selectFixtures,
+  officialStartFor,
   collectStakeOdds,
 } = require('../stake_api_odds.js');
 const { mergeStakeGame } = require('../nhl_core.js');
@@ -230,4 +231,46 @@ test('handicap price movement cannot create a favorite flip while the negative l
   const after = mergeStakeGame(before, second, '2026-10-01T00:05:00.000Z');
 
   assert.equal(after.events.some((event) => event.type === 'favorite-flip'), false);
+});
+
+// Stake 賽程只給整點：08:30 開打的紅翼主場，Stake 寫 08:00（＝NOW）。用玩運彩 08:30 當真正開賽，NOW 仍要抓。
+const FLOORED = { slug: 'det-phi', name: 'Detroit Red Wings - Philadelphia Flyers', date: NOW, status: 'active', preMatchEnabled: true };
+const PLAYSPORT = [{ date: '2026-10-01', time: '08:30', away: '飛人', home: '紅翼', status: 'upcoming' }];
+
+test('official start: Playsport time replaces Stake hour-floored time for the same matchup', () => {
+  assert.equal(officialStartFor(FLOORED, PLAYSPORT), NOW + 30 * 60000);
+  assert.equal(officialStartFor(FLOORED, [{ ...PLAYSPORT[0], away: '企鵝' }]), NOW);           // 不同對戰
+  assert.equal(officialStartFor(FLOORED, [{ ...PLAYSPORT[0], time: '11:30' }]), NOW);           // 差超過 2 小時
+  assert.equal(officialStartFor(FLOORED, [{ ...PLAYSPORT[0], time: null }]), NOW);              // 沒時間
+  const startOf = (fixture) => officialStartFor(fixture, PLAYSPORT);
+  assert.deepEqual(selectFixtures([FLOORED], NOW, 0, 96, 60, startOf).map((f) => f.slug), ['det-phi']);
+  assert.deepEqual(selectFixtures([FLOORED], NOW, 0, 96, 60).map((f) => f.slug), []);           // 舊行為：整點已到就不抓
+  assert.deepEqual(selectFixtures([{ ...FLOORED, status: 'live' }], NOW, 0, 96, 60, startOf), []);
+});
+
+test('collector keeps collecting until the Playsport start and stores the real start', async () => {
+  const output = await collectStakeOdds({
+    apiKey: '', now: NOW, previous: { games: {} }, pregameGames: PLAYSPORT,
+    request: async () => ({ schedule: [{ fixtures: [FLOORED] }] }),
+    fetchPage: async () => EVENT_HTML,
+  });
+  const game = output.games['det-phi'];
+  assert.ok(game, 'floored fixture should still be collected');
+  assert.equal(game.startTime, NOW + 30 * 60000);
+  assert.equal(game.stakeDate, NOW);
+  assert.equal(game.startISO, '2026-10-01T00:30:00.000Z');
+  assert.equal(game.lastPregameAt, new Date(NOW).toISOString());
+  assert.equal(output.health.shiftedStarts, 1);
+  assert.ok(findStakeGame(output, { date: '2026-10-01', time: '08:30', away: '飛人', home: '紅翼' }));
+});
+
+test('collector never stores odds for a fixture Stake marks live', async () => {
+  const previous = { games: { 'det-phi': { slug: 'det-phi', startTime: NOW + 30 * 60000, history: [{ at: 'earlier' }] } } };
+  const output = await collectStakeOdds({
+    apiKey: '', now: NOW, previous, pregameGames: PLAYSPORT,
+    request: async () => ({ schedule: [{ fixtures: [{ ...FLOORED, status: 'live' }, { ...FLOORED, slug: 'other', name: 'New York Rangers - Tampa Bay Lightning', date: FUTURE }] }] }),
+    fetchPage: async () => EVENT_HTML,
+  });
+  assert.deepEqual(output.games['det-phi'], previous.games['det-phi']);
+  assert.ok(output.games.other);
 });

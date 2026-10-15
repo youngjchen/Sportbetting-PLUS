@@ -16,6 +16,8 @@ const BASE_URL = 'https://odds-data.stake.com';
 const PUBLIC_EVENT_BASE = 'https://stake.com/sports/ice-hockey/usa/nhl/';
 const SCHEDULE_PATH = '/schedule/sport/ice-hockey/usa/tournament/nhl';
 const OUT = path.join('data', 'stake_api_odds.json');
+const PREGAME = path.join('data', 'nhl_pregame.json');
+const OFFICIAL_MATCH_MS = 2 * 3600000;
 
 function flattenSchedule(payload) {
   const seen = new Set();
@@ -32,13 +34,41 @@ function flattenSchedule(payload) {
   return out.sort((a, b) => Number(a.date || a.startTime || 0) - Number(b.date || b.startTime || 0));
 }
 
-function selectFixtures(fixtures, now, fromHours, toHours, maxFixtures) {
+// startOf：場次的真正開賽時間（預設＝Stake 的 date）；Stake 標成場中（live）的一律不抓，避免混進場中盤。
+function selectFixtures(fixtures, now, fromHours, toHours, maxFixtures, startOf) {
   const lo = Math.max(now + fromHours * 3600000, now + 1);
   const hi = now + toHours * 3600000;
+  const startMs = typeof startOf === 'function' ? startOf : (item => Number(item.date || item.startTime || 0));
   return fixtures.filter(item => {
-    const start = Number(item.date || item.startTime || 0);
-    return item && item.preMatchEnabled !== false && item.status !== 'ended' && start >= lo && start <= hi;
+    if (!item) return false;
+    const start = startMs(item);
+    return item.preMatchEnabled !== false && item.status !== 'ended' && item.status !== 'live' && start >= lo && start <= hi;
   }).slice(0, maxFixtures);
+}
+
+// Stake 賽程的 date 只到整點（07:30 開打寫 07:00；2026-10-15 對 NHL 官網 120 場，有 26 場早 15～45 分），
+// 照它停抓會漏掉開賽前最後一段賠率。玩運彩的開賽時間與官網一致（118/118），所以同對戰、相差 2 小時內就用玩運彩的時間，
+// 對不到才退回 Stake 的整點。
+function pregameStartMs(game) {
+  const time = String(game && game.time || '');
+  if (!/^\d{2}:\d{2}$/.test(time)) return NaN;
+  return Date.parse(`${game.date}T${time}:00+08:00`);
+}
+
+function officialStartFor(fixture, pregameGames) {
+  const stakeMs = Number(fixture && (fixture.date || fixture.startTime) || 0);
+  let teams;
+  try { teams = stakeHomeAway(fixture && fixture.name); } catch (_) { return stakeMs; }
+  const away = translateTeam(teams.away);
+  const home = translateTeam(teams.home);
+  let best = null;
+  for (const game of Array.isArray(pregameGames) ? pregameGames : []) {
+    if (!game || game.away !== away || game.home !== home) continue;
+    const ms = pregameStartMs(game);
+    if (!Number.isFinite(ms) || Math.abs(ms - stakeMs) > OFFICIAL_MATCH_MS) continue;
+    if (best == null || Math.abs(ms - stakeMs) < Math.abs(best - stakeMs)) best = ms;
+  }
+  return best == null ? stakeMs : best;
 }
 
 async function requestJSON(endpoint, apiKey) {
@@ -310,12 +340,16 @@ async function collectStakeOdds(options) {
 
   const schedule = await request(SCHEDULE_PATH, apiKey);
   const discovered = flattenSchedule(schedule);
+  const pregameGames = Array.isArray(opts.pregameGames) ? opts.pregameGames : [];
+  const startOf = (fixture) => officialStartFor(fixture, pregameGames);
   const targets = selectFixtures(
     discovered, now,
     Number(opts.fromHours == null ? 0 : opts.fromHours),
     Number(opts.toHours == null ? 96 : opts.toHours),
-    Number(opts.maxFixtures == null ? 60 : opts.maxFixtures)
+    Number(opts.maxFixtures == null ? 60 : opts.maxFixtures),
+    startOf
   );
+  const shiftedStarts = targets.filter((fixture) => startOf(fixture) !== Number(fixture.date || fixture.startTime || 0)).length;
 
   const games = { ...(previous.games || {}) };
   const failures = [];
@@ -324,7 +358,8 @@ async function collectStakeOdds(options) {
   let pageSucceeded = 0;
   for (const fixture of targets) {
     try {
-      const startTime = Number(fixture.date || fixture.startTime || 0);
+      const startTime = startOf(fixture);
+      const stakeDate = Number(fixture.date || fixture.startTime || 0);
       if (!(startTime > now)) continue;
       let detail = fixture;
       let markets = null;
@@ -372,11 +407,12 @@ async function collectStakeOdds(options) {
         name: fixtureName,
         teams: [fixtureTeams.away, fixtureTeams.home],
         startTime,
+        stakeDate,
         status: detail.status || fixture.status || null,
         ...markets,
         rawMarkets,
       };
-      if (!(current.startTime > now)) continue;
+      if (!(current.startTime > now) || current.status === 'live') continue;
       const previousGame = repairStoredOrientation(games[current.slug], current.name);
       const merged = mergeStakeGame(previousGame, current, observedAt);
       games[current.slug] = withUiMarkets(merged, observedAt, sourceMode);
@@ -400,7 +436,7 @@ async function collectStakeOdds(options) {
     mode: apiSucceeded && pageSucceeded ? 'hybrid' : apiSucceeded ? 'official-api' : 'official-page',
     updated: observedAt,
     source: { schedule: SCHEDULE_PATH, odds: '/odds/{fixtureSlug}', page: `${PUBLIC_EVENT_BASE}{fixtureSlug}` },
-    health: { discovered: discovered.length, targeted: targets.length, succeeded, apiSucceeded, pageSucceeded, failed: failures.length, failures },
+    health: { discovered: discovered.length, targeted: targets.length, shiftedStarts, succeeded, apiSucceeded, pageSucceeded, failed: failures.length, failures },
     games
   };
 }
@@ -426,15 +462,17 @@ async function main() {
   try {
     if (process.argv.includes('--probe')) return probeSchedule();
     const previous = loadJSON(OUT, { games: {} });
+    const pregame = loadJSON(PREGAME, { games: [] });
     const output = await collectStakeOdds({
       apiKey: process.env.STAKE_ODDS_API_KEY,
       previous,
+      pregameGames: Array.isArray(pregame.games) ? pregame.games : [],
       fromHours: process.env.STAKE_FROM_HOURS,
       toHours: process.env.STAKE_TO_HOURS,
       maxFixtures: process.env.STAKE_MAX_FIXTURES
     });
     saveAtomic(OUT, output);
-    console.log(`STAKE NHL 官方盤：模式 ${output.mode}、目標 ${output.health.targeted}、成功 ${output.health.succeeded}、失敗 ${output.health.failed}`);
+    console.log(`STAKE NHL 官方盤：模式 ${output.mode}、目標 ${output.health.targeted}（${output.health.shiftedStarts} 場改用玩運彩開賽時間）、成功 ${output.health.succeeded}、失敗 ${output.health.failed}`);
   } finally {
     await sidecar.shutdown();
   }
@@ -443,6 +481,7 @@ async function main() {
 module.exports = {
   flattenSchedule,
   selectFixtures,
+  officialStartFor,
   parseStakeOfficialPage,
   collectStakeOdds,
   requestJSON,
