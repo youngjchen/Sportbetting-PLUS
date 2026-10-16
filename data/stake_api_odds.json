@@ -1,19 +1,19 @@
 {
  "provider": "stake-official",
  "mode": "official-page",
- "updated": "2026-10-16T17:00:14.122Z",
+ "updated": "2026-10-16T17:05:13.310Z",
  "source": {
   "schedule": "/schedule/sport/ice-hockey/usa/tournament/nhl",
   "odds": "/odds/{fixtureSlug}",
   "page": "https://stake.com/sports/ice-hockey/usa/nhl/{fixtureSlug}"
  },
  "health": {
-  "discovered": 2,
-  "targeted": 2,
+  "discovered": 3,
+  "targeted": 3,
   "shiftedStarts": 0,
-  "succeeded": 2,
+  "succeeded": 3,
   "apiSucceeded": 0,
-  "pageSucceeded": 2,
+  "pageSucceeded": 3,
   "failed": 0,
   "failures": []
  },
@@ -46948,13 +46948,13 @@
       "name": "Pittsburgh Penguins",
       "side": "away",
       "line": 1.5,
-      "odds": 1.72
+      "odds": 1.71
      },
      {
       "name": "Colorado Avalanche",
       "side": "home",
       "line": -1.5,
-      "odds": 2.05
+      "odds": 2.06
      }
     ]
    },
@@ -46978,6 +46978,61 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-16T17:05:13.310Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Pittsburgh Penguins",
+        "side": "away",
+        "odds": 2.65
+       },
+       {
+        "name": "Colorado Avalanche",
+        "side": "home",
+        "odds": 1.46
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Pittsburgh Penguins",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.71
+       },
+       {
+        "name": "Colorado Avalanche",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.06
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.8
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.94
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-16T16:50:13.881Z",
      "ml": {
@@ -47979,7 +48034,7 @@
    "homeTeam": "雪崩",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925098-colorado-avalanche-pittsburgh-penguins",
-   "lastPregameAt": "2026-10-16T17:00:14.122Z",
+   "lastPregameAt": "2026-10-16T17:05:13.310Z",
    "markets": {
     "ml": {
      "open": {
@@ -47988,7 +48043,7 @@
       "home": 1.45
      },
      "active": {
-      "at": "2026-10-16T17:00:14.122Z",
+      "at": "2026-10-16T17:05:13.310Z",
       "away": 2.65,
       "home": 1.46
      }
@@ -48002,11 +48057,11 @@
       "home": 2.04
      },
      "active": {
-      "at": "2026-10-16T17:00:14.122Z",
+      "at": "2026-10-16T17:05:13.310Z",
       "line": 1.5,
       "favorite": "home",
-      "away": 1.72,
-      "home": 2.05
+      "away": 1.71,
+      "home": 2.06
      }
     },
     "ou": {
@@ -48017,7 +48072,7 @@
       "under": 1.95
      },
      "active": {
-      "at": "2026-10-16T17:00:14.122Z",
+      "at": "2026-10-16T17:05:13.310Z",
       "line": 6.5,
       "over": 1.8,
       "under": 1.94
@@ -48541,7 +48596,7 @@
    "homeTeam": "巨鴨",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925064-anaheim-ducks-boston-bruins",
-   "lastPregameAt": "2026-10-16T17:00:14.122Z",
+   "lastPregameAt": "2026-10-16T17:05:13.310Z",
    "markets": {
     "ml": {
      "open": {
@@ -48550,7 +48605,7 @@
       "home": 1.95
      },
      "active": {
-      "at": "2026-10-16T17:00:14.122Z",
+      "at": "2026-10-16T17:05:13.310Z",
       "away": 1.85,
       "home": 1.93
      }
@@ -48564,7 +48619,7 @@
       "home": 1.39
      },
      "active": {
-      "at": "2026-10-16T17:00:14.122Z",
+      "at": "2026-10-16T17:05:13.310Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2.9,
@@ -48579,10 +48634,187 @@
       "under": 1.78
      },
      "active": {
-      "at": "2026-10-16T17:00:14.122Z",
+      "at": "2026-10-16T17:05:13.310Z",
       "line": 6.5,
       "over": 1.98,
       "under": 1.77
+     }
+    }
+   }
+  },
+  "46925438-washington-capitals-new-jersey-devils": {
+   "fixtureId": "93a120ff-ad36-4250-8c84-a176a27f756b",
+   "slug": "46925438-washington-capitals-new-jersey-devils",
+   "name": "Washington Capitals - New Jersey Devils",
+   "teams": [
+    "New Jersey Devils",
+    "Washington Capitals"
+   ],
+   "startTime": 1792256400000,
+   "stakeDate": 1792256400000,
+   "status": "active",
+   "ml": {
+    "market": "Winner (Incl. Overtime and Penalties)",
+    "outcomes": [
+     {
+      "name": "New Jersey Devils",
+      "side": "away",
+      "odds": 1.96
+     },
+     {
+      "name": "Washington Capitals",
+      "side": "home",
+      "odds": 1.82
+     }
+    ]
+   },
+   "hd": {
+    "market": "Handicap (Incl. Overtime and Penalties)",
+    "line": 1.5,
+    "favSide": "home",
+    "outcomes": [
+     {
+      "name": "New Jersey Devils",
+      "side": "away",
+      "line": 1.5,
+      "odds": 1.38
+     },
+     {
+      "name": "Washington Capitals",
+      "side": "home",
+      "line": -1.5,
+      "odds": 2.9
+     }
+    ]
+   },
+   "tot": {
+    "market": "Total (Incl. Overtime and Penalties)",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 2.07
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.7
+     }
+    ]
+   },
+   "rawMarkets": [],
+   "history": [
+    {
+     "at": "2026-10-16T17:05:13.310Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "odds": 1.96
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "odds": 1.82
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.38
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.9
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.07
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.7
+       }
+      ]
+     }
+    }
+   ],
+   "events": [],
+   "league": "nhl",
+   "date": "2026-10-18",
+   "startISO": "2026-10-17T17:00:00.000Z",
+   "awayName": "New Jersey Devils",
+   "homeName": "Washington Capitals",
+   "awayTeam": "魔鬼",
+   "homeTeam": "首都",
+   "sourceMode": "official-page",
+   "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925438-washington-capitals-new-jersey-devils",
+   "lastPregameAt": "2026-10-16T17:05:13.310Z",
+   "markets": {
+    "ml": {
+     "open": {
+      "at": "2026-10-16T17:05:13.310Z",
+      "away": 1.96,
+      "home": 1.82
+     },
+     "active": {
+      "at": "2026-10-16T17:05:13.310Z",
+      "away": 1.96,
+      "home": 1.82
+     }
+    },
+    "hd": {
+     "open": {
+      "at": "2026-10-16T17:05:13.310Z",
+      "line": 1.5,
+      "favorite": "home",
+      "away": 1.38,
+      "home": 2.9
+     },
+     "active": {
+      "at": "2026-10-16T17:05:13.310Z",
+      "line": 1.5,
+      "favorite": "home",
+      "away": 1.38,
+      "home": 2.9
+     }
+    },
+    "ou": {
+     "open": {
+      "at": "2026-10-16T17:05:13.310Z",
+      "line": 6.5,
+      "over": 2.07,
+      "under": 1.7
+     },
+     "active": {
+      "at": "2026-10-16T17:05:13.310Z",
+      "line": 6.5,
+      "over": 2.07,
+      "under": 1.7
      }
     }
    }
