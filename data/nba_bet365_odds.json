@@ -1,38 +1,32 @@
 {
  "schemaVersion": 2,
  "provider": "bet365-official-first",
- "updated": "2026-10-16T00:55:56.777Z",
+ "updated": "2026-10-16T01:00:56.465Z",
  "source": "https://www.bet365.com/",
  "health": {
-  "status": "partial",
-  "errors": [
-   "Request failed with status code 403"
-  ]
+  "status": "ok",
+  "errors": []
  },
  "leagues": {
   "NBA": {
-   "status": "error",
+   "status": "empty",
    "scheduled": 12,
    "officialMatched": 0,
    "fallbackMatched": 0,
    "matched": 0,
-   "lastAttemptAt": "2026-10-16T00:55:56.777Z",
+   "lastAttemptAt": "2026-10-16T01:00:56.465Z",
    "lastSuccessAt": "2026-10-16T00:25:56.524Z",
-   "errors": [
-    "Request failed with status code 403"
-   ]
+   "errors": []
   },
   "WNBA": {
-   "status": "error",
+   "status": "empty",
    "scheduled": 0,
    "officialMatched": 0,
    "fallbackMatched": 0,
    "matched": 0,
-   "lastAttemptAt": "2026-10-16T00:55:56.777Z",
+   "lastAttemptAt": "2026-10-16T01:00:56.465Z",
    "lastSuccessAt": "2026-10-10T01:27:24.068Z",
-   "errors": [
-    "Request failed with status code 403"
-   ]
+   "errors": []
   }
  },
  "matches": {
