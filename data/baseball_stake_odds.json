@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T13:50:27.130Z",
+  "generatedAt": "2026-10-16T13:55:07.358Z",
   "officialScheduleCount": 6,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-16T13:50:27.130Z",
-      "lastAttemptAt": "2026-10-16T13:50:27.130Z",
+      "lastSuccessAt": "2026-10-16T13:55:07.358Z",
+      "lastAttemptAt": "2026-10-16T13:55:07.358Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -19,9 +19,9 @@
       }
     },
     "NPB": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-16T13:50:27.130Z",
-      "lastAttemptAt": "2026-10-16T13:50:27.130Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-16T13:55:07.358Z",
+      "lastAttemptAt": "2026-10-16T13:55:07.358Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-16T13:50:27.130Z",
-      "lastAttemptAt": "2026-10-16T13:50:27.130Z",
+      "lastSuccessAt": "2026-10-16T13:55:07.358Z",
+      "lastAttemptAt": "2026-10-16T13:55:07.358Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-16T13:50:27.130Z",
-      "lastAttemptAt": "2026-10-16T13:50:27.130Z",
+      "lastSuccessAt": "2026-10-16T13:55:07.358Z",
+      "lastAttemptAt": "2026-10-16T13:55:07.358Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -22931,7 +22931,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-16T13:50:05.792Z",
+      "observedAt": "2026-10-16T13:55:06.319Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23152,7 +23152,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-16T13:50:26.950Z",
+      "observedAt": "2026-10-16T13:55:07.152Z",
       "frozenAt": null,
       "favoriteFlipCount": 1,
       "favoriteTransitions": [
@@ -23382,23 +23382,30 @@
       "fixtureId": "09894e39-a5f1-4b19-b5ab-27a581033e6b",
       "slug": "46986765-hanshin-tigers-yokohama-dena-baystars",
       "sourceUrl": "https://stake.com/sports/baseball/japan/npb/46986765-hanshin-tigers-yokohama-dena-baystars",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
-      "moneyline": {
-        "away": 1.84,
-        "home": 1.93
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 2.7,
+        "home": 1.45
       },
-      "total": null,
+      "moneyline": {
+        "away": 1.79,
+        "home": 1.99
+      },
+      "total": {
+        "line": 4.5,
+        "over": 1.96,
+        "under": 1.82
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-16T13:50:26.543Z",
+      "partial": false,
+      "observedAt": "2026-10-16T13:55:06.701Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23421,6 +23428,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-16T13:55:06.701Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.7,
+            "home": 1.45
+          },
+          "moneyline": {
+            "away": 1.79,
+            "home": 1.99
+          },
+          "total": {
+            "line": 4.5,
+            "over": 1.96,
+            "under": 1.82
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
