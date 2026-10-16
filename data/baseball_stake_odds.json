@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-16T12:00:07.816Z",
+  "generatedAt": "2026-10-16T12:05:07.975Z",
   "officialScheduleCount": 7,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-16T12:00:07.816Z",
-      "lastAttemptAt": "2026-10-16T12:00:07.816Z",
+      "lastSuccessAt": "2026-10-16T12:05:07.975Z",
+      "lastAttemptAt": "2026-10-16T12:05:07.975Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,12 +20,12 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-16T12:00:07.816Z",
-      "lastAttemptAt": "2026-10-16T12:00:07.816Z",
+      "lastSuccessAt": "2026-10-16T12:05:07.975Z",
+      "lastAttemptAt": "2026-10-16T12:05:07.975Z",
       "error": null,
       "matched": 0,
       "health": {
-        "discovered": 1,
+        "discovered": 0,
         "matched": 0,
         "unmatched": 0,
         "shiftedStarts": 0,
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-16T12:00:07.816Z",
-      "lastAttemptAt": "2026-10-16T12:00:07.816Z",
+      "lastSuccessAt": "2026-10-16T12:05:07.975Z",
+      "lastAttemptAt": "2026-10-16T12:05:07.975Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-16T12:00:07.816Z",
-      "lastAttemptAt": "2026-10-16T12:00:07.816Z",
+      "lastSuccessAt": "2026-10-16T12:05:07.975Z",
+      "lastAttemptAt": "2026-10-16T12:05:07.975Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -22931,7 +22931,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-16T12:00:05.370Z",
+      "observedAt": "2026-10-16T12:05:06.858Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23103,12 +23103,12 @@
       "fixtureId": "d1a7ca01-acd4-42ef-b171-694ba1d9bd88",
       "slug": "46995604-kia-tigers-lg-twins",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46995604-kia-tigers-lg-twins",
-      "favorite": "away",
+      "favorite": "home",
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 2.55,
-        "home": 1.5
+        "away": 1.5,
+        "home": 2.55
       },
       "moneyline": {
         "away": 1.97,
@@ -23116,8 +23116,8 @@
       },
       "total": {
         "line": 8.5,
-        "over": 1.79,
-        "under": 1.99
+        "over": 1.83,
+        "under": 1.95
       },
       "sources": {
         "direction": "stake-official",
@@ -23126,10 +23126,16 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-16T12:00:07.625Z",
+      "observedAt": "2026-10-16T12:05:07.795Z",
       "frozenAt": null,
-      "favoriteFlipCount": 0,
-      "favoriteTransitions": [],
+      "favoriteFlipCount": 1,
+      "favoriteTransitions": [
+        {
+          "at": "2026-10-16T12:05:07.795Z",
+          "from": "away",
+          "to": "home"
+        }
+      ],
       "history": [
         {
           "observedAt": "2026-10-16T11:10:27.792Z",
@@ -23200,6 +23206,32 @@
             "line": 8.5,
             "over": 1.79,
             "under": 1.99
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        },
+        {
+          "observedAt": "2026-10-16T12:05:07.795Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.5,
+            "home": 2.55
+          },
+          "moneyline": {
+            "away": 1.97,
+            "home": 1.81
+          },
+          "total": {
+            "line": 8.5,
+            "over": 1.83,
+            "under": 1.95
           },
           "sources": {
             "direction": "stake-official",
