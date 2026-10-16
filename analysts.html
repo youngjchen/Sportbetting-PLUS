@@ -68,6 +68,11 @@
   .info{font-size:13.5px;color:var(--ink-dim);line-height:1.55;min-width:0}
   .info .who span{display:inline-block;padding:0 6px;margin:1px 3px 1px 0;border-radius:5px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
   .info .who span.l{border-style:dashed;border-color:var(--lotto)}
+  .info .who span.w{background:rgba(62,207,122,.22);border-color:var(--win);color:#d4f7e2}
+  .info .who span.x{background:rgba(255,91,110,.18);border-color:var(--loss);color:#ffd6dc}
+  .info .who span.p{opacity:.55}
+  .d-after{font-size:13px;color:var(--ink-dim);margin-top:2px}
+  .d-after .up{color:var(--win)} .d-after .dn{color:var(--loss)}
   .info .tag{font-weight:700;color:var(--ink);font-size:14px}
   .info .tag.c{color:var(--conflict)}
   .info .hist{margin-top:4px;color:var(--ink);font-size:13.5px;line-height:1.6}
@@ -250,6 +255,7 @@
   view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [], tab: 'duel', hero: 'BANKROLL', heroM: 'PLUS', oppMode: 'any', opp: [], oppM: 'ML', rel: 'oppose' }, view.st || {});
   const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
   let RESULTS = {};   // data/analyst_results.json（analyst-settle 工作流寫）：官方核對後的比分、賽季階段、Stake 收盤價
+  let RESULTS_VER = 0;   // 結算檔內容變了就 +1（卡片快取跟著失效）
   let picks = (readJson(LOCAL_KEY) || {}).picks || [];
 
   function readJson(key) { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch (e) { return null; } }
@@ -508,8 +514,13 @@
   }
   function infoCell(g) {
     const sides = { away: [], home: [] };
-    for (const a of ANALYSTS) { const p = mainPick(a, g.officialId); if (p) sides[p.side].push({ a, lotto: p.layer === 'lotto' }); }
-    const chip = (x) => `<span class="${x.lotto ? 'l' : ''}">${SHORT[x.a]}</span>`;
+    for (const a of ANALYSTS) {
+      const p = mainPick(a, g.officialId);
+      if (p) sides[p.side].push({ a, lotto: p.layer === 'lotto', res: g.final ? Core.settlePick(p, g).result : null });
+    }
+    const RES_CLS = { win: 'w', loss: 'x', push: 'p', refund: 'p' };
+    const RES_TXT = { win: '命中', loss: '沒中', push: '走盤', refund: '退款' };
+    const chip = (x) => `<span class="${[x.lotto ? 'l' : '', RES_CLS[x.res] || ''].join(' ').trim()}"${x.res ? ` title="${x.a} ${RES_TXT[x.res] || ''}"` : ''}>${SHORT[x.a]}</span>`;
     const na = sides.away.length; const nh = sides.home.length;
     let tag = '';
     if (na && nh) tag = `<span class="tag c">衝突 ${Math.max(na, nh)}:${Math.min(na, nh)}</span>`;
@@ -658,15 +669,15 @@
   /* ---------- 對決卡（登錄頁與分析頁共用） ---------- */
   function duelCard(d, heroName, oppName, opts = {}) {
     const title = opts.title ? `<div class="d-title">${opts.title}</div>` : '';
-    if (!d.games) return `<div class="duel">${title}<div class="h-dim">過去沒有這種對決。${opts.note ? `<br>${opts.note}` : ''}</div></div>`;
+    if (!d.games) return `<div class="duel">${title}<div class="h-dim">過去沒有這種對決。${opts.note ? `<br>${opts.note}` : ''}</div>${opts.after && opts.after.games ? `<div class="d-after">賽後：${opts.heroShort || '主角'} ${pctOf(opts.after.hero.wins, opts.after.hero.settled)} vs 對手 ${pctOf(opts.after.opp.wins, opts.after.opp.settled)}（1 場）</div>` : ''}</div>`;
     const hn = d.hero.settled; const on = d.opp.settled;
     const hr = hn ? d.hero.wins / hn : 0; const or = on ? d.opp.wins / on : 0;
     const roi = (s) => (s.priced ? `｜ROI <span class="${s.profit >= 0 ? 'pos' : 'neg'}">${(s.roi * 100).toFixed(1)}%</span>` : '');
     return `<div class="duel${d.games < 10 ? ' few' : ''}">${title}
       <div class="d-vs">
-        <div class="d-side"><div class="d-who">${heroName}</div><div class="d-big" style="color:${rateText(hr)}">${pctOf(d.hero.wins, hn)}</div><div class="d-sub">過盤 ${d.hero.wins}／${hn}${roi(d.hero)}</div></div>
+        <div class="d-side"><div class="d-who">${heroName}</div><div class="d-big" style="color:${rateText(hr)}">${pctOf(d.hero.wins, hn)}</div><div class="d-sub">過盤 ${d.hero.wins}／${hn}${roi(d.hero)}</div>${opts.after ? afterLine(d.hero.wins, hn, opts.after.hero.wins, opts.after.hero.settled) : ''}</div>
         <div class="d-mid">vs</div>
-        <div class="d-side"><div class="d-who">${oppName}</div><div class="d-big" style="color:${rateText(or)}">${pctOf(d.opp.wins, on)}</div><div class="d-sub">過盤 ${d.opp.wins}／${on}${roi(d.opp)}</div></div>
+        <div class="d-side"><div class="d-who">${oppName}</div><div class="d-big" style="color:${rateText(or)}">${pctOf(d.opp.wins, on)}</div><div class="d-sub">過盤 ${d.opp.wins}／${on}${roi(d.opp)}</div>${opts.after ? afterLine(d.opp.wins, on, opts.after.opp.wins, opts.after.opp.settled) : ''}</div>
       </div>
       <div class="d-split"><span style="flex:${Math.max(0.02, hr)};background:rgb(${rateMix(hr).c.join(',')})"></span><span style="flex:${Math.max(0.02, or)};background:rgb(${rateMix(or).c.join(',')})"></span></div>
       <div class="d-note">共 ${d.games} 場｜兩邊都過 ${d.both} 場${d.games < 10 ? '｜<b>樣本少於 10 場，僅供參考</b>' : ''}${opts.note ? `｜${opts.note}` : ''}</div>
@@ -865,32 +876,63 @@
   }
 
   /* ---------- 登錄頁最下面：今天每場的對決卡 ---------- */
-  let IDX_CACHE = {};
-  function leagueIndex(league) {
-    if (!HISTORY) return null;
-    const settledLive = Core.livePicks(picks).filter((p) => RESULTS[p.officialId] && RESULTS[p.officialId].final).length;
-    const key = `${Object.keys(RESULTS).length}|${settledLive}`;
-    if (IDX_CACHE[league] && IDX_CACHE[league].key === key) return IDX_CACHE[league];
-    const ann = Core.annotateContexts(Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES }));
-    const val = { key, ann, idx: Core.sideIndex(ann), lone: Core.scenarioStats(ann, 'loneDissent'), solo: {}, byCount: {} };
+  // 賽前基準＝到「看的那天的前一天」為止（一整天固定不動，也不會把這場自己的結果算進去）；
+  // 某場結算後，另外算「基準＋這一場」給卡片顯示賽後數字與升降。
+  let IDX_CACHE = {}; let AFTER_CACHE = {};
+  function buildIdx(ann) {
+    const val = { ann, idx: Core.sideIndex(ann), solo: {}, byCount: {} };
     for (const a of ANALYSTS) val.solo[a] = Core.summarize(ann.filter((r) => r.analyst === a && r.ctx.alignment === 'solo'));
     for (const s of val.idx.sides) {
       if (s.oppKey !== '') continue;
       const n = s.key.split('+').length; const b = val.byCount[n] || (val.byCount[n] = { games: 0, dirWins: 0 });
       b.games++; if (s.dirWin) b.dirWins++;
     }
+    return val;
+  }
+  function leagueIndex(league, beforeDate) {
+    if (!HISTORY) return null;
+    const settledLive = Core.livePicks(picks).filter((p) => RESULTS[p.officialId] && RESULTS[p.officialId].final).length;
+    const key = `${RESULTS_VER}|${settledLive}|${beforeDate}`;
+    if (IDX_CACHE[league] && IDX_CACHE[league].key === key) return IDX_CACHE[league];
+    const rows = Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES, to: addDays(beforeDate, -1) });
+    const val = Object.assign(buildIdx(Core.annotateContexts(rows)), { key });
     IDX_CACHE[league] = val;
     return val;
   }
+  function gameLedger(id) {   // 只算這一場的主帳票（同 statsLedger 的比賽合併規則）
+    const live = Core.livePicks(picks).filter((p) => p.officialId === id);
+    const hist = HISTORY ? HISTORY.picks.filter((p) => p.officialId === id) : [];
+    let g = Object.assign({}, HISTORY && HISTORY.games[id] || {});
+    if (!Object.keys(g).length) for (const lg of LEAGUES) { const x = DATA[lg].games.find((y) => y.officialId === id); if (x) { g = Object.assign({}, x); break; } }
+    const r = RESULTS[id]; if (r) Object.assign(g, r, r.review ? { final: false } : {});
+    return Core.buildLedger(Core.mergePicks(hist, live), { [id]: g });
+  }
+  function afterIndex(L, g) {
+    if (!g.final) return null;
+    const k = `${L.key}|${g.officialId}`;
+    if (!(k in AFTER_CACHE)) {
+      const extra = Core.annotateContexts(Core.filterRows(gameLedger(g.officialId), { league: g.league, phases: DEFAULT_PHASES }));
+      AFTER_CACHE[k] = extra.length ? buildIdx(L.ann.concat(extra)) : null;
+    }
+    return AFTER_CACHE[k];
+  }
+  function afterLine(bw, bn, aw, an) {   // 賽前 bw/bn → 賽後 aw/an
+    if (!an || an === bn && aw === bw) return '<div class="d-after">賽後 不變 ＝</div>';
+    const diff = (aw / an) - (bn ? bw / bn : 0);
+    const arrow = !bn || Math.abs(diff) < 0.0005 ? '＝' : diff > 0 ? '<b class="up">▲</b>' : '<b class="dn">▼</b>';
+    return `<div class="d-after">賽後 ${pctOf(aw, an)}（${aw}／${an}）${arrow}</div>`;
+  }
   const sideKey = (list) => list.slice().sort((a, b) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(b)).join('+');
   const EXCL = new Set();   // 暫時排除的分析師：點任一張卡的名字＝所有比賽一起排除（只影響卡片數據，不動推薦）
-  function oneSided(title, wins, n, what, note) {
-    if (!n) return `<div class="duel"><div class="d-title">${title}</div><div class="h-dim">過去沒出現過。${note ? `<br>${note}` : ''}</div></div>`;
+  function oneSided(title, wins, n, what, note, after) {
+    const tail = after ? afterLine(wins, n, after.wins, after.n) : '';
+    if (!n) return `<div class="duel"><div class="d-title">${title}</div><div class="h-dim">過去沒出現過。${note ? `<br>${note}` : ''}</div>${tail}</div>`;
     const r = wins / n;
-    return `<div class="duel${n < 10 ? ' few' : ''}"><div class="d-title">${title}</div><div class="d-one"><span class="d-big" style="color:${rateText(r)}">${pctOf(wins, n)}</span><span class="d-sub">${what} ${wins}／${n}${n < 10 ? '｜<b>樣本少於 10 場</b>' : ''}</span></div>${note ? `<div class="d-note">${note}</div>` : ''}</div>`;
+    return `<div class="duel${n < 10 ? ' few' : ''}"><div class="d-title">${title}</div><div class="d-one"><span class="d-big" style="color:${rateText(r)}">${pctOf(wins, n)}</span><span class="d-sub">${what} ${wins}／${n}${n < 10 ? '｜<b>樣本少於 10 場</b>' : ''}</span></div>${tail}${note ? `<div class="d-note">${note}</div>` : ''}</div>`;
   }
   function todayCard(g, L, L2, league2) {
     const ex = EXCL;
+    const AF = afterIndex(L, g);   // 這場已結算：基準＋這一場
     const all = ANALYSTS.map((a) => mainPick(a, g.officialId)).filter(Boolean);
     if (!all.length) return '';
     const chip = (p) => `<button class="tchip${ex.has(p.analyst) ? ' off' : ''}" data-ex="${p.analyst}" title="${ex.has(p.analyst) ? '加回' : '所有比賽暫時排除'} ${p.analyst}">${p.analyst} <small>${p.market === 'ML' ? 'ML' : signed(p.line)}</small></button>`;
@@ -908,26 +950,31 @@
       for (const m of min.slice(0, 2)) {
         const q = { hero: m.analyst, heroMarket: Core.marketKind(m), oppMarket: majM, relation: 'oppose' };
         const d = Core.duel(L.ann, q);
+        const after = AF ? Core.duel(AF.ann, q) : null;
         let note = '';
         if (L2) { const d2 = Core.duel(L2.ann, q); note = d2.games ? `${league2} 同情境 ${d2.games} 場：${SHORT[m.analyst]} ${pctOf(d2.hero.wins, d2.hero.settled)} vs 對手 ${pctOf(d2.opp.wins, d2.opp.settled)}` : `${league2} 沒有同情境`; }
         body += duelCard(d, `${SHORT[m.analyst]} ${MK_TXT[q.heroMarket]}`, `對手 ${MK_TXT[majM]}`, {
-          title: `過去 ${SHORT[m.analyst]} 押${MK_TXT[q.heroMarket]}、對面有人押${MK_TXT[majM]}（${g.league}）`, note,
+          title: `過去 ${SHORT[m.analyst]} 押${MK_TXT[q.heroMarket]}、對面有人押${MK_TXT[majM]}（${g.league}）`, note, after, heroShort: SHORT[m.analyst],
         });
       }
-      const o = L.idx.query({ key: sideKey(maj.map((p) => p.analyst)), opposed: true });
-      body += `<div class="d-extra">${names(maj)} 同一邊但有人反對時：${o.games ? `直勝 <b style="color:${rateText(o.dirWins / o.games)}">${pctOf(o.dirWins, o.games)}</b>（${o.dirWins}／${o.games}）` : '過去沒出現過'}</div>`;
+      const oq = { key: sideKey(maj.map((p) => p.analyst)), opposed: true };
+      const o = L.idx.query(oq); const o2 = AF ? AF.idx.query(oq) : null;
+      const oAfter = o2 && o2.games ? `｜賽後 ${pctOf(o2.dirWins, o2.games)}${o.games ? (o2.dirWins / o2.games > o.dirWins / o.games ? ' <b style="color:var(--win)">▲</b>' : o2.dirWins / o2.games < o.dirWins / o.games ? ' <b style="color:var(--loss)">▼</b>' : ' ＝') : ''}` : '';
+      body += `<div class="d-extra">${names(maj)} 同一邊但有人反對時：${o.games ? `直勝 <b style="color:${rateText(o.dirWins / o.games)}">${pctOf(o.dirWins, o.games)}</b>（${o.dirWins}／${o.games}）` : '過去沒出現過'}${oAfter}</div>`;
     } else if (A.length + H.length >= 2) {
       const side = A.length ? A : H; const k = sideKey(side.map((p) => p.analyst));
       tag = `<span class="tag">同向 ${side.length}:0</span>`;
       const u = L.idx.query({ key: k, opposed: false });
       const c = L.byCount[side.length] || { games: 0, dirWins: 0 };
+      const u2 = AF ? AF.idx.query({ key: k, opposed: false }) : null;
+      const c2 = AF ? (AF.byCount[side.length] || { games: 0, dirWins: 0 }) : null;
       const anyNote = `任何 ${side.length} 人同向、沒人反對：${c.games ? `直勝 ${pctOf(c.dirWins, c.games)}（${c.dirWins}／${c.games}）` : '過去沒出現過'}`;
-      body += u.games ? oneSided(`${names(side)} 同向、沒人反對（${g.league}）`, u.dirWins, u.games, '球隊直勝', anyNote)
-        : oneSided(`任何 ${side.length} 人同向、沒人反對（${g.league}）`, c.dirWins, c.games, '球隊直勝', `${names(side)} 這個組合過去沒出現過，改看任何 ${side.length} 人`);
+      body += u.games ? oneSided(`${names(side)} 同向、沒人反對（${g.league}）`, u.dirWins, u.games, '球隊直勝', anyNote, u2 && { wins: u2.dirWins, n: u2.games })
+        : oneSided(`任何 ${side.length} 人同向、沒人反對（${g.league}）`, c.dirWins, c.games, '球隊直勝', `${names(side)} 這個組合過去沒出現過，改看任何 ${side.length} 人`, c2 && { wins: c2.dirWins, n: c2.games });
     } else if (A.length + H.length === 1) {
       const p = live[0]; tag = '<span class="tag">單人</span>';
-      const s = L.solo[p.analyst];
-      body += oneSided(`${SHORT[p.analyst]} 單獨推薦（${g.league}）`, s.wins, s.settled, '命中');
+      const s = L.solo[p.analyst]; const s2 = AF ? AF.solo[p.analyst] : null;
+      body += oneSided(`${SHORT[p.analyst]} 單獨推薦（${g.league}）`, s.wins, s.settled, '命中', '', s2 && { wins: s2.wins, n: s2.settled });
     } else {
       tag = '<span class="tag">已全部排除</span>';
     }
@@ -943,12 +990,12 @@
     if (view.league === 'NBA' && games.every((g) => g.startMs < Date.parse('2026-10-20T04:00:00Z'))) {
       return `<div class="today"><div class="st-sec">${head}</div><div class="st-help">NBA 季前賽不比對（例行賽 10/20 起才有歷史可對照）。</div></div>`;
     }
-    const L = leagueIndex(view.league);
+    const L = leagueIndex(view.league, view.date);
     if (!L) return `<div class="today"><div class="st-sec">${head}</div><div class="st-help">${histLoading ? '載入歷史中…' : '歷史紀錄載入失敗'}</div></div>`;
     const league2 = view.league === 'NHL' ? 'MLB' : view.league === 'MLB' ? 'NHL' : null;
-    const L2 = league2 ? leagueIndex(league2) : null;
+    const L2 = league2 ? leagueIndex(league2, view.date) : null;
     return `<div class="today"><div class="st-sec">${head}</div>
-      <div class="st-help">依你目前的登錄即時計算（${view.league} 歷史，例行＋季後）。點任一張卡的分析師名字＝所有比賽一起排除他、改看其餘人的組合（不會改到推薦），再點一次加回。大數字＝過盤率，灰→金；少於 10 場會變淡。</div>
+      <div class="st-help">依你目前的登錄即時計算（${view.league} 歷史，例行＋季後）。大數字＝賽前（到 ${addDays(view.date, -1).slice(5).replace('-', '/')} 為止）的過盤率，灰→金、少於 10 場變淡；比賽結算後多一行「賽後 ▲升／▼降」。點任一張卡的分析師名字＝所有比賽一起排除他（不會改到推薦），再點一次加回。</div>
       ${EXCL.size ? `<div class="st-help"><b>目前排除：${ANALYSTS.filter((a) => EXCL.has(a)).join('、')}</b></div>` : ''}
       <div class="tcards">${games.map((g) => todayCard(g, L, L2, league2)).join('')}</div></div>`;
   }
@@ -1036,10 +1083,28 @@
     const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]).concat([fetchJson('data/analyst_results.json')]));
     LEAGUES.forEach((lg, i) => { DATA[lg].games = normalizeGames(lg, loaded[i * 2]); DATA[lg].stake = loaded[i * 2 + 1]; });
     RESULTS = (loaded[LEAGUES.length * 2] && loaded[LEAGUES.length * 2].games) || {};
+    RESULTS_VER++;
     render();
     syncNow();
     loadHistory();
   }
+  // 每 5 分鐘（與切回這個分頁時）重讀賽程、Stake 與結算檔：開著不關也看得到新結算
+  let refreshing = false;
+  async function refreshData() {
+    if (refreshing) return;
+    refreshing = true;
+    try {
+      const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]).concat([fetchJson('data/analyst_results.json')]));
+      LEAGUES.forEach((lg, i) => { if (loaded[i * 2]) DATA[lg].games = normalizeGames(lg, loaded[i * 2]); if (loaded[i * 2 + 1]) DATA[lg].stake = loaded[i * 2 + 1]; });
+      const res = loaded[LEAGUES.length * 2];
+      if (res && res.games && JSON.stringify(res.games) !== JSON.stringify(RESULTS)) { RESULTS = res.games; RESULTS_VER++; }
+      const box = $('list'); const keep = box.scrollTop;
+      render();
+      box.scrollTop = keep;
+    } finally { refreshing = false; }
+  }
+  setInterval(refreshData, 5 * 60 * 1000);
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') refreshData(); });
   boot();
 })();
 </script>
