@@ -195,3 +195,19 @@ test('acceptance: NHL 9/29-10/13 consensus and conflict numbers match the 10/14 
     assert.equal(abs[a].settled + rel[a].settled, core.scenarioStats(ann, 'noOpposition')[a].settled, a);
   }
 });
+
+test('revision layer (改版另計) never counts in the main ledger, even without a card', () => {
+  const rows = core.buildLedger([
+    pick({ analyst: 'LEO', layer: 'card', side: 'away' }),
+    pick({ analyst: 'LEO', layer: 'rev', side: 'home', market: 'SPREAD', line: 1.5 }),
+    pick({ analyst: 'LEO', officialId: 'G2', layer: 'rev', side: 'home' }),
+    pick({ analyst: 'LEO', officialId: 'G2', layer: 'lotto', side: 'away' }),
+  ], { G1: game(3, 2), G2: game(1, 4) });
+  const by = (id, layer) => rows.find((r) => r.officialId === id && r.layer === layer);
+  assert.equal(by('G1', 'card').countsInMain, true);
+  assert.equal(by('G1', 'rev').countsInMain, false);
+  assert.equal(by('G1', 'rev').relation, '反向');
+  assert.equal(by('G2', 'rev').countsInMain, false);
+  assert.equal(by('G2', 'lotto').countsInMain, true);   // 沒表單的 LOTTO 照舊算主帳
+  assert.ok(core.WATCH.includes('LEO') && !core.ANALYSTS.includes('LEO'));
+});

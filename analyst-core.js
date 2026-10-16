@@ -17,7 +17,10 @@
   'use strict';
 
   const ANALYSTS = ['APE', 'BOOKIE', 'BANKROLL', 'SNIPER', 'MONEY'];
-  const LAYERS = ['card', 'lotto'];
+  // 觀察名單（2026-10-16）：照常登錄、結算，但不進任何合併統計（同向／衝突、對決、組合）；轉正＝移到 ANALYSTS，下架＝移出這裡
+  const WATCH = ['LEO'];
+  // card＝表單、lotto＝LOTTO、rev＝改版另計（同日第二版表單改動的場次，只另外統計）
+  const LAYERS = ['card', 'lotto', 'rev'];
 
   function pickKey(p) { return `${p.analyst}|${p.officialId}|${p.layer}`; }
 
@@ -126,7 +129,7 @@
         line: pickLine(p),
         result: settled.result,
         direction: settled.direction,
-        countsInMain: isCard || !card,
+        countsInMain: isCard || (p.layer === 'lotto' && !card),
         relation: isCard ? '表單' : relationToCard(p, card),
         phase: (game && game.phase) || null,
         odds: price.odds,
@@ -344,7 +347,7 @@
   }
 
   return {
-    ANALYSTS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,
+    ANALYSTS, WATCH, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,
     pickKey, pickLine, mergePicks, livePicks, settlePick, priceQuote, priceFrom, priceFor, relationToCard,
     buildLedger, summarize, filterRows, annotateContexts, inScenario, scenarioStats, pairMatrix, comboBoard,
   };

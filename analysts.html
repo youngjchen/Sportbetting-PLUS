@@ -36,6 +36,7 @@
   .tab{min-width:104px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel-2);color:var(--ink-dim);font-size:15.5px;font-weight:700;cursor:pointer;text-align:center;white-space:nowrap}
   .tab.on{color:#151006;background:var(--lit);border-color:var(--lit)}
   .tbr{display:none}   /* 手機：複選與複製自…換到第二行 */
+  .tab .sn{display:none}   /* 手機：分析師分頁用縮寫 */
   .tab small{font-weight:500;opacity:.8;margin-left:4px;font-size:13px}
   select.hbtn{appearance:auto}
   .datebar{display:flex;gap:6px;padding:7px 14px;border-bottom:1px solid var(--line);overflow-x:auto;align-items:center}
@@ -64,6 +65,11 @@
   .team .od.who{color:var(--ink);font-weight:700;overflow:hidden;text-overflow:ellipsis}
   .badge{position:absolute;top:6px;right:7px;font-size:12.5px;font-weight:700;padding:1px 6px;border-radius:6px;background:rgba(0,0,0,.35)}
   .badge2{position:absolute;bottom:6px;right:7px;font-size:12.5px;font-weight:700;color:var(--lotto)}
+  .badge2 .rv{color:#b9a6ff}   /* 改版另計 */
+  .tab.watch{border-style:dashed}
+  .info .who span.wt{opacity:.75;border-style:dotted}
+  .wday{display:inline-block;margin:3px 4px 3px 0;padding:3px 8px;border:1px solid var(--line);border-radius:7px;font-size:13.5px;color:var(--ink-dim)}
+  .wday.on{border-color:var(--lit);color:var(--ink);background:rgba(255,176,46,.12)}
   .res{font-size:14px;margin-left:5px}
   .info{font-size:13.5px;color:var(--ink-dim);line-height:1.55;min-width:0}
   .info .who span{display:inline-block;padding:0 6px;margin:1px 3px 1px 0;border-radius:5px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
@@ -177,6 +183,7 @@
     .tab{flex:1 1 0;min-width:0;padding:8px 2px;font-size:13px}
     .tab small{display:block;margin:0}
     .tbr{display:block;flex-basis:100%;height:0}
+    .tab .fn{display:none} .tab .sn{display:inline}
     #copySel{flex:1 1 0;min-width:0}
     .team{padding:6px 8px;height:64px}
     .team .nm{font-size:15.5px}
@@ -218,14 +225,19 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261015d"></script>
+<script src="./analyst-core.js?v=20261016w"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
 <script>
 (function () {
   'use strict';
   const Core = window.AnalystCore;
   const ANALYSTS = Core.ANALYSTS;
-  const SHORT = { APE: 'APE', BOOKIE: 'BOO', BANKROLL: 'BAN', SNIPER: 'SNI', MONEY: 'MON' };
+  // 觀察名單：照常登錄與結算，但不進任何合併統計（同向／衝突、對決、組合、今日對決卡）
+  const WATCH = Core.WATCH || [];
+  const ROSTER = ANALYSTS.concat(WATCH);
+  const isWatch = (a) => WATCH.includes(a);
+  const mainOnly = (rows) => rows.filter((r) => !isWatch(r.analyst));
+  const SHORT = { APE: 'APE', BOOKIE: 'BOO', BANKROLL: 'BAN', SNIPER: 'SNI', MONEY: 'MON', LEO: 'LEO' };
   const LEAGUES = ['NHL', 'MLB', 'NBA'];
   const REPO = 'youngjchen/Sportbetting-PLUS';
   const RAW = `https://raw.githubusercontent.com/${REPO}/main/`;
@@ -251,7 +263,8 @@
   /* ---------- 狀態 ---------- */
   const view = Object.assign({ analyst: 'APE', league: 'NHL', date: twToday(), retro: false, mode: 'entry', multi: false, multiSel: [] }, readJson(VIEW_KEY) || {});
   // 複選＝只看不登錄：選幾位分析師，隊伍依他們的推薦上色（同盤口金、同隊不同盤口紫、衝突紅）
-  const multiSel = () => ANALYSTS.filter((a) => (view.multiSel || []).includes(a));
+  const multiSel = () => ROSTER.filter((a) => (view.multiSel || []).includes(a));
+  const revMode = () => !view.multi && view.rev && isWatch(view.analyst);   // ✎ 改版：左鍵改記「改版另計」
   view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [], tab: 'duel', hero: 'BANKROLL', heroM: 'PLUS', oppMode: 'any', opp: [], oppM: 'ML', rel: 'oppose' }, view.st || {});
   const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
   let RESULTS = {};   // data/analyst_results.json（analyst-settle 工作流寫）：官方核對後的比分、賽季階段、Stake 收盤價
@@ -450,11 +463,11 @@
 
   function renderTabs() {
     const ids = new Set(gamesFor(view.league, view.date).map((g) => g.officialId));
-    $('tabs').innerHTML = ANALYSTS.map((a) => {
+    $('tabs').innerHTML = ROSTER.map((a) => {
       const n = picks.filter((p) => p.analyst === a && !p.deleted && ids.has(p.officialId)).length;
       const on = view.multi ? multiSel().includes(a) : a === view.analyst;
-      return `<button class="tab${on ? ' on' : ''}" data-a="${a}">${a}<small>${n || ''}</small></button>`;
-    }).join('') + `<span class="tbr"></span><button class="hbtn${view.multi ? ' on' : ''}" data-multi="1" title="複選：選兩位以上看他們的推薦關係（只看不登錄）">☑ 複選</button>` + (view.multi ? '' : `<select class="hbtn" id="copySel" title="把另一位分析師在這天這聯盟的推薦複製過來"><option value="">⧉ 複製自…</option>${ANALYSTS.filter((a) => a !== view.analyst).map((a) => `<option>${a}</option>`).join('')}</select>`);
+      return `<button class="tab${on ? ' on' : ''}${isWatch(a) ? ' watch' : ''}" data-a="${a}"${isWatch(a) ? ' title="觀察中：只看他自己的戰績，不進合併統計"' : ''}>${isWatch(a) ? '👁 ' : ''}<span class="fn">${a}</span><span class="sn">${SHORT[a]}</span><small>${n || ''}</small></button>`;
+    }).join('') + `<span class="tbr"></span>${!view.multi && isWatch(view.analyst) ? `<button class="hbtn${view.rev ? ' on' : ''}" data-rev="1" title="改版另計：同日第二版表單改動的場次，開著時左鍵改記這一層">✎ 改版</button>` : ''}<button class="hbtn${view.multi ? ' on' : ''}" data-multi="1" title="複選：選兩位以上看他們的推薦關係（只看不登錄）">☑ 複選</button>` + (view.multi ? '' : `<select class="hbtn" id="copySel" title="把另一位分析師在這天這聯盟的推薦複製過來"><option value="">⧉ 複製自…</option>${ANALYSTS.filter((a) => a !== view.analyst).map((a) => `<option>${a}</option>`).join('')}</select>`);
   }
   function renderDates() {
     const set = new Set([twToday(), view.date]);
@@ -470,6 +483,7 @@
   function teamButton(g, side, snap) {
     const card = findPick(view.analyst, g.officialId, 'card');
     const lotto = findPick(view.analyst, g.officialId, 'lotto');
+    const rev = findPick(view.analyst, g.officialId, 'rev');
     const sp = defaultSpreadLine(g.league, snap, side);
     const mlOdds = snap && snap.ml ? snap.ml[side] : null;
     const spOdds = sp == null ? null : Core.priceFrom(snap, { side, market: 'SPREAD', line: sp });
@@ -498,8 +512,9 @@
       }
       // LOTTO 只留右下角小標；這場沒有表單、只有 LOTTO 時整格淺黃
       if (lotto && lotto.side === side) { badge2 = `L ${mk(lotto)}`; if (!card) cls += ' lotonly'; }
+      if (rev && rev.side === side) badge2 += `${badge2 ? ' · ' : ''}<span class="rv">改 ${mk(rev)}</span>`;
       if (g.final) {
-        const mine = [card, lotto].filter((p) => p && p.side === side);
+        const mine = [card, lotto, rev].filter((p) => p && p.side === side);
         if (mine.length) res = mine.map(icon).join('');
       }
     }
@@ -520,8 +535,12 @@
     }
     const RES_CLS = { win: 'w', loss: 'x', push: 'p', refund: 'p' };
     const RES_TXT = { win: '命中', loss: '沒中', push: '走盤', refund: '退款' };
-    const chip = (x) => `<span class="${[x.lotto ? 'l' : '', RES_CLS[x.res] || ''].join(' ').trim()}"${x.res ? ` title="${x.a} ${RES_TXT[x.res] || ''}"` : ''}>${SHORT[x.a]}</span>`;
+    const chip = (x) => `<span class="${[x.lotto ? 'l' : '', x.watch ? 'wt' : '', RES_CLS[x.res] || ''].join(' ').trim()}"${x.res || x.watch ? ` title="${x.a}${x.watch ? '（觀察中，不算同向／衝突）' : ''} ${RES_TXT[x.res] || ''}"` : ''}>${x.watch ? '👁' : ''}${SHORT[x.a]}</span>`;
     const na = sides.away.length; const nh = sides.home.length;
+    for (const a of WATCH) {
+      const p = mainPick(a, g.officialId);
+      if (p) sides[p.side].push({ a, watch: true, lotto: p.layer === 'lotto', res: g.final ? Core.settlePick(p, g).result : null });
+    }
     let tag = '';
     if (na && nh) tag = `<span class="tag c">衝突 ${Math.max(na, nh)}:${Math.min(na, nh)}</span>`;
     else if (na + nh >= 2) tag = `<span class="tag">同向 ${na + nh}:0</span>`;
@@ -537,7 +556,9 @@
     }
     $('list').innerHTML = (view.multi
       ? `<div class="legend">複選檢視（${multiSel().map((a) => SHORT[a]).join('・') || '尚未選人'}）：一人＝ML 藍、讓分綠、只有 LOTTO 淺黃｜同隊同盤口＝金、同隊不同盤口＝紫、互相衝突＝紅｜點隊伍不會登錄</div>`
-      : '<div class="legend">左鍵＝表單、右鍵（手機長按）＝LOTTO；各點 1 下 ML、2 下讓分、3 下取消｜只有 LOTTO＝淺黃</div>')
+      : revMode()
+        ? `<div class="legend"><b>✎ 改版模式（${view.analyst}）</b>：左鍵＝改版另計（同日第二版表單改動的場次，只另外統計），右鍵＝LOTTO；各點 1 下 ML、2 下讓分、3 下取消</div>`
+        : '<div class="legend">左鍵＝表單、右鍵（手機長按）＝LOTTO；各點 1 下 ML、2 下讓分、3 下取消｜只有 LOTTO＝淺黃</div>')
       + games.map((g) => {
         const snap = stakeSnapshot(g.league, g) || g.closing;
         const state = g.review ? '⚠ 待核對' : g.final ? (g.officialCheck === 'ok' ? '完賽 ✔官方' : '完賽') : Date.now() >= g.startMs ? '進行中' : '';
@@ -549,12 +570,13 @@
     const games = gamesFor(view.league, view.date);
     const results = {}; games.forEach((g) => { results[g.officialId] = g; });
     const rows = Core.buildLedger(picks.filter((p) => p.league === view.league && p.date === view.date), results);
-    const parts = ANALYSTS.map((a) => {
+    const parts = ROSTER.map((a) => {
       const s = Core.summarize(rows.filter((r) => r.analyst === a && r.countsInMain));
-      const l = Core.summarize(rows.filter((r) => r.analyst === a && !r.countsInMain));
-      if (!s.wins && !s.losses && !s.pending && !l.wins && !l.losses && !l.pending) return '';
+      const l = Core.summarize(rows.filter((r) => r.analyst === a && !r.countsInMain && r.layer === 'lotto'));
+      const v = Core.summarize(rows.filter((r) => r.analyst === a && r.layer === 'rev'));
+      if (!s.wins && !s.losses && !s.pending && !l.wins && !l.losses && !l.pending && !v.wins && !v.losses && !v.pending) return '';
       const u = (x) => (x.priced ? ` ${x.profit >= 0 ? '+' : ''}${x.profit.toFixed(2)}u` : '');
-      return `<span><b>${a}</b> ${s.wins}–${s.losses}${u(s)}${s.pending ? `（未完${s.pending}）` : ''}${l.wins + l.losses + l.pending ? `｜L ${l.wins}–${l.losses}${u(l)}` : ''}</span>`;
+      return `<span><b>${isWatch(a) ? '👁' : ''}${a}</b> ${s.wins}–${s.losses}${u(s)}${s.pending ? `（未完${s.pending}）` : ''}${l.wins + l.losses + l.pending ? `｜L ${l.wins}–${l.losses}${u(l)}` : ''}${v.wins + v.losses + v.pending ? `｜改 ${v.wins}–${v.losses}${u(v)}` : ''}</span>`;
     }).filter(Boolean);
     $('summary').innerHTML = parts.length ? `<span>${view.date} ${view.league} 主要命中：</span>${parts.join('')}` : `<span>${view.date} ${view.league} 尚無推薦</span>`;
   }
@@ -579,7 +601,7 @@
   const DEFAULT_PHASES = ['regular', 'postseason', null];
   const MK = [['any', '任意'], ['ML', 'ML'], ['PLUS', '受讓（+）'], ['MINUS', '讓分（−）']];
   const MK_TXT = { any: '任意盤口', ML: 'ML', PLUS: '受讓', MINUS: '讓分' };
-  const TABS = [['duel', '對決查詢'], ['overview', '個人總覽'], ['pairs', '兩兩組合'], ['lotto', '表單 vs LOTTO']];
+  const TABS = [['duel', '對決查詢'], ['overview', '個人總覽'], ['pairs', '兩兩組合'], ['lotto', '表單 vs LOTTO']].concat(WATCH.length ? [['watch', '👁 觀察名單']] : []);
   let HISTORY = null; let histLoading = false; let drill = null; let GAMES = {};
   async function loadHistory() {
     if (HISTORY || histLoading) return;
@@ -827,6 +849,57 @@
     }).join('') || `<tr><td colspan="5" style="color:var(--ink-dim)">沒有場數 ≥ ${minN} 的組合，可把最少樣本調低。</td></tr>`;
     return `${html}</table></div>`;
   }
+  // 觀察名單：各人自己的戰績（主帳／改版另計／LOTTO 另計）＋出勤（比賽日 vs 有發推薦的日子）
+  let SEASON_DAYS = null; let seasonLoading = false;   // 整季每天場數（NHL：data/nhl_games.json；其他聯盟用手上的賽程）
+  async function loadSeasonDays() {
+    if (SEASON_DAYS || seasonLoading) return;
+    seasonLoading = true;
+    const nhl = await fetchJson('data/nhl_games.json');
+    const days = { NHL: {}, MLB: {}, NBA: {} };
+    for (const g of (nhl && nhl.games) || []) (days.NHL[g.date] || (days.NHL[g.date] = new Set())).add(g.sid);
+    SEASON_DAYS = days; seasonLoading = false;
+    render();
+  }
+  function slateSizes(league) {
+    const days = {};
+    const add = (date, id) => { if (date && id) (days[date] || (days[date] = new Set())).add(id); };
+    for (const [date, ids] of Object.entries((SEASON_DAYS && SEASON_DAYS[league]) || {})) ids.forEach((id) => add(date, id));
+    for (const g of DATA[league].games) add(g.date, g.officialId);
+    for (const [id, r] of Object.entries(RESULTS)) if (r.league === league) add(r.date, id);
+    return days;
+  }
+  function renderWatchTab(allRows) {
+    if (!SEASON_DAYS) loadSeasonDays();
+    let html = '<div class="st-sec">👁 觀察名單</div><div class="st-help">觀察中的分析師照常登錄、自動結算，但不進任何合併統計（同向／衝突、對決、組合、今日對決卡）。轉正或下架只要改一行名單，推薦紀錄都保留、不用清。上方日期與階段篩選照樣適用。</div>';
+    for (const a of WATCH) {
+      const mine = allRows.filter((r) => r.analyst === a);
+      const allPicks = Core.livePicks(picks).filter((p) => p.analyst === a);
+      if (!allPicks.length) { html += `<div class="st-help"><b>${a}</b>：還沒有登錄任何推薦。</div>`; continue; }
+      html += `<div class="st-sec">${a}</div><div class="wrap-x"><table class="tbl"><tr><th>分類</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>`;
+      for (const [k, label, list, head] of [
+        ['main', '主帳（表單＋沒表單時的 LOTTO）', mine.filter((r) => r.countsInMain), '推薦'],
+        ['rev', '改版另計', mine.filter((r) => r.layer === 'rev'), '與第一版關係'],
+        ['lotto', 'LOTTO 另計', mine.filter((r) => r.layer === 'lotto' && !r.countsInMain), '與表單關係'],
+      ]) {
+        if (!list.length) continue;
+        const anchor = `wt:${a}:${k}`;
+        html += anchorRow(anchor, statCells(label, Core.summarize(list), 0), () => drillGamesHtml(anchor, `${a}｜${label}`, singles(list), a, head));
+      }
+      html += '</table></div>';
+      // 出勤：從第一次登錄那天起，每個有比賽的日子（今天還沒發的不算缺席）
+      for (const league of LEAGUES) {
+        const dates = [...new Set(allPicks.filter((p) => p.league === league).map((p) => p.date))].sort();
+        if (!dates.length) continue;
+        const sizes = slateSizes(league); const today = twToday();
+        const days = Object.keys(sizes).filter((d) => d >= dates[0] && (d < today || dates.includes(d))).sort();
+        const on = days.filter((d) => dates.includes(d)); const off = days.filter((d) => !dates.includes(d));
+        const avg = (ds) => (ds.length ? (ds.reduce((t, d) => t + sizes[d].size, 0) / ds.length).toFixed(1) : '—');
+        html += `<div class="st-help" style="margin-top:8px"><b>${league} 出勤</b>：${dates[0].slice(5).replace('-', '/')} 起有比賽 ${days.length} 天、有發推薦 ${on.length} 天（${days.length ? Math.round(on.length / days.length * 100) : 0}%）｜有發的日子平均 ${avg(on)} 場、沒發的日子平均 ${avg(off)} 場${SEASON_DAYS ? '' : '（整季賽程載入中…）'}</div>`;
+        html += `<div>${days.map((d) => `<span class="wday${dates.includes(d) ? ' on' : ''}" title="${d}：當天 ${sizes[d].size} 場${dates.includes(d) ? '，有發推薦' : '，沒發'}">${d.slice(5).replace('-', '/')} ${sizes[d].size}場 ${dates.includes(d) ? '✓' : '—'}</span>`).join('')}</div>`;
+      }
+    }
+    return html;
+  }
   function renderLottoTab(rows) {
     const settled = rows.filter((r) => r.result !== 'pending');
     let html = '<div class="st-sec">表單 vs LOTTO</div><div class="st-help">表單＝左鍵層；LOTTO 另計＝同場已有表單的 LOTTO 腿（不進主帳）；串關腿計入＝當天沒表單時的 LOTTO／串關腿。10/13 起才分得出來。</div>';
@@ -852,7 +925,8 @@
     $('rail').innerHTML = ['ALL', ...LEAGUES].map((lg) => `<button class="lg${lg === st.league ? ' on' : ''}" data-sl="${lg}">${lg === 'ALL' ? '全部' : lg}</button>`).join('');
     if (!HISTORY) { $('list').innerHTML = '<div class="empty">載入歷史紀錄中…</div>'; loadHistory(); return; }
     const chips = (key, opts) => `<div class="chips">${opts.map(([v, t]) => `<button class="chip${String(st[key]) === v ? ' on' : ''}" data-st="${key}" data-v="${v}">${t}</button>`).join('')}</div>`;
-    const rows = Core.filterRows(statsLedger(), statsFilter());
+    const allRows = Core.filterRows(statsLedger(), statsFilter());
+    const rows = mainOnly(allRows);   // 合併統計只用正式名單
     const ann = Core.annotateContexts(rows);
     const minN = Math.max(0, Number(st.min) || 0);
     const tab = TABS.some((t) => t[0] === st.tab) ? st.tab : 'duel';
@@ -867,6 +941,7 @@
     if (tab === 'duel') html += renderDuelTab(ann, minN);
     else if (tab === 'overview') html += renderOverviewTab(rows, ann, minN);
     else if (tab === 'pairs') html += renderPairsTab(ann, minN);
+    else if (tab === 'watch') html += renderWatchTab(allRows);
     else html += renderLottoTab(rows);
     const box = $('list'); const keep = box.scrollTop;
     box.innerHTML = html;
@@ -894,7 +969,7 @@
     const settledLive = Core.livePicks(picks).filter((p) => RESULTS[p.officialId] && RESULTS[p.officialId].final).length;
     const key = `${RESULTS_VER}|${settledLive}|${beforeDate}`;
     if (IDX_CACHE[league] && IDX_CACHE[league].key === key) return IDX_CACHE[league];
-    const rows = Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES, to: addDays(beforeDate, -1) });
+    const rows = mainOnly(Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES, to: addDays(beforeDate, -1) }));
     const val = Object.assign(buildIdx(Core.annotateContexts(rows)), { key });
     IDX_CACHE[league] = val;
     return val;
@@ -911,7 +986,7 @@
     if (!g.final) return null;
     const k = `${L.key}|${g.officialId}`;
     if (!(k in AFTER_CACHE)) {
-      const extra = Core.annotateContexts(Core.filterRows(gameLedger(g.officialId), { league: g.league, phases: DEFAULT_PHASES }));
+      const extra = Core.annotateContexts(mainOnly(Core.filterRows(gameLedger(g.officialId), { league: g.league, phases: DEFAULT_PHASES })));
       AFTER_CACHE[k] = extra.length ? buildIdx(L.ann.concat(extra)) : null;
     }
     return AFTER_CACHE[k];
@@ -1024,17 +1099,18 @@
     cycle(g, 'lotto', btn.dataset.s); render();
   }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-ex],[data-sel],[data-opp],[data-multi]');
+    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-ex],[data-sel],[data-opp],[data-multi],[data-rev]');
     if (!t) return;
     if (t.dataset.sl) { view.st.league = t.dataset.sl; drill = null; saveView(); render(); return; }
     if (t.dataset.st) { view.st[t.dataset.st] = t.dataset.v; if (t.dataset.st !== 'matrix') drill = null; saveView(); render(); return; }
     if (t.dataset.ex) { const a = t.dataset.ex; if (EXCL.has(a)) EXCL.delete(a); else EXCL.add(a); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
+    if (t.dataset.rev) { view.rev = !view.rev; saveView(); render(); toast(view.rev ? '✎ 改版模式：左鍵記成「改版另計」' : '改版模式已關閉，左鍵回到表單'); return; }
     if (t.dataset.multi) { view.multi = !view.multi; if (view.multi && !multiSel().length) view.multiSel = [view.analyst]; saveView(); render(); return; }
     if (t.dataset.sel) { const sel = new Set(view.st.sel || []); if (sel.has(t.dataset.sel)) sel.delete(t.dataset.sel); else sel.add(t.dataset.sel); view.st.sel = ANALYSTS.filter((a) => sel.has(a)); drill = null; saveView(); render(); return; }
     if (t.dataset.opp) { const o = new Set(view.st.opp || []); if (o.has(t.dataset.opp)) o.delete(t.dataset.opp); else o.add(t.dataset.opp); view.st.opp = ANALYSTS.filter((a) => o.has(a)); drill = null; saveView(); render(); return; }
     if (t.dataset.anchor) { drill = drill && drill.anchor === t.dataset.anchor ? null : { anchor: t.dataset.anchor }; render(); return; }
     if (t.dataset.a) {
-      if (view.multi) { const sel = new Set(multiSel()); if (sel.has(t.dataset.a)) sel.delete(t.dataset.a); else sel.add(t.dataset.a); view.multiSel = ANALYSTS.filter((a) => sel.has(a)); }
+      if (view.multi) { const sel = new Set(multiSel()); if (sel.has(t.dataset.a)) sel.delete(t.dataset.a); else sel.add(t.dataset.a); view.multiSel = ROSTER.filter((a) => sel.has(a)); }
       else view.analyst = t.dataset.a;
       saveView(); render(); return;
     }
@@ -1045,7 +1121,7 @@
     if (t.classList.contains('team')) {
       if (suppressClick.key === btnKey(t) && Date.now() - suppressClick.t < 800) return;   // 長按放開的補發 click
       const g = gameById(t.dataset.g); if (!g) return;
-      cycle(g, 'card', t.dataset.s); render();
+      cycle(g, revMode() ? 'rev' : 'card', t.dataset.s); render();
     }
   });
   document.addEventListener('contextmenu', (e) => {
