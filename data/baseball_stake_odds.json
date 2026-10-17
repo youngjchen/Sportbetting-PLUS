@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T08:25:58.835Z",
+  "generatedAt": "2026-10-17T08:30:39.411Z",
   "officialScheduleCount": 7,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-17T08:25:58.835Z",
-      "lastAttemptAt": "2026-10-17T08:25:58.835Z",
+      "lastSuccessAt": "2026-10-17T08:30:39.411Z",
+      "lastAttemptAt": "2026-10-17T08:30:39.411Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-17T08:25:58.835Z",
-      "lastAttemptAt": "2026-10-17T08:25:58.835Z",
+      "lastSuccessAt": "2026-10-17T08:30:39.411Z",
+      "lastAttemptAt": "2026-10-17T08:30:39.411Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -34,9 +34,9 @@
       }
     },
     "KBO": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-17T08:25:58.835Z",
-      "lastAttemptAt": "2026-10-17T08:25:58.835Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-17T08:30:39.411Z",
+      "lastAttemptAt": "2026-10-17T08:30:39.411Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-17T08:25:58.835Z",
-      "lastAttemptAt": "2026-10-17T08:25:58.835Z",
+      "lastSuccessAt": "2026-10-17T08:30:39.411Z",
+      "lastAttemptAt": "2026-10-17T08:30:39.411Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -22677,7 +22677,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-17T08:25:58.835Z",
+      "observedAt": "2026-10-17T08:30:39.411Z",
       "frozenAt": null,
       "favoriteFlipCount": 1,
       "favoriteTransitions": [
@@ -23287,7 +23287,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-17T08:25:37.824Z",
+      "observedAt": "2026-10-17T08:30:38.409Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23589,23 +23589,30 @@
       "fixtureId": "d8dfd65e-562a-410c-af00-e9ecedc36126",
       "slug": "46995605-kia-tigers-lg-twins",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46995605-kia-tigers-lg-twins",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.88,
+        "home": 1.89
+      },
       "moneyline": {
         "away": 2.8,
         "home": 1.43
       },
-      "total": null,
+      "total": {
+        "line": 8.5,
+        "over": 1.98,
+        "under": 1.8
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-17T08:25:58.466Z",
+      "partial": false,
+      "observedAt": "2026-10-17T08:30:39.082Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23628,6 +23635,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-17T08:30:39.082Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.88,
+            "home": 1.89
+          },
+          "moneyline": {
+            "away": 2.8,
+            "home": 1.43
+          },
+          "total": {
+            "line": 8.5,
+            "over": 1.98,
+            "under": 1.8
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
