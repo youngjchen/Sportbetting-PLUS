@@ -1,15 +1,24 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-17T12:59:47.786Z",
+ "updated": "2026-10-17T13:21:03.504Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 3,
   "targeted": 43,
-  "fetched": 1,
+  "fetched": 0,
   "cached": 42,
   "unmatched": [],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/wnba/fixtures/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "officialId": "WNBA_20261018_美夢_金州_0330",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
   "NBA_20261010_MEM@CHI": {
