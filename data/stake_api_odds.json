@@ -1,7 +1,7 @@
 {
  "provider": "stake-official",
  "mode": "official-page",
- "updated": "2026-10-17T21:15:18.897Z",
+ "updated": "2026-10-17T21:20:18.961Z",
  "source": {
   "schedule": "/schedule/sport/ice-hockey/usa/tournament/nhl",
   "odds": "/odds/{fixtureSlug}",
@@ -11,11 +11,44 @@
   "discovered": 13,
   "targeted": 11,
   "shiftedStarts": 0,
-  "succeeded": 11,
+  "succeeded": 3,
   "apiSucceeded": 0,
-  "pageSucceeded": 11,
-  "failed": 0,
-  "failures": []
+  "pageSucceeded": 3,
+  "failed": 8,
+  "failures": [
+   {
+    "slug": "46925303-philadelphia-flyers-ottawa-senators",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   },
+   {
+    "slug": "46925339-toronto-maple-leafs-new-york-islanders",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   },
+   {
+    "slug": "46925150-montreal-canadiens-buffalo-sabres",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   },
+   {
+    "slug": "46925115-detroit-red-wings-san-jose-sharks",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   },
+   {
+    "slug": "46925155-nashville-predators-st-louis-blues",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   },
+   {
+    "slug": "46925133-los-angeles-kings-boston-bruins",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   },
+   {
+    "slug": "46925345-utah-mammoth-edmonton-oilers",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   },
+   {
+    "slug": "46925427-vegas-golden-knights-pittsburgh-penguins",
+    "error": "RuntimeError: solve-cloudflare returned challenge/status 404"
+   }
+  ]
  },
  "games": {
   "46925465-washington-capitals-montreal-canadiens": {
@@ -28999,7 +29032,7 @@
    "homeTeam": "佛羅里",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925129-florida-panthers-seattle-kraken",
-   "lastPregameAt": "2026-10-17T21:15:18.897Z",
+   "lastPregameAt": "2026-10-17T21:20:18.961Z",
    "markets": {
     "ml": {
      "open": {
@@ -29008,7 +29041,7 @@
       "home": 1.52
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "away": 2.49,
       "home": 1.54
      }
@@ -29022,7 +29055,7 @@
       "home": 2.23
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.63,
@@ -29037,7 +29070,7 @@
       "under": 1.74
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "line": 6,
       "over": 1.87,
       "under": 1.94
@@ -29506,7 +29539,7 @@
    "homeTeam": "藍衣",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925103-columbus-blue-jackets-new-york-rangers",
-   "lastPregameAt": "2026-10-17T21:15:18.897Z",
+   "lastPregameAt": "2026-10-17T21:20:18.961Z",
    "markets": {
     "ml": {
      "open": {
@@ -29515,7 +29548,7 @@
       "home": 1.74
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "away": 2.07,
       "home": 1.73
      }
@@ -29529,7 +29562,7 @@
       "home": 2.7
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.44,
@@ -29544,7 +29577,7 @@
       "under": 1.77
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "line": 6,
       "over": 1.81,
       "under": 1.98
@@ -29605,7 +29638,7 @@
       "name": "Over",
       "side": "over",
       "line": 6,
-      "odds": 1.9
+      "odds": 1.91
      },
      {
       "name": "Under",
@@ -29617,6 +29650,61 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-10-17T21:20:18.961Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Dallas Stars",
+        "side": "away",
+        "odds": 1.47
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "odds": 2.65
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Dallas Stars",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.14
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.69
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6,
+        "odds": 1.91
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6,
+        "odds": 1.87
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-17T17:33:12.505Z",
      "ml": {
@@ -30618,7 +30706,7 @@
    "homeTeam": "黑鷹",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/46925454-chicago-blackhawks-dallas-stars",
-   "lastPregameAt": "2026-10-17T21:15:18.897Z",
+   "lastPregameAt": "2026-10-17T21:20:18.961Z",
    "markets": {
     "ml": {
      "open": {
@@ -30627,7 +30715,7 @@
       "home": 2.46
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "away": 1.47,
       "home": 2.65
      }
@@ -30641,7 +30729,7 @@
       "home": 1.6
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2.14,
@@ -30656,9 +30744,9 @@
       "under": 2.09
      },
      "active": {
-      "at": "2026-10-17T21:15:18.897Z",
+      "at": "2026-10-17T21:20:18.961Z",
       "line": 6,
-      "over": 1.9,
+      "over": 1.91,
       "under": 1.87
      }
     }
