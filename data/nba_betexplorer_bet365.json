@@ -1,15 +1,28 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-17T04:40:10.713Z",
+ "updated": "2026-10-17T04:58:12.821Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 2,
   "targeted": 43,
-  "fetched": 1,
+  "fetched": 0,
   "cached": 42,
   "unmatched": [],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/wnba/results/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "officialId": "WNBA_20261018_美夢_金州_0330",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
   "NBA_20261010_MEM@CHI": {
