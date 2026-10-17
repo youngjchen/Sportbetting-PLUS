@@ -1,18 +1,18 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-17T15:45:19.111Z",
+ "updated": "2026-10-17T16:01:24.743Z",
  "siteOffsetHours": 7,
  "health": {
   "lists": 0,
-  "targeted": 43,
+  "targeted": 42,
   "fetched": 0,
-  "cached": 42,
+  "cached": 41,
   "unmatched": [],
   "failures": [
    {
     "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
-    "error": "The operation was aborted due to timeout"
+    "error": "BetExplorer HTTP 502 https://www.betexplorer.com/basketball/usa/nba/fixtures/"
    },
    {
     "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
@@ -24,7 +24,7 @@
    },
    {
     "url": "https://www.betexplorer.com/basketball/usa/wnba/results/",
-    "error": "The operation was aborted due to timeout"
+    "error": "BetExplorer HTTP 502 https://www.betexplorer.com/basketball/usa/wnba/results/"
    },
    {
     "officialId": "WNBA_20261018_美夢_金州_0330",
@@ -33,82 +33,6 @@
   ]
  },
  "games": {
-  "NBA_20261010_MEM@CHI": {
-   "officialId": "NBA_20261010_MEM@CHI",
-   "eventId": "08aTHh6N",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/chicago-bulls-memphis-grizzlies/08aTHh6N/",
-   "siteStart": "10,10,2026,1,00",
-   "scheduledStart": "2026-10-10T00:00:00.000Z",
-   "away": "灰熊",
-   "home": "公牛",
-   "fetchedAt": "2026-10-10T20:28:49.816Z",
-   "complete": true,
-   "ml": {
-    "home": 1.7,
-    "away": 2.1,
-    "created": "09,10,2026,23,26"
-   },
-   "hd": [
-    {
-     "line": -3.5,
-     "active": false,
-     "created": "09,10,2026,08,49",
-     "home": 1.91,
-     "away": 1.82
-    },
-    {
-     "line": -3,
-     "active": false,
-     "created": "09,10,2026,12,39",
-     "home": 1.86,
-     "away": 1.86
-    },
-    {
-     "line": -2.5,
-     "active": true,
-     "created": "09,10,2026,23,26",
-     "home": 1.86,
-     "away": 1.86
-    }
-   ],
-   "ou": [
-    {
-     "line": 237.5,
-     "active": false,
-     "created": "09,10,2026,07,28",
-     "over": 1.86,
-     "under": 1.86
-    },
-    {
-     "line": 238.5,
-     "active": false,
-     "created": "09,10,2026,08,32",
-     "over": 1.86,
-     "under": 1.86
-    },
-    {
-     "line": 239.5,
-     "active": true,
-     "created": "09,10,2026,06,04",
-     "over": 1.86,
-     "under": 1.86
-    },
-    {
-     "line": 240.5,
-     "active": false,
-     "created": "09,10,2026,12,48",
-     "over": 1.86,
-     "under": 1.86
-    },
-    {
-     "line": 241.5,
-     "active": false,
-     "created": "09,10,2026,12,39",
-     "over": 1.86,
-     "under": 1.86
-    }
-   ]
-  },
   "NBA_20261011_LAC@TOR": {
    "officialId": "NBA_20261011_LAC@TOR",
    "league": "NBA",
@@ -3226,6 +3150,82 @@
      "line": 154.5,
      "active": true,
      "created": "15,10,2026,17,34",
+     "over": 1.86,
+     "under": 1.86
+    }
+   ]
+  },
+  "NBA_20261010_MEM@CHI": {
+   "officialId": "NBA_20261010_MEM@CHI",
+   "eventId": "08aTHh6N",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/chicago-bulls-memphis-grizzlies/08aTHh6N/",
+   "siteStart": "10,10,2026,1,00",
+   "scheduledStart": "2026-10-10T00:00:00.000Z",
+   "away": "灰熊",
+   "home": "公牛",
+   "fetchedAt": "2026-10-10T20:28:49.816Z",
+   "complete": true,
+   "ml": {
+    "home": 1.7,
+    "away": 2.1,
+    "created": "09,10,2026,23,26"
+   },
+   "hd": [
+    {
+     "line": -3.5,
+     "active": false,
+     "created": "09,10,2026,08,49",
+     "home": 1.91,
+     "away": 1.82
+    },
+    {
+     "line": -3,
+     "active": false,
+     "created": "09,10,2026,12,39",
+     "home": 1.86,
+     "away": 1.86
+    },
+    {
+     "line": -2.5,
+     "active": true,
+     "created": "09,10,2026,23,26",
+     "home": 1.86,
+     "away": 1.86
+    }
+   ],
+   "ou": [
+    {
+     "line": 237.5,
+     "active": false,
+     "created": "09,10,2026,07,28",
+     "over": 1.86,
+     "under": 1.86
+    },
+    {
+     "line": 238.5,
+     "active": false,
+     "created": "09,10,2026,08,32",
+     "over": 1.86,
+     "under": 1.86
+    },
+    {
+     "line": 239.5,
+     "active": true,
+     "created": "09,10,2026,06,04",
+     "over": 1.86,
+     "under": 1.86
+    },
+    {
+     "line": 240.5,
+     "active": false,
+     "created": "09,10,2026,12,48",
+     "over": 1.86,
+     "under": 1.86
+    },
+    {
+     "line": 241.5,
+     "active": false,
+     "created": "09,10,2026,12,39",
      "over": 1.86,
      "under": 1.86
     }
