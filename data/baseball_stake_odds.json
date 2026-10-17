@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-17T18:13:39.777Z",
+  "generatedAt": "2026-10-17T18:18:26.882Z",
   "officialScheduleCount": 6,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-17T18:13:39.777Z",
-      "lastAttemptAt": "2026-10-17T18:13:39.777Z",
+      "lastSuccessAt": "2026-10-17T18:18:26.882Z",
+      "lastAttemptAt": "2026-10-17T18:18:26.882Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-17T18:13:39.777Z",
-      "lastAttemptAt": "2026-10-17T18:13:39.777Z",
+      "lastSuccessAt": "2026-10-17T18:18:26.882Z",
+      "lastAttemptAt": "2026-10-17T18:18:26.882Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-17T18:13:39.777Z",
-      "lastAttemptAt": "2026-10-17T18:13:39.777Z",
+      "lastSuccessAt": "2026-10-17T18:18:26.882Z",
+      "lastAttemptAt": "2026-10-17T18:18:26.882Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -49,9 +49,9 @@
       }
     },
     "CPBL": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-17T18:13:39.777Z",
-      "lastAttemptAt": "2026-10-17T18:13:39.777Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-17T18:18:26.882Z",
+      "lastAttemptAt": "2026-10-17T18:18:26.882Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -22947,7 +22947,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-17T18:13:26.749Z",
+      "observedAt": "2026-10-17T18:18:25.633Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23428,7 +23428,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-17T18:13:27.244Z",
+      "observedAt": "2026-10-17T18:18:26.464Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23619,23 +23619,30 @@
       "fixtureId": "2d4ae203-9aaa-4f7f-b134-486864970cb5",
       "slug": "46993776-wei-chuan-dragons-ctbc-brothers",
       "sourceUrl": "https://stake.com/sports/baseball/chinese-taipei/cpbl/46993776-wei-chuan-dragons-ctbc-brothers",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
+      "favorite": "away",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 2.75,
+        "home": 1.4
+      },
       "moneyline": {
         "away": 1.96,
         "home": 1.75
       },
-      "total": null,
+      "total": {
+        "line": 5.5,
+        "over": 1.84,
+        "under": 1.86
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-17T18:13:39.777Z",
+      "partial": false,
+      "observedAt": "2026-10-17T18:18:26.882Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -23658,6 +23665,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-17T18:18:26.882Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.75,
+            "home": 1.4
+          },
+          "moneyline": {
+            "away": 1.96,
+            "home": 1.75
+          },
+          "total": {
+            "line": 5.5,
+            "over": 1.84,
+            "under": 1.86
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     }
