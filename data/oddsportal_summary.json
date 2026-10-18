@@ -2,14 +2,15 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-18T10:30:13+08:00",
+  "updatedAt": "2026-10-18T10:40:16+08:00",
   "health": {
-    "scheduled": 4,
-    "discovered": 2,
+    "scheduled": 5,
+    "discovered": 3,
     "succeeded": 1,
-    "failed": 1,
+    "failed": 2,
     "errors": [
-      "cpbl MwxgH84e: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+      "mlb djqLFhJE: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none",
+      "kbo jR5MBCFd: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
     ]
   },
   "games": {
@@ -184673,8 +184674,8 @@
       "startISO": "2026-10-18T17:05:00+08:00",
       "awayTeam": "兄弟",
       "homeTeam": "味全",
-      "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/wei-chuan-dragons-chinatrust-brothers/MwxgH84e/",
-      "observedAt": "2026-10-18T03:36:49+08:00",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chinatrust-brothers-SSEfUtBO/wei-chuan-dragons-IRL5wMoR/#MwxgH84e",
+      "observedAt": "2026-10-18T10:40:16+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -184684,7 +184685,7 @@
             "away": 1.96
           },
           "active": {
-            "at": "2026-10-18T03:36:49+08:00",
+            "at": "2026-10-18T10:40:16+08:00",
             "home": 1.75,
             "away": 1.96
           }
@@ -184698,7 +184699,7 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-18T03:36:49+08:00",
+            "at": "2026-10-18T10:40:16+08:00",
             "home": 1.4,
             "away": 2.75,
             "line": 1.5,
@@ -184713,7 +184714,7 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-18T03:36:49+08:00",
+            "at": "2026-10-18T10:40:16+08:00",
             "over": 1.84,
             "under": 1.86,
             "line": 5.5
@@ -184722,17 +184723,16 @@
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
-          "away"
-        ],
-        "struckSide": [],
-        "lines": [
-          {
-            "line": 1.5,
-            "active": true,
-            "created": "17,10,2026,19,15"
-          }
-        ]
+        "transitions": [],
+        "scanFavorite": "away"
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
       }
     },
     "mlb|2026-10-18|光芒|守護者|08:00|roAeiSwR": {
