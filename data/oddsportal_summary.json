@@ -2,7 +2,7 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-18T13:10:08+08:00",
+  "updatedAt": "2026-10-18T20:55:54+08:00",
   "health": {
     "discovered": 1,
     "succeeded": 1,
@@ -184751,7 +184751,7 @@
       "awayTeam": "兄弟",
       "homeTeam": "味全",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/chinatrust-brothers-SSEfUtBO/wei-chuan-dragons-IRL5wMoR/#MwxgH84e",
-      "observedAt": "2026-10-18T10:40:16+08:00",
+      "observedAt": "2026-10-18T20:55:54+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -184761,9 +184761,15 @@
             "away": 1.96
           },
           "active": {
-            "at": "2026-10-18T10:40:16+08:00",
-            "home": 1.75,
-            "away": 1.96
+            "at": "2026-10-18T20:55:54+08:00",
+            "home": 1.66,
+            "away": 2.09
+          },
+          "close": {
+            "at": "2026-10-18T14:32:00+08:00",
+            "home": 1.66,
+            "away": 2.09,
+            "final": true
           }
         },
         "hd": {
@@ -184775,11 +184781,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-10-18T10:40:16+08:00",
-            "home": 1.4,
-            "away": 2.75,
+            "at": "2026-10-18T20:55:54+08:00",
+            "home": 2.47,
+            "away": 1.48,
             "line": 1.5,
-            "favorite": "away"
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-18T16:55:00+08:00",
+            "home": 2.47,
+            "away": 1.48,
+            "line": 1.5,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -184790,17 +184804,40 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-18T10:40:16+08:00",
-            "over": 1.84,
-            "under": 1.86,
-            "line": 5.5
+            "at": "2026-10-18T20:55:54+08:00",
+            "over": 1.97,
+            "under": 1.75,
+            "line": 6.5
+          },
+          "close": {
+            "at": "2026-10-18T16:55:00+08:00",
+            "over": 1.97,
+            "under": 1.75,
+            "line": 6.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
-        "ever": false,
-        "transitions": [],
-        "scanFavorite": "away"
+        "ever": true,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [
+          "away"
+        ],
+        "lines": [
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "18,10,2026,09,55"
+          },
+          {
+            "line": 1.5,
+            "active": false,
+            "created": "17,10,2026,19,15"
+          }
+        ]
       },
       "handicapSwitch": {
         "ever": false,
