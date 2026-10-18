@@ -2,13 +2,12 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-18T07:35:10+08:00",
+  "updatedAt": "2026-10-18T08:10:16+08:00",
   "health": {
-    "discovered": 3,
-    "succeeded": 2,
+    "scheduled": 1,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
-    "added": 0,
-    "updated": 2,
     "errors": []
   },
   "games": {
@@ -184754,6 +184753,98 @@
             "created": "17,10,2026,19,15"
           }
         ]
+      }
+    },
+    "mlb|2026-10-18|光芒|守護者|08:00|roAeiSwR": {
+      "eventId": "roAeiSwR",
+      "league": "mlb",
+      "date": "2026-10-18",
+      "startTime": "08:00",
+      "startISO": "2026-10-18T08:00:00+08:00",
+      "awayTeam": "光芒",
+      "homeTeam": "守護者",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/cleveland-guardians-4K05MrFG/tampa-bay-rays-GCHgI4hp/inplay-odds/#roAeiSwR",
+      "observedAt": "2026-10-18T08:10:16+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-10-18T08:09:00+08:00",
+            "home": 1.9,
+            "away": 1.85
+          },
+          "close": {
+            "at": "2026-10-18T08:10:16+08:00",
+            "home": 1.85,
+            "away": 1.9,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-18T08:10:16+08:00",
+            "home": 1.85,
+            "away": 1.9
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-10-18T08:09:00+08:00",
+            "home": 2.9,
+            "away": 1.35,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-18T08:10:16+08:00",
+            "home": 2.7,
+            "away": 1.4,
+            "line": -1.5,
+            "favorite": "home",
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-18T08:10:16+08:00",
+            "home": 2.7,
+            "away": 1.4,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-10-18T08:09:00+08:00",
+            "over": 1.65,
+            "under": 2.05,
+            "line": 6.0
+          },
+          "close": {
+            "at": "2026-10-18T08:10:16+08:00",
+            "over": 1.85,
+            "under": 1.85,
+            "line": 6.5,
+            "final": true,
+            "precision": "page-post-start"
+          },
+          "active": {
+            "at": "2026-10-18T08:10:16+08:00",
+            "over": 1.85,
+            "under": 1.85,
+            "line": 6.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "away"
       }
     }
   },
