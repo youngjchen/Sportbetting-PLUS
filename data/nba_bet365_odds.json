@@ -1,7 +1,7 @@
 {
  "schemaVersion": 2,
  "provider": "bet365-official-first",
- "updated": "2026-10-18T16:04:53.887Z",
+ "updated": "2026-10-18T16:09:53.534Z",
  "source": "https://www.bet365.com/",
  "health": {
   "status": "partial",
@@ -16,20 +16,20 @@
    "officialMatched": 0,
    "fallbackMatched": 0,
    "matched": 0,
-   "lastAttemptAt": "2026-10-18T16:04:53.887Z",
+   "lastAttemptAt": "2026-10-18T16:09:53.534Z",
    "lastSuccessAt": "2026-10-17T02:27:58.720Z",
    "errors": [
     "Bet365 official content unavailable"
    ]
   },
   "WNBA": {
-   "status": "error",
-   "scheduled": 0,
-   "officialMatched": 0,
+   "status": "ok",
+   "scheduled": 1,
+   "officialMatched": 1,
    "fallbackMatched": 0,
-   "matched": 0,
-   "lastAttemptAt": "2026-10-18T16:04:53.887Z",
-   "lastSuccessAt": "2026-10-17T19:25:40.530Z",
+   "matched": 1,
+   "lastAttemptAt": "2026-10-18T16:09:53.534Z",
+   "lastSuccessAt": "2026-10-18T16:09:53.534Z",
    "errors": [
     "Bet365 official content unavailable"
    ]
@@ -105281,6 +105281,70 @@
      "to": "betexplorer-bet365"
     }
    ],
+   "favoriteFlipCount": 0
+  },
+  "WNBA_20261020_美夢_金州_0800": {
+   "officialId": "WNBA_20261020_美夢_金州_0800",
+   "league": "WNBA",
+   "scheduledStart": "2026-10-20T00:00:00.000Z",
+   "away": "美夢",
+   "home": "金州",
+   "provider": "bet365-official",
+   "observedAt": "2026-10-18T16:09:53.534Z",
+   "favorite": null,
+   "line": null,
+   "moneyline": {
+    "away": 2.18,
+    "home": 1.64
+   },
+   "handicapOdds": null,
+   "total": null,
+   "markets": {
+    "ml": {
+     "away": 2.18,
+     "home": 1.64,
+     "provider": "bet365-official",
+     "observedAt": "2026-10-18T16:09:53.534Z",
+     "stale": false
+    }
+   },
+   "mixedSources": false,
+   "frozenAt": null,
+   "history": [
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-10-18T16:09:53.534Z",
+     "favorite": null,
+     "markets": {
+      "ml": {
+       "away": 2.18,
+       "home": 1.64,
+       "provider": "bet365-official",
+       "observedAt": "2026-10-18T16:09:53.534Z",
+       "stale": false
+      }
+     }
+    }
+   ],
+   "providerHistories": {
+    "bet365-official": [
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-10-18T16:09:53.534Z",
+      "favorite": null,
+      "markets": {
+       "ml": {
+        "away": 2.18,
+        "home": 1.64,
+        "provider": "bet365-official",
+        "observedAt": "2026-10-18T16:09:53.534Z",
+        "stale": false
+       }
+      }
+     }
+    ]
+   },
+   "events": [],
    "favoriteFlipCount": 0
   }
  }
