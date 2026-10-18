@@ -2,13 +2,15 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-18T08:10:16+08:00",
+  "updatedAt": "2026-10-18T10:30:13+08:00",
   "health": {
-    "scheduled": 1,
-    "discovered": 1,
+    "scheduled": 4,
+    "discovered": 2,
     "succeeded": 1,
-    "failed": 0,
-    "errors": []
+    "failed": 1,
+    "errors": [
+      "cpbl MwxgH84e: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -184490,8 +184492,8 @@
       "startISO": "2026-10-18T13:00:00+08:00",
       "awayTeam": "雙子",
       "homeTeam": "起亞虎",
-      "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/kia-tigers-lg-twins/jR5MBCFd/",
-      "observedAt": "2026-10-18T07:35:10+08:00",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kia-tigers-rXhOpG8E/lg-twins-jglLOYoe/#jR5MBCFd",
+      "observedAt": "2026-10-18T10:30:13+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -184501,9 +184503,9 @@
             "away": 2.8
           },
           "active": {
-            "at": "2026-10-18T03:36:49+08:00",
-            "home": 1.44,
-            "away": 2.8
+            "at": "2026-10-18T10:30:13+08:00",
+            "home": 1.42,
+            "away": 2.9
           }
         },
         "hd": {
@@ -184515,10 +184517,10 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-18T03:36:49+08:00",
-            "home": 1.92,
-            "away": 1.89,
-            "line": 1.5,
+            "at": "2026-10-18T10:30:13+08:00",
+            "home": 1.87,
+            "away": 1.94,
+            "line": -1.5,
             "favorite": "home"
           }
         },
@@ -184530,47 +184532,25 @@
             "line": 6.5
           },
           "active": {
-            "at": "2026-10-18T03:36:49+08:00",
-            "over": 1.44,
-            "under": 2.75,
-            "line": 6.5
+            "at": "2026-10-18T10:30:13+08:00",
+            "over": 1.96,
+            "under": 1.82,
+            "line": 8.5
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
-          "away",
-          "home"
-        ],
-        "struckSide": [],
-        "lines": [
-          {
-            "line": -4.5,
-            "active": true,
-            "created": "17,10,2026,18,03"
-          },
-          {
-            "line": -3.5,
-            "active": true,
-            "created": "17,10,2026,18,03"
-          },
-          {
-            "line": -2.5,
-            "active": true,
-            "created": "17,10,2026,18,03"
-          },
-          {
-            "line": -1.5,
-            "active": true,
-            "created": "17,10,2026,18,03"
-          },
-          {
-            "line": 1.5,
-            "active": true,
-            "created": "17,10,2026,18,03"
-          }
-        ]
+        "transitions": [],
+        "scanFavorite": "away"
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
       }
     },
     "mlb|2026-10-19|光芒|守護者|05:08|djqLFhJE": {
