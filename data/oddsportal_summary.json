@@ -2,14 +2,14 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-19T10:40:14+08:00",
+  "updatedAt": "2026-10-20T03:00:27+08:00",
   "health": {
-    "scheduled": 6,
+    "scheduled": 4,
     "discovered": 2,
     "succeeded": 1,
     "failed": 1,
     "errors": [
-      "mlb h6E9Vg34: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+      "cpbl U3u1FnZ7: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
     ]
   },
   "games": {
@@ -185118,6 +185118,58 @@
         "ever": false,
         "transitions": [],
         "scanFavorite": "home"
+      }
+    },
+    "kbo|2026-10-20|起亞虎|雙子|17:30|IXq6JOY2": {
+      "eventId": "IXq6JOY2",
+      "league": "kbo",
+      "date": "2026-10-20",
+      "startTime": "17:30",
+      "startISO": "2026-10-20T17:30:00+08:00",
+      "awayTeam": "起亞虎",
+      "homeTeam": "雙子",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kia-tigers-rXhOpG8E/lg-twins-jglLOYoe/#IXq6JOY2",
+      "observedAt": "2026-10-20T03:00:27+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-10-19T15:43:00+08:00",
+            "home": 1.84,
+            "away": 1.93
+          },
+          "active": {
+            "at": "2026-10-20T03:00:27+08:00",
+            "home": 1.75,
+            "away": 2.05
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-10-19T15:43:00+08:00",
+            "over": 1.65,
+            "under": 2.21,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-10-20T03:00:27+08:00",
+            "over": 1.85,
+            "under": 1.93,
+            "line": 8.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
       }
     }
   },
