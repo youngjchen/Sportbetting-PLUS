@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-19T08:04:19.245Z",
+  "generatedAt": "2026-10-19T08:09:19.551Z",
   "officialScheduleCount": 5,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-19T08:04:19.245Z",
-      "lastAttemptAt": "2026-10-19T08:04:19.245Z",
+      "lastSuccessAt": "2026-10-19T08:09:19.551Z",
+      "lastAttemptAt": "2026-10-19T08:09:19.551Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-19T08:04:19.245Z",
-      "lastAttemptAt": "2026-10-19T08:04:19.245Z",
+      "lastSuccessAt": "2026-10-19T08:09:19.551Z",
+      "lastAttemptAt": "2026-10-19T08:09:19.551Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-19T08:04:19.245Z",
-      "lastAttemptAt": "2026-10-19T08:04:19.245Z",
+      "lastSuccessAt": "2026-10-19T08:09:19.551Z",
+      "lastAttemptAt": "2026-10-19T08:09:19.551Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-19T08:04:19.245Z",
-      "lastAttemptAt": "2026-10-19T08:04:19.245Z",
+      "lastSuccessAt": "2026-10-19T08:09:19.551Z",
+      "lastAttemptAt": "2026-10-19T08:09:19.551Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -20096,7 +20096,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-19T08:04:18.107Z",
+      "observedAt": "2026-10-19T08:09:18.838Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -20320,21 +20320,21 @@
       "fixtureId": "5c0f6d54-39ee-47c8-8859-879988908b42",
       "slug": "46995606-lg-twins-kia-tigers",
       "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/46995606-lg-twins-kia-tigers",
-      "favorite": "away",
+      "favorite": "home",
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 2.55,
-        "home": 1.5
+        "away": 1.5,
+        "home": 2.55
       },
       "moneyline": {
         "away": 1.98,
         "home": 1.8
       },
       "total": {
-        "line": 8.5,
-        "over": 1.72,
-        "under": 2.08
+        "line": 9.5,
+        "over": 2.08,
+        "under": 1.73
       },
       "sources": {
         "direction": "stake-official",
@@ -20343,10 +20343,16 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-19T08:04:19.066Z",
+      "observedAt": "2026-10-19T08:09:19.367Z",
       "frozenAt": null,
-      "favoriteFlipCount": 0,
-      "favoriteTransitions": [],
+      "favoriteFlipCount": 1,
+      "favoriteTransitions": [
+        {
+          "at": "2026-10-19T08:09:19.367Z",
+          "from": "away",
+          "to": "home"
+        }
+      ],
       "history": [
         {
           "observedAt": "2026-10-19T07:44:20.518Z",
@@ -20417,6 +20423,32 @@
             "line": 8.5,
             "over": 1.72,
             "under": 2.08
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        },
+        {
+          "observedAt": "2026-10-19T08:09:19.367Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.5,
+            "home": 2.55
+          },
+          "moneyline": {
+            "away": 1.98,
+            "home": 1.8
+          },
+          "total": {
+            "line": 9.5,
+            "over": 2.08,
+            "under": 1.73
           },
           "sources": {
             "direction": "stake-official",
