@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-19T14:28:12.116Z",
+  "generatedAt": "2026-10-19T14:33:21.922Z",
   "officialScheduleCount": 5,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-19T14:28:12.116Z",
-      "lastAttemptAt": "2026-10-19T14:28:12.116Z",
+      "lastSuccessAt": "2026-10-19T14:33:21.922Z",
+      "lastAttemptAt": "2026-10-19T14:33:21.922Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-19T14:28:12.116Z",
-      "lastAttemptAt": "2026-10-19T14:28:12.116Z",
+      "lastSuccessAt": "2026-10-19T14:33:21.922Z",
+      "lastAttemptAt": "2026-10-19T14:33:21.922Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-19T14:28:12.116Z",
-      "lastAttemptAt": "2026-10-19T14:28:12.116Z",
+      "lastSuccessAt": "2026-10-19T14:33:21.922Z",
+      "lastAttemptAt": "2026-10-19T14:33:21.922Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -49,16 +49,16 @@
       }
     },
     "CPBL": {
-      "status": "ok",
-      "lastSuccessAt": "2026-10-19T14:28:12.116Z",
-      "lastAttemptAt": "2026-10-19T14:28:12.116Z",
+      "status": "partial",
+      "lastSuccessAt": "2026-10-19T14:33:21.922Z",
+      "lastAttemptAt": "2026-10-19T14:33:21.922Z",
       "error": null,
-      "matched": 0,
+      "matched": 1,
       "health": {
-        "discovered": 0,
-        "matched": 0,
+        "discovered": 1,
+        "matched": 1,
         "unmatched": 0,
-        "shiftedStarts": 0,
+        "shiftedStarts": 1,
         "failed": 0,
         "failures": []
       }
@@ -17502,7 +17502,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-19T14:28:11.342Z",
+      "observedAt": "2026-10-19T14:33:12.424Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -17983,7 +17983,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-19T14:28:11.920Z",
+      "observedAt": "2026-10-19T14:33:13.471Z",
       "frozenAt": null,
       "favoriteFlipCount": 3,
       "favoriteTransitions": [
@@ -18315,6 +18315,57 @@
             "moneyline": "stake-official"
           },
           "partial": false
+        }
+      ]
+    },
+    "CPBL_20261020_DRAGONS@BRO_1835": {
+      "league": "CPBL",
+      "officialId": "CPBL_20261020_DRAGONS@BRO_1835",
+      "scheduledStart": "2026-10-20T10:35:00.000Z",
+      "away": "味全",
+      "home": "兄弟",
+      "fixtureId": "2a28fe98-c709-42a5-a904-e684f64a946a",
+      "slug": "46996856-ctbc-brothers-wei-chuan-dragons",
+      "sourceUrl": "https://stake.com/sports/baseball/chinese-taipei/cpbl/46996856-ctbc-brothers-wei-chuan-dragons",
+      "favorite": null,
+      "rawLine": null,
+      "canonicalLine": null,
+      "handicapOdds": null,
+      "moneyline": {
+        "away": 1.96,
+        "home": 1.76
+      },
+      "total": null,
+      "sources": {
+        "direction": null,
+        "handicapOdds": null,
+        "total": null,
+        "moneyline": "stake-official"
+      },
+      "partial": true,
+      "observedAt": "2026-10-19T14:33:21.922Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-19T14:33:21.922Z",
+          "favorite": null,
+          "rawLine": null,
+          "canonicalLine": null,
+          "handicapOdds": null,
+          "moneyline": {
+            "away": 1.96,
+            "home": 1.76
+          },
+          "total": null,
+          "sources": {
+            "direction": null,
+            "handicapOdds": null,
+            "total": null,
+            "moneyline": "stake-official"
+          },
+          "partial": true
         }
       ]
     }
