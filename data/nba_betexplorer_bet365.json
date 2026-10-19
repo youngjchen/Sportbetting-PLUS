@@ -1,15 +1,28 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-19T05:30:36.868Z",
+ "updated": "2026-10-19T05:50:32.526Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 2,
   "targeted": 35,
-  "fetched": 1,
+  "fetched": 0,
   "cached": 34,
   "unmatched": [],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/wnba/fixtures/",
+    "error": "fetch failed"
+   },
+   {
+    "officialId": "WNBA_20261020_美夢_金州_0800",
+    "error": "fetch failed"
+   }
+  ]
  },
  "games": {
   "NBA_20261012_ORL@CLE": {
