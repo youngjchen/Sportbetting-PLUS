@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-20T08:01:49.613Z",
+ "updated": "2026-10-20T08:11:48.636Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -513,24 +513,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "COL Avalanche",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3.05
      },
      {
       "name": "NJ Devils",
       "side": "home",
-      "line": -1.5,
-      "odds": 3
+      "line": 1.5,
+      "odds": 1.37
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-20T08:11:48.636Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "COL Avalanche",
+        "side": "away",
+        "odds": 1.85
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "odds": 1.88
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "COL Avalanche",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.05
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.37
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-20T07:56:48.746Z",
      "provider": "bet365-official",
@@ -951,6 +989,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-10-20T08:11:48.636Z",
+     "type": "favorite-flip",
+     "from": "home",
+     "to": "away"
+    },
     {
      "at": "2026-10-20T07:56:48.746Z",
      "type": "favorite-flip",
