@@ -2,7 +2,7 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-20T08:10:10+08:00",
+  "updatedAt": "2026-10-20T08:15:10+08:00",
   "health": {
     "discovered": 1,
     "succeeded": 1,
@@ -185126,7 +185126,7 @@
       "awayTeam": "守護者",
       "homeTeam": "光芒",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/cleveland-guardians-4K05MrFG/tampa-bay-rays-GCHgI4hp/#h6E9Vg34",
-      "observedAt": "2026-10-20T07:00:14+08:00",
+      "observedAt": "2026-10-20T08:15:10+08:00",
       "markets": {
         "hd": {
           "open": {
@@ -185137,11 +185137,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-20T07:00:14+08:00",
-            "home": 2.38,
-            "away": 1.59,
-            "line": -1.5,
+            "at": "2026-10-20T08:15:10+08:00",
+            "home": 1.95,
+            "away": 1.86,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-20T07:38:00+08:00",
+            "home": 1.95,
+            "away": 1.86,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -185152,10 +185160,17 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-20T07:00:14+08:00",
-            "over": 2.0,
-            "under": 1.82,
-            "line": 7.0
+            "at": "2026-10-20T08:15:10+08:00",
+            "over": 1.53,
+            "under": 2.46,
+            "line": 5.5
+          },
+          "close": {
+            "at": "2026-10-20T07:38:00+08:00",
+            "over": 1.53,
+            "under": 2.46,
+            "line": 5.5,
+            "final": true
           }
         },
         "ml": {
@@ -185165,9 +185180,15 @@
             "away": 2.13
           },
           "active": {
-            "at": "2026-10-20T07:00:14+08:00",
+            "at": "2026-10-20T08:15:10+08:00",
             "home": 1.64,
-            "away": 2.28
+            "away": 2.32
+          },
+          "close": {
+            "at": "2026-10-20T07:09:00+08:00",
+            "home": 1.64,
+            "away": 2.32,
+            "final": true
           }
         }
       },
@@ -185181,8 +185202,84 @@
       },
       "stakeSwap": {
         "ever": false,
-        "transitions": [],
-        "scanFavorite": "away"
+        "activeSide": [
+          "away",
+          "home"
+        ],
+        "struckSide": [
+          "away",
+          "home"
+        ],
+        "lines": [
+          {
+            "line": -4.5,
+            "active": false,
+            "created": "19,10,2026,23,10"
+          },
+          {
+            "line": -3.5,
+            "active": true,
+            "created": "19,10,2026,23,24"
+          },
+          {
+            "line": -3.0,
+            "active": true,
+            "created": "20,10,2026,00,38"
+          },
+          {
+            "line": -2.5,
+            "active": true,
+            "created": "20,10,2026,00,38"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "20,10,2026,00,38"
+          },
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "20,10,2026,00,52"
+          },
+          {
+            "line": -1.0,
+            "active": true,
+            "created": "20,10,2026,00,38"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "20,10,2026,00,38"
+          },
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "20,10,2026,00,38"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "20,10,2026,00,38"
+          },
+          {
+            "line": 2.5,
+            "active": false,
+            "created": "19,10,2026,23,24"
+          }
+        ]
+      },
+      "bet365": {
+        "side": "home",
+        "line": 1.5,
+        "at": "2026-10-20T07:48:00+08:00",
+        "flipEver": false,
+        "ambiguous": false,
+        "struck": [],
+        "odds": {
+          "home": 2.36,
+          "away": 1.56
+        },
+        "observedAt": "2026-10-20T08:15:10+08:00"
       }
     },
     "kbo|2026-10-20|起亞虎|雙子|17:30|IXq6JOY2": {
