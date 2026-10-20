@@ -1,10 +1,10 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-20T20:37:25.009Z",
+ "updated": "2026-10-20T20:56:09.220Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 2,
   "targeted": 43,
   "fetched": 1,
   "cached": 28,
@@ -20,12 +20,17 @@
    "NBA_20261022_IND@NO 溜馬@鵜鶘",
    "NBA_20261022_UTA@MEM 爵士@灰熊",
    "NBA_20261022_DAL@HOU 獨行俠@火箭",
+   "NBA_20261022_GS@LAL 勇士@湖人",
    "NBA_20261022_PHO@POR 太陽@拓荒者",
    "NBA_20261022_SAC@LAC 國王@快艇"
   ],
   "failures": [
    {
-    "officialId": "NBA_20261022_GS@LAL",
+    "url": "https://www.betexplorer.com/basketball/usa/wnba/fixtures/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/wnba/results/",
     "error": "The operation was aborted due to timeout"
    }
   ]
@@ -2154,7 +2159,7 @@
    "scheduledStart": "2026-10-22T00:00:00.000Z",
    "away": "金州",
    "home": "美夢",
-   "fetchedAt": "2026-10-20T20:37:25.009Z",
+   "fetchedAt": "2026-10-20T20:56:09.220Z",
    "complete": false,
    "ml": {
     "home": 1.58,
