@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-20T08:20:09+08:00",
+  "updatedAt": "2026-10-20T08:55:12+08:00",
   "health": {
-    "discovered": 1,
+    "discovered": 2,
     "succeeded": 1,
     "failed": 0,
-    "added": 0,
-    "updated": 1,
+    "added": 1,
+    "updated": 0,
     "errors": []
   },
   "games": {
@@ -185332,6 +185332,84 @@
         "ever": false,
         "transitions": [],
         "scanFavorite": null
+      }
+    },
+    "cpbl|2026-10-20|味全|兄弟|18:35|U3u1FnZ7": {
+      "bet365": null,
+      "eventId": "U3u1FnZ7",
+      "league": "cpbl",
+      "date": "2026-10-20",
+      "startTime": "18:35",
+      "startISO": "2026-10-20T18:35:00+08:00",
+      "awayTeam": "味全",
+      "homeTeam": "兄弟",
+      "sourceUrl": "https://www.betexplorer.com/baseball/taiwan/cpbl/chinatrust-brothers-wei-chuan-dragons/U3u1FnZ7/",
+      "observedAt": "2026-10-20T08:55:12+08:00",
+      "source": "BetExplorer",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-10-19T22:30:00+08:00",
+            "home": 1.76,
+            "away": 1.96
+          },
+          "active": {
+            "at": "2026-10-20T08:55:12+08:00",
+            "home": 1.75,
+            "away": 1.97
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-10-20T08:51:00+08:00",
+            "home": 2.65,
+            "away": 1.42,
+            "line": 1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-10-20T08:55:12+08:00",
+            "home": 2.65,
+            "away": 1.42,
+            "line": 1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-10-20T01:49:00+08:00",
+            "over": 1.87,
+            "under": 1.83,
+            "line": 6.5
+          },
+          "active": {
+            "at": "2026-10-20T08:55:12+08:00",
+            "over": 1.89,
+            "under": 1.81,
+            "line": 6.5
+          }
+        }
+      },
+      "stakeSwap": {
+        "ever": true,
+        "activeSide": [
+          "home"
+        ],
+        "struckSide": [
+          "away"
+        ],
+        "lines": [
+          {
+            "line": -1.5,
+            "active": true,
+            "created": "20,10,2026,01,51"
+          },
+          {
+            "line": 1.5,
+            "active": false,
+            "created": "19,10,2026,18,49"
+          }
+        ]
       }
     }
   },
