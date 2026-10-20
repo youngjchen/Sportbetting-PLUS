@@ -16,9 +16,11 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function buildAnalystCore() {
   'use strict';
 
-  const ANALYSTS = ['APE', 'BOOKIE', 'BANKROLL', 'SNIPER', 'MONEY'];
+  const ANALYSTS = ['APE', 'BOOKIE', 'BANKROLL', 'SNIPER', 'MONEY', 'LEO'];   // LEO：10/14 起觀察、10/21 轉正
   // 觀察名單（2026-10-16）：照常登錄、結算，但不進任何合併統計（同向／衝突、對決、組合）；轉正＝移到 ANALYSTS，下架＝移出這裡
-  const WATCH = ['LEO'];
+  const WATCH = [];
+  // 同日會發第二版表單的分析師：登錄頁有「✎ 改版」按鈕（改版另計，只另外統計）
+  const REVISERS = ['LEO'];
   // card＝表單、lotto＝LOTTO、rev＝改版另計（同日第二版表單改動的場次，只另外統計）
   const LAYERS = ['card', 'lotto', 'rev'];
 
@@ -347,7 +349,7 @@
   }
 
   return {
-    ANALYSTS, WATCH, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,
+    ANALYSTS, WATCH, REVISERS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,
     pickKey, pickLine, mergePicks, livePicks, settlePick, priceQuote, priceFrom, priceFor, relationToCard,
     buildLedger, summarize, filterRows, annotateContexts, inScenario, scenarioStats, pairMatrix, comboBoard,
   };

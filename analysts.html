@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>分析師推薦</title>
 <!-- 分析師推薦登錄頁（計畫：docs/plans/2026-10-14-analyst-picks-page.md）
-     上方橫排五位分析師、左側豎排聯盟；每場兩顆隊伍鈕：
+     上方橫排分析師、左側豎排聯盟；每場兩顆隊伍鈕：
        左鍵＝表單層：ML → 讓分 → 取消；右鍵／長按＝LOTTO 層：同樣循環。
      推薦只存 state/analyst_picks.json（本頁唯一寫手，沿用 github-sync 的權杖 gh_sync_pat）；
      不讀寫盤面 doc（sportbetting_plus_doc_v2），異常統計／七類零接觸。 -->
@@ -110,7 +110,7 @@
   .tbl .thin td{opacity:.5}
   .tbl tr.drill-row td{padding:0 0 8px;background:transparent;white-space:normal;text-align:left}
   .pos{color:var(--win)} .neg{color:var(--loss)}
-  .mx{display:grid;grid-template-columns:78px repeat(5,minmax(0,1fr));gap:5px;font-size:13.5px}
+  .mx{display:grid;grid-template-columns:78px repeat(var(--n,5),minmax(0,1fr));gap:5px;font-size:13.5px}
   .mx > div{padding:8px 2px;text-align:center;border-radius:7px;line-height:1.35}
   .mx .h{color:var(--ink-dim);font-weight:700}
   .mx .cell b{display:block;font-size:17px}
@@ -194,7 +194,7 @@
     .tbl td.num{font-size:15.5px}
     .tbl td,.tbl th{padding:6px 5px}
     .rate{min-width:50px;padding:1px 4px}
-    .mx{grid-template-columns:50px repeat(5,minmax(0,1fr));font-size:12px;gap:3px}
+    .mx{grid-template-columns:50px repeat(var(--n,5),minmax(0,1fr));font-size:12px;gap:3px}
     .mx .cell b{font-size:14.5px}
     .drill .dg{grid-template-columns:58px minmax(0,1fr);gap:2px 8px;font-size:13.5px}
     .drill .dg > span:nth-child(n+3){grid-column:2}
@@ -225,7 +225,7 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261016w"></script>
+<script src="./analyst-core.js?v=20261021p"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
 <script>
 (function () {
@@ -264,7 +264,9 @@
   const view = Object.assign({ analyst: 'APE', league: 'NHL', date: twToday(), retro: false, mode: 'entry', multi: false, multiSel: [] }, readJson(VIEW_KEY) || {});
   // 複選＝只看不登錄：選幾位分析師，隊伍依他們的推薦上色（同盤口金、同隊不同盤口紫、衝突紅）
   const multiSel = () => ROSTER.filter((a) => (view.multiSel || []).includes(a));
-  const revMode = () => !view.multi && view.rev && isWatch(view.analyst);   // ✎ 改版：左鍵改記「改版另計」
+  const REVISERS = Core.REVISERS || [];
+  const canRevise = (a) => isWatch(a) || REVISERS.includes(a);
+  const revMode = () => !view.multi && view.rev && canRevise(view.analyst);   // ✎ 改版：左鍵改記「改版另計」
   view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [], tab: 'duel', hero: 'BANKROLL', heroM: 'PLUS', oppMode: 'any', opp: [], oppM: 'ML', rel: 'oppose' }, view.st || {});
   const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
   let RESULTS = {};   // data/analyst_results.json（analyst-settle 工作流寫）：官方核對後的比分、賽季階段、Stake 收盤價
@@ -467,7 +469,7 @@
       const n = picks.filter((p) => p.analyst === a && !p.deleted && ids.has(p.officialId)).length;
       const on = view.multi ? multiSel().includes(a) : a === view.analyst;
       return `<button class="tab${on ? ' on' : ''}${isWatch(a) ? ' watch' : ''}" data-a="${a}"${isWatch(a) ? ' title="觀察中：只看他自己的戰績，不進合併統計"' : ''}>${isWatch(a) ? '👁 ' : ''}<span class="fn">${a}</span><span class="sn">${SHORT[a]}</span><small>${n || ''}</small></button>`;
-    }).join('') + `<span class="tbr"></span>${!view.multi && isWatch(view.analyst) ? `<button class="hbtn${view.rev ? ' on' : ''}" data-rev="1" title="改版另計：同日第二版表單改動的場次，開著時左鍵改記這一層">✎ 改版</button>` : ''}<button class="hbtn${view.multi ? ' on' : ''}" data-multi="1" title="複選：選兩位以上看他們的推薦關係（只看不登錄）">☑ 複選</button>` + (view.multi ? '' : `<select class="hbtn" id="copySel" title="把另一位分析師在這天這聯盟的推薦複製過來"><option value="">⧉ 複製自…</option>${ANALYSTS.filter((a) => a !== view.analyst).map((a) => `<option>${a}</option>`).join('')}</select>`);
+    }).join('') + `<span class="tbr"></span>${!view.multi && canRevise(view.analyst) ? `<button class="hbtn${view.rev ? ' on' : ''}" data-rev="1" title="改版另計：同日第二版表單改動的場次，開著時左鍵改記這一層">✎ 改版</button>` : ''}<button class="hbtn${view.multi ? ' on' : ''}" data-multi="1" title="複選：選兩位以上看他們的推薦關係（只看不登錄）">☑ 複選</button>` + (view.multi ? '' : `<select class="hbtn" id="copySel" title="把另一位分析師在這天這聯盟的推薦複製過來"><option value="">⧉ 複製自…</option>${ANALYSTS.filter((a) => a !== view.analyst).map((a) => `<option>${a}</option>`).join('')}</select>`);
   }
   function renderDates() {
     const set = new Set([twToday(), view.date]);
@@ -770,7 +772,7 @@
     const { same, versus } = Core.pairMatrix(ann);
     let html = `<div class="st-sec">兩兩矩陣</div><div class="chips">${[['same', '同向時（球隊直勝率）'], ['versus', '對立時（行的人命中率）']].map(([v, t]) => `<button class="chip${st.matrix === v ? ' on' : ''}" data-st="matrix" data-v="${v}">${t}</button>`).join('')}</div>`;
     html += `<div class="mx-legend"><span>低</span><span class="bar"></span><span>高</span><span>｜淡色＝少於 ${minN} 場</span></div>`;
-    html += `<div class="mx"><div></div>${ANALYSTS.map((a) => `<div class="h">${SHORT[a]}</div>`).join('')}`;
+    html += `<div class="mx" style="--n:${ANALYSTS.length}"><div></div>${ANALYSTS.map((a) => `<div class="h">${SHORT[a]}</div>`).join('')}`;
     for (const x of ANALYSTS) {
       html += `<div class="h" style="text-align:left">${SHORT[x]}</div>`;
       let openHere = null;
@@ -902,17 +904,18 @@
   }
   function renderLottoTab(rows) {
     const settled = rows.filter((r) => r.result !== 'pending');
-    let html = '<div class="st-sec">表單 vs LOTTO</div><div class="st-help">表單＝左鍵層；LOTTO 另計＝同場已有表單的 LOTTO 腿（不進主帳）；串關腿計入＝當天沒表單時的 LOTTO／串關腿。10/13 起才分得出來。</div>';
+    let html = '<div class="st-sec">表單 vs LOTTO</div><div class="st-help">表單＝左鍵層；LOTTO 另計＝同場已有表單的 LOTTO 腿（不進主帳）；串關腿計入＝當天沒表單時的 LOTTO／串關腿；改版另計＝同日第二版表單改動的場次（不進主帳）。10/13 起才分得出來。</div>';
     html += '<div class="wrap-x"><table class="tbl"><tr><th>分析師｜分類</th><th>戰績</th><th>命中率</th><th>球隊直勝</th><th>收盤損益／ROI（張）</th></tr>';
     for (const a of ANALYSTS) {
       const groups = [
         ['表單', settled.filter((r) => r.analyst === a && r.layer === 'card')],
-        ['LOTTO 另計', settled.filter((r) => r.analyst === a && !r.countsInMain)],
+        ['LOTTO 另計', settled.filter((r) => r.analyst === a && r.layer === 'lotto' && !r.countsInMain)],
         ['串關腿計入', settled.filter((r) => r.analyst === a && r.layer === 'lotto' && r.countsInMain)],
+        ['改版另計', settled.filter((r) => r.analyst === a && r.layer === 'rev')],
       ].filter(([, l]) => l.length);
       html += groups.map(([t, l]) => anchorRow(`lt:${a}:${t}`, statCells(`${a}｜${t}`, Core.summarize(l), 0), () => drillGamesHtml(`lt:${a}:${t}`, `${a}｜${t}`, singles(l), a, '與表單關係'))).join('');
     }
-    const extra = settled.filter((r) => !r.countsInMain);
+    const extra = settled.filter((r) => r.layer === 'lotto' && !r.countsInMain);
     for (const rel of ['跟表單一樣', '同隊改盤口', '反向']) {
       const l = extra.filter((r) => r.relation === rel);
       if (l.length) html += anchorRow(`lt:rel:${rel}`, statCells(`全部｜LOTTO・${rel}`, Core.summarize(l), 0), () => drillGamesHtml(`lt:rel:${rel}`, `LOTTO・${rel}`, singles(l), 'LOTTO 腿', '與表單關係'));

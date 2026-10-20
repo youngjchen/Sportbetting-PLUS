@@ -142,7 +142,7 @@ test('acceptance: US 2026-10-13 NHL reproduces the C: tracker settlement and Sta
   const sMain = core.summarize(main);
   assert.equal(sMain.wins, fx.expected.main.wins);
   assert.equal(sMain.losses, fx.expected.main.losses);
-  for (const a of core.ANALYSTS) {
+  for (const a of Object.keys(fx.expected.analysts)) {   // 驗收資料是 10/13 的五位（LEO 10/14 起）
     const s = core.summarize(main.filter((r) => r.analyst === a));
     assert.equal(`${s.wins}-${s.losses}`, `${fx.expected.analysts[a].wins}-${fx.expected.analysts[a].losses}`, a);
   }
@@ -172,9 +172,9 @@ test('acceptance: NHL 9/29-10/13 consensus and conflict numbers match the 10/14 
   assert.equal(`${sMain.wins}-${sMain.losses}`, '221-98');
   const ann = core.annotateContexts(rows);
   const rec = (stats) => Object.fromEntries(Object.entries(stats).map(([a, s]) => [a, `${s.wins}/${s.settled}`]));
-  assert.deepEqual(rec(core.scenarioStats(ann, 'conflict')), { APE: '21/37', BOOKIE: '29/43', BANKROLL: '19/31', SNIPER: '3/3', MONEY: '26/47' });
-  assert.deepEqual(rec(core.scenarioStats(ann, 'loneDissent')), { APE: '5/13', BOOKIE: '4/6', BANKROLL: '1/2', SNIPER: '0/0', MONEY: '5/14' });
-  assert.deepEqual(rec(core.scenarioStats(ann, 'noOpposition')), { APE: '28/35', BOOKIE: '32/39', BANKROLL: '19/28', SNIPER: '2/3', MONEY: '36/45' });
+  assert.deepEqual(rec(core.scenarioStats(ann, 'conflict')), { APE: '21/37', BOOKIE: '29/43', BANKROLL: '19/31', SNIPER: '3/3', MONEY: '26/47', LEO: '0/0' });
+  assert.deepEqual(rec(core.scenarioStats(ann, 'loneDissent')), { APE: '5/13', BOOKIE: '4/6', BANKROLL: '1/2', SNIPER: '0/0', MONEY: '5/14', LEO: '0/0' });
+  assert.deepEqual(rec(core.scenarioStats(ann, 'noOpposition')), { APE: '28/35', BOOKIE: '32/39', BANKROLL: '19/28', SNIPER: '2/3', MONEY: '36/45', LEO: '0/0' });
   const { same, versus } = core.pairMatrix(ann);
   assert.deepEqual([same['APE+BOOKIE'].games, same['APE+BOOKIE'].dirWins], [45, 34]);
   assert.deepEqual([same['BOOKIE+MONEY'].games, same['BOOKIE+MONEY'].dirWins], [47, 37]);
@@ -209,5 +209,5 @@ test('revision layer (改版另計) never counts in the main ledger, even withou
   assert.equal(by('G1', 'rev').relation, '反向');
   assert.equal(by('G2', 'rev').countsInMain, false);
   assert.equal(by('G2', 'lotto').countsInMain, true);   // 沒表單的 LOTTO 照舊算主帳
-  assert.ok(core.WATCH.includes('LEO') && !core.ANALYSTS.includes('LEO'));
+  assert.ok(core.ANALYSTS.includes('LEO') && !core.WATCH.includes('LEO') && core.REVISERS.includes('LEO'));
 });
