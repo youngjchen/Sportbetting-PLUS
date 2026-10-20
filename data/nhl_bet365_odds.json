@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-20T19:03:31.093Z",
+ "updated": "2026-10-20T19:19:49.751Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -1105,12 +1105,12 @@
      {
       "name": "COL Avalanche",
       "side": "away",
-      "odds": 1.96
+      "odds": 1.98
      },
      {
       "name": "NJ Devils",
       "side": "home",
-      "odds": 1.79
+      "odds": 1.78
      }
     ]
    },
@@ -1133,12 +1133,50 @@
       "name": "NJ Devils",
       "side": "home",
       "line": -1.5,
-      "odds": 3.05
+      "odds": 3
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-20T19:19:49.751Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "COL Avalanche",
+        "side": "away",
+        "odds": 1.98
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "odds": 1.78
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "COL Avalanche",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.37
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-20T18:43:25.989Z",
      "provider": "bet365-official",
@@ -9428,24 +9466,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "TB Lightning",
       "side": "away",
-      "line": -1.5,
-      "odds": 3.3
+      "line": 1.5,
+      "odds": 1.34
      },
      {
       "name": "VGS Golden Knights",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.32
+      "line": -1.5,
+      "odds": 3.15
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-20T19:19:49.751Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "TB Lightning",
+        "side": "away",
+        "odds": 1.86
+       },
+       {
+        "name": "VGS Golden Knights",
+        "side": "home",
+        "odds": 1.87
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "TB Lightning",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.34
+       },
+       {
+        "name": "VGS Golden Knights",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.15
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-20T19:03:31.093Z",
      "provider": "bet365-official",
@@ -10474,6 +10550,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-10-20T19:19:49.751Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    },
     {
      "at": "2026-10-20T12:49:04.358Z",
      "type": "favorite-flip",
