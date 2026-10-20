@@ -248,3 +248,19 @@ test('keeps collecting after Stake hour-floored time until the official first pi
   assert.equal(Object.keys((await run(Date.parse('2026-10-04T09:10:00Z'), 'live')).matches).length, 0);
   assert.equal(Object.keys((await run(Date.parse('2026-10-04T09:31:00Z'))).matches).length, 0);
 });
+
+test('API parser keeps every full-game run line so a one-run main line can fall back to the Stake 1.5 alternate', () => {
+  const groups = [{ name: 'main', markets: [
+    [{ name: 'Handicap (Incl. Extra Innings)', status: 'active', specifiers: 'hcp=-1', outcomes: [
+      { name: 'Yokohama Dena Baystars (1)', odds: 1.71, active: true },
+      { name: 'Hanshin Tigers (-1)', odds: 2.14, active: true },
+    ] }],
+    [{ name: 'Handicap (Incl. Extra Innings)', status: 'active', specifiers: 'hcp=-1.5', outcomes: [
+      { name: 'Yokohama Dena Baystars (1.5)', odds: 1.5, active: true },
+      { name: 'Hanshin Tigers (-1.5)', odds: 2.55, active: true },
+    ] }],
+  ] }];
+  const markets = parseStakeApiMarkets(groups, fixture());
+  assert.equal(markets.hd.line, 1);
+  assert.deepEqual(markets.hdLines.map((x) => [x.favorite, x.line, x.away, x.home]), [['away', 1, 2.14, 1.71], ['away', 1.5, 2.55, 1.5]]);
+});

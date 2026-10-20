@@ -83,7 +83,7 @@ test('same-team doubleheaders are matched by the nearest official start time', (
 test('MLB raw one-run line keeps Stake direction but takes only BetExplorer Stake.com 1.5 prices', () => {
   const fallback = {
     bookmaker: 'Stake.com',
-    markets: { hd: { active: { line: 1.5, favorite: 'home', away: 1.66, home: 2.22 } } },
+    markets: { hd: { active: { line: 1.5, favorite: 'away', away: 2.22, home: 1.66 } } },
   };
   const normalized = normalizeBaseballMarkets('MLB', marketInput({
     hd: { favorite: 'away', line: 1, away: 1.5, home: 2.4 },
@@ -92,8 +92,45 @@ test('MLB raw one-run line keeps Stake direction but takes only BetExplorer Stak
   assert.equal(normalized.favorite, 'away');
   assert.equal(normalized.rawLine, 1);
   assert.equal(normalized.canonicalLine, 1.5);
-  assert.deepEqual(normalized.handicapOdds, { away: 1.66, home: 2.22 });
+  assert.deepEqual(normalized.handicapOdds, { away: 2.22, home: 1.66 });
   assert.equal(normalized.sources.handicapOdds, 'betexplorer-stake-row');
+});
+
+test('one-run line: BetExplorer 1.5 laid by the other team is a different market and is not used', () => {
+  const normalized = normalizeBaseballMarkets('MLB', marketInput({
+    hd: { favorite: 'away', line: 1, away: 1.5, home: 2.4 },
+  }), { bookmaker: 'Stake.com', markets: { hd: { active: { line: 1.5, favorite: 'home', away: 1.66, home: 2.22 } } } });
+
+  assert.equal(normalized.canonicalLine, 1.5);
+  assert.equal(normalized.handicapOdds, null);
+  assert.equal(normalized.partial, true);
+});
+
+test('KBO one-run line is treated like MLB and prefers Stake\'s own same-direction 1.5 alternate', () => {
+  const normalized = normalizeBaseballMarkets('KBO', marketInput({
+    hd: { favorite: 'home', line: 1, away: 1.71, home: 2.14 },
+    hdLines: [
+      { favorite: 'home', line: 1, away: 1.71, home: 2.14 },
+      { favorite: 'home', line: 1.5, away: 1.5, home: 2.55 },
+      { favorite: 'away', line: 1.5, away: 3.4, home: 1.28 },
+    ],
+  }), { bookmaker: 'Stake.com', markets: { hd: { active: { line: 1, favorite: 'home', away: 1.71, home: 2.14 } } } });
+
+  assert.equal(normalized.favorite, 'home');
+  assert.equal(normalized.rawLine, 1);
+  assert.equal(normalized.canonicalLine, 1.5);
+  assert.deepEqual(normalized.handicapOdds, { away: 1.5, home: 2.55 });
+  assert.equal(normalized.sources.handicapOdds, 'stake-official-alt');
+});
+
+test('a real line move to 2.5 is kept as Stake\'s main line', () => {
+  const normalized = normalizeBaseballMarkets('KBO', marketInput({
+    hd: { favorite: 'home', line: 2.5, away: 1.62, home: 2.3 },
+  }), null);
+
+  assert.equal(normalized.canonicalLine, 2.5);
+  assert.deepEqual(normalized.handicapOdds, { away: 1.62, home: 2.3 });
+  assert.equal(normalized.sources.handicapOdds, 'stake-official');
 });
 
 test('MLB one-run line never substitutes Bet365 or a non-Stake fallback row', () => {

@@ -128,11 +128,13 @@ function validOddsPair(value, left, right) {
   return a != null && b != null && a > 1 && b > 1 ? { [left]: a, [right]: b } : null;
 }
 
-function betExplorerStakeHandicap(game) {
+// 備援：BetExplorer 上 Stake.com 那一列的 ±1.5；讓分方必須跟 Stake 主盤同一隊，否則那組價格是另一個方向的盤
+function betExplorerStakeHandicap(game, favorite) {
   if (!game || String(game.bookmaker || '') !== 'Stake.com') return null;
   const market = game.markets && game.markets.hd;
   const snapshot = market && (market.active || market.close || market.open);
   if (!snapshot || absoluteOrNull(snapshot.line) !== 1.5) return null;
+  if (favorite && (snapshot.favorite === 'away' || snapshot.favorite === 'home') && snapshot.favorite !== favorite) return null;
   return validOddsPair(snapshot, 'away', 'home');
 }
 
@@ -141,13 +143,21 @@ function normalizeBaseballMarkets(leagueValue, markets, fallbackGame) {
   const hd = markets && markets.hd;
   const favorite = hd && (hd.favorite === 'away' || hd.favorite === 'home') ? hd.favorite : null;
   const rawLine = absoluteOrNull(hd && hd.line);
-  const isMlbOne = league === 'MLB' && rawLine === 1;
+  // Stake 有時把主盤改成 ±1（四聯盟都會；2026-10-20 使用者規格）：不採 ±1，只用它的讓分方，
+  // 價格改抓 ±1.5——先找 Stake 自己同方向的 ±1.5 另開盤，沒有才用 BetExplorer 的 Stake.com 列。±2.5 以上照 Stake 主盤。
+  const isOneRun = rawLine === 1;
   let handicapOdds = validOddsPair(hd, 'away', 'home');
   let handicapSource = handicapOdds ? 'stake-official' : null;
-  const canonicalLine = isMlbOne ? 1.5 : rawLine;
-  if (isMlbOne) {
-    handicapOdds = betExplorerStakeHandicap(fallbackGame);
-    handicapSource = handicapOdds ? 'betexplorer-stake-row' : null;
+  const canonicalLine = isOneRun ? 1.5 : rawLine;
+  if (isOneRun) {
+    const alt = (Array.isArray(markets && markets.hdLines) ? markets.hdLines : [])
+      .find((line) => line && absoluteOrNull(line.line) === 1.5 && line.favorite === favorite);
+    handicapOdds = alt ? validOddsPair(alt, 'away', 'home') : null;
+    handicapSource = handicapOdds ? 'stake-official-alt' : null;
+    if (!handicapOdds) {
+      handicapOdds = betExplorerStakeHandicap(fallbackGame, favorite);
+      handicapSource = handicapOdds ? 'betexplorer-stake-row' : null;
+    }
   }
   const totalLine = absoluteOrNull(markets && markets.total && markets.total.line);
   const totalOdds = validOddsPair(markets && markets.total, 'over', 'under');

@@ -141,8 +141,10 @@ function parseStakeApiMarkets(groups, fixture) {
   const ml = teamOdds(winner, teams);
   if (ml) output.ml = ml;
 
-  const hd = balancedHandicap(handicapMarkets.map((market) => handicapCandidate(market, teams)));
+  const hdLines = handicapMarkets.map((market) => handicapCandidate(market, teams)).filter(Boolean);
+  const hd = balancedHandicap(hdLines);
   if (hd) output.hd = hd;
+  if (hdLines.length) output.hdLines = hdLines;   // 全部讓分線：主盤變 ±1 時找同方向的 ±1.5
 
   const totalCandidates = totalMarkets.map((market) => {
     let over = null;
