@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-21T04:31:18.028Z",
+  "generatedAt": "2026-10-21T04:36:18.124Z",
   "officialScheduleCount": 4,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-21T04:31:18.028Z",
-      "lastAttemptAt": "2026-10-21T04:31:18.028Z",
+      "lastSuccessAt": "2026-10-21T04:36:18.124Z",
+      "lastAttemptAt": "2026-10-21T04:36:18.124Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-21T04:31:18.028Z",
-      "lastAttemptAt": "2026-10-21T04:31:18.028Z",
+      "lastSuccessAt": "2026-10-21T04:36:18.124Z",
+      "lastAttemptAt": "2026-10-21T04:36:18.124Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-21T04:31:18.028Z",
-      "lastAttemptAt": "2026-10-21T04:31:18.028Z",
+      "lastSuccessAt": "2026-10-21T04:36:18.124Z",
+      "lastAttemptAt": "2026-10-21T04:36:18.124Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-21T04:31:18.028Z",
-      "lastAttemptAt": "2026-10-21T04:31:18.028Z",
+      "lastSuccessAt": "2026-10-21T04:36:18.124Z",
+      "lastAttemptAt": "2026-10-21T04:36:18.124Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -16967,16 +16967,16 @@
       "fixtureId": "6d7f3997-4d64-41c7-9aa1-aa1d27b8b040",
       "slug": "47003767-ctbc-brothers-wei-chuan-dragons",
       "sourceUrl": "https://stake.com/sports/baseball/chinese-taipei/cpbl/47003767-ctbc-brothers-wei-chuan-dragons",
-      "favorite": "away",
+      "favorite": "home",
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 2.6,
-        "home": 1.44
+        "away": 1.44,
+        "home": 2.6
       },
       "moneyline": {
-        "away": 1.92,
-        "home": 1.79
+        "away": 1.97,
+        "home": 1.75
       },
       "total": {
         "line": 6.5,
@@ -16990,10 +16990,16 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-21T04:31:18.028Z",
+      "observedAt": "2026-10-21T04:36:18.124Z",
       "frozenAt": null,
-      "favoriteFlipCount": 0,
-      "favoriteTransitions": [],
+      "favoriteFlipCount": 1,
+      "favoriteTransitions": [
+        {
+          "at": "2026-10-21T04:36:18.124Z",
+          "from": "away",
+          "to": "home"
+        }
+      ],
       "history": [
         {
           "observedAt": "2026-10-20T13:54:17.955Z",
@@ -17194,6 +17200,32 @@
           "moneyline": {
             "away": 1.92,
             "home": 1.79
+          },
+          "total": {
+            "line": 6.5,
+            "over": 1.71,
+            "under": 2.02
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        },
+        {
+          "observedAt": "2026-10-21T04:36:18.124Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.44,
+            "home": 2.6
+          },
+          "moneyline": {
+            "away": 1.97,
+            "home": 1.75
           },
           "total": {
             "line": 6.5,
