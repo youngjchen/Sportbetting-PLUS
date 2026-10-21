@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-21T19:03:12.739Z",
+ "updated": "2026-10-21T19:13:23.932Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -3659,12 +3659,12 @@
      {
       "name": "CAR Hurricanes",
       "side": "away",
-      "odds": 1.84
+      "odds": 1.83
      },
      {
       "name": "EDM Oilers",
       "side": "home",
-      "odds": 1.89
+      "odds": 1.91
      }
     ]
    },
@@ -3675,24 +3675,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "CAR Hurricanes",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3.1
      },
      {
       "name": "EDM Oilers",
       "side": "home",
-      "line": -1.5,
-      "odds": 3.05
+      "line": 1.5,
+      "odds": 1.35
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-21T19:13:23.932Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "CAR Hurricanes",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "EDM Oilers",
+        "side": "home",
+        "odds": 1.91
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "CAR Hurricanes",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.1
+       },
+       {
+        "name": "EDM Oilers",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.35
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-21T17:28:12.177Z",
      "provider": "bet365-official",
@@ -3732,7 +3770,14 @@
      }
     }
    ],
-   "events": []
+   "events": [
+    {
+     "at": "2026-10-21T19:13:23.932Z",
+     "type": "favorite-flip",
+     "from": "home",
+     "to": "away"
+    }
+   ]
   },
   "1792717620000|MIN Wild|CGY Flames": {
    "startTime": 1792717620000,
