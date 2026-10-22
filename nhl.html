@@ -1629,7 +1629,8 @@ function nhlSnapHasData(s){ return !!(s && (s.relation || s.mlFav || Number(s.st
 function nhlSnapScore(s){ if(!s) return 0; return (s.relation?4:0) + (s.mlFav?2:0) + ((Number(s.stakeSwaps)>0||Number(s.bet365Swaps)>0)?1:0); }
 function nhlEvidenceFromSnap(s){
   return { relation: s.relation!==undefined ? (s.relation||null) : (s.flip ? "diverged" : null),
-           stakeSwaps: Number(s.stakeSwaps)||0, bet365Swaps: Number(s.bet365Swaps)||0, mlFav: s.mlFav||null };
+           stakeSwaps: Number(s.stakeSwaps)||0, bet365Swaps: Number(s.bet365Swaps)||0,
+           mlFav: (s.mlFav==="away"||s.mlFav==="home") ? s.mlFav : null };             // "even"＝同賠無熱門：不算背離、熱門勝不計
 }
 // 即時（資料檔仍有這場時）算出 Stake × BET365 的讓分關係、各自換邊次數、獨贏熱門；沒有任何平台資料時回傳 null。
 function nhlLiveSnap(g){
@@ -1644,7 +1645,8 @@ function nhlLiveSnap(g){
     bswaps: _hist ? _hist.stake.swapCount+_hist.bet365.swapCount : (_i ? (_i.flips||0) : 0), lsw: _l||0,
     stakeSwaps:_hist?_hist.stake.swapCount:0, bet365Swaps:_hist?_hist.bet365.swapCount:0,
     flipState:_hist?_hist.classification:"none", relation:_hist?_hist.currentRelation:null,
-    mlFav: (_ma&&_mh&&Number.isFinite(Number(_ma.odds))&&Number.isFinite(Number(_mh.odds))) ? (Number(_ma.odds) < Number(_mh.odds) ? "away" : "home") : null
+    // 兩隊獨贏同賠＝"even"（沒有熱門）：仍算有賠率、完整度不降，才蓋得掉先前誤記成主隊的快照（2026-10-23 國王@島人 1.89/1.89 被判背離）
+    mlFav: (_ma&&_mh&&Number.isFinite(Number(_ma.odds))&&Number.isFinite(Number(_mh.odds))) ? (Number(_ma.odds) < Number(_mh.odds) ? "away" : Number(_ma.odds) > Number(_mh.odds) ? "home" : "even") : null
   };
   return nhlSnapHasData(snap) ? snap : null;
 }
