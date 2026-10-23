@@ -464,7 +464,7 @@
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
-        <button id="clearOldDates">🧹 清除已結算的舊日期</button>
+        <button id="clearOldDates">🧹 清除沒有紀錄的舊日期</button>
         <div class="sep"></div>
         <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
       </div>
@@ -973,6 +973,40 @@ const NHL_ANOM_RESTORE_20261021 = [
     if(touched) n++;
   }
   if(n){ bumpGamesVersion(); saveDoc(doc); console.info(`[冰球] 異常場救援：補回 ${n} 場`); }
+})();
+// ===== 一次性資料救援：冰球卡片（2026-10-24 使用者回報異常統計又全不見）=====
+// 真因：「🧹 清除已結算的舊日期」篩選條件恆真，把今天以前的卡片整批刪掉（異常快照、手動顛倒／收斂標記、燈號都存在卡片上；
+// 比賽紀錄 doc.games 沒事），之後資料檔還有的 10/17 以後比賽被自動結算重建成空卡。10/21 那次也是同一顆按鈕。
+// 完整的一份＝10/24 03:09 開頁時的自動快照，已在使用者 Chrome 另存到 NHL_RESCUE_KEY_20261024（沒有這把鑰匙的裝置不動）。
+// 只補缺的：整天不見補整天、卡不見補卡；同一張卡只補空欄位，燈號只在現在 0 燈且沒下注時補，異常快照只在更完整時換，手動結算優先。
+// 補完在 doc 記號，之後使用者自己的刪改不會再被補回；若記號連同資料又被舊分頁蓋掉，下次開頁會再補一次。
+const NHL_RESCUE_KEY_20261024 = DOC_KEY+"_rescue_20261024";
+(function restoreNhlBoards20261024(){
+  if(doc.nhlRescue20261024) return;
+  let src = null; try{ const j = JSON.parse(localStorage.getItem(NHL_RESCUE_KEY_20261024)); src = j && j.doc; }catch(_){}
+  if(!src || !src.boards) return;
+  const clone = (x)=> JSON.parse(JSON.stringify(x));
+  const blank = (v)=> v==null || v==="";
+  const snapScore = (x)=> !x ? 0 : (x.relation?4:0) + (x.mlFav?2:0) + ((Number(x.stakeSwaps)>0||Number(x.bet365Swaps)>0)?1:0);
+  let days = 0, cards = 0, fields = 0;
+  for(const d of Object.keys(src.boards)){
+    const sb = src.boards[d]; if(!sb || !Array.isArray(sb.items)) continue;
+    if(!doc.boards[d]){ doc.boards[d] = clone(sb); days++; cards += sb.items.length; continue; }
+    const b = doc.boards[d]; b.items = b.items || [];
+    for(const si of sb.items){
+      const it = b.items.find(x=>x.id===si.id);
+      if(!it){ b.items.push(clone(si)); cards++; continue; }
+      for(const k of Object.keys(si)){
+        const v = si[k]; if(blank(v)) continue;
+        if(OPT_KEYS.includes(k)){ const c = it[k]; if((!c || (!c.lights && !c.bet)) && (v.lights || v.bet)){ it[k] = clone(v); fields++; } }
+        else if(k==="anomSnap" || k==="anomLive"){ if(snapScore(v) > snapScore(it[k])){ it[k] = clone(v); fields++; } }
+        else if(k==="settled"){ if(!it.settled || (v.manual && !it.settled.manual)){ it.settled = clone(v); fields++; } }
+        else if(blank(it[k])){ it[k] = clone(v); fields++; }
+      }
+    }
+  }
+  doc.nhlRescue20261024 = true; saveDoc(doc);
+  console.info(`[冰球] 卡片救援：補回 ${days} 天、${cards} 張卡、${fields} 個欄位`);
 })();
 
 // ===== Stake 官方主軸／Bet365 官方備援軸 =====
@@ -2738,11 +2772,15 @@ $("#restoreAutoBtn").onclick=()=>{
     snapshot(); doc=j.doc; if(!doc.games) doc.games=[]; bumpGamesVersion(); saveDoc(doc); render();
   }catch(err){ alert(String(err.message||err)); } closeMore();
 };
+// 只清「完全沒紀錄」的舊日期：卡片上有燈、下注、結算、異常快照、手動標記或手填欄位就整天保留。
+// （2026-10-24：原條件 every(x=>!x.settled||x.settled) 恆真，10/21、10/24 兩次把異常統計、手動標記、燈號回顧整批刪掉）
+const cardHasRecord = (it)=> Object.keys(it).some(k=> k!=="id" && k!=="league" &&
+  (OPT_KEYS.includes(k) ? !!(it[k] && (it[k].lights || it[k].bet)) : (it[k]!=null && it[k]!=="")));
 $("#clearOldDates").onclick=()=>{
   const cutoff=twOffset(0);
-  const del=Object.keys(doc.boards).filter(d=>d<cutoff && (doc.boards[d].items||[]).every(x=>!x.settled||x.settled));
-  if(!del.length){ alert("沒有可清的舊日期。"); return; }
-  if(!confirm(`清除 ${del.length} 個舊日期的卡片狀態（統計資料 doc.games 不動）？`)) return;
+  const del=Object.keys(doc.boards).filter(d=>d<cutoff && !(doc.boards[d].items||[]).some(cardHasRecord));
+  if(!del.length){ alert("沒有可清的舊日期（有結算、燈號或異常紀錄的日期一律保留）。"); closeMore(); return; }
+  if(!confirm(`清除 ${del.length} 個沒有任何紀錄的舊日期？（有結算、燈號或異常紀錄的日期一律保留）`)) return;
   snapshot(); del.forEach(d=>delete doc.boards[d]); saveDoc(doc); render(); closeMore();
 };
 // ===== 燈號回顧（跨日命中率;燈數桶/各盤口/聯盟,資料自累積） =====

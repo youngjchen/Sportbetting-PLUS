@@ -473,7 +473,7 @@
         <button id="exportDataBtn">💾 匯出備份檔</button>
         <button id="importDataBtn">📂 匯入備份檔</button>
         <button id="restoreAutoBtn">↺ 還原自動備份</button>
-        <button id="clearOldDates">🧹 清除已結算的舊日期</button>
+        <button id="clearOldDates">🧹 清除沒有紀錄的舊日期</button>
         <div class="sep"></div>
         <button id="undoBtn" disabled>↶ 復原 (⌘Z)</button>
       </div>
@@ -2541,11 +2541,15 @@ $("#restoreAutoBtn").onclick=()=>{
     snapshot(); doc=j.doc; if(!doc.games) doc.games=[]; bumpGamesVersion(); saveDoc(doc); render();
   }catch(err){ alert(String(err.message||err)); } closeMore();
 };
+// 只清「完全沒紀錄」的舊日期：卡片上有燈、下注、結算、盤口快照或手填欄位就整天保留。
+// （2026-10-24：原條件 every(x=>!x.settled||x.settled) 恆真，冰球同款按鈕兩次把異常統計整批刪掉）
+const cardHasRecord = (it)=> Object.keys(it).some(k=> k!=="id" && k!=="league" &&
+  (OPT_KEYS.includes(k) ? !!(it[k] && (it[k].lights || it[k].bet)) : (it[k]!=null && it[k]!=="")));
 $("#clearOldDates").onclick=()=>{
   const cutoff=twOffset(0);
-  const del=Object.keys(doc.boards).filter(d=>d<cutoff && (doc.boards[d].items||[]).every(x=>!x.settled||x.settled));
-  if(!del.length){ alert("沒有可清的舊日期。"); return; }
-  if(!confirm(`清除 ${del.length} 個舊日期的卡片狀態（統計資料 doc.games 不動）？`)) return;
+  const del=Object.keys(doc.boards).filter(d=>d<cutoff && !(doc.boards[d].items||[]).some(cardHasRecord));
+  if(!del.length){ alert("沒有可清的舊日期（有結算、燈號或盤口紀錄的日期一律保留）。"); closeMore(); return; }
+  if(!confirm(`清除 ${del.length} 個沒有任何紀錄的舊日期？（有結算、燈號或盤口紀錄的日期一律保留）`)) return;
   snapshot(); del.forEach(d=>delete doc.boards[d]); saveDoc(doc); render(); closeMore();
 };
 // ===== 燈號回顧（跨日命中率;燈數桶/各盤口/聯盟,資料自累積） =====
