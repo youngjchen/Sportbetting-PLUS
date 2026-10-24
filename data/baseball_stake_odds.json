@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-24T13:33:11.743Z",
+  "generatedAt": "2026-10-24T13:38:11.662Z",
   "officialScheduleCount": 7,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T13:33:11.743Z",
-      "lastAttemptAt": "2026-10-24T13:33:11.743Z",
+      "lastSuccessAt": "2026-10-24T13:38:11.662Z",
+      "lastAttemptAt": "2026-10-24T13:38:11.662Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T13:33:11.743Z",
-      "lastAttemptAt": "2026-10-24T13:33:11.743Z",
+      "lastSuccessAt": "2026-10-24T13:38:11.662Z",
+      "lastAttemptAt": "2026-10-24T13:38:11.662Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T13:33:11.743Z",
-      "lastAttemptAt": "2026-10-24T13:33:11.743Z",
+      "lastSuccessAt": "2026-10-24T13:38:11.662Z",
+      "lastAttemptAt": "2026-10-24T13:38:11.662Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "partial",
-      "lastSuccessAt": "2026-10-24T13:33:11.743Z",
-      "lastAttemptAt": "2026-10-24T13:33:11.743Z",
+      "lastSuccessAt": "2026-10-24T13:38:11.662Z",
+      "lastAttemptAt": "2026-10-24T13:38:11.662Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -7411,21 +7411,21 @@
       "fixtureId": "1740ef1d-8607-4c10-a76e-55e4a2683093",
       "slug": "46951947-national-league-champion-american-league-champion",
       "sourceUrl": "https://stake.com/sports/baseball/usa/mlb/46951947-national-league-champion-american-league-champion",
-      "favorite": "home",
+      "favorite": "away",
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 1.45,
-        "home": 2.75
+        "away": 2.75,
+        "home": 1.45
       },
       "moneyline": {
-        "away": 2.01,
-        "home": 1.81
+        "away": 2,
+        "home": 1.82
       },
       "total": {
         "line": 6.5,
         "over": 1.91,
-        "under": 1.86
+        "under": 1.87
       },
       "sources": {
         "direction": "stake-official",
@@ -7434,10 +7434,16 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-24T13:33:01.812Z",
+      "observedAt": "2026-10-24T13:38:03.199Z",
       "frozenAt": null,
-      "favoriteFlipCount": 0,
-      "favoriteTransitions": [],
+      "favoriteFlipCount": 1,
+      "favoriteTransitions": [
+        {
+          "at": "2026-10-24T13:38:03.199Z",
+          "from": "home",
+          "to": "away"
+        }
+      ],
       "history": [
         {
           "observedAt": "2026-10-24T03:25:18.860Z",
@@ -7795,6 +7801,32 @@
             "moneyline": "stake-official"
           },
           "partial": false
+        },
+        {
+          "observedAt": "2026-10-24T13:38:03.199Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.75,
+            "home": 1.45
+          },
+          "moneyline": {
+            "away": 2,
+            "home": 1.82
+          },
+          "total": {
+            "line": 6.5,
+            "over": 1.91,
+            "under": 1.87
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -7830,7 +7862,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-24T13:33:02.722Z",
+      "observedAt": "2026-10-24T13:38:03.638Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -7992,7 +8024,7 @@
         "moneyline": "stake-official"
       },
       "partial": true,
-      "observedAt": "2026-10-24T13:33:11.743Z",
+      "observedAt": "2026-10-24T13:38:11.662Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
