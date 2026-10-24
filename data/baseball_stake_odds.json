@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-24T14:43:14.685Z",
+  "generatedAt": "2026-10-24T14:48:19.497Z",
   "officialScheduleCount": 6,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T14:43:14.685Z",
-      "lastAttemptAt": "2026-10-24T14:43:14.685Z",
+      "lastSuccessAt": "2026-10-24T14:48:19.497Z",
+      "lastAttemptAt": "2026-10-24T14:48:19.497Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -19,14 +19,14 @@
       }
     },
     "NPB": {
-      "status": "ok",
-      "lastSuccessAt": "2026-10-24T14:43:14.685Z",
-      "lastAttemptAt": "2026-10-24T14:43:14.685Z",
+      "status": "partial",
+      "lastSuccessAt": "2026-10-24T14:48:19.497Z",
+      "lastAttemptAt": "2026-10-24T14:48:19.497Z",
       "error": null,
-      "matched": 0,
+      "matched": 1,
       "health": {
-        "discovered": 0,
-        "matched": 0,
+        "discovered": 1,
+        "matched": 1,
         "unmatched": 0,
         "shiftedStarts": 0,
         "failed": 0,
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T14:43:14.685Z",
-      "lastAttemptAt": "2026-10-24T14:43:14.685Z",
+      "lastSuccessAt": "2026-10-24T14:48:19.497Z",
+      "lastAttemptAt": "2026-10-24T14:48:19.497Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "partial",
-      "lastSuccessAt": "2026-10-24T14:43:14.685Z",
-      "lastAttemptAt": "2026-10-24T14:43:14.685Z",
+      "lastSuccessAt": "2026-10-24T14:48:19.497Z",
+      "lastAttemptAt": "2026-10-24T14:48:19.497Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -7434,7 +7434,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-24T14:43:03.417Z",
+      "observedAt": "2026-10-24T14:48:02.268Z",
       "frozenAt": null,
       "favoriteFlipCount": 1,
       "favoriteTransitions": [
@@ -7862,7 +7862,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-24T14:43:04.472Z",
+      "observedAt": "2026-10-24T14:48:12.419Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -8024,7 +8024,7 @@
         "moneyline": "stake-official"
       },
       "partial": true,
-      "observedAt": "2026-10-24T14:43:14.685Z",
+      "observedAt": "2026-10-24T14:48:19.497Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -8038,6 +8038,57 @@
           "moneyline": {
             "away": 2.09,
             "home": 1.66
+          },
+          "total": null,
+          "sources": {
+            "direction": null,
+            "handicapOdds": null,
+            "total": null,
+            "moneyline": "stake-official"
+          },
+          "partial": true
+        }
+      ]
+    },
+    "NPB_20261025_Hawks@DeNA_1700": {
+      "league": "NPB",
+      "officialId": "NPB_20261025_Hawks@DeNA_1700",
+      "scheduledStart": "2026-10-25T09:00:00.000Z",
+      "away": "軟銀",
+      "home": "橫濱",
+      "fixtureId": "9b325b58-da06-4cba-aadd-7231d2aa7f14",
+      "slug": "47004614-yokohama-dena-baystars-fukuoka-hawks",
+      "sourceUrl": "https://stake.com/sports/baseball/japan/npb/47004614-yokohama-dena-baystars-fukuoka-hawks",
+      "favorite": null,
+      "rawLine": null,
+      "canonicalLine": null,
+      "handicapOdds": null,
+      "moneyline": {
+        "away": 1.55,
+        "home": 2.41
+      },
+      "total": null,
+      "sources": {
+        "direction": null,
+        "handicapOdds": null,
+        "total": null,
+        "moneyline": "stake-official"
+      },
+      "partial": true,
+      "observedAt": "2026-10-24T14:48:12.006Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-24T14:48:12.006Z",
+          "favorite": null,
+          "rawLine": null,
+          "canonicalLine": null,
+          "handicapOdds": null,
+          "moneyline": {
+            "away": 1.55,
+            "home": 2.41
           },
           "total": null,
           "sources": {
