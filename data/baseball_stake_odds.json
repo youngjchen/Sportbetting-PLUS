@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-24T16:23:13.399Z",
+  "generatedAt": "2026-10-24T16:38:04.098Z",
   "officialScheduleCount": 8,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T16:23:13.399Z",
-      "lastAttemptAt": "2026-10-24T16:23:13.399Z",
+      "lastSuccessAt": "2026-10-24T16:38:04.098Z",
+      "lastAttemptAt": "2026-10-24T16:38:04.098Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T16:23:13.399Z",
-      "lastAttemptAt": "2026-10-24T16:23:13.399Z",
+      "lastSuccessAt": "2026-10-24T16:38:04.098Z",
+      "lastAttemptAt": "2026-10-24T16:38:04.098Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-24T16:23:13.399Z",
-      "lastAttemptAt": "2026-10-24T16:23:13.399Z",
+      "lastSuccessAt": "2026-10-24T16:38:04.098Z",
+      "lastAttemptAt": "2026-10-24T16:38:04.098Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -49,9 +49,9 @@
       }
     },
     "CPBL": {
-      "status": "partial",
-      "lastSuccessAt": "2026-10-24T16:23:13.399Z",
-      "lastAttemptAt": "2026-10-24T16:23:13.399Z",
+      "status": "ok",
+      "lastSuccessAt": "2026-10-24T16:38:04.098Z",
+      "lastAttemptAt": "2026-10-24T16:38:04.098Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -7434,7 +7434,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-24T16:23:03.135Z",
+      "observedAt": "2026-10-24T16:38:02.636Z",
       "frozenAt": null,
       "favoriteFlipCount": 1,
       "favoriteTransitions": [
@@ -7862,7 +7862,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-24T16:23:03.797Z",
+      "observedAt": "2026-10-24T16:38:03.781Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -8060,23 +8060,30 @@
       "fixtureId": "39bd5590-e0f1-46ae-b140-1c9d72ffe48a",
       "slug": "1792919100000-wei-chuan-dragons-ctbc-brothers",
       "sourceUrl": "https://stake.com/sports/baseball/chinese-taipei/cpbl/1792919100000-wei-chuan-dragons-ctbc-brothers",
-      "favorite": null,
-      "rawLine": null,
-      "canonicalLine": null,
-      "handicapOdds": null,
-      "moneyline": {
-        "away": 2.07,
-        "home": 1.67
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.43,
+        "home": 2.6
       },
-      "total": null,
+      "moneyline": {
+        "away": 2,
+        "home": 1.72
+      },
+      "total": {
+        "line": 6.5,
+        "over": 2,
+        "under": 1.72
+      },
       "sources": {
-        "direction": null,
-        "handicapOdds": null,
-        "total": null,
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
         "moneyline": "stake-official"
       },
-      "partial": true,
-      "observedAt": "2026-10-24T16:23:13.399Z",
+      "partial": false,
+      "observedAt": "2026-10-24T16:38:04.098Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -8137,6 +8144,32 @@
             "moneyline": "stake-official"
           },
           "partial": true
+        },
+        {
+          "observedAt": "2026-10-24T16:38:04.098Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.43,
+            "home": 2.6
+          },
+          "moneyline": {
+            "away": 2,
+            "home": 1.72
+          },
+          "total": {
+            "line": 6.5,
+            "over": 2,
+            "under": 1.72
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -8172,7 +8205,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-24T16:23:03.478Z",
+      "observedAt": "2026-10-24T16:38:03.465Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
