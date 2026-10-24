@@ -2,12 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-24T07:30:14+08:00",
+  "updatedAt": "2026-10-24T12:45:41+08:00",
   "health": {
-    "scheduled": 1,
     "discovered": 1,
     "succeeded": 1,
     "failed": 0,
+    "added": 0,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -185798,15 +185799,15 @@
       "bet365": {
         "side": "home",
         "line": 1.5,
-        "at": "2026-10-24T06:39:00+08:00",
+        "at": "2026-10-24T07:16:00+08:00",
         "flipEver": false,
         "ambiguous": false,
         "struck": [],
         "odds": {
-          "home": 2.21,
+          "home": 2.2,
           "away": 1.62
         },
-        "observedAt": "2026-10-24T07:00:09+08:00"
+        "observedAt": "2026-10-24T12:45:41+08:00"
       },
       "eventId": "WtTquPP9",
       "league": "mlb",
@@ -185816,7 +185817,7 @@
       "awayTeam": "光芒",
       "homeTeam": "釀酒人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/milwaukee-brewers-tampa-bay-rays/WtTquPP9/",
-      "observedAt": "2026-10-24T07:00:09+08:00",
+      "observedAt": "2026-10-24T12:45:41+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -185826,9 +185827,15 @@
             "away": 2.26
           },
           "active": {
-            "at": "2026-10-24T07:00:09+08:00",
-            "home": 1.52,
-            "away": 2.55
+            "at": "2026-10-24T12:45:41+08:00",
+            "home": 1.53,
+            "away": 2.6
+          },
+          "close": {
+            "at": "2026-10-24T07:05:00+08:00",
+            "home": 1.53,
+            "away": 2.6,
+            "final": true
           }
         },
         "hd": {
@@ -185840,11 +185847,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-24T07:00:09+08:00",
-            "home": 2.18,
-            "away": 1.69,
-            "line": 1.5,
+            "at": "2026-10-24T12:45:41+08:00",
+            "home": 1.76,
+            "away": 2.07,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-24T07:05:00+08:00",
+            "home": 1.76,
+            "away": 2.07,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -185855,10 +185870,17 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-24T07:00:09+08:00",
-            "over": 1.63,
-            "under": 2.29,
-            "line": 5.5
+            "at": "2026-10-24T12:45:41+08:00",
+            "over": 1.41,
+            "under": 2.85,
+            "line": 5.0
+          },
+          "close": {
+            "at": "2026-10-24T07:05:00+08:00",
+            "over": 1.41,
+            "under": 2.85,
+            "line": 5.0,
+            "final": true
           }
         }
       },
@@ -185868,11 +185890,13 @@
           "away",
           "home"
         ],
-        "struckSide": [],
+        "struckSide": [
+          "home"
+        ],
         "lines": [
           {
             "line": -4.5,
-            "active": true,
+            "active": false,
             "created": "23,10,2026,23,26"
           },
           {
@@ -185881,9 +185905,19 @@
             "created": "23,10,2026,23,26"
           },
           {
+            "line": -3.0,
+            "active": true,
+            "created": "24,10,2026,00,05"
+          },
+          {
             "line": -2.5,
             "active": true,
             "created": "23,10,2026,23,26"
+          },
+          {
+            "line": -2.0,
+            "active": true,
+            "created": "24,10,2026,00,05"
           },
           {
             "line": -1.5,
@@ -185891,9 +185925,24 @@
             "created": "23,10,2026,23,26"
           },
           {
+            "line": -1.0,
+            "active": true,
+            "created": "24,10,2026,00,05"
+          },
+          {
+            "line": 1.0,
+            "active": true,
+            "created": "24,10,2026,00,05"
+          },
+          {
             "line": 1.5,
             "active": true,
             "created": "23,10,2026,17,39"
+          },
+          {
+            "line": 2.0,
+            "active": true,
+            "created": "24,10,2026,00,05"
           }
         ]
       }
