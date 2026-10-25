@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-25T03:45:20.018Z",
+  "generatedAt": "2026-10-25T03:50:20.081Z",
   "officialScheduleCount": 7,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T03:45:20.018Z",
-      "lastAttemptAt": "2026-10-25T03:45:20.018Z",
+      "lastSuccessAt": "2026-10-25T03:50:20.081Z",
+      "lastAttemptAt": "2026-10-25T03:50:20.081Z",
       "error": null,
       "matched": 0,
       "health": {
         "discovered": 1,
         "matched": 0,
-        "unmatched": 0,
+        "unmatched": 1,
         "shiftedStarts": 0,
         "failed": 0,
         "failures": []
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T03:45:20.018Z",
-      "lastAttemptAt": "2026-10-25T03:45:20.018Z",
+      "lastSuccessAt": "2026-10-25T03:50:20.081Z",
+      "lastAttemptAt": "2026-10-25T03:50:20.081Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T03:45:20.018Z",
-      "lastAttemptAt": "2026-10-25T03:45:20.018Z",
+      "lastSuccessAt": "2026-10-25T03:50:20.081Z",
+      "lastAttemptAt": "2026-10-25T03:50:20.081Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T03:45:20.018Z",
-      "lastAttemptAt": "2026-10-25T03:45:20.018Z",
+      "lastSuccessAt": "2026-10-25T03:50:20.081Z",
+      "lastAttemptAt": "2026-10-25T03:50:20.081Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -7852,13 +7852,13 @@
         "home": 2.6
       },
       "moneyline": {
-        "away": 2.04,
-        "home": 1.7
+        "away": 2.01,
+        "home": 1.72
       },
       "total": {
         "line": 5.5,
-        "over": 1.75,
-        "under": 1.97
+        "over": 1.76,
+        "under": 1.96
       },
       "sources": {
         "direction": "stake-official",
@@ -7867,7 +7867,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-25T03:45:20.018Z",
+      "observedAt": "2026-10-25T03:50:20.081Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -8292,6 +8292,32 @@
             "moneyline": "stake-official"
           },
           "partial": false
+        },
+        {
+          "observedAt": "2026-10-25T03:50:20.081Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.44,
+            "home": 2.6
+          },
+          "moneyline": {
+            "away": 2.01,
+            "home": 1.72
+          },
+          "total": {
+            "line": 5.5,
+            "over": 1.76,
+            "under": 1.96
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
         }
       ]
     },
@@ -8317,7 +8343,7 @@
       },
       "total": {
         "line": 5.5,
-        "over": 1.94,
+        "over": 1.95,
         "under": 1.83
       },
       "sources": {
@@ -8327,7 +8353,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-25T03:45:19.602Z",
+      "observedAt": "2026-10-25T03:50:19.684Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -8601,6 +8627,32 @@
           "total": {
             "line": 5.5,
             "over": 1.94,
+            "under": 1.83
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        },
+        {
+          "observedAt": "2026-10-25T03:50:19.684Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.01,
+            "home": 1.78
+          },
+          "moneyline": {
+            "away": 1.5,
+            "home": 2.55
+          },
+          "total": {
+            "line": 5.5,
+            "over": 1.95,
             "under": 1.83
           },
           "sources": {
