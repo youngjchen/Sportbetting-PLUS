@@ -2,13 +2,13 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-25T07:50:09+08:00",
+  "updatedAt": "2026-10-25T08:10:10+08:00",
   "health": {
-    "discovered": 4,
-    "succeeded": 3,
+    "discovered": 1,
+    "succeeded": 1,
     "failed": 0,
     "added": 0,
-    "updated": 3,
+    "updated": 1,
     "errors": []
   },
   "games": {
@@ -186210,7 +186210,7 @@
       "awayTeam": "光芒",
       "homeTeam": "釀酒人",
       "sourceUrl": "https://www.betexplorer.com/baseball/usa/mlb/milwaukee-brewers-tampa-bay-rays/4fRiw3fM/",
-      "observedAt": "2026-10-25T07:50:09+08:00",
+      "observedAt": "2026-10-25T08:10:10+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -186220,9 +186220,15 @@
             "away": 1.96
           },
           "active": {
-            "at": "2026-10-25T05:30:09+08:00",
-            "home": 1.82,
+            "at": "2026-10-25T08:10:10+08:00",
+            "home": 1.75,
             "away": 2.0
+          },
+          "close": {
+            "at": "2026-10-25T08:00:00+08:00",
+            "home": 1.75,
+            "away": 2.0,
+            "final": true
           }
         },
         "hd": {
@@ -186234,11 +186240,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-25T05:30:09+08:00",
-            "home": 2.8,
-            "away": 1.44,
-            "line": 1.5,
+            "at": "2026-10-25T08:10:10+08:00",
+            "home": 2.28,
+            "away": 1.64,
+            "line": 1.0,
             "favorite": "home"
+          },
+          "close": {
+            "at": "2026-10-25T07:52:00+08:00",
+            "home": 2.28,
+            "away": 1.64,
+            "line": 1.0,
+            "favorite": "home",
+            "final": true
           }
         },
         "ou": {
@@ -186249,20 +186263,25 @@
             "line": 5.5
           },
           "active": {
-            "at": "2026-10-25T05:30:09+08:00",
+            "at": "2026-10-25T08:10:10+08:00",
             "over": 1.33,
             "under": 3.25,
             "line": 4.5
+          },
+          "close": {
+            "at": "2026-10-25T04:18:00+08:00",
+            "over": 1.33,
+            "under": 3.25,
+            "line": 4.5,
+            "final": true
           }
         }
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
-          "away",
-          "home"
-        ],
+        "activeSide": [],
         "struckSide": [
+          "away",
           "home"
         ],
         "lines": [
@@ -186277,28 +186296,53 @@
             "created": "24,10,2026,08,12"
           },
           {
+            "line": -3.0,
+            "active": false,
+            "created": "25,10,2026,00,50"
+          },
+          {
             "line": -2.5,
-            "active": true,
-            "created": "24,10,2026,21,18"
+            "active": false,
+            "created": "25,10,2026,00,52"
+          },
+          {
+            "line": -2.0,
+            "active": false,
+            "created": "25,10,2026,00,52"
           },
           {
             "line": -1.5,
-            "active": true,
-            "created": "24,10,2026,21,02"
+            "active": false,
+            "created": "25,10,2026,01,00"
+          },
+          {
+            "line": -1.0,
+            "active": false,
+            "created": "25,10,2026,00,52"
+          },
+          {
+            "line": 1.0,
+            "active": false,
+            "created": "25,10,2026,00,50"
           },
           {
             "line": 1.5,
-            "active": true,
-            "created": "24,10,2026,21,18"
+            "active": false,
+            "created": "25,10,2026,01,00"
+          },
+          {
+            "line": 2.0,
+            "active": false,
+            "created": "25,10,2026,00,50"
           },
           {
             "line": 2.5,
-            "active": true,
-            "created": "24,10,2026,21,18"
+            "active": false,
+            "created": "25,10,2026,00,46"
           },
           {
             "line": 4.5,
-            "active": true,
+            "active": false,
             "created": "24,10,2026,21,02"
           }
         ]
