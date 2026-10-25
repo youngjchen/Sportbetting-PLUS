@@ -2,14 +2,15 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-26T01:15:09+08:00",
+  "updatedAt": "2026-10-26T03:20:14+08:00",
   "health": {
-    "discovered": 2,
+    "scheduled": 7,
+    "discovered": 3,
     "succeeded": 2,
-    "failed": 0,
-    "added": 0,
-    "updated": 2,
-    "errors": []
+    "failed": 1,
+    "errors": [
+      "cpbl dMkEEJkf: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -186499,8 +186500,8 @@
       "startISO": "2026-10-25T17:00:00+08:00",
       "awayTeam": "軟銀",
       "homeTeam": "橫濱",
-      "sourceUrl": "https://www.betexplorer.com/baseball/japan/npb/yokohama-baystars-fukuoka-s-hawks/MZcUO0Wr/",
-      "observedAt": "2026-10-25T20:25:11+08:00",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/fukuoka-s-hawks-MJ3q4UeB/yokohama-baystars-AggJifst/#MZcUO0Wr",
+      "observedAt": "2026-10-26T03:20:14+08:00",
       "source": "BetExplorer",
       "markets": {
         "ml": {
@@ -186510,9 +186511,16 @@
             "away": 1.55
           },
           "active": {
-            "at": "2026-10-25T10:30:10+08:00",
-            "home": 2.47,
-            "away": 1.53
+            "at": "2026-10-26T03:20:14+08:00",
+            "home": 2.65,
+            "away": 1.49
+          },
+          "close": {
+            "at": "2026-10-24T22:47:00+08:00",
+            "final": true,
+            "precision": "history",
+            "home": 2.41,
+            "away": 1.55
           }
         },
         "hd": {
@@ -186539,7 +186547,15 @@
             "line": 4.5
           },
           "active": {
-            "at": "2026-10-25T10:30:10+08:00",
+            "at": "2026-10-26T03:20:14+08:00",
+            "over": 1.91,
+            "under": 1.9,
+            "line": 5.5
+          },
+          "close": {
+            "at": "2026-10-24T22:57:00+08:00",
+            "final": true,
+            "precision": "history",
             "over": 1.5,
             "under": 2.55,
             "line": 4.5
@@ -186548,27 +186564,16 @@
       },
       "stakeSwap": {
         "ever": false,
-        "activeSide": [
-          "away"
-        ],
-        "struckSide": [],
-        "lines": [
-          {
-            "line": 1.5,
-            "active": true,
-            "created": "25,10,2026,01,47"
-          },
-          {
-            "line": 2.5,
-            "active": true,
-            "created": "24,10,2026,16,04"
-          },
-          {
-            "line": 3.5,
-            "active": true,
-            "created": "24,10,2026,16,04"
-          }
-        ]
+        "transitions": [],
+        "scanFavorite": null
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
       }
     },
     "kbo|2026-10-26|起亞虎|三星獅|17:30|6ZLCGBu1": {
@@ -186592,10 +186597,72 @@
       "startISO": "2026-10-26T17:30:00+08:00",
       "awayTeam": "起亞虎",
       "homeTeam": "三星獅",
-      "sourceUrl": "https://www.betexplorer.com/baseball/south-korea/kbo/samsung-lions-kia-tigers/6ZLCGBu1/",
-      "observedAt": "2026-10-26T01:15:09+08:00",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kia-tigers-rXhOpG8E/samsung-lions-O6nTMCG7/#6ZLCGBu1",
+      "observedAt": "2026-10-26T03:20:14+08:00",
       "source": "BetExplorer",
-      "markets": {}
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-10-24T14:07:00+08:00",
+            "home": 2.09,
+            "away": 1.72
+          },
+          "active": {
+            "at": "2026-10-26T03:20:14+08:00",
+            "home": 2.2,
+            "away": 1.65
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-10-24T14:08:00+08:00",
+            "home": 1.69,
+            "away": 2.14,
+            "line": 1.5,
+            "favorite": "away"
+          },
+          "active": {
+            "at": "2026-10-26T03:20:14+08:00",
+            "home": 1.75,
+            "away": 2.04,
+            "line": 1.5,
+            "favorite": "away"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-10-24T14:08:00+08:00",
+            "over": 1.57,
+            "under": 2.35,
+            "line": 8.5
+          },
+          "active": {
+            "at": "2026-10-26T03:20:14+08:00",
+            "over": 1.9,
+            "under": 1.87,
+            "line": 9.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": true,
+        "transitions": [
+          {
+            "from": "away",
+            "to": "home",
+            "at": "2026-10-25T01:07+08:00"
+          }
+        ],
+        "scanFavorite": "home"
+      }
     },
     "mlb|2026-10-27|釀酒人|光芒|08:00|zwINXtIq": {
       "bet365": {
