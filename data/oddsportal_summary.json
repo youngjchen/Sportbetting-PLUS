@@ -2,13 +2,12 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-26T07:30:59+08:00",
+  "updatedAt": "2026-10-26T07:45:15+08:00",
   "health": {
-    "discovered": 4,
+    "scheduled": 1,
+    "discovered": 1,
     "succeeded": 1,
     "failed": 0,
-    "added": 0,
-    "updated": 1,
     "errors": []
   },
   "games": {
@@ -186772,6 +186771,74 @@
             "created": "25,10,2026,22,16"
           }
         ]
+      }
+    },
+    "wnba|2026-10-27|美夢|金州|08:00|OGPysoec": {
+      "eventId": "OGPysoec",
+      "league": "wnba",
+      "date": "2026-10-27",
+      "startTime": "08:00",
+      "startISO": "2026-10-27T08:00:00+08:00",
+      "awayTeam": "美夢",
+      "homeTeam": "金州",
+      "sourceUrl": "https://www.oddsportal.com/basketball/h2h/atlanta-dream-z1xwbiiQ/golden-state-valkyries-jJ2zZYLs/#OGPysoec",
+      "observedAt": "2026-10-26T07:45:15+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-10-25T03:36:00+08:00",
+            "home": 1.87,
+            "away": 1.91
+          },
+          "active": {
+            "at": "2026-10-26T07:45:15+08:00",
+            "home": 1.82,
+            "away": 1.96
+          }
+        },
+        "hd": {
+          "open": {
+            "at": "2026-10-25T03:36:00+08:00",
+            "home": 1.97,
+            "away": 1.81,
+            "line": -1.5,
+            "favorite": "home"
+          },
+          "active": {
+            "at": "2026-10-26T07:45:15+08:00",
+            "home": 1.92,
+            "away": 1.86,
+            "line": -1.5,
+            "favorite": "home"
+          }
+        },
+        "ou": {
+          "open": {
+            "at": "2026-10-25T03:36:00+08:00",
+            "over": 1.86,
+            "under": 1.87,
+            "line": 149.5
+          },
+          "active": {
+            "at": "2026-10-26T07:45:15+08:00",
+            "over": 1.88,
+            "under": 1.85,
+            "line": 149.5
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": "home"
       }
     }
   },
