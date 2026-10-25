@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-25T21:15:19.955Z",
+  "generatedAt": "2026-10-25T21:20:20.294Z",
   "officialScheduleCount": 8,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T21:15:19.955Z",
-      "lastAttemptAt": "2026-10-25T21:15:19.955Z",
+      "lastSuccessAt": "2026-10-25T21:20:20.294Z",
+      "lastAttemptAt": "2026-10-25T21:20:20.294Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T21:15:19.955Z",
-      "lastAttemptAt": "2026-10-25T21:15:19.955Z",
+      "lastSuccessAt": "2026-10-25T21:20:20.294Z",
+      "lastAttemptAt": "2026-10-25T21:20:20.294Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -35,8 +35,8 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T21:15:19.955Z",
-      "lastAttemptAt": "2026-10-25T21:15:19.955Z",
+      "lastSuccessAt": "2026-10-25T21:20:20.294Z",
+      "lastAttemptAt": "2026-10-25T21:20:20.294Z",
       "error": null,
       "matched": 1,
       "health": {
@@ -50,8 +50,8 @@
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-25T21:15:19.955Z",
-      "lastAttemptAt": "2026-10-25T21:15:19.955Z",
+      "lastSuccessAt": "2026-10-25T21:20:20.294Z",
+      "lastAttemptAt": "2026-10-25T21:20:20.294Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -7652,7 +7652,7 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-25T21:15:19.770Z",
+      "observedAt": "2026-10-25T21:20:19.601Z",
       "frozenAt": null,
       "favoriteFlipCount": 0,
       "favoriteTransitions": [],
@@ -7824,12 +7824,12 @@
       "fixtureId": "d8168be4-441e-4e99-a471-ee2d113870ef",
       "slug": "46951945-american-league-champion-national-league-champion",
       "sourceUrl": "https://stake.com/sports/baseball/usa/mlb/46951945-american-league-champion-national-league-champion",
-      "favorite": "home",
+      "favorite": "away",
       "rawLine": 1.5,
       "canonicalLine": 1.5,
       "handicapOdds": {
-        "away": 1.46,
-        "home": 2.65
+        "away": 2.65,
+        "home": 1.46
       },
       "moneyline": {
         "away": 1.98,
@@ -7837,8 +7837,8 @@
       },
       "total": {
         "line": 7.5,
-        "over": 2.1,
-        "under": 1.71
+        "over": 2.08,
+        "under": 1.73
       },
       "sources": {
         "direction": "stake-official",
@@ -7847,10 +7847,16 @@
         "moneyline": "stake-official"
       },
       "partial": false,
-      "observedAt": "2026-10-25T21:15:19.217Z",
+      "observedAt": "2026-10-25T21:20:19.061Z",
       "frozenAt": null,
-      "favoriteFlipCount": 0,
-      "favoriteTransitions": [],
+      "favoriteFlipCount": 1,
+      "favoriteTransitions": [
+        {
+          "at": "2026-10-25T21:20:19.061Z",
+          "from": "home",
+          "to": "away"
+        }
+      ],
       "history": [
         {
           "observedAt": "2026-10-25T16:04:21.432Z",
@@ -7947,6 +7953,32 @@
             "line": 7.5,
             "over": 2.1,
             "under": 1.71
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        },
+        {
+          "observedAt": "2026-10-25T21:20:19.061Z",
+          "favorite": "away",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 2.65,
+            "home": 1.46
+          },
+          "moneyline": {
+            "away": 1.98,
+            "home": 1.8
+          },
+          "total": {
+            "line": 7.5,
+            "over": 2.08,
+            "under": 1.73
           },
           "sources": {
             "direction": "stake-official",
