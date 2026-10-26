@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "provider": "bet365-official-first",
-  "updated": "2026-10-26T12:44:25.437Z",
+  "updated": "2026-10-26T12:49:26.053Z",
   "source": "https://www.bet365.com/",
   "pages": {
     "MLB": {
@@ -18,10 +18,10 @@
       "scheduled": 1,
       "officialMatched": 0,
       "fallbackMatched": 1,
-      "oddsPortalMatched": 0,
+      "oddsPortalMatched": 1,
       "matched": 1,
-      "lastAttemptAt": "2026-10-26T12:44:25.437Z",
-      "lastSuccessAt": "2026-10-26T12:44:25.437Z",
+      "lastAttemptAt": "2026-10-26T12:49:26.053Z",
+      "lastSuccessAt": "2026-10-26T12:49:26.053Z",
       "errors": [
         "Request failed with status code 403"
       ]
@@ -33,7 +33,7 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-10-26T12:44:25.437Z",
+      "lastAttemptAt": "2026-10-26T12:49:26.053Z",
       "lastSuccessAt": "2026-10-25T08:57:04.993Z",
       "errors": [
         "Request failed with status code 403"
@@ -46,7 +46,7 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-10-26T12:44:25.437Z",
+      "lastAttemptAt": "2026-10-26T12:49:26.053Z",
       "lastSuccessAt": "2026-10-26T09:28:28.460Z",
       "errors": [
         "Request failed with status code 403"
@@ -59,7 +59,7 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-10-26T12:44:25.437Z",
+      "lastAttemptAt": "2026-10-26T12:49:26.053Z",
       "lastSuccessAt": "2026-10-10T09:04:27.563Z",
       "errors": [
         "Request failed with status code 403"
@@ -48894,8 +48894,8 @@
       "scheduledStart": "2026-10-27T00:00:00.000Z",
       "away": "釀酒人",
       "home": "光芒",
-      "provider": "betexplorer-bet365",
-      "observedAt": "2026-10-26T12:44:25.437Z",
+      "provider": "oddsportal-bet365",
+      "observedAt": "2026-10-26T12:49:26.053Z",
       "favorite": "away",
       "markets": {
         "hd": {
@@ -48903,8 +48903,8 @@
           "line": 1.5,
           "away": 2.7,
           "home": 1.44,
-          "provider": "betexplorer-bet365",
-          "observedAt": "2026-10-26T07:50:08.000Z",
+          "provider": "oddsportal-bet365",
+          "observedAt": "2026-10-26T12:40:48.000Z",
           "stale": false
         }
       },
@@ -52849,6 +52849,22 @@
               "home": 1.44,
               "provider": "betexplorer-bet365",
               "observedAt": "2026-10-26T07:50:08.000Z",
+              "stale": false
+            }
+          }
+        },
+        {
+          "provider": "oddsportal-bet365",
+          "observedAt": "2026-10-26T12:49:26.053Z",
+          "favorite": "away",
+          "markets": {
+            "hd": {
+              "favorite": "away",
+              "line": 1.5,
+              "away": 2.7,
+              "home": 1.44,
+              "provider": "oddsportal-bet365",
+              "observedAt": "2026-10-26T12:40:48.000Z",
               "stale": false
             }
           }
@@ -56800,6 +56816,24 @@
               }
             }
           }
+        ],
+        "oddsportal-bet365": [
+          {
+            "provider": "oddsportal-bet365",
+            "observedAt": "2026-10-26T12:49:26.053Z",
+            "favorite": "away",
+            "markets": {
+              "hd": {
+                "favorite": "away",
+                "line": 1.5,
+                "away": 2.7,
+                "home": 1.44,
+                "provider": "oddsportal-bet365",
+                "observedAt": "2026-10-26T12:40:48.000Z",
+                "stale": false
+              }
+            }
+          }
         ]
       },
       "events": [
@@ -56826,6 +56860,12 @@
           "type": "source-change",
           "from": "bet365-official",
           "to": "betexplorer-bet365"
+        },
+        {
+          "at": "2026-10-26T12:49:26.053Z",
+          "type": "source-change",
+          "from": "betexplorer-bet365",
+          "to": "oddsportal-bet365"
         }
       ],
       "favoriteFlipCount": 2
