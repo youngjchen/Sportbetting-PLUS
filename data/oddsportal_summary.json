@@ -2,13 +2,12 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-27T06:41:27+08:00",
+  "updatedAt": "2026-10-27T06:50:22+08:00",
   "health": {
-    "discovered": 2,
+    "scheduled": 1,
+    "discovered": 1,
     "succeeded": 1,
     "failed": 0,
-    "added": 0,
-    "updated": 1,
     "errors": []
   },
   "games": {
@@ -186901,7 +186900,7 @@
       "awayTeam": "美夢",
       "homeTeam": "金州",
       "sourceUrl": "https://www.oddsportal.com/basketball/h2h/atlanta-dream-z1xwbiiQ/golden-state-valkyries-jJ2zZYLs/#OGPysoec",
-      "observedAt": "2026-10-26T07:45:15+08:00",
+      "observedAt": "2026-10-27T06:50:22+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -186924,11 +186923,11 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-26T07:45:15+08:00",
-            "home": 1.92,
-            "away": 1.86,
-            "line": -1.5,
-            "favorite": "home"
+            "at": "2026-10-27T06:50:22+08:00",
+            "home": 1.82,
+            "away": 1.92,
+            "line": 1.5,
+            "favorite": "away"
           }
         },
         "ou": {
@@ -186955,9 +186954,15 @@
         "last": null
       },
       "stakeSwap": {
-        "ever": false,
-        "transitions": [],
-        "scanFavorite": "home"
+        "ever": true,
+        "transitions": [
+          {
+            "from": "home",
+            "to": "away",
+            "at": "2026-10-27T04:10+08:00"
+          }
+        ],
+        "scanFavorite": "away"
       }
     },
     "kbo|2026-10-27|起亞虎|三星獅|17:30|EaPKEkAD": {
