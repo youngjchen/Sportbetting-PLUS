@@ -842,7 +842,7 @@ async function loadPregame(){
       autoSettleFromPregame();
       const st=$("#stamp");
       if(st){
-        const suffix=j2.provider==="bet365-official" ? `BET365 ${Number(j2.health&&j2.health.gameCount)||Object.keys(j2.games).length} 場` : "";
+        const suffix=(j2.provider==="bet365-official"||j2.provider==="actionnetwork-bet365") ? `BET365 ${Number(j2.health&&j2.health.gameCount)||Object.keys(j2.games).length} 場` : "";
         if(suffix && !st.textContent.includes(suffix)) st.textContent += ` · ${suffix}`;
       }
       render();
@@ -1105,7 +1105,7 @@ function renderNhlMarketMonitor(model, stakeObserved, bet365, hdHistory, stakeSt
       sourceLabel:stakeObserved?(stakeStale?"Stake 官網（已停更，只供歷史）":"Stake 官網"):null},
     {key:"bet365",label:"BET365",side:betSide,current:label(betSide,betHd&&betHd.line,""),available:!!bet365,
       changed:!!(hdHistory&&hdHistory.bet365.swapCount),details:betDetails,events:nhlMeaningfulHistory(hdHistory,"bet365",model),
-      sourceLabel:bet365?(provider==="betexplorer"?"BetExplorer 備援":"BET365 官網"):null}
+      sourceLabel:bet365?(provider==="betexplorer"?"BetExplorer 備援":provider==="actionnetwork-bet365"?"Action Network 備援":"BET365 官網"):null}
   ]});
 }
 

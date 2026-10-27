@@ -153,7 +153,84 @@ async function fetchOfficialDetails(game) {
   return page.html;
 }
 
-async function collectBet365NhlOdds(options = {}) {
+// ===== 備援：Action Network 上的 bet365（美國站，與官網 hub/en-us 同一家）=====
+// 2026-10-26 起 Bet365 各聯盟 hub 頁拿掉了整塊賠率（只剩文案），互動頁也擋程式；BetExplorer／OddsPortal 的冰球讓分都沒有 bet365。
+// 2026-10-28 使用者拍板：官網失敗時改用 Action Network 的 bet365 盤，「只要看 BET365 讓分方是誰，賠率不重要」。
+const ACTION_URL = 'https://api.actionnetwork.com/web/v2/scoreboard/nhl';
+const ACTION_BET365_BOOK = '79';
+
+function americanToDecimal(value) {
+  const n = Number(value);
+  if (!Number.isFinite(n) || n === 0) return null;
+  return Math.round((n > 0 ? 1 + n / 100 : 1 + 100 / Math.abs(n)) * 100) / 100;
+}
+
+function usDate(ms) {
+  return new Date(ms - 5 * 3600e3).toISOString().slice(0, 10).replace(/-/g, '');
+}
+
+// scoreboard JSON → 與官網 hub 解析同形的比賽（隊名用 Action Network 全名，中文名同一張對照表）
+function parseActionNetworkNhl(payload) {
+  const out = [];
+  for (const row of (payload && payload.games) || []) {
+    const teams = Object.fromEntries(((row && row.teams) || []).map((t) => [t.id, t.full_name]));
+    const away = String(teams[row.away_team_id] || '').trim();
+    const home = String(teams[row.home_team_id] || '').trim();
+    const startTime = Date.parse(row.start_time || '');
+    const book = row.markets && row.markets[ACTION_BET365_BOOK] && row.markets[ACTION_BET365_BOOK].event;
+    if (!away || !home || !Number.isFinite(startTime) || !book) continue;
+    let awayZh, homeZh;
+    try { awayZh = translateTeam(away); homeZh = translateTeam(home); } catch (_) { continue; }
+    const pick = (list, side) => (list || []).find((o) => o && o.side === side);
+    const game = { startTime, away, home, awayZh, homeZh, fixtureIds: { actionNetwork: String(row.id || '') },
+      provider: 'actionnetwork-bet365', status: String(row.status || '') };
+    const mlA = pick(book.moneyline, 'away'), mlH = pick(book.moneyline, 'home');
+    if (mlA && mlH && americanToDecimal(mlA.odds) && americanToDecimal(mlH.odds)) {
+      game.ml = { market: 'Money Line', outcomes: [
+        { name: away, side: 'away', odds: americanToDecimal(mlA.odds) },
+        { name: home, side: 'home', odds: americanToDecimal(mlH.odds) },
+      ] };
+    }
+    const spA = pick(book.spread, 'away'), spH = pick(book.spread, 'home');
+    const aLine = Number(spA && spA.value), hLine = Number(spH && spH.value);
+    if (Number.isFinite(aLine) && Number.isFinite(hLine) && aLine !== 0 && Math.sign(aLine) !== Math.sign(hLine)) {
+      game.hd = { market: 'Puck Line', line: Math.abs(aLine), favSide: aLine < 0 ? 'away' : 'home', outcomes: [
+        { name: away, side: 'away', line: aLine, odds: americanToDecimal(spA.odds) },
+        { name: home, side: 'home', line: hLine, odds: americanToDecimal(spH.odds) },
+      ] };
+    }
+    const over = pick(book.total, 'over'), under = pick(book.total, 'under');
+    const tLine = Number(over && over.value);
+    if (Number.isFinite(tLine) && tLine > 0 && under) {
+      game.total = { market: 'Game Totals', line: tLine, outcomes: [
+        { name: 'Over', side: 'over', line: tLine, odds: americanToDecimal(over.odds) },
+        { name: 'Under', side: 'under', line: tLine, odds: americanToDecimal(under.odds) },
+      ] };
+    }
+    if (game.hd) out.push(game);
+  }
+  return out.sort((a, b) => a.startTime - b.startTime);
+}
+
+async function fetchActionNetworkGames(now) {
+  const games = [];
+  for (const day of [0, 1, 2]) {
+    const url = `${ACTION_URL}?bookIds=${ACTION_BET365_BOOK}&periods=event&date=${usDate(now + day * 86400e3)}`;
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+        Accept: 'application/json',
+      },
+      signal: AbortSignal.timeout(30000),
+    });
+    if (!response.ok) throw new Error(`Action Network HTTP ${response.status}`);
+    games.push(...parseActionNetworkNhl(await response.json()));
+  }
+  const seen = new Set();
+  return games.filter((g) => !seen.has(`${g.startTime}|${g.away}|${g.home}`) && seen.add(`${g.startTime}|${g.away}|${g.home}`));
+}
+
+async function collectOfficialGames(options) {
   const fetchText = options.fetchText || fetchOfficialHub;
   const html = await fetchText(HUB_URL);
   if (/(?:just a moment|cf-chl|challenge-platform|cloudflare)/i.test(String(html || ''))) {
@@ -166,8 +243,34 @@ async function collectBet365NhlOdds(options = {}) {
   if (complete.length !== parsed.length) {
     throw new Error(`Bet365 NHL 官方頁解析不完整：完整 ${complete.length}/${parsed.length} 場，保留舊資料`);
   }
+  return complete;
+}
 
-  const fetchDetails = options.fetchDetails === false || (options.fetchText && options.fetchDetails == null)
+async function collectBet365NhlOdds(options = {}) {
+  const now = Number.isFinite(Number(options.now)) ? Number(options.now) : Date.now();
+  const previous = options.previous && typeof options.previous === 'object' ? options.previous : { games: {} };
+  const previousGames = previous.games && typeof previous.games === 'object' ? previous.games : {};
+  // 測試注入 fetchText 時不碰真網路的備援（同 fetchDetails 的慣例）
+  const fetchFallback = options.fetchActionNetwork === false || (options.fetchText && options.fetchActionNetwork == null)
+    ? null
+    : (options.fetchActionNetwork || fetchActionNetworkGames);
+  let complete, source = HUB_URL, official = true;
+  try {
+    complete = await collectOfficialGames(options);
+  } catch (officialError) {
+    if (!fetchFallback) throw officialError;
+    complete = await fetchFallback(now);
+    if (!complete.length) throw new Error(`${officialError.message}；Action Network 也沒有 bet365 讓分盤`);
+    source = ACTION_URL; official = false;
+    // 同一場沿用舊鍵（官網隊名「LA Kings」≠ Action Network「Los Angeles Kings」），讓分歷史接續、換邊照算
+    for (const game of complete) {
+      const hit = Object.entries(previousGames).find(([, old]) => old && old.awayZh === game.awayZh && old.homeZh === game.homeZh &&
+        Math.abs(Number(old.startTime) - game.startTime) <= 2 * 3600e3);
+      if (hit) { game.startTime = Number(hit[1].startTime); game.away = hit[1].away; game.home = hit[1].home; }
+    }
+  }
+
+  const fetchDetails = !official || options.fetchDetails === false || (options.fetchText && options.fetchDetails == null)
     ? null
     : (options.fetchDetails || fetchOfficialDetails);
   if (fetchDetails) {
@@ -188,12 +291,10 @@ async function collectBet365NhlOdds(options = {}) {
     }
   }
 
-  const now = Number.isFinite(Number(options.now)) ? Number(options.now) : Date.now();
   const observedAt = new Date(now).toISOString();
   // 開賽前最後 30 秒開始凍結，避免頁面切成場中盤後把即時盤誤當賽前收盤。
-  const upcoming = complete.filter((game) => Number(game.startTime) > now + 30000);
-  const previous = options.previous && typeof options.previous === 'object' ? options.previous : { games: {} };
-  const previousGames = previous.games && typeof previous.games === 'object' ? previous.games : {};
+  const upcoming = complete.filter((game) => Number(game.startTime) > now + 30000 &&
+    (official || !game.status || game.status === 'scheduled'));
   const games = {};
 
   for (const game of upcoming) {
@@ -206,12 +307,12 @@ async function collectBet365NhlOdds(options = {}) {
   }
 
   return {
-    provider: 'bet365-official',
+    provider: official ? 'bet365-official' : 'actionnetwork-bet365',
     strategy: 'official-first',
     updated: observedAt,
-    source: HUB_URL,
+    source,
     health: {
-      status: 'ok',
+      status: official ? 'ok' : 'fallback',
       gameCount: upcoming.length,
       marketCount: upcoming.reduce((count, game) => count + ['ml', 'hd', 'total'].filter((key) => game[key]).length, 0),
       totalCount: upcoming.filter((game) => game.total).length,
@@ -262,6 +363,7 @@ module.exports = {
   HUB_URL,
   OUT,
   parseBet365NhlHub,
+  parseActionNetworkNhl,
   collectBet365NhlOdds,
   saveAtomic,
   updateOddsFile,
