@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T20:51:33.495Z",
+ "updated": "2026-10-27T20:56:33.478Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -1759,12 +1759,12 @@
      {
       "name": "Minnesota Wild",
       "side": "away",
-      "odds": 2.02
+      "odds": 1.99
      },
      {
       "name": "Utah Mammoth",
       "side": "home",
-      "odds": 1.82
+      "odds": 1.83
      }
     ]
    },
@@ -1806,6 +1806,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T20:56:33.478Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Minnesota Wild",
+        "side": "away",
+        "odds": 1.99
+       },
+       {
+        "name": "Utah Mammoth",
+        "side": "home",
+        "odds": 1.83
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Minnesota Wild",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.41
+       },
+       {
+        "name": "Utah Mammoth",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.83
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T18:56:39.820Z",
      "provider": "actionnetwork-bet365",
