@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T21:27:40.730Z",
+ "updated": "2026-10-27T21:32:39.722Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -2175,12 +2175,12 @@
      {
       "name": "Ottawa Senators",
       "side": "away",
-      "odds": 2.34
+      "odds": 2.36
      },
      {
       "name": "Vegas Golden Knights",
       "side": "home",
-      "odds": 1.63
+      "odds": 1.62
      }
     ]
    },
@@ -2222,6 +2222,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T21:32:39.722Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "odds": 2.36
+       },
+       {
+        "name": "Vegas Golden Knights",
+        "side": "home",
+        "odds": 1.62
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.55
+       },
+       {
+        "name": "Vegas Golden Knights",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.53
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.85
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.97
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T20:16:34.831Z",
      "provider": "actionnetwork-bet365",
