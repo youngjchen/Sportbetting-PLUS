@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T20:06:34.041Z",
+ "updated": "2026-10-27T20:11:34.572Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -285,19 +285,19 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "Los Angeles Kings",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.38
+      "line": -1.5,
+      "odds": 3.2
      },
      {
       "name": "Chicago Blackhawks",
       "side": "home",
-      "line": -1.5,
-      "odds": 3.1
+      "line": 1.5,
+      "odds": 1.37
      }
     ]
    },
@@ -320,6 +320,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T20:11:34.572Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Los Angeles Kings",
+        "side": "away",
+        "odds": 1.93
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "odds": 1.89
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Los Angeles Kings",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.2
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.37
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 5.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 5.5,
+        "odds": 1.74
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 5.5,
+        "odds": 2.15
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T20:01:34.345Z",
      "provider": "actionnetwork-bet365",
@@ -714,6 +770,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-10-27T20:11:34.572Z",
+     "type": "favorite-flip",
+     "from": "home",
+     "to": "away"
+    },
     {
      "at": "2026-10-27T20:01:34.345Z",
      "type": "favorite-flip",
