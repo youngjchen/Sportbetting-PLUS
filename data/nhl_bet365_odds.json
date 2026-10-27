@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T19:41:34.665Z",
+ "updated": "2026-10-27T19:46:34.299Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -1799,11 +1799,67 @@
       "name": "Under",
       "side": "under",
       "line": 6.5,
-      "odds": 2.04
+      "odds": 2.02
      }
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T19:46:34.299Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Vancouver Canucks",
+        "side": "away",
+        "odds": 2.8
+       },
+       {
+        "name": "Anaheim Ducks",
+        "side": "home",
+        "odds": 1.45
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Vancouver Canucks",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.75
+       },
+       {
+        "name": "Anaheim Ducks",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.14
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.82
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 2.02
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T19:41:34.665Z",
      "provider": "actionnetwork-bet365",
