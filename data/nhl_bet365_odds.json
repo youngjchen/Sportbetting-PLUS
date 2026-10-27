@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T23:42:39.976Z",
+ "updated": "2026-10-27T23:47:39.328Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -1548,12 +1548,12 @@
      {
       "name": "Montreal Canadiens",
       "side": "away",
-      "odds": 1.85
+      "odds": 1.83
      },
      {
       "name": "St. Louis Blues",
       "side": "home",
-      "odds": 1.98
+      "odds": 2
      }
     ]
    },
@@ -1595,6 +1595,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T23:47:39.328Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Montreal Canadiens",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "St. Louis Blues",
+        "side": "home",
+        "odds": 2
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Montreal Canadiens",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.1
+       },
+       {
+        "name": "St. Louis Blues",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.38
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.05
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.8
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T23:37:40.296Z",
      "provider": "actionnetwork-bet365",
