@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T19:56:34.326Z",
+ "updated": "2026-10-27T20:01:34.345Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -285,19 +285,19 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "Los Angeles Kings",
       "side": "away",
-      "line": -1.5,
-      "odds": 3.2
+      "line": 1.5,
+      "odds": 1.38
      },
      {
       "name": "Chicago Blackhawks",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3.1
      }
     ]
    },
@@ -320,6 +320,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T20:01:34.345Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Los Angeles Kings",
+        "side": "away",
+        "odds": 1.93
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "odds": 1.89
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Los Angeles Kings",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.38
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.1
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 5.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 5.5,
+        "odds": 1.74
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 5.5,
+        "odds": 2.15
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T19:56:34.326Z",
      "provider": "actionnetwork-bet365",
@@ -658,6 +714,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-10-27T20:01:34.345Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    },
     {
      "at": "2026-10-27T19:56:34.326Z",
      "type": "favorite-flip",
@@ -1911,17 +1973,73 @@
       "name": "Over",
       "side": "over",
       "line": 6.5,
-      "odds": 1.81
+      "odds": 1.82
      },
      {
       "name": "Under",
       "side": "under",
       "line": 6.5,
-      "odds": 2.04
+      "odds": 2.02
      }
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T20:01:34.345Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Vancouver Canucks",
+        "side": "away",
+        "odds": 2.8
+       },
+       {
+        "name": "Anaheim Ducks",
+        "side": "home",
+        "odds": 1.45
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Vancouver Canucks",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.75
+       },
+       {
+        "name": "Anaheim Ducks",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.14
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.82
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 2.02
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T19:56:34.326Z",
      "provider": "actionnetwork-bet365",
