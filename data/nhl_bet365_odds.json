@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T23:27:39.464Z",
+ "updated": "2026-10-27T23:32:39.825Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -51,7 +51,7 @@
       "name": "Dallas Stars",
       "side": "home",
       "line": -1.5,
-      "odds": 3.15
+      "odds": 3.1
      }
     ]
    },
@@ -74,6 +74,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T23:32:39.825Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "odds": 1.99
+       },
+       {
+        "name": "Dallas Stars",
+        "side": "home",
+        "odds": 1.84
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.38
+       },
+       {
+        "name": "Dallas Stars",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.1
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 5.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 5.5,
+        "odds": 1.9
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 5.5,
+        "odds": 1.92
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T23:17:39.557Z",
      "provider": "actionnetwork-bet365",
