@@ -2,7 +2,7 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-27T11:15:44+08:00",
+  "updatedAt": "2026-10-27T11:20:08+08:00",
   "health": {
     "discovered": 1,
     "succeeded": 1,
@@ -186947,7 +186947,7 @@
       "awayTeam": "美夢",
       "homeTeam": "金州",
       "sourceUrl": "https://www.oddsportal.com/basketball/h2h/atlanta-dream-z1xwbiiQ/golden-state-valkyries-jJ2zZYLs/#OGPysoec",
-      "observedAt": "2026-10-27T06:50:22+08:00",
+      "observedAt": "2026-10-27T11:20:08+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -186956,9 +186956,15 @@
             "away": 1.91
           },
           "active": {
-            "at": "2026-10-26T07:45:15+08:00",
-            "home": 1.82,
-            "away": 1.96
+            "at": "2026-10-27T11:20:08+08:00",
+            "home": 1.98,
+            "away": 1.84
+          },
+          "close": {
+            "at": "2026-10-27T07:50:00+08:00",
+            "home": 1.98,
+            "away": 1.84,
+            "final": true
           }
         },
         "hd": {
@@ -186970,11 +186976,19 @@
             "favorite": "home"
           },
           "active": {
-            "at": "2026-10-27T06:50:22+08:00",
-            "home": 1.82,
-            "away": 1.92,
+            "at": "2026-10-27T11:20:08+08:00",
+            "home": 1.84,
+            "away": 1.9,
             "line": 1.5,
             "favorite": "away"
+          },
+          "close": {
+            "at": "2026-10-27T07:50:00+08:00",
+            "home": 1.84,
+            "away": 1.9,
+            "line": 1.5,
+            "favorite": "away",
+            "final": true
           }
         },
         "ou": {
@@ -186985,10 +186999,17 @@
             "line": 149.5
           },
           "active": {
-            "at": "2026-10-26T07:45:15+08:00",
-            "over": 1.88,
-            "under": 1.85,
+            "at": "2026-10-27T11:20:08+08:00",
+            "over": 1.8,
+            "under": 2.02,
             "line": 149.5
+          },
+          "close": {
+            "at": "2026-10-27T07:50:00+08:00",
+            "over": 1.8,
+            "under": 2.02,
+            "line": 149.5,
+            "final": true
           }
         }
       },
@@ -187002,14 +187023,43 @@
       },
       "stakeSwap": {
         "ever": true,
-        "transitions": [
+        "activeSide": [
+          "away"
+        ],
+        "struckSide": [
+          "home"
+        ],
+        "lines": [
           {
-            "from": "home",
-            "to": "away",
-            "at": "2026-10-27T04:10+08:00"
+            "line": -1.5,
+            "active": false,
+            "created": "26,10,2026,21,08"
+          },
+          {
+            "line": 1.5,
+            "active": true,
+            "created": "27,10,2026,00,50"
+          }
+        ]
+      },
+      "bet365": {
+        "side": "away",
+        "line": 1.5,
+        "at": "2026-10-27T05:45:00+08:00",
+        "flipEver": true,
+        "ambiguous": false,
+        "struck": [
+          {
+            "line": -1.5,
+            "side": "home",
+            "at": "2026-10-27T04:10:00+08:00"
           }
         ],
-        "scanFavorite": "away"
+        "odds": {
+          "home": 1.83,
+          "away": 1.9
+        },
+        "observedAt": "2026-10-27T11:20:08+08:00"
       }
     },
     "kbo|2026-10-27|起亞虎|三星獅|17:30|EaPKEkAD": {
