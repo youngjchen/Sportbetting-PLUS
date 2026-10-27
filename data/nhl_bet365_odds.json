@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-27T18:46:38.598Z",
+ "updated": "2026-10-27T18:51:39.240Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -291,13 +291,13 @@
       "name": "Los Angeles Kings",
       "side": "away",
       "line": -1.5,
-      "odds": 3.15
+      "odds": 3.3
      },
      {
       "name": "Chicago Blackhawks",
       "side": "home",
       "line": 1.5,
-      "odds": 1.38
+      "odds": 1.37
      }
     ]
    },
@@ -320,6 +320,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-27T18:51:39.240Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Los Angeles Kings",
+        "side": "away",
+        "odds": 1.91
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "odds": 1.91
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Los Angeles Kings",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.3
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.37
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 5.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 5.5,
+        "odds": 1.74
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 5.5,
+        "odds": 2.15
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-27T18:41:38.674Z",
      "provider": "actionnetwork-bet365",
