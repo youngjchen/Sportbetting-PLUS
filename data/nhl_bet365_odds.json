@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-28T13:13:07.376Z",
+ "updated": "2026-10-28T13:18:06.847Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -2784,17 +2784,73 @@
       "name": "Over",
       "side": "over",
       "line": 6.5,
-      "odds": 1.84
+      "odds": 1.83
      },
      {
       "name": "Under",
       "side": "under",
       "line": 6.5,
-      "odds": 1.99
+      "odds": 2.01
      }
     ]
    },
    "history": [
+    {
+     "at": "2026-10-28T13:18:06.847Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Toronto Maple Leafs",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "Seattle Kraken",
+        "side": "home",
+        "odds": 2
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Toronto Maple Leafs",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.05
+       },
+       {
+        "name": "Seattle Kraken",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.4
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.83
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 2.01
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-28T02:02:22.705Z",
      "provider": "actionnetwork-bet365",
