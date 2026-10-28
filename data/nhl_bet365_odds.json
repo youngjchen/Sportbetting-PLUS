@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-28T06:05:54.283Z",
+ "updated": "2026-10-28T06:10:53.979Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -45,13 +45,13 @@
       "name": "Philadelphia Flyers",
       "side": "away",
       "line": 1.5,
-      "odds": 1.76
+      "odds": 1.77
      },
      {
       "name": "Washington Capitals",
       "side": "home",
       "line": -1.5,
-      "odds": 2.12
+      "odds": 2.1
      }
     ]
    },
@@ -74,6 +74,62 @@
     ]
    },
    "history": [
+    {
+     "at": "2026-10-28T06:10:53.979Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Philadelphia Flyers",
+        "side": "away",
+        "odds": 2.85
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "odds": 1.43
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Philadelphia Flyers",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.77
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.1
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.05
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.8
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-28T05:30:53.285Z",
      "provider": "actionnetwork-bet365",
