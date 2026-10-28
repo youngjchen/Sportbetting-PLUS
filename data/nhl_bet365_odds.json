@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-28T00:42:39.869Z",
+ "updated": "2026-10-28T00:47:39.554Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -1776,17 +1776,73 @@
       "name": "Over",
       "side": "over",
       "line": 6.5,
-      "odds": 1.72
+      "odds": 1.71
      },
      {
       "name": "Under",
       "side": "under",
       "line": 6.5,
-      "odds": 2.18
+      "odds": 2.2
      }
     ]
    },
    "history": [
+    {
+     "at": "2026-10-28T00:47:39.554Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Buffalo Sabres",
+        "side": "away",
+        "odds": 1.68
+       },
+       {
+        "name": "San Jose Sharks",
+        "side": "home",
+        "odds": 2.24
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Buffalo Sabres",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.64
+       },
+       {
+        "name": "San Jose Sharks",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.51
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.71
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 2.2
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-28T00:42:39.869Z",
      "provider": "actionnetwork-bet365",
