@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-10-28T05:30:53.285Z",
+ "updated": "2026-10-28T05:35:54.165Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -1541,17 +1541,73 @@
       "name": "Over",
       "side": "over",
       "line": 6.5,
-      "odds": 2.04
+      "odds": 2.01
      },
      {
       "name": "Under",
       "side": "under",
       "line": 6.5,
-      "odds": 1.81
+      "odds": 1.83
      }
     ]
    },
    "history": [
+    {
+     "at": "2026-10-28T05:35:54.165Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "odds": 2.48
+       },
+       {
+        "name": "Colorado Avalanche",
+        "side": "home",
+        "odds": 1.57
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.6
+       },
+       {
+        "name": "Colorado Avalanche",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.41
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.01
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.83
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-28T05:30:53.285Z",
      "provider": "actionnetwork-bet365",
