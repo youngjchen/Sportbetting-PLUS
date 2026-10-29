@@ -2,14 +2,15 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-10-30T00:40:10+08:00",
+  "updatedAt": "2026-10-30T03:20:46+08:00",
   "health": {
-    "discovered": 1,
+    "scheduled": 6,
+    "discovered": 2,
     "succeeded": 1,
-    "failed": 0,
-    "added": 0,
-    "updated": 1,
-    "errors": []
+    "failed": 1,
+    "errors": [
+      "cpbl dMkEEJkf: Stake.com 無可用盤口 (ml=0 hd=0 ou=0); 目前頁面可見 bookmaker/logo: none"
+    ]
   },
   "games": {
     "mlb|2026-08-01|海盜|紅人|06:10|StRyELbl": {
@@ -188043,6 +188044,44 @@
           "away": 1.88
         },
         "observedAt": "2026-10-30T00:40:10+08:00"
+      }
+    },
+    "kbo|2026-10-30|三星獅|起亞虎|17:30|xScoFYGc": {
+      "eventId": "xScoFYGc",
+      "league": "kbo",
+      "date": "2026-10-30",
+      "startTime": "17:30",
+      "startISO": "2026-10-30T17:30:00+08:00",
+      "awayTeam": "三星獅",
+      "homeTeam": "起亞虎",
+      "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kia-tigers-rXhOpG8E/samsung-lions-O6nTMCG7/#xScoFYGc",
+      "observedAt": "2026-10-30T03:20:46+08:00",
+      "markets": {
+        "ml": {
+          "open": {
+            "at": "2026-10-29T21:58:00+08:00",
+            "home": 1.73,
+            "away": 2.08
+          },
+          "active": {
+            "at": "2026-10-30T03:20:46+08:00",
+            "home": 1.73,
+            "away": 2.08
+          }
+        }
+      },
+      "handicapSwitch": {
+        "ever": false,
+        "count": 0,
+        "initialFavorite": null,
+        "currentFavorite": null,
+        "first": null,
+        "last": null
+      },
+      "stakeSwap": {
+        "ever": false,
+        "transitions": [],
+        "scanFavorite": null
       }
     }
   },
