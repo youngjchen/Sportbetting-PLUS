@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-10-29T13:54:27.368Z",
+  "generatedAt": "2026-10-29T13:59:45.980Z",
   "officialScheduleCount": 4,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-29T13:54:27.368Z",
-      "lastAttemptAt": "2026-10-29T13:54:27.368Z",
+      "lastSuccessAt": "2026-10-29T13:59:45.980Z",
+      "lastAttemptAt": "2026-10-29T13:59:45.980Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-29T13:54:27.368Z",
-      "lastAttemptAt": "2026-10-29T13:54:27.368Z",
+      "lastSuccessAt": "2026-10-29T13:59:45.980Z",
+      "lastAttemptAt": "2026-10-29T13:59:45.980Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -34,24 +34,24 @@
       }
     },
     "KBO": {
-      "status": "ok",
-      "lastSuccessAt": "2026-10-29T13:54:27.368Z",
-      "lastAttemptAt": "2026-10-29T13:54:27.368Z",
+      "status": "partial",
+      "lastSuccessAt": "2026-10-29T13:59:45.980Z",
+      "lastAttemptAt": "2026-10-29T13:59:45.980Z",
       "error": null,
-      "matched": 0,
+      "matched": 1,
       "health": {
-        "discovered": 0,
-        "matched": 0,
+        "discovered": 1,
+        "matched": 1,
         "unmatched": 0,
-        "shiftedStarts": 0,
+        "shiftedStarts": 1,
         "failed": 0,
         "failures": []
       }
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-10-29T13:54:27.368Z",
-      "lastAttemptAt": "2026-10-29T13:54:27.368Z",
+      "lastSuccessAt": "2026-10-29T13:59:45.980Z",
+      "lastAttemptAt": "2026-10-29T13:59:45.980Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -10444,6 +10444,57 @@
             "moneyline": "stake-official"
           },
           "partial": false
+        }
+      ]
+    },
+    "KBO_20261030_SAMSUNG@KIA_1730": {
+      "league": "KBO",
+      "officialId": "KBO_20261030_SAMSUNG@KIA_1730",
+      "scheduledStart": "2026-10-30T09:30:00.000Z",
+      "away": "三星獅",
+      "home": "起亞虎",
+      "fixtureId": "3366bfb3-d432-4d1d-81ab-388a8ba5009b",
+      "slug": "1793352600000-kia-tigers-samsung-lions",
+      "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/1793352600000-kia-tigers-samsung-lions",
+      "favorite": null,
+      "rawLine": null,
+      "canonicalLine": null,
+      "handicapOdds": null,
+      "moneyline": {
+        "away": 2.08,
+        "home": 1.73
+      },
+      "total": null,
+      "sources": {
+        "direction": null,
+        "handicapOdds": null,
+        "total": null,
+        "moneyline": "stake-official"
+      },
+      "partial": true,
+      "observedAt": "2026-10-29T13:59:45.683Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-10-29T13:59:45.683Z",
+          "favorite": null,
+          "rawLine": null,
+          "canonicalLine": null,
+          "handicapOdds": null,
+          "moneyline": {
+            "away": 2.08,
+            "home": 1.73
+          },
+          "total": null,
+          "sources": {
+            "direction": null,
+            "handicapOdds": null,
+            "total": null,
+            "moneyline": "stake-official"
+          },
+          "partial": true
         }
       ]
     }
