@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-29T09:57:34.026Z",
+ "updated": "2026-10-29T10:14:31.080Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -1781,24 +1781,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "WAS Capitals",
       "side": "away",
-      "line": -1.5,
-      "odds": 3
+      "line": 1.5,
+      "odds": 1.35
      },
      {
       "name": "NSH Predators",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3.1
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-29T10:14:31.080Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "WAS Capitals",
+        "side": "away",
+        "odds": 1.87
+       },
+       {
+        "name": "NSH Predators",
+        "side": "home",
+        "odds": 1.86
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "WAS Capitals",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.35
+       },
+       {
+        "name": "NSH Predators",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.1
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-29T09:46:37.964Z",
      "provider": "bet365-official",
@@ -2105,6 +2143,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-10-29T10:14:31.080Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    },
     {
      "at": "2026-10-29T05:11:38.517Z",
      "type": "favorite-flip",
