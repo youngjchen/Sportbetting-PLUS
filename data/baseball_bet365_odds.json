@@ -1,38 +1,43 @@
 {
   "schemaVersion": 1,
   "provider": "bet365-official-first",
-  "updated": "2026-10-30T05:47:59.391Z",
+  "updated": "2026-10-30T05:52:59.450Z",
   "source": "https://www.bet365.com/",
   "pages": {
     "MLB": {
       "ok": true
     },
     "ALL": {
-      "ok": true
+      "ok": false,
+      "error": "Request failed with status code 403"
     }
   },
   "leagues": {
     "MLB": {
-      "status": "empty",
+      "status": "error",
       "scheduled": 0,
       "officialMatched": 0,
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-10-30T05:47:59.391Z",
+      "lastAttemptAt": "2026-10-30T05:52:59.450Z",
       "lastSuccessAt": "2026-10-28T23:54:58.752Z",
-      "errors": []
+      "errors": [
+        "Request failed with status code 403"
+      ]
     },
     "NPB": {
-      "status": "empty",
+      "status": "error",
       "scheduled": 0,
       "officialMatched": 0,
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-10-30T05:47:59.391Z",
+      "lastAttemptAt": "2026-10-30T05:52:59.450Z",
       "lastSuccessAt": "2026-10-28T08:57:29.164Z",
-      "errors": []
+      "errors": [
+        "Request failed with status code 403"
+      ]
     },
     "KBO": {
       "status": "fallback",
@@ -41,20 +46,24 @@
       "fallbackMatched": 1,
       "oddsPortalMatched": 0,
       "matched": 1,
-      "lastAttemptAt": "2026-10-30T05:47:59.391Z",
-      "lastSuccessAt": "2026-10-30T05:47:59.391Z",
-      "errors": []
+      "lastAttemptAt": "2026-10-30T05:52:59.450Z",
+      "lastSuccessAt": "2026-10-30T05:52:59.450Z",
+      "errors": [
+        "Request failed with status code 403"
+      ]
     },
     "CPBL": {
-      "status": "empty",
+      "status": "error",
       "scheduled": 0,
       "officialMatched": 0,
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-10-30T05:47:59.391Z",
+      "lastAttemptAt": "2026-10-30T05:52:59.450Z",
       "lastSuccessAt": "2026-10-10T09:04:27.563Z",
-      "errors": []
+      "errors": [
+        "Request failed with status code 403"
+      ]
     }
   },
   "matches": {
@@ -53077,7 +53086,7 @@
       "away": "三星獅",
       "home": "起亞虎",
       "provider": "betexplorer-bet365",
-      "observedAt": "2026-10-30T05:47:59.391Z",
+      "observedAt": "2026-10-30T05:52:59.450Z",
       "favorite": "home",
       "markets": {
         "hd": {
