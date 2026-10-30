@@ -126,6 +126,22 @@
   .bmkt-sec .mname{ color:#cdd8e6; font-size:12.5px; letter-spacing:.06em; flex:0 0 auto; font-family:"Noto Sans TC"; font-weight:700; }
   .bmkt-sec.conflict .mname{ color:var(--conflict); }
   .bmkt-sec .bswap{ cursor:pointer; color:#ff9f43; font-size:15px; line-height:1; }
+  .bmkt-sec .bam{ cursor:pointer; color:var(--ink-dim); font-size:14px; line-height:1; margin-left:6px; }
+  .bmkt-sec .bam.on{ color:var(--lit); }
+  #anomModal{ position:fixed; inset:0; z-index:500; background:rgba(0,0,0,.6); display:none; align-items:center; justify-content:center; padding:20px; }
+  #anomModal.show{ display:flex; }
+  #anomModal .box{ background:var(--panel); border:1px solid var(--line); border-radius:14px; padding:16px 18px; width:420px; max-width:100%; box-shadow:0 16px 48px rgba(0,0,0,.7); }
+  #anomModal h3{ margin:0 0 4px; font-size:16px; }
+  #anomModal .sub{ color:var(--ink-dim); font-size:12px; line-height:1.6; margin-bottom:8px; }
+  #anomModal .am-row{ display:flex; align-items:center; gap:6px; margin:9px 0; flex-wrap:wrap; }
+  #anomModal .am-lbl{ width:56px; font-size:12px; color:var(--ink-dim); }
+  #anomModal .am-opt{ padding:6px 11px; border:1px solid var(--line); border-radius:8px; background:var(--panel-2); color:var(--ink); font-size:13px; font-weight:700; cursor:pointer; }
+  #anomModal .am-opt.on{ border-color:var(--lit); color:var(--lit); background:rgba(255,196,0,.10); }
+  #anomModal .am-opt:disabled{ opacity:.3; cursor:default; }
+  #anomModal .am-actions{ display:flex; gap:8px; align-items:center; margin-top:14px; }
+  #anomModal .am-btn{ padding:8px 14px; border:1px solid var(--line); border-radius:9px; background:var(--panel-2); color:var(--ink); font-size:13.5px; font-weight:700; cursor:pointer; }
+  #anomModal .am-save{ background:var(--lit); color:#1a1205; border-color:var(--lit); }
+  #anomModal .am-save:disabled{ opacity:.4; cursor:default; }
   .bmkt-sec .basis{ display:inline-flex; align-items:center; gap:4px; font-size:11px; letter-spacing:0; color:var(--ink-dim); font-family:"Noto Sans TC"; }
   .bmkt-sec .basis input{ width:58px; background:#0c0f14; border:1px solid var(--line); border-radius:6px; color:var(--ink); font-size:13px; font-weight:700; text-align:center; padding:3px 2px; font-family:"Oswald"; outline:none; }
   .bmkt-sec .basis input:focus{ border-color:var(--lit); }
@@ -510,6 +526,19 @@
       <button class="btn" id="settleRemove" style="display:none;color:var(--danger);">取消結算</button>
       <button class="btn" id="settleSaveOdds" title="只存賠率，不需填比分；賽後再回來補比分結算">💾 暫存賠率</button>
       <button class="btn" id="settleConfirm" style="background:var(--lit);color:#1a1205;border-color:var(--lit);">確認結算</button>
+    </div>
+  </div></div>
+
+  <!-- 手動改異常歸類（卡片讓分列 ✎） -->
+  <div id="anomModal"><div class="box">
+    <h3>異常歸類</h3>
+    <div class="sub" id="anomSub"></div>
+    <div id="anomBody"></div>
+    <div class="am-actions">
+      <button class="am-btn" id="anomAuto" title="清掉手動設定，回到程式自動判斷">↺ 自動判斷</button>
+      <span style="flex:1"></span>
+      <button class="am-btn" id="anomCancel">取消</button>
+      <button class="am-btn am-save" id="anomSave">儲存</button>
     </div>
   </div></div>
 
@@ -1661,10 +1690,27 @@ const NHL_ANOM_COMBO_LABEL = { none:"都沒對調", stake:"Stake 對調", bet365
 function nhlSnapHasData(s){ return !!(s && (s.relation || s.mlFav || Number(s.stakeSwaps)>0 || Number(s.bet365Swaps)>0)); }
 // 完整度：收盤關係（Stake 與 BET365 都到齊）最重要；只有單一平台的快照不算完整，之後資料到齊要能補上。
 function nhlSnapScore(s){ if(!s) return 0; return (s.relation?4:0) + (s.mlFav?2:0) + ((Number(s.stakeSwaps)>0||Number(s.bet365Swaps)>0)?1:0); }
-function nhlEvidenceFromSnap(s){
+// 背離標準（2026-10-31 使用者要求比照棒球）：收盤獨贏較低那隊 ≠ 讓分方，且兩隊獨贏差 ≥0.10；差 <0.10＝沒有明確熱門，不算背離。
+// 缺賠率＝不可判 → 視同無背離（棒球同）。熱門勝仍以較低賠率那隊計（同賠不計）。
+const NHL_DIV_MIN_GAP = 0.10;
+// 已結算舊場的收盤獨贏 [客, 主]（git 歷史 data/stake_api_odds.json 開賽後凍結的 Stake 收盤；沒有 Stake 才用 BET365，第三格 "B"）。
+// 舊快照只存「誰熱門」沒存賠率，0.10 門檻要靠這張表；之後的快照自帶 mlOdds。鍵＝台灣日期|客|主。
+const NHL_CLOSE_ML = {"20260930|加人|油人":[3.4,1.3,"B"],"20260930|遊騎兵|棕熊":[1.86,1.86,"B"],"20260930|黑鷹|騎士":[3.1,1.35,"B"],"20261001|企鵝|飛人":[2.12,1.67],"20261001|國王|雪崩":[2.5,1.52],"20261001|島人|楓葉":[2.05,1.75],"20261002|佛羅里|鯊魚":[1.65,2.16],"20261002|油人|加人":[1.43,2.7],"20261002|海怪|火焰":[1.85,1.89],"20261002|荒野|掠奪者":[1.66,2.15],"20261002|軍刀|藍衣":[1.85,1.89],"20261002|閃電|遊騎兵":[1.67,2.13],"20261002|飛人|魔鬼":[2.33,1.56],"20261002|黑鷹|猛瑪象":[2.65,1.45],"20261003|巨鴨|騎士":[2.24,1.6],"20261003|棕熊|噴射機":[1.85,1.89],"20261003|藍調|達拉斯":[2.55,1.47],"20261003|遊騎兵|紅翼":[2.03,1.73],"20261003|首都|颶風":[2.07,1.7],"20261004|加拿大|企鵝":[1.89,1.92],"20261004|參議員|楓葉":[1.92,1.89],"20261004|國王|鯊魚":[1.9,1.91],"20261004|棕熊|荒野":[2.7,1.48],"20261004|海怪|油人":[2.6,1.5],"20261004|火焰|加人":[1.91,1.9],"20261004|猛瑪象|藍衣":[1.88,1.93],"20261004|藍調|雪崩":[3.2,1.35],"20261004|達拉斯|掠奪者":[1.71,2.14],"20261004|颶風|飛人":[1.75,2.09],"20261004|首都|閃電":[2.55,1.52],"20261004|魔鬼|島人":[1.73,2.12],"20261004|黑鷹|軍刀":[2.85,1.43],"20261005|佛羅里|巨鴨":[1.7,2.16],"20261005|噴射機|紅翼":[1.86,1.96],"20261005|火焰|海怪":[2.28,1.63],"20261005|猛瑪象|遊騎兵":[2,1.82],"20261005|騎士|加人":[1.33,3.35],"20261006|參議員|棕熊":[1.84,1.94],"20261006|噴射機|企鵝":[2.39,1.56],"20261006|飛人|閃電":[2.75,1.44],"20261006|鯊魚|達拉斯":[2.55,1.5],"20261007|佛羅里|國王":[1.87,1.94],"20261007|參議員|紅翼":[1.99,1.82],"20261007|島人|遊騎兵":[2.29,1.63],"20261007|掠奪者|楓葉":[2.29,1.63],"20261007|猛瑪象|魔鬼":[2.02,1.8],"20261007|荒野|軍刀":[1.89,1.92],"20261007|藍調|黑鷹":[1.7,2.17],"20261007|颶風|加拿大":[1.77,2.06],"20261007|騎士|海怪":[1.62,2.31],"20261008|企鵝|首都":[2.29,1.63],"20261008|油人|巨鴨":[1.74,2.11],"20261008|雪崩|噴射機":[1.52,2.55],"20261009|加人|颶風":[3.6,1.3],"20261009|掠奪者|加拿大":[2.31,1.62],"20261009|楓葉|騎士":[2.35,1.6],"20261009|猛瑪象|棕熊":[1.75,2.05],"20261009|荒野|閃電":[2.21,1.67],"20261009|達拉斯|軍刀":[1.82,2],"20261009|雪崩|火焰":[1.42,2.9],"20261009|飛人|參議員":[2.41,1.58],"20261009|鯊魚|藍調":[2.31,1.62],"20261009|黑鷹|島人":[2.46,1.55],"20261010|企鵝|藍衣":[1.95,1.86],"20261010|巨鴨|噴射機":[2,1.82],"20261010|海怪|紅翼":[2.22,1.67],"20261010|遊騎兵|首都":[2.14,1.71],"20261011|加人|魔鬼":[3.35,1.33],"20261011|國王|騎士":[2.33,1.61],"20261011|巨鴨|火焰":[1.84,1.97],"20261011|掠奪者|參議員":[2.37,1.59],"20261011|楓葉|雪崩":[2.75,1.46],"20261011|油人|鯊魚":[1.67,2.22],"20261011|猛瑪象|軍刀":[1.89,1.92],"20261011|紅翼|加拿大":[2.49,1.54],"20261011|荒野|佛羅里":[2.11,1.74],"20261011|藍衣|藍調":[1.97,1.84],"20261011|達拉斯|企鵝":[1.58,2.4],"20261011|閃電|島人":[1.57,2.41],"20261011|颶風|黑鷹":[1.4,2.95],"20261011|飛人|棕熊":[2.19,1.68],"20261012|加人|遊騎兵":[3.2,1.35],"20261012|海怪|首都":[2.65,1.48],"20261012|颶風|飛人":[1.45,2.7],"20261013|佛羅里|軍刀":[1.95,1.86],"20261013|參議員|魔鬼":[1.95,1.85],"20261013|騎士|荒野":[1.85,1.9],"20261014|企鵝|黑鷹":[1.64,2.27],"20261014|佛羅里|藍衣":[2.09,1.75],"20261014|加人|島人":[2.7,1.47],"20261014|棕熊|鯊魚":[1.78,2.05],"20261014|楓葉|猛瑪象":[2.29,1.63],"20261014|油人|國王":[1.77,2.07],"20261014|海怪|飛人":[1.93,1.88],"20261014|火焰|巨鴨":[2.39,1.58],"20261014|荒野|噴射機":[1.88,1.93],"20261014|藍調|參議員":[1.81,2],"20261014|軍刀|加拿大":[2.26,1.65],"20261014|閃電|遊騎兵":[1.63,2.29],"20261014|雪崩|達拉斯":[1.96,1.85],"20261014|首都|颶風":[2.22,1.67],"20261014|騎士|掠奪者":[1.78,2.05],"20261014|魔鬼|紅翼":[1.89,1.92],"20261015|加拿大|首都":[2,1.82],"20261015|達拉斯|雪崩":[2.27,1.64],"20261016|加人|佛羅里":[3.35,1.33],"20261016|噴射機|黑鷹":[1.81,2.01],"20261016|島人|參議員":[2.29,1.63],"20261016|海怪|閃電":[3.25,1.35],"20261016|火焰|騎士":[3.3,1.34],"20261016|猛瑪象|油人":[1.87,1.94],"20261016|藍調|荒野":[2.15,1.71],"20261016|軍刀|楓葉":[1.95,1.86],"20261016|遊騎兵|魔鬼":[2.1,1.74],"20261016|飛人|紅翼":[2.17,1.7],"20261016|鯊魚|掠奪者":[2.08,1.76],"20261017|企鵝|雪崩":[2.65,1.49],"20261017|棕熊|巨鴨":[1.89,1.92],"20261018|企鵝|騎士":[2.75,1.46],"20261018|加人|閃電":[4.2,1.23],"20261018|參議員|飛人":[1.64,2.27],"20261018|島人|楓葉":[2.08,1.76],"20261018|棕熊|國王":[2.23,1.66],"20261018|油人|猛瑪象":[2.23,1.66],"20261018|海怪|佛羅里":[2.5,1.53],"20261018|藍調|掠奪者":[1.91,1.9],"20261018|軍刀|加拿大":[2.17,1.7],"20261018|遊騎兵|藍衣":[2.09,1.75],"20261018|達拉斯|黑鷹":[1.48,2.7],"20261018|颶風|噴射機":[1.51,2.6],"20261018|魔鬼|首都":[1.96,1.85],"20261018|鯊魚|紅翼":[2.16,1.7],"20261019|藍衣|荒野":[2.55,1.53],"20261019|颶風|火焰":[1.48,2.7],"20261020|企鵝|猛瑪象":[2.44,1.56],"20261020|巨鴨|遊騎兵":[2.22,1.67],"20261020|雪崩|飛人":[1.42,2.9],"20261020|鯊魚|楓葉":[2.17,1.7],"20261021|噴射機|藍調":[2.1,1.74],"20261021|國王|首都":[2.27,1.64],"20261021|巨鴨|島人":[2.25,1.65],"20261021|棕熊|達拉斯":[2.32,1.62],"20261021|楓葉|藍衣":[2.27,1.64],"20261021|紅翼|海怪":[1.82,1.99],"20261021|荒野|油人":[2.04,1.79],"20261021|閃電|騎士":[1.9,1.91],"20261021|雪崩|魔鬼":[1.98,1.84],"20261021|颶風|加人":[1.32,3.4],"20261021|鯊魚|加拿大":[2.75,1.45],"20261022|佛羅里|參議員":[1.95,1.85],"20261022|飛人|軍刀":[2.6,1.5],"20261023|佛羅里|企鵝":[1.88,1.93],"20261023|噴射機|達拉斯":[2.6,1.51],"20261023|國王|島人":[1.88,1.93],"20261023|巨鴨|魔鬼":[2.7,1.47],"20261023|掠奪者|棕熊":[2.23,1.66],"20261023|猛瑪象|海怪":[1.55,2.47],"20261023|紅翼|加人":[1.6,2.36],"20261023|荒野|火焰":[1.48,2.65],"20261023|遊騎兵|楓葉":[1.9,1.91],"20261023|颶風|油人":[1.76,2.07],"20261023|騎士|藍調":[1.82,2],"20261023|鯊魚|參議員":[2.09,1.75],"20261024|加拿大|黑鷹":[1.63,2.3],"20261024|閃電|雪崩":[1.99,1.82],"20261025|國王|魔鬼":[2.5,1.5],"20261025|巨鴨|飛人":[2,1.8],"20261025|掠奪者|企鵝":[2.04,1.78],"20261025|楓葉|油人":[2.18,1.69],"20261025|紅翼|火焰":[1.76,2.07],"20261025|荒野|海怪":[1.57,2.42],"20261025|軍刀|首都":[1.98,1.83],"20261025|遊騎兵|參議員":[2.03,1.79],"20261025|閃電|猛瑪象":[2.19,1.68],"20261025|颶風|藍調":[1.65,2.24],"20261025|騎士|藍衣":[1.76,2.07],"20261025|鯊魚|棕熊":[2.48,1.55],"20261026|佛羅里|黑鷹":[1.52,2.55],"20261026|加拿大|噴射機":[1.86,1.95],"20261026|島人|達拉斯":[2.48,1.55],"20261026|荒野|加人":[1.51,2.6],"20261026|雪崩|掠奪者":[1.43,2.85],"20261027|國王|遊騎兵":[2.08,1.76],"20261027|楓葉|火焰":[1.7,2.16],"20261027|紅翼|油人":[2.45,1.56],"20261028|佛羅里|噴射機":[1.75,2],"20261028|加人|巨鴨":[2.65,1.45],"20261028|加拿大|藍調":[1.85,1.9],"20261028|參議員|騎士":[2.3,1.6],"20261028|國王|黑鷹":[1.9,1.85],"20261028|島人|掠奪者":[1.9,1.85],"20261028|棕熊|颶風":[2.5,1.5],"20261028|荒野|猛瑪象":[2,1.8],"20261028|藍衣|飛人":[1.85,1.95],"20261028|軍刀|鯊魚":[1.65,2.15],"20261028|魔鬼|達拉斯":[1.95,1.85],"20261029|楓葉|海怪":[1.74,2.1],"20261029|火焰|油人":[2.5,1.53],"20261029|飛人|首都":[2.9,1.41],"20261029|魔鬼|雪崩":[2.22,1.67],"20261030|加人|鯊魚":[2.37,1.59],"20261030|加拿大|達拉斯":[2.42,1.57],"20261030|參議員|國王":[1.83,1.99],"20261030|噴射機|閃電":[2.7,1.46],"20261030|島人|荒野":[2.55,1.53],"20261030|棕熊|藍調":[1.95,1.86],"20261030|猛瑪象|企鵝":[1.75,2.09],"20261030|藍衣|颶風":[3,1.4],"20261030|軍刀|巨鴨":[1.65,2.25],"20261030|首都|掠奪者":[1.89,1.92],"20261030|黑鷹|紅翼":[2.25,1.65]};
+function nhlCloseMlFor(id){
+  const m = /^NHL_(\d{8})_(.+)@(.+)_\d{4}$/.exec(String(id||""));
+  const v = m && NHL_CLOSE_ML[`${m[1]}|${m[2]}|${m[3]}`];
+  return v ? { away:v[0], home:v[1] } : null;
+}
+function nhlEvidenceFromSnap(s, id){
+  const own = s.mlOdds && Number(s.mlOdds.away)>1 && Number(s.mlOdds.home)>1 ? s.mlOdds : null;
+  const odds = own || nhlCloseMlFor(id);
+  const a = odds ? Number(odds.away) : NaN, h = odds ? Number(odds.home) : NaN;
+  // 用表上的收盤賠率時，熱門也照同一組賠率重算（舊快照的熱門可能是較早時間點的）
+  const mlFav = odds ? (a<h ? "away" : a>h ? "home" : null) : ((s.mlFav==="away"||s.mlFav==="home") ? s.mlFav : null);   // "even"＝同賠無熱門
   return { relation: s.relation!==undefined ? (s.relation||null) : (s.flip ? "diverged" : null),
            stakeSwaps: Number(s.stakeSwaps)||0, bet365Swaps: Number(s.bet365Swaps)||0,
-           mlFav: (s.mlFav==="away"||s.mlFav==="home") ? s.mlFav : null };             // "even"＝同賠無熱門：不算背離、熱門勝不計
+           mlFav, mlOdds: odds ? { away:a, home:h } : null,
+           mlGap: odds ? Math.round(Math.abs(a-h)*100)/100 : null };
 }
 // 即時（資料檔仍有這場時）算出 Stake × BET365 的讓分關係、各自換邊次數、獨贏熱門；沒有任何平台資料時回傳 null。
 function nhlLiveSnap(g){
@@ -1680,18 +1726,29 @@ function nhlLiveSnap(g){
     stakeSwaps:_hist?_hist.stake.swapCount:0, bet365Swaps:_hist?_hist.bet365.swapCount:0,
     flipState:_hist?_hist.classification:"none", relation:_hist?_hist.currentRelation:null,
     // 兩隊獨贏同賠＝"even"（沒有熱門）：仍算有賠率、完整度不降，才蓋得掉先前誤記成主隊的快照（2026-10-23 國王@島人 1.89/1.89 被判背離）
-    mlFav: (_ma&&_mh&&Number.isFinite(Number(_ma.odds))&&Number.isFinite(Number(_mh.odds))) ? (Number(_ma.odds) < Number(_mh.odds) ? "away" : Number(_ma.odds) > Number(_mh.odds) ? "home" : "even") : null
+    mlFav: (_ma&&_mh&&Number.isFinite(Number(_ma.odds))&&Number.isFinite(Number(_mh.odds))) ? (Number(_ma.odds) < Number(_mh.odds) ? "away" : Number(_ma.odds) > Number(_mh.odds) ? "home" : "even") : null,
+    mlOdds: (_ma&&_mh&&Number(_ma.odds)>1&&Number(_mh.odds)>1) ? { away:Number(_ma.odds), home:Number(_mh.odds) } : null   // 背離 0.10 門檻用
   };
   return nhlSnapHasData(snap) ? snap : null;
 }
 function nhlAnomEvidence(model, it){
   const snap = it && it.anomSnap, live = it && it.anomLive;
   const best = nhlSnapScore(live) > nhlSnapScore(snap) ? live : snap;               // 結算時資料已過期／不完整：改用賽前記下的即時快照
-  if(best && nhlSnapHasData(best)) return nhlEvidenceFromSnap(best);
-  if(model && model.league==="NHL" && !(it && it.settled)){ const now = nhlLiveSnap(model); if(now) return nhlEvidenceFromSnap(now); }
+  if(best && nhlSnapHasData(best)) return nhlEvidenceFromSnap(best, it && it.id);
+  if(model && model.league==="NHL" && !(it && it.settled)){ const now = nhlLiveSnap(model); if(now) return nhlEvidenceFromSnap(now, it && it.id); }
   return null;
 }
+// 手動歸類（卡片讓分列 ✎）：{kind: flip|conv|other|none, combo, div}，蓋過所有自動判斷與舊手標；統計也照這個歸。
+function nhlAnomManual(it){
+  const am = it && it.anomManual;
+  if(!am || !["flip","conv","other","none"].includes(am.kind)) return undefined;
+  if(am.kind==="none") return null;
+  if(am.kind==="other") return { kind:"other", combo:null, div:true, manual:true };
+  return { kind:am.kind, combo: NHL_ANOM_COMBOS[am.kind].includes(am.combo) ? am.combo : null, div: !!am.div, manual:true };
+}
 function nhlAnomClassify(ev, it, hdFav){
+  const forced = nhlAnomManual(it);
+  if(forced!==undefined) return forced;
   const manual = it ? (it.flipStateManual!=null ? normalizeFlipState(it.flipStateManual)
                : it.platformFlip ? "flipped" : it.flipVanished ? normalizeFlipState(it.flipDir||"converged_unknown") : null) : null;
   if(!ev && !manual) return null;
@@ -1706,7 +1763,7 @@ function nhlAnomClassify(ev, it, hdFav){
     else if(manual==="converged_both"){ s=true; b=true; comboKnown=true; }
   }
   const combo = (s&&b) ? "both" : s ? "stake" : b ? "bet365" : "none";
-  const div = !!(ev && ev.mlFav && hdFav && ev.mlFav!==hdFav);                       // 背離＝獨贏熱門不是讓分方
+  const div = !!(ev && ev.mlFav && hdFav && ev.mlFav!==hdFav && ev.mlGap!=null && ev.mlGap>=NHL_DIV_MIN_GAP);   // 背離＝獨贏熱門（差≥0.10）不是讓分方
   let kind = null;
   if(relation==="diverged") kind = "flip";
   else if(relation==="aligned" && (combo!=="none" || (manual && manual.startsWith("converged")))) kind = "conv";
@@ -1732,7 +1789,7 @@ function collectCrossTab(leagueFilter){
       const margin=rec.homeScore-rec.awayScore, winner=margin>0?"home":margin<0?"away":null;
       const favMargin = rec.hdFav ? (rec.hdFav==="home"?margin:-margin) : null;
       const o={ date:d, away:rec.awayTeam, home:rec.homeTeam, aScore:rec.awayScore, hScore:rec.homeScore, itId:it.id,
-                fv: ev && ev.mlFav || null, combo:cls.combo, div:cls.div,
+                fv: ev && ev.mlFav || null, combo:cls.combo, div:cls.div, manual:!!cls.manual,
                 hd: (favMargin!=null && rec.hdVal!=null) ? rvResultOf(favMargin, rec.hdVal) : null,
                 tot: rvTotalOf(rec.awayScore+rec.homeScore, rec.totBasis) };
       const upd=(c)=>{
@@ -1751,10 +1808,10 @@ function collectCrossTab(leagueFilter){
 function renderAnomSection(leagueFilter){
   const ct = collectCrossTab(leagueFilter||"all");
   const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
-  let h=`<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">Stake × BET365 收盤讓分方：顛倒／收斂／其他異常・熱門＝獨贏賠率較低的那隊・點列看明細</span></div>`;
+  let h=`<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">Stake × BET365 收盤讓分方：顛倒／收斂／其他異常・熱門＝獨贏賠率較低的那隊・背離＝熱門不是讓分方且兩隊獨贏差≥0.10・✋＝手動歸類・點列看明細</span></div>`;
   if(!ct.total){ return h+`<div class="rv-empty">還沒有已結算的異常場。讓分方相反、曾換邊或背離的比賽結算後會自動進帳。</div></div>`; }
   const roleFn = g=>{
-    const tags=[g.combo ? NHL_ANOM_COMBO_LABEL[g.combo] : "", g.div ? "背離" : ""].filter(Boolean).join("・");
+    const tags=[g.manual ? "✋手動" : "", g.combo ? NHL_ANOM_COMBO_LABEL[g.combo] : "", g.div ? "背離" : ""].filter(Boolean).join("・");
     return `${rvWinText(g)}・讓分${rvHdText(g.hd)}・開${rvTotText(g.tot)}${tags?`・<span style="color:var(--ink-dim)">${tags}</span>`:""}`;
   };
   const cols = c=>[[c.fw,c.fwN],[c.cov,c.covN],[c.ov,c.ovN]];
@@ -1778,22 +1835,91 @@ function crossTabCached(){ const n=Date.now(); if(!__ctMemo||n-__ctMemoAt>800){ 
 function bAnomInfo(model, it){
   const cls = nhlAnomClassify(nhlAnomEvidence(model, it), it, model.hdFav);
   if(!cls) return null;
-  const ct = crossTabCached(); if(!ct || !ct.total) return null;
+  const ct = crossTabCached();
   const pc=(x,n)=> n? Math.round(100*x/n)+"%" : "—";
   let B, lbl, chipCls, groupAll=null, groupName="";
-  if(cls.kind==="other"){ B=ct.other.divOnly; lbl="背離"; chipCls="as"; }
+  if(cls.kind==="other"){ B=ct&&ct.other.divOnly; lbl="背離"; chipCls="as"; }
   else {
-    const G=ct.grp[cls.kind]; groupAll=G.all; groupName = cls.kind==="flip" ? "顛倒" : "收斂"; chipCls = cls.kind==="flip" ? "af" : "aw";
-    B = cls.div ? G.div : (cls.combo ? G[cls.combo] : G.unknown);
+    const G=ct&&ct.grp[cls.kind]; groupAll=G&&G.all; groupName = cls.kind==="flip" ? "顛倒" : "收斂"; chipCls = cls.kind==="flip" ? "af" : "aw";
+    B = G && (cls.div ? G.div : (cls.combo ? G[cls.combo] : G.unknown));
     lbl = groupName + (cls.div ? "＋背離" : cls.combo ? "·"+NHL_ANOM_COMBO_LABEL[cls.combo].replace(/\s/g,"") : "");
   }
-  if(!B || !B.n) return null;
+  if(cls.manual) lbl = "✋"+lbl;                                                       // 手動歸類：沒有歷史也照樣顯示
+  if(!B || !B.n) return cls.manual ? { lbl, cls:chipCls, covTxt:"—", n:0, tip:`${lbl}（手動歸類；這一格還沒有已結算的場）` } : null;
   let tip=`${lbl}場歷史（NHL ${B.n} 場）
 熱門勝 ${pc(B.fw,B.fwN)}・讓分過盤 ${pc(B.cov,B.covN)}・開大 ${pc(B.ov,B.ovN)}`;
   if(groupAll && groupAll.n) tip+=`
 ${groupName}全部：熱門勝 ${pc(groupAll.fw,groupAll.fwN)}・讓過 ${pc(groupAll.cov,groupAll.covN)}（${groupAll.n}場）`;
   return { lbl, cls: chipCls, covTxt:pc(B.cov,B.covN), n:B.n, tip };
 }
+// ===== 手動改異常歸類（2026-10-31 使用者要求）：類別／誰對調／背離，存 it.anomManual，蓋過自動判斷，統計同步 =====
+const NHL_AM_KINDS = [["flip","顛倒"],["conv","收斂"],["other","只背離"],["none","正常"]];
+const NHL_AM_COMBOS = [["none","都沒"],["stake","Stake"],["bet365","BET365"],["both","雙方"]];
+let anomTarget = null, anomSel = null;
+function nhlAnomText(cls){
+  if(!cls) return "正常（不列入異常）";
+  if(cls.kind==="other") return "只背離";
+  return (cls.kind==="flip"?"顛倒":"收斂") + (cls.combo ? "·"+NHL_ANOM_COMBO_LABEL[cls.combo].replace(/\s/g,"") : "") + (cls.div ? "＋背離" : "");
+}
+function openAnomModal(model){
+  const it = model._item || ensureItem(model.date, model.officialId);
+  const bare = { ...it, anomManual:null };
+  const ev = nhlAnomEvidence(model, bare), auto = nhlAnomClassify(ev, bare, model.hdFav);
+  anomTarget = { model, it };
+  const am = it.anomManual;
+  anomSel = am ? { kind:am.kind, combo:am.combo||null, div:!!am.div }
+               : { kind: auto ? auto.kind : "none", combo: auto && auto.combo || (auto && auto.kind==="flip" ? "none" : null), div: !!(auto && auto.div) };
+  const team = (s)=> s==="away" ? model.away : s==="home" ? model.home : "—";
+  const mlTxt = ev && ev.mlOdds ? `收盤獨贏 ${model.away} ${ev.mlOdds.away.toFixed(2)}／${model.home} ${ev.mlOdds.home.toFixed(2)}，差 ${ev.mlGap.toFixed(2)}${ev.mlGap<NHL_DIV_MIN_GAP?"（<0.10 沒有明確熱門）":""}` : "收盤獨贏：沒有賠率";
+  $("#anomSub").innerHTML = `${esc(model.away)}（客） vs ${esc(model.home)}（主）　·　${fmtDate(model.date)}<br>`+
+    `自動判斷：<b>${esc(nhlAnomText(auto))}</b>${am?"　·　目前：<b style=\"color:var(--lit)\">✋"+esc(nhlAnomText(nhlAnomManual(it)))+"</b>":""}<br>`+
+    `讓分方 ${esc(team(model.hdFav))}　·　${esc(mlTxt)}`;
+  renderAnomModal();
+  $("#anomAuto").style.visibility = am ? "visible" : "hidden";
+  $("#anomModal").classList.add("show");
+}
+function renderAnomModal(){
+  const s = anomSel, body = $("#anomBody");
+  const row = (lbl, opts, cur, pick, disabledFn)=>{
+    const r = document.createElement("div"); r.className = "am-row";
+    const l = document.createElement("span"); l.className = "am-lbl"; l.textContent = lbl; r.appendChild(l);
+    for(const [v, t] of opts){
+      const b = document.createElement("button"); b.className = "am-opt"+(cur===v?" on":""); b.textContent = t;
+      b.disabled = !!(disabledFn && disabledFn(v));
+      b.onclick = ()=>{ pick(v); renderAnomModal(); };
+      r.appendChild(b);
+    }
+    return r;
+  };
+  body.innerHTML = "";
+  body.appendChild(row("類別", NHL_AM_KINDS, s.kind, (v)=>{
+    s.kind = v;
+    if(v==="other") s.div = true;
+    if(v==="none") s.div = false;
+    if(v==="conv" && s.combo==="none") s.combo = null;                 // 收斂一定有人換過邊，要使用者自己選
+    if(v==="flip" && !s.combo) s.combo = "none";
+  }));
+  const noCombo = s.kind==="other" || s.kind==="none";
+  body.appendChild(row("誰對調", NHL_AM_COMBOS, noCombo ? null : s.combo, (v)=>{ s.combo = v; },
+    (v)=> noCombo || (s.kind==="conv" && v==="none")));
+  body.appendChild(row("背離", [[true,"有"],[false,"沒有"]], s.div, (v)=>{ s.div = v; },
+    ()=> s.kind==="other" || s.kind==="none"));
+  $("#anomSave").disabled = (s.kind==="flip"||s.kind==="conv") && !s.combo;
+}
+$("#anomSave").onclick = ()=>{
+  if(!anomTarget) return;
+  const { it } = anomTarget, s = anomSel;
+  snapshot();
+  it.anomManual = { kind:s.kind, combo:(s.kind==="flip"||s.kind==="conv") ? s.combo : null, div: s.kind==="other" ? true : (s.kind==="none" ? false : !!s.div), at:new Date().toISOString() };
+  saveDoc(doc); __ctMemo = null; $("#anomModal").classList.remove("show"); render();
+};
+$("#anomAuto").onclick = ()=>{
+  if(!anomTarget) return;
+  snapshot(); delete anomTarget.it.anomManual;
+  saveDoc(doc); __ctMemo = null; $("#anomModal").classList.remove("show"); render();
+};
+$("#anomCancel").onclick = ()=> $("#anomModal").classList.remove("show");
+$("#anomModal").addEventListener("click", (e)=>{ if(e.target.id==="anomModal") e.target.classList.remove("show"); });
 function jumpToCard(id){
   const card = document.querySelector('.card.bcard[data-id="'+CSS.escape(id)+'"]');
   const main = document.getElementById("board");
@@ -1973,6 +2099,10 @@ let _navDrag=null;
 // 卡片框色與列表標籤共用的異常分類：flip＝顛倒(紫)、flip-was＝收斂(藍)、flip-swap＝對調(青綠)。
 // 判定規則與原卡片框色相同（手標＞Stake × BET365 自動分類＞國際軸），只是列表也跟著顯示。
 function cardAnomClass(model, it){
+  const am = nhlAnomManual(it);                           // 手動歸類優先：框色跟著改
+  if(am===null) return null;
+  if(am && am.kind==="flip") return "flip";
+  if(am && am.kind==="conv") return "flip-was";
   const isNhl = model.league==="NHL";
   const favSide = model.hdFav || "home";
   const intl = isNhl ? intlFor(model) : null;
@@ -2392,7 +2522,10 @@ function renderCardW(model){
     let anomChip=null;
     try{ const ai=bAnomInfo(model, it); if(ai){ anomChip=document.createElement("span"); anomChip.className="banom "+ai.cls;
       anomChip.textContent=`${ai.lbl} 讓過${ai.covTxt} (${ai.n})`; anomChip.title=ai.tip; } }catch(_){}
-    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip], hdTrend()),
+    const amBtn=document.createElement("span"); amBtn.className="bam"+(it.anomManual?" on":""); amBtn.textContent="✎";
+    amBtn.title=it.anomManual?"異常歸類：手動（點開可改或回自動判斷）":"手動改異常歸類";
+    amBtn.onclick=(e)=>{ e.stopPropagation(); openAnomModal(model); };
+    hdWrap.append(mktSecHead("讓分", hdConflict, [swap, anomChip, amBtn], hdTrend()),
       mktRow("讓","give", favName, hv?hdHv(favSide,-Math.abs(Number(hv))):"", it.hdGive, bCoverHTML(pctInfo(model.league,season,favName,"hd",favSide)), hdConflict),
       mktRow("受讓","recv", undName, hv?hdHv(undSide,Math.abs(Number(hv))):"", it.hdRecv, bCoverHTML(pctInfo(model.league,season,undName,"recv",undSide)), hdConflict));
     ana.appendChild(hdWrap);
