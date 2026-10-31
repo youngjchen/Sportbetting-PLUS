@@ -1,10 +1,10 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-31T15:15:44.421Z",
+ "updated": "2026-10-31T15:37:59.287Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
+  "lists": 2,
   "targeted": 75,
   "fetched": 3,
   "cached": 67,
@@ -15,7 +15,16 @@
    "NBA_20261101_SAC@MEM 國王@灰熊",
    "NBA_20261101_OKC@HOU 雷霆@火箭"
   ],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/results/",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
   "NBA_20261024_CHI@MIL": {
@@ -4577,7 +4586,7 @@
    "scheduledStart": "2026-10-31T19:00:00.000Z",
    "away": "拓荒者",
    "home": "爵士",
-   "fetchedAt": "2026-10-31T15:15:44.421Z",
+   "fetchedAt": "2026-10-31T15:37:59.287Z",
    "complete": false,
    "ml": {
     "home": 3.7,
@@ -4618,9 +4627,9 @@
     {
      "line": 232.5,
      "active": true,
-     "created": "31,10,2026,16,08",
-     "over": 1.91,
-     "under": 1.91
+     "created": "31,10,2026,16,38",
+     "over": 1.88,
+     "under": 1.93
     },
     {
      "line": 233.5,
@@ -4640,20 +4649,20 @@
    "scheduledStart": "2026-10-31T22:00:00.000Z",
    "away": "76人",
    "home": "黃蜂",
-   "fetchedAt": "2026-10-31T15:15:44.421Z",
+   "fetchedAt": "2026-10-31T15:37:59.287Z",
    "complete": false,
    "ml": {
-    "home": 2.07,
-    "away": 1.79,
-    "created": "31,10,2026,15,45"
+    "home": 2.09,
+    "away": 1.78,
+    "created": "31,10,2026,16,40"
    },
    "hd": [
     {
      "line": 1.5,
      "active": true,
-     "created": "31,10,2026,15,48",
-     "home": 1.92,
-     "away": 1.9
+     "created": "31,10,2026,16,40",
+     "home": 1.93,
+     "away": 1.88
     }
    ],
    "ou": [
@@ -4787,7 +4796,7 @@
    "scheduledStart": "2026-11-01T00:00:00.000Z",
    "away": "美夢",
    "home": "金州",
-   "fetchedAt": "2026-10-31T15:15:44.421Z",
+   "fetchedAt": "2026-10-31T15:37:59.287Z",
    "complete": false,
    "ml": {
     "home": 1.84,
