@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-10-31T20:37:06.820Z",
+ "updated": "2026-10-31T20:42:07.318Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -3033,24 +3033,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "MIN Wild",
       "side": "away",
-      "line": -1.5,
-      "odds": 3.15
+      "line": 1.5,
+      "odds": 1.37
      },
      {
       "name": "WAS Capitals",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.34
+      "line": -1.5,
+      "odds": 3.05
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-10-31T20:42:07.318Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "MIN Wild",
+        "side": "away",
+        "odds": 1.87
+       },
+       {
+        "name": "WAS Capitals",
+        "side": "home",
+        "odds": 1.86
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "MIN Wild",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.37
+       },
+       {
+        "name": "WAS Capitals",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.05
+       }
+      ]
+     }
+    },
     {
      "at": "2026-10-31T20:27:06.599Z",
      "provider": "bet365-official",
@@ -3167,6 +3205,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-10-31T20:42:07.318Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    },
     {
      "at": "2026-10-31T20:27:06.599Z",
      "type": "favorite-flip",
