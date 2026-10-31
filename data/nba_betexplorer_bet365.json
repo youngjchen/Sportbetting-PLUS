@@ -1,926 +1,32 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-10-31T15:55:35.828Z",
+ "updated": "2026-10-31T16:52:49.574Z",
  "siteOffsetHours": 7,
  "health": {
-  "lists": 4,
-  "targeted": 75,
+  "lists": 3,
+  "targeted": 67,
   "fetched": 3,
-  "cached": 67,
+  "cached": 55,
   "unmatched": [
    "NBA_20261101_ATL@NO 老鷹@鵜鶘",
    "NBA_20261101_CLE@MIL 騎士@公鹿",
    "NBA_20261101_MIN@SA 灰狼@馬刺",
    "NBA_20261101_SAC@MEM 國王@灰熊",
-   "NBA_20261101_OKC@HOU 雷霆@火箭"
+   "NBA_20261101_OKC@HOU 雷霆@火箭",
+   "NBA_20261102_BOS@ORL 塞爾提@魔術",
+   "NBA_20261102_BKN@IND 籃網@溜馬",
+   "NBA_20261102_LAC@GS 快艇@勇士",
+   "NBA_20261102_TOR@LAL 暴龍@湖人"
   ],
-  "failures": []
+  "failures": [
+   {
+    "url": "https://www.betexplorer.com/basketball/usa/nba/fixtures/",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
-  "NBA_20261024_CHI@MIL": {
-   "officialId": "NBA_20261024_CHI@MIL",
-   "league": "NBA",
-   "eventId": "pxFIMqFt",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/milwaukee-bucks-chicago-bulls/pxFIMqFt/",
-   "siteStart": "23,10,2026,21,00",
-   "scheduledStart": "2026-10-23T20:00:00.000Z",
-   "away": "公牛",
-   "home": "公鹿",
-   "fetchedAt": "2026-10-23T20:30:13.038Z",
-   "complete": true,
-   "ml": {
-    "home": 1.8,
-    "away": 2.05,
-    "created": "23,10,2026,20,57"
-   },
-   "hd": [
-    {
-     "line": -1.5,
-     "active": true,
-     "created": "23,10,2026,20,46",
-     "home": 1.92,
-     "away": 1.9
-    },
-    {
-     "line": 1.5,
-     "active": false,
-     "created": "23,10,2026,07,49",
-     "home": 1.87,
-     "away": 1.95
-    }
-   ],
-   "ou": [
-    {
-     "line": 237.5,
-     "active": false,
-     "created": "23,10,2026,10,33",
-     "over": 1.9,
-     "under": 1.92
-    },
-    {
-     "line": 238.5,
-     "active": false,
-     "created": "23,10,2026,14,19",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 239.5,
-     "active": false,
-     "created": "23,10,2026,17,26",
-     "over": 1.88,
-     "under": 1.93
-    },
-    {
-     "line": 240.5,
-     "active": true,
-     "created": "23,10,2026,20,50",
-     "over": 1.91,
-     "under": 1.91
-    }
-   ]
-  },
-  "NBA_20261024_NY@BOS": {
-   "officialId": "NBA_20261024_NY@BOS",
-   "league": "NBA",
-   "eventId": "ruuM0LY1",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/boston-celtics-new-york-knicks/ruuM0LY1/",
-   "siteStart": "24,10,2026,0,00",
-   "scheduledStart": "2026-10-23T23:00:00.000Z",
-   "away": "尼克",
-   "home": "塞爾提",
-   "fetchedAt": "2026-10-23T23:33:33.517Z",
-   "complete": true,
-   "ml": {
-    "home": 1.68,
-    "away": 2.23,
-    "created": "23,10,2026,23,46"
-   },
-   "hd": [
-    {
-     "line": -2.5,
-     "active": true,
-     "created": "23,10,2026,23,57",
-     "home": 1.89,
-     "away": 1.93
-    }
-   ],
-   "ou": [
-    {
-     "line": 220.5,
-     "active": true,
-     "created": "23,10,2026,23,57",
-     "over": 1.94,
-     "under": 1.88
-    },
-    {
-     "line": 221.5,
-     "active": false,
-     "created": "23,10,2026,18,36",
-     "over": 1.92,
-     "under": 1.9
-    },
-    {
-     "line": 222.5,
-     "active": false,
-     "created": "23,10,2026,15,56",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 223.5,
-     "active": false,
-     "created": "23,10,2026,14,51",
-     "over": 1.92,
-     "under": 1.9
-    },
-    {
-     "line": 224.5,
-     "active": false,
-     "created": "23,10,2026,03,16",
-     "over": 1.95,
-     "under": 1.87
-    }
-   ]
-  },
-  "NBA_20261024_TOR@WAS": {
-   "officialId": "NBA_20261024_TOR@WAS",
-   "league": "NBA",
-   "eventId": "xj8DQhGE",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/washington-wizards-toronto-raptors/xj8DQhGE/",
-   "siteStart": "24,10,2026,0,00",
-   "scheduledStart": "2026-10-23T23:00:00.000Z",
-   "away": "暴龍",
-   "home": "巫師",
-   "fetchedAt": "2026-10-23T23:33:33.517Z",
-   "complete": true,
-   "ml": {
-    "home": 3.65,
-    "away": 1.3,
-    "created": "23,10,2026,23,46"
-   },
-   "hd": [
-    {
-     "line": 4.5,
-     "active": false,
-     "created": "22,10,2026,15,48",
-     "home": 1.95,
-     "away": 1.87
-    },
-    {
-     "line": 5.5,
-     "active": false,
-     "created": "23,10,2026,05,35",
-     "home": 1.97,
-     "away": 1.85
-    },
-    {
-     "line": 6.5,
-     "active": false,
-     "created": "23,10,2026,13,22",
-     "home": 1.95,
-     "away": 1.87
-    },
-    {
-     "line": 7.5,
-     "active": false,
-     "created": "23,10,2026,13,30",
-     "home": 1.93,
-     "away": 1.88
-    },
-    {
-     "line": 8.5,
-     "active": true,
-     "created": "23,10,2026,23,46",
-     "home": 1.92,
-     "away": 1.9
-    }
-   ],
-   "ou": [
-    {
-     "line": 235.5,
-     "active": false,
-     "created": "23,10,2026,14,43",
-     "over": 1.87,
-     "under": 1.95
-    },
-    {
-     "line": 236.5,
-     "active": true,
-     "created": "23,10,2026,23,57",
-     "over": 1.92,
-     "under": 1.9
-    },
-    {
-     "line": 237.5,
-     "active": false,
-     "created": "23,10,2026,20,40",
-     "over": 1.91,
-     "under": 1.91
-    }
-   ]
-  },
-  "NBA_20261024_ATL@CHA": {
-   "officialId": "NBA_20261024_ATL@CHA",
-   "league": "NBA",
-   "eventId": "nq0aHlw1",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/charlotte-hornets-atlanta-hawks/nq0aHlw1/",
-   "siteStart": "24,10,2026,0,00",
-   "scheduledStart": "2026-10-23T23:00:00.000Z",
-   "away": "老鷹",
-   "home": "黃蜂",
-   "fetchedAt": "2026-10-23T23:33:33.517Z",
-   "complete": true,
-   "ml": {
-    "home": 2.15,
-    "away": 1.74,
-    "created": "23,10,2026,23,22"
-   },
-   "hd": [
-    {
-     "line": 2.5,
-     "active": true,
-     "created": "23,10,2026,23,44",
-     "home": 1.89,
-     "away": 1.93
-    },
-    {
-     "line": 3.5,
-     "active": false,
-     "created": "23,10,2026,14,04",
-     "home": 1.87,
-     "away": 1.95
-    }
-   ],
-   "ou": [
-    {
-     "line": 224.5,
-     "active": false,
-     "created": "23,10,2026,13,10",
-     "over": 1.86,
-     "under": 1.96
-    },
-    {
-     "line": 225.5,
-     "active": false,
-     "created": "23,10,2026,13,12",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 226.5,
-     "active": true,
-     "created": "23,10,2026,23,02",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 227.5,
-     "active": false,
-     "created": "23,10,2026,17,32",
-     "over": 1.91,
-     "under": 1.91
-    }
-   ]
-  },
-  "NBA_20261024_MIN@ORL": {
-   "officialId": "NBA_20261024_MIN@ORL",
-   "league": "NBA",
-   "eventId": "vJdiJA8l",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/orlando-magic-minnesota-timberwolves/vJdiJA8l/",
-   "siteStart": "24,10,2026,0,00",
-   "scheduledStart": "2026-10-23T23:00:00.000Z",
-   "away": "灰狼",
-   "home": "魔術",
-   "fetchedAt": "2026-10-23T23:33:33.517Z",
-   "complete": true,
-   "ml": {
-    "home": 1.84,
-    "away": 1.99,
-    "created": "23,10,2026,23,59"
-   },
-   "hd": [
-    {
-     "line": -1.5,
-     "active": true,
-     "created": "23,10,2026,23,59",
-     "home": 1.93,
-     "away": 1.88
-    },
-    {
-     "line": 1.5,
-     "active": false,
-     "created": "23,10,2026,18,24",
-     "home": 1.88,
-     "away": 1.94
-    },
-    {
-     "line": 2.5,
-     "active": false,
-     "created": "23,10,2026,11,48",
-     "home": 1.87,
-     "away": 1.95
-    }
-   ],
-   "ou": [
-    {
-     "line": 233.5,
-     "active": false,
-     "created": "23,10,2026,11,18",
-     "over": 1.89,
-     "under": 1.93
-    },
-    {
-     "line": 234.5,
-     "active": true,
-     "created": "23,10,2026,23,48",
-     "over": 1.92,
-     "under": 1.9
-    },
-    {
-     "line": 235.5,
-     "active": false,
-     "created": "23,10,2026,14,58",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 236.5,
-     "active": false,
-     "created": "23,10,2026,03,06",
-     "over": 1.93,
-     "under": 1.89
-    },
-    {
-     "line": 237.5,
-     "active": false,
-     "created": "22,10,2026,22,57",
-     "over": 1.93,
-     "under": 1.88
-    },
-    {
-     "line": 238.5,
-     "active": false,
-     "created": "22,10,2026,20,23",
-     "over": 1.96,
-     "under": 1.86
-    },
-    {
-     "line": 239.5,
-     "active": false,
-     "created": "22,10,2026,16,06",
-     "over": 1.95,
-     "under": 1.87
-    }
-   ]
-  },
-  "NBA_20261024_DAL@IND": {
-   "officialId": "NBA_20261024_DAL@IND",
-   "league": "NBA",
-   "eventId": "rmBLOWpR",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/indiana-pacers-dallas-mavericks/rmBLOWpR/",
-   "siteStart": "24,10,2026,0,00",
-   "scheduledStart": "2026-10-23T23:00:00.000Z",
-   "away": "獨行俠",
-   "home": "溜馬",
-   "fetchedAt": "2026-10-23T23:33:33.517Z",
-   "complete": true,
-   "ml": {
-    "home": 1.38,
-    "away": 3.15,
-    "created": "23,10,2026,23,59"
-   },
-   "hd": [
-    {
-     "line": -7.5,
-     "active": true,
-     "created": "23,10,2026,23,47",
-     "home": 1.96,
-     "away": 1.86
-    },
-    {
-     "line": -6.5,
-     "active": false,
-     "created": "23,10,2026,14,16",
-     "home": 1.89,
-     "away": 1.93
-    },
-    {
-     "line": -5.5,
-     "active": false,
-     "created": "22,10,2026,09,32",
-     "home": 1.87,
-     "away": 1.95
-    }
-   ],
-   "ou": [
-    {
-     "line": 235.5,
-     "active": false,
-     "created": "22,10,2026,13,28",
-     "over": 1.95,
-     "under": 1.87
-    },
-    {
-     "line": 236.5,
-     "active": false,
-     "created": "23,10,2026,05,15",
-     "over": 1.87,
-     "under": 1.95
-    },
-    {
-     "line": 237.5,
-     "active": false,
-     "created": "23,10,2026,13,31",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 238.5,
-     "active": false,
-     "created": "23,10,2026,14,15",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 239.5,
-     "active": false,
-     "created": "23,10,2026,23,22",
-     "over": 1.85,
-     "under": 1.97
-    },
-    {
-     "line": 240.5,
-     "active": true,
-     "created": "23,10,2026,23,44",
-     "over": 1.9,
-     "under": 1.92
-    },
-    {
-     "line": 241.5,
-     "active": true,
-     "created": "23,10,2026,23,47",
-     "over": 1.89,
-     "under": 1.93
-    },
-    {
-     "line": 242.5,
-     "active": true,
-     "created": "23,10,2026,23,53",
-     "over": 1.95,
-     "under": 1.87
-    }
-   ]
-  },
-  "NBA_20261024_DET@MIA": {
-   "officialId": "NBA_20261024_DET@MIA",
-   "league": "NBA",
-   "eventId": "f937FS7D",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/miami-heat-detroit-pistons/f937FS7D/",
-   "siteStart": "24,10,2026,1,00",
-   "scheduledStart": "2026-10-24T00:00:00.000Z",
-   "away": "活塞",
-   "home": "熱火",
-   "fetchedAt": "2026-10-24T04:47:48.304Z",
-   "complete": true,
-   "ml": {
-    "home": 2.07,
-    "away": 1.79,
-    "created": "24,10,2026,00,57"
-   },
-   "hd": [
-    {
-     "line": -2.5,
-     "active": false,
-     "created": "22,10,2026,17,29",
-     "home": 1.98,
-     "away": 1.85
-    },
-    {
-     "line": -1.5,
-     "active": false,
-     "created": "22,10,2026,23,06",
-     "home": 2,
-     "away": 1.83
-    },
-    {
-     "line": 1.5,
-     "active": true,
-     "created": "24,10,2026,00,57",
-     "home": 1.97,
-     "away": 1.85
-    }
-   ],
-   "ou": [
-    {
-     "line": 234.5,
-     "active": false,
-     "created": "23,10,2026,17,17",
-     "over": 1.9,
-     "under": 1.92
-    },
-    {
-     "line": 235.5,
-     "active": true,
-     "created": "23,10,2026,23,52",
-     "over": 1.94,
-     "under": 1.88
-    },
-    {
-     "line": 236.5,
-     "active": false,
-     "created": "23,10,2026,10,53",
-     "over": 1.91,
-     "under": 1.91
-    },
-    {
-     "line": 237.5,
-     "active": false,
-     "created": "23,10,2026,07,26",
-     "over": 1.93,
-     "under": 1.89
-    }
-   ]
-  },
-  "NBA_20261024_HOU@SA": {
-   "officialId": "NBA_20261024_HOU@SA",
-   "league": "NBA",
-   "eventId": "fTo7OOQ8",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/san-antonio-spurs-houston-rockets/fTo7OOQ8/",
-   "siteStart": "24,10,2026,2,30",
-   "scheduledStart": "2026-10-24T01:30:00.000Z",
-   "away": "火箭",
-   "home": "馬刺",
-   "fetchedAt": "2026-10-24T04:47:48.304Z",
-   "complete": true,
-   "ml": {
-    "home": 1.52,
-    "away": 2.62,
-    "created": "24,10,2026,02,08"
-   },
-   "hd": [
-    {
-     "line": -7.5,
-     "active": false,
-     "created": "22,10,2026,07,56",
-     "home": 1.94,
-     "away": 1.88
-    },
-    {
-     "line": -6.5,
-     "active": false,
-     "created": "22,10,2026,22,28",
-     "home": 1.96,
-     "away": 1.86
-    },
-    {
-     "line": -5.5,
-     "active": false,
-     "created": "24,10,2026,00,49",
-     "home": 1.92,
-     "away": 1.9
-    },
-    {
-     "line": -5,
-     "active": false,
-     "created": "23,10,2026,09,07",
-     "home": 1.93,
-     "away": 1.89
-    },
-    {
-     "line": -4.5,
-     "active": true,
-     "created": "24,10,2026,02,29",
-     "home": 1.88,
-     "away": 1.94
-    }
-   ],
-   "ou": [
-    {
-     "line": 224.5,
-     "active": true,
-     "created": "24,10,2026,02,27",
-     "over": 1.93,
-     "under": 1.88
-    },
-    {
-     "line": 225.5,
-     "active": false,
-     "created": "23,10,2026,15,13",
-     "over": 1.95,
-     "under": 1.87
-    },
-    {
-     "line": 226.5,
-     "active": false,
-     "created": "23,10,2026,14,24",
-     "over": 1.9,
-     "under": 1.92
-    },
-    {
-     "line": 227.5,
-     "active": false,
-     "created": "23,10,2026,14,27",
-     "over": 1.95,
-     "under": 1.87
-    },
-    {
-     "line": 228.5,
-     "active": false,
-     "created": "23,10,2026,12,51",
-     "over": 1.95,
-     "under": 1.87
-    }
-   ]
-  },
-  "NBA_20261024_NO@UTA": {
-   "officialId": "NBA_20261024_NO@UTA",
-   "league": "NBA",
-   "eventId": "I3SPKNqg",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/utah-jazz-new-orleans-pelicans/I3SPKNqg/",
-   "siteStart": "24,10,2026,2,30",
-   "scheduledStart": "2026-10-24T01:30:00.000Z",
-   "away": "鵜鶘",
-   "home": "爵士",
-   "fetchedAt": "2026-10-24T04:47:48.304Z",
-   "complete": true,
-   "ml": {
-    "home": 1.88,
-    "away": 1.94,
-    "created": "24,10,2026,02,28"
-   },
-   "hd": [
-    {
-     "line": -5.5,
-     "active": false,
-     "created": "22,10,2026,09,46",
-     "home": 1.96,
-     "away": 1.86
-    },
-    {
-     "line": -4.5,
-     "active": false,
-     "created": "22,10,2026,17,20",
-     "home": 1.91,
-     "away": 1.91
-    },
-    {
-     "line": -3.5,
-     "active": false,
-     "created": "22,10,2026,21,09",
-     "home": 1.93,
-     "away": 1.88
-    },
-    {
-     "line": -2.5,
-     "active": false,
-     "created": "23,10,2026,13,38",
-     "home": 1.95,
-     "away": 1.87
-    },
-    {
-     "line": -1.5,
-     "active": true,
-     "created": "24,10,2026,01,40",
-     "home": 1.95,
-     "away": 1.87
-    },
-    {
-     "line": 1.5,
-     "active": false,
-     "created": "23,10,2026,15,49",
-     "home": 1.85,
-     "away": 1.98
-    }
-   ],
-   "ou": [
-    {
-     "line": 238.5,
-     "active": false,
-     "created": "23,10,2026,11,15",
-     "over": 1.89,
-     "under": 1.93
-    },
-    {
-     "line": 239.5,
-     "active": true,
-     "created": "24,10,2026,02,12",
-     "over": 1.95,
-     "under": 1.87
-    },
-    {
-     "line": 240.5,
-     "active": false,
-     "created": "23,10,2026,22,59",
-     "over": 1.95,
-     "under": 1.87
-    },
-    {
-     "line": 241.5,
-     "active": false,
-     "created": "22,10,2026,21,56",
-     "over": 1.92,
-     "under": 1.9
-    },
-    {
-     "line": 242.5,
-     "active": false,
-     "created": "22,10,2026,10,35",
-     "over": 1.91,
-     "under": 1.91
-    }
-   ]
-  },
-  "NBA_20261024_MEM@GS": {
-   "officialId": "NBA_20261024_MEM@GS",
-   "league": "NBA",
-   "eventId": "67XmFJDU",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/golden-state-warriors-memphis-grizzlies/67XmFJDU/",
-   "siteStart": "24,10,2026,3,00",
-   "scheduledStart": "2026-10-24T02:00:00.000Z",
-   "away": "灰熊",
-   "home": "勇士",
-   "fetchedAt": "2026-10-24T04:47:48.304Z",
-   "complete": true,
-   "ml": {
-    "home": 1.6,
-    "away": 2.41,
-    "created": "24,10,2026,02,52"
-   },
-   "hd": [
-    {
-     "line": -4.5,
-     "active": true,
-     "created": "24,10,2026,02,52",
-     "home": 1.94,
-     "away": 1.88
-    },
-    {
-     "line": -3.5,
-     "active": false,
-     "created": "23,10,2026,13,20",
-     "home": 1.97,
-     "away": 1.85
-    },
-    {
-     "line": -2.5,
-     "active": false,
-     "created": "23,10,2026,14,06",
-     "home": 1.89,
-     "away": 1.93
-    }
-   ],
-   "ou": [
-    {
-     "line": 234.5,
-     "active": false,
-     "created": "23,10,2026,14,03",
-     "over": 1.87,
-     "under": 1.95
-    },
-    {
-     "line": 235.5,
-     "active": false,
-     "created": "23,10,2026,14,55",
-     "over": 1.88,
-     "under": 1.93
-    },
-    {
-     "line": 236.5,
-     "active": true,
-     "created": "24,10,2026,02,58",
-     "over": 1.89,
-     "under": 1.93
-    },
-    {
-     "line": 237.5,
-     "active": false,
-     "created": "23,10,2026,19,53",
-     "over": 1.9,
-     "under": 1.92
-    }
-   ]
-  },
-  "NBA_20261024_LAC@LAL": {
-   "officialId": "NBA_20261024_LAC@LAL",
-   "league": "NBA",
-   "eventId": "QTVXI1E5",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/los-angeles-lakers-los-angeles-clippers/QTVXI1E5/",
-   "siteStart": "24,10,2026,3,00",
-   "scheduledStart": "2026-10-24T02:00:00.000Z",
-   "away": "快艇",
-   "home": "湖人",
-   "fetchedAt": "2026-10-24T04:47:48.304Z",
-   "complete": true,
-   "ml": {
-    "home": 1.28,
-    "away": 3.8,
-    "created": "24,10,2026,02,27"
-   },
-   "hd": [
-    {
-     "line": -9.5,
-     "active": false,
-     "created": "23,10,2026,18,45",
-     "home": 1.94,
-     "away": 1.88
-    },
-    {
-     "line": -8.5,
-     "active": true,
-     "created": "24,10,2026,02,30",
-     "home": 1.9,
-     "away": 1.92
-    }
-   ],
-   "ou": [
-    {
-     "line": 225.5,
-     "active": true,
-     "created": "24,10,2026,02,27",
-     "over": 1.92,
-     "under": 1.9
-    },
-    {
-     "line": 226.5,
-     "active": false,
-     "created": "23,10,2026,15,15",
-     "over": 1.92,
-     "under": 1.9
-    },
-    {
-     "line": 228.5,
-     "active": false,
-     "created": "23,10,2026,14,30",
-     "over": 1.9,
-     "under": 1.92
-    }
-   ]
-  },
-  "NBA_20261024_POR@SAC": {
-   "officialId": "NBA_20261024_POR@SAC",
-   "league": "NBA",
-   "eventId": "bsUuHuqI",
-   "url": "https://www.betexplorer.com/basketball/usa/nba/sacramento-kings-portland-trail-blazers/bsUuHuqI/",
-   "siteStart": "24,10,2026,3,00",
-   "scheduledStart": "2026-10-24T02:00:00.000Z",
-   "away": "拓荒者",
-   "home": "國王",
-   "fetchedAt": "2026-10-24T04:47:48.304Z",
-   "complete": true,
-   "ml": {
-    "home": 4.5,
-    "away": 1.22,
-    "created": "24,10,2026,01,21"
-   },
-   "hd": [
-    {
-     "line": 6.5,
-     "active": false,
-     "created": "22,10,2026,09,35",
-     "home": 1.93,
-     "away": 1.88
-    },
-    {
-     "line": 7.5,
-     "active": false,
-     "created": "23,10,2026,08,35",
-     "home": 1.97,
-     "away": 1.85
-    },
-    {
-     "line": 8.5,
-     "active": false,
-     "created": "23,10,2026,13,07",
-     "home": 1.93,
-     "away": 1.88
-    },
-    {
-     "line": 9.5,
-     "active": true,
-     "created": "24,10,2026,01,20",
-     "home": 1.92,
-     "away": 1.9
-    },
-    {
-     "line": 10.5,
-     "active": false,
-     "created": "23,10,2026,20,15",
-     "home": 1.89,
-     "away": 1.93
-    }
-   ],
-   "ou": [
-    {
-     "line": 232.5,
-     "active": true,
-     "created": "24,10,2026,02,58",
-     "over": 1.9,
-     "under": 1.92
-    }
-   ]
-  },
   "NBA_20261025_MIA@CHA": {
    "officialId": "NBA_20261025_MIA@CHA",
    "league": "NBA",
@@ -4577,12 +3683,12 @@
    "scheduledStart": "2026-10-31T19:00:00.000Z",
    "away": "拓荒者",
    "home": "爵士",
-   "fetchedAt": "2026-10-31T15:55:35.828Z",
+   "fetchedAt": "2026-10-31T16:52:49.574Z",
    "complete": false,
    "ml": {
-    "home": 3.65,
-    "away": 1.3,
-    "created": "31,10,2026,16,55"
+    "home": 3.6,
+    "away": 1.31,
+    "created": "31,10,2026,17,24"
    },
    "hd": [
     {
@@ -4602,7 +3708,7 @@
     {
      "line": 8.5,
      "active": true,
-     "created": "31,10,2026,15,39",
+     "created": "31,10,2026,17,52",
      "home": 1.91,
      "away": 1.91
     }
@@ -4610,17 +3716,17 @@
    "ou": [
     {
      "line": 231.5,
-     "active": false,
-     "created": "31,10,2026,08,53",
-     "over": 1.88,
-     "under": 1.94
+     "active": true,
+     "created": "31,10,2026,17,49",
+     "over": 1.89,
+     "under": 1.93
     },
     {
      "line": 232.5,
-     "active": true,
-     "created": "31,10,2026,16,47",
-     "over": 1.91,
-     "under": 1.91
+     "active": false,
+     "created": "31,10,2026,16,56",
+     "over": 1.96,
+     "under": 1.86
     },
     {
      "line": 233.5,
@@ -4640,20 +3746,20 @@
    "scheduledStart": "2026-10-31T22:00:00.000Z",
    "away": "76人",
    "home": "黃蜂",
-   "fetchedAt": "2026-10-31T15:55:35.828Z",
+   "fetchedAt": "2026-10-31T16:52:49.574Z",
    "complete": false,
    "ml": {
-    "home": 2.09,
-    "away": 1.78,
-    "created": "31,10,2026,16,40"
+    "home": 2.03,
+    "away": 1.81,
+    "created": "31,10,2026,17,27"
    },
    "hd": [
     {
      "line": 1.5,
      "active": true,
-     "created": "31,10,2026,16,40",
-     "home": 1.93,
-     "away": 1.88
+     "created": "31,10,2026,17,03",
+     "home": 1.91,
+     "away": 1.91
     }
    ],
    "ou": [
@@ -4787,7 +3893,7 @@
    "scheduledStart": "2026-11-01T00:00:00.000Z",
    "away": "美夢",
    "home": "金州",
-   "fetchedAt": "2026-10-31T15:55:35.828Z",
+   "fetchedAt": "2026-10-31T16:52:49.574Z",
    "complete": false,
    "ml": {
     "home": 1.84,
@@ -4813,17 +3919,920 @@
    "ou": [
     {
      "line": 142.5,
-     "active": true,
+     "active": false,
      "created": "31,10,2026,13,25",
      "over": 1.83,
      "under": 1.9
     },
     {
      "line": 143.5,
+     "active": true,
+     "created": "31,10,2026,17,25",
+     "over": 1.93,
+     "under": 1.81
+    }
+   ]
+  },
+  "NBA_20261024_CHI@MIL": {
+   "officialId": "NBA_20261024_CHI@MIL",
+   "league": "NBA",
+   "eventId": "pxFIMqFt",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/milwaukee-bucks-chicago-bulls/pxFIMqFt/",
+   "siteStart": "23,10,2026,21,00",
+   "scheduledStart": "2026-10-23T20:00:00.000Z",
+   "away": "公牛",
+   "home": "公鹿",
+   "fetchedAt": "2026-10-23T20:30:13.038Z",
+   "complete": true,
+   "ml": {
+    "home": 1.8,
+    "away": 2.05,
+    "created": "23,10,2026,20,57"
+   },
+   "hd": [
+    {
+     "line": -1.5,
+     "active": true,
+     "created": "23,10,2026,20,46",
+     "home": 1.92,
+     "away": 1.9
+    },
+    {
+     "line": 1.5,
      "active": false,
-     "created": "30,10,2026,07,31",
+     "created": "23,10,2026,07,49",
+     "home": 1.87,
+     "away": 1.95
+    }
+   ],
+   "ou": [
+    {
+     "line": 237.5,
+     "active": false,
+     "created": "23,10,2026,10,33",
+     "over": 1.9,
+     "under": 1.92
+    },
+    {
+     "line": 238.5,
+     "active": false,
+     "created": "23,10,2026,14,19",
      "over": 1.91,
-     "under": 1.82
+     "under": 1.91
+    },
+    {
+     "line": 239.5,
+     "active": false,
+     "created": "23,10,2026,17,26",
+     "over": 1.88,
+     "under": 1.93
+    },
+    {
+     "line": 240.5,
+     "active": true,
+     "created": "23,10,2026,20,50",
+     "over": 1.91,
+     "under": 1.91
+    }
+   ]
+  },
+  "NBA_20261024_NY@BOS": {
+   "officialId": "NBA_20261024_NY@BOS",
+   "league": "NBA",
+   "eventId": "ruuM0LY1",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/boston-celtics-new-york-knicks/ruuM0LY1/",
+   "siteStart": "24,10,2026,0,00",
+   "scheduledStart": "2026-10-23T23:00:00.000Z",
+   "away": "尼克",
+   "home": "塞爾提",
+   "fetchedAt": "2026-10-23T23:33:33.517Z",
+   "complete": true,
+   "ml": {
+    "home": 1.68,
+    "away": 2.23,
+    "created": "23,10,2026,23,46"
+   },
+   "hd": [
+    {
+     "line": -2.5,
+     "active": true,
+     "created": "23,10,2026,23,57",
+     "home": 1.89,
+     "away": 1.93
+    }
+   ],
+   "ou": [
+    {
+     "line": 220.5,
+     "active": true,
+     "created": "23,10,2026,23,57",
+     "over": 1.94,
+     "under": 1.88
+    },
+    {
+     "line": 221.5,
+     "active": false,
+     "created": "23,10,2026,18,36",
+     "over": 1.92,
+     "under": 1.9
+    },
+    {
+     "line": 222.5,
+     "active": false,
+     "created": "23,10,2026,15,56",
+     "over": 1.91,
+     "under": 1.91
+    },
+    {
+     "line": 223.5,
+     "active": false,
+     "created": "23,10,2026,14,51",
+     "over": 1.92,
+     "under": 1.9
+    },
+    {
+     "line": 224.5,
+     "active": false,
+     "created": "23,10,2026,03,16",
+     "over": 1.95,
+     "under": 1.87
+    }
+   ]
+  },
+  "NBA_20261024_TOR@WAS": {
+   "officialId": "NBA_20261024_TOR@WAS",
+   "league": "NBA",
+   "eventId": "xj8DQhGE",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/washington-wizards-toronto-raptors/xj8DQhGE/",
+   "siteStart": "24,10,2026,0,00",
+   "scheduledStart": "2026-10-23T23:00:00.000Z",
+   "away": "暴龍",
+   "home": "巫師",
+   "fetchedAt": "2026-10-23T23:33:33.517Z",
+   "complete": true,
+   "ml": {
+    "home": 3.65,
+    "away": 1.3,
+    "created": "23,10,2026,23,46"
+   },
+   "hd": [
+    {
+     "line": 4.5,
+     "active": false,
+     "created": "22,10,2026,15,48",
+     "home": 1.95,
+     "away": 1.87
+    },
+    {
+     "line": 5.5,
+     "active": false,
+     "created": "23,10,2026,05,35",
+     "home": 1.97,
+     "away": 1.85
+    },
+    {
+     "line": 6.5,
+     "active": false,
+     "created": "23,10,2026,13,22",
+     "home": 1.95,
+     "away": 1.87
+    },
+    {
+     "line": 7.5,
+     "active": false,
+     "created": "23,10,2026,13,30",
+     "home": 1.93,
+     "away": 1.88
+    },
+    {
+     "line": 8.5,
+     "active": true,
+     "created": "23,10,2026,23,46",
+     "home": 1.92,
+     "away": 1.9
+    }
+   ],
+   "ou": [
+    {
+     "line": 235.5,
+     "active": false,
+     "created": "23,10,2026,14,43",
+     "over": 1.87,
+     "under": 1.95
+    },
+    {
+     "line": 236.5,
+     "active": true,
+     "created": "23,10,2026,23,57",
+     "over": 1.92,
+     "under": 1.9
+    },
+    {
+     "line": 237.5,
+     "active": false,
+     "created": "23,10,2026,20,40",
+     "over": 1.91,
+     "under": 1.91
+    }
+   ]
+  },
+  "NBA_20261024_ATL@CHA": {
+   "officialId": "NBA_20261024_ATL@CHA",
+   "league": "NBA",
+   "eventId": "nq0aHlw1",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/charlotte-hornets-atlanta-hawks/nq0aHlw1/",
+   "siteStart": "24,10,2026,0,00",
+   "scheduledStart": "2026-10-23T23:00:00.000Z",
+   "away": "老鷹",
+   "home": "黃蜂",
+   "fetchedAt": "2026-10-23T23:33:33.517Z",
+   "complete": true,
+   "ml": {
+    "home": 2.15,
+    "away": 1.74,
+    "created": "23,10,2026,23,22"
+   },
+   "hd": [
+    {
+     "line": 2.5,
+     "active": true,
+     "created": "23,10,2026,23,44",
+     "home": 1.89,
+     "away": 1.93
+    },
+    {
+     "line": 3.5,
+     "active": false,
+     "created": "23,10,2026,14,04",
+     "home": 1.87,
+     "away": 1.95
+    }
+   ],
+   "ou": [
+    {
+     "line": 224.5,
+     "active": false,
+     "created": "23,10,2026,13,10",
+     "over": 1.86,
+     "under": 1.96
+    },
+    {
+     "line": 225.5,
+     "active": false,
+     "created": "23,10,2026,13,12",
+     "over": 1.91,
+     "under": 1.91
+    },
+    {
+     "line": 226.5,
+     "active": true,
+     "created": "23,10,2026,23,02",
+     "over": 1.91,
+     "under": 1.91
+    },
+    {
+     "line": 227.5,
+     "active": false,
+     "created": "23,10,2026,17,32",
+     "over": 1.91,
+     "under": 1.91
+    }
+   ]
+  },
+  "NBA_20261024_MIN@ORL": {
+   "officialId": "NBA_20261024_MIN@ORL",
+   "league": "NBA",
+   "eventId": "vJdiJA8l",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/orlando-magic-minnesota-timberwolves/vJdiJA8l/",
+   "siteStart": "24,10,2026,0,00",
+   "scheduledStart": "2026-10-23T23:00:00.000Z",
+   "away": "灰狼",
+   "home": "魔術",
+   "fetchedAt": "2026-10-23T23:33:33.517Z",
+   "complete": true,
+   "ml": {
+    "home": 1.84,
+    "away": 1.99,
+    "created": "23,10,2026,23,59"
+   },
+   "hd": [
+    {
+     "line": -1.5,
+     "active": true,
+     "created": "23,10,2026,23,59",
+     "home": 1.93,
+     "away": 1.88
+    },
+    {
+     "line": 1.5,
+     "active": false,
+     "created": "23,10,2026,18,24",
+     "home": 1.88,
+     "away": 1.94
+    },
+    {
+     "line": 2.5,
+     "active": false,
+     "created": "23,10,2026,11,48",
+     "home": 1.87,
+     "away": 1.95
+    }
+   ],
+   "ou": [
+    {
+     "line": 233.5,
+     "active": false,
+     "created": "23,10,2026,11,18",
+     "over": 1.89,
+     "under": 1.93
+    },
+    {
+     "line": 234.5,
+     "active": true,
+     "created": "23,10,2026,23,48",
+     "over": 1.92,
+     "under": 1.9
+    },
+    {
+     "line": 235.5,
+     "active": false,
+     "created": "23,10,2026,14,58",
+     "over": 1.91,
+     "under": 1.91
+    },
+    {
+     "line": 236.5,
+     "active": false,
+     "created": "23,10,2026,03,06",
+     "over": 1.93,
+     "under": 1.89
+    },
+    {
+     "line": 237.5,
+     "active": false,
+     "created": "22,10,2026,22,57",
+     "over": 1.93,
+     "under": 1.88
+    },
+    {
+     "line": 238.5,
+     "active": false,
+     "created": "22,10,2026,20,23",
+     "over": 1.96,
+     "under": 1.86
+    },
+    {
+     "line": 239.5,
+     "active": false,
+     "created": "22,10,2026,16,06",
+     "over": 1.95,
+     "under": 1.87
+    }
+   ]
+  },
+  "NBA_20261024_DAL@IND": {
+   "officialId": "NBA_20261024_DAL@IND",
+   "league": "NBA",
+   "eventId": "rmBLOWpR",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/indiana-pacers-dallas-mavericks/rmBLOWpR/",
+   "siteStart": "24,10,2026,0,00",
+   "scheduledStart": "2026-10-23T23:00:00.000Z",
+   "away": "獨行俠",
+   "home": "溜馬",
+   "fetchedAt": "2026-10-23T23:33:33.517Z",
+   "complete": true,
+   "ml": {
+    "home": 1.38,
+    "away": 3.15,
+    "created": "23,10,2026,23,59"
+   },
+   "hd": [
+    {
+     "line": -7.5,
+     "active": true,
+     "created": "23,10,2026,23,47",
+     "home": 1.96,
+     "away": 1.86
+    },
+    {
+     "line": -6.5,
+     "active": false,
+     "created": "23,10,2026,14,16",
+     "home": 1.89,
+     "away": 1.93
+    },
+    {
+     "line": -5.5,
+     "active": false,
+     "created": "22,10,2026,09,32",
+     "home": 1.87,
+     "away": 1.95
+    }
+   ],
+   "ou": [
+    {
+     "line": 235.5,
+     "active": false,
+     "created": "22,10,2026,13,28",
+     "over": 1.95,
+     "under": 1.87
+    },
+    {
+     "line": 236.5,
+     "active": false,
+     "created": "23,10,2026,05,15",
+     "over": 1.87,
+     "under": 1.95
+    },
+    {
+     "line": 237.5,
+     "active": false,
+     "created": "23,10,2026,13,31",
+     "over": 1.91,
+     "under": 1.91
+    },
+    {
+     "line": 238.5,
+     "active": false,
+     "created": "23,10,2026,14,15",
+     "over": 1.91,
+     "under": 1.91
+    },
+    {
+     "line": 239.5,
+     "active": false,
+     "created": "23,10,2026,23,22",
+     "over": 1.85,
+     "under": 1.97
+    },
+    {
+     "line": 240.5,
+     "active": true,
+     "created": "23,10,2026,23,44",
+     "over": 1.9,
+     "under": 1.92
+    },
+    {
+     "line": 241.5,
+     "active": true,
+     "created": "23,10,2026,23,47",
+     "over": 1.89,
+     "under": 1.93
+    },
+    {
+     "line": 242.5,
+     "active": true,
+     "created": "23,10,2026,23,53",
+     "over": 1.95,
+     "under": 1.87
+    }
+   ]
+  },
+  "NBA_20261024_DET@MIA": {
+   "officialId": "NBA_20261024_DET@MIA",
+   "league": "NBA",
+   "eventId": "f937FS7D",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/miami-heat-detroit-pistons/f937FS7D/",
+   "siteStart": "24,10,2026,1,00",
+   "scheduledStart": "2026-10-24T00:00:00.000Z",
+   "away": "活塞",
+   "home": "熱火",
+   "fetchedAt": "2026-10-24T04:47:48.304Z",
+   "complete": true,
+   "ml": {
+    "home": 2.07,
+    "away": 1.79,
+    "created": "24,10,2026,00,57"
+   },
+   "hd": [
+    {
+     "line": -2.5,
+     "active": false,
+     "created": "22,10,2026,17,29",
+     "home": 1.98,
+     "away": 1.85
+    },
+    {
+     "line": -1.5,
+     "active": false,
+     "created": "22,10,2026,23,06",
+     "home": 2,
+     "away": 1.83
+    },
+    {
+     "line": 1.5,
+     "active": true,
+     "created": "24,10,2026,00,57",
+     "home": 1.97,
+     "away": 1.85
+    }
+   ],
+   "ou": [
+    {
+     "line": 234.5,
+     "active": false,
+     "created": "23,10,2026,17,17",
+     "over": 1.9,
+     "under": 1.92
+    },
+    {
+     "line": 235.5,
+     "active": true,
+     "created": "23,10,2026,23,52",
+     "over": 1.94,
+     "under": 1.88
+    },
+    {
+     "line": 236.5,
+     "active": false,
+     "created": "23,10,2026,10,53",
+     "over": 1.91,
+     "under": 1.91
+    },
+    {
+     "line": 237.5,
+     "active": false,
+     "created": "23,10,2026,07,26",
+     "over": 1.93,
+     "under": 1.89
+    }
+   ]
+  },
+  "NBA_20261024_HOU@SA": {
+   "officialId": "NBA_20261024_HOU@SA",
+   "league": "NBA",
+   "eventId": "fTo7OOQ8",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/san-antonio-spurs-houston-rockets/fTo7OOQ8/",
+   "siteStart": "24,10,2026,2,30",
+   "scheduledStart": "2026-10-24T01:30:00.000Z",
+   "away": "火箭",
+   "home": "馬刺",
+   "fetchedAt": "2026-10-24T04:47:48.304Z",
+   "complete": true,
+   "ml": {
+    "home": 1.52,
+    "away": 2.62,
+    "created": "24,10,2026,02,08"
+   },
+   "hd": [
+    {
+     "line": -7.5,
+     "active": false,
+     "created": "22,10,2026,07,56",
+     "home": 1.94,
+     "away": 1.88
+    },
+    {
+     "line": -6.5,
+     "active": false,
+     "created": "22,10,2026,22,28",
+     "home": 1.96,
+     "away": 1.86
+    },
+    {
+     "line": -5.5,
+     "active": false,
+     "created": "24,10,2026,00,49",
+     "home": 1.92,
+     "away": 1.9
+    },
+    {
+     "line": -5,
+     "active": false,
+     "created": "23,10,2026,09,07",
+     "home": 1.93,
+     "away": 1.89
+    },
+    {
+     "line": -4.5,
+     "active": true,
+     "created": "24,10,2026,02,29",
+     "home": 1.88,
+     "away": 1.94
+    }
+   ],
+   "ou": [
+    {
+     "line": 224.5,
+     "active": true,
+     "created": "24,10,2026,02,27",
+     "over": 1.93,
+     "under": 1.88
+    },
+    {
+     "line": 225.5,
+     "active": false,
+     "created": "23,10,2026,15,13",
+     "over": 1.95,
+     "under": 1.87
+    },
+    {
+     "line": 226.5,
+     "active": false,
+     "created": "23,10,2026,14,24",
+     "over": 1.9,
+     "under": 1.92
+    },
+    {
+     "line": 227.5,
+     "active": false,
+     "created": "23,10,2026,14,27",
+     "over": 1.95,
+     "under": 1.87
+    },
+    {
+     "line": 228.5,
+     "active": false,
+     "created": "23,10,2026,12,51",
+     "over": 1.95,
+     "under": 1.87
+    }
+   ]
+  },
+  "NBA_20261024_NO@UTA": {
+   "officialId": "NBA_20261024_NO@UTA",
+   "league": "NBA",
+   "eventId": "I3SPKNqg",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/utah-jazz-new-orleans-pelicans/I3SPKNqg/",
+   "siteStart": "24,10,2026,2,30",
+   "scheduledStart": "2026-10-24T01:30:00.000Z",
+   "away": "鵜鶘",
+   "home": "爵士",
+   "fetchedAt": "2026-10-24T04:47:48.304Z",
+   "complete": true,
+   "ml": {
+    "home": 1.88,
+    "away": 1.94,
+    "created": "24,10,2026,02,28"
+   },
+   "hd": [
+    {
+     "line": -5.5,
+     "active": false,
+     "created": "22,10,2026,09,46",
+     "home": 1.96,
+     "away": 1.86
+    },
+    {
+     "line": -4.5,
+     "active": false,
+     "created": "22,10,2026,17,20",
+     "home": 1.91,
+     "away": 1.91
+    },
+    {
+     "line": -3.5,
+     "active": false,
+     "created": "22,10,2026,21,09",
+     "home": 1.93,
+     "away": 1.88
+    },
+    {
+     "line": -2.5,
+     "active": false,
+     "created": "23,10,2026,13,38",
+     "home": 1.95,
+     "away": 1.87
+    },
+    {
+     "line": -1.5,
+     "active": true,
+     "created": "24,10,2026,01,40",
+     "home": 1.95,
+     "away": 1.87
+    },
+    {
+     "line": 1.5,
+     "active": false,
+     "created": "23,10,2026,15,49",
+     "home": 1.85,
+     "away": 1.98
+    }
+   ],
+   "ou": [
+    {
+     "line": 238.5,
+     "active": false,
+     "created": "23,10,2026,11,15",
+     "over": 1.89,
+     "under": 1.93
+    },
+    {
+     "line": 239.5,
+     "active": true,
+     "created": "24,10,2026,02,12",
+     "over": 1.95,
+     "under": 1.87
+    },
+    {
+     "line": 240.5,
+     "active": false,
+     "created": "23,10,2026,22,59",
+     "over": 1.95,
+     "under": 1.87
+    },
+    {
+     "line": 241.5,
+     "active": false,
+     "created": "22,10,2026,21,56",
+     "over": 1.92,
+     "under": 1.9
+    },
+    {
+     "line": 242.5,
+     "active": false,
+     "created": "22,10,2026,10,35",
+     "over": 1.91,
+     "under": 1.91
+    }
+   ]
+  },
+  "NBA_20261024_MEM@GS": {
+   "officialId": "NBA_20261024_MEM@GS",
+   "league": "NBA",
+   "eventId": "67XmFJDU",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/golden-state-warriors-memphis-grizzlies/67XmFJDU/",
+   "siteStart": "24,10,2026,3,00",
+   "scheduledStart": "2026-10-24T02:00:00.000Z",
+   "away": "灰熊",
+   "home": "勇士",
+   "fetchedAt": "2026-10-24T04:47:48.304Z",
+   "complete": true,
+   "ml": {
+    "home": 1.6,
+    "away": 2.41,
+    "created": "24,10,2026,02,52"
+   },
+   "hd": [
+    {
+     "line": -4.5,
+     "active": true,
+     "created": "24,10,2026,02,52",
+     "home": 1.94,
+     "away": 1.88
+    },
+    {
+     "line": -3.5,
+     "active": false,
+     "created": "23,10,2026,13,20",
+     "home": 1.97,
+     "away": 1.85
+    },
+    {
+     "line": -2.5,
+     "active": false,
+     "created": "23,10,2026,14,06",
+     "home": 1.89,
+     "away": 1.93
+    }
+   ],
+   "ou": [
+    {
+     "line": 234.5,
+     "active": false,
+     "created": "23,10,2026,14,03",
+     "over": 1.87,
+     "under": 1.95
+    },
+    {
+     "line": 235.5,
+     "active": false,
+     "created": "23,10,2026,14,55",
+     "over": 1.88,
+     "under": 1.93
+    },
+    {
+     "line": 236.5,
+     "active": true,
+     "created": "24,10,2026,02,58",
+     "over": 1.89,
+     "under": 1.93
+    },
+    {
+     "line": 237.5,
+     "active": false,
+     "created": "23,10,2026,19,53",
+     "over": 1.9,
+     "under": 1.92
+    }
+   ]
+  },
+  "NBA_20261024_LAC@LAL": {
+   "officialId": "NBA_20261024_LAC@LAL",
+   "league": "NBA",
+   "eventId": "QTVXI1E5",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/los-angeles-lakers-los-angeles-clippers/QTVXI1E5/",
+   "siteStart": "24,10,2026,3,00",
+   "scheduledStart": "2026-10-24T02:00:00.000Z",
+   "away": "快艇",
+   "home": "湖人",
+   "fetchedAt": "2026-10-24T04:47:48.304Z",
+   "complete": true,
+   "ml": {
+    "home": 1.28,
+    "away": 3.8,
+    "created": "24,10,2026,02,27"
+   },
+   "hd": [
+    {
+     "line": -9.5,
+     "active": false,
+     "created": "23,10,2026,18,45",
+     "home": 1.94,
+     "away": 1.88
+    },
+    {
+     "line": -8.5,
+     "active": true,
+     "created": "24,10,2026,02,30",
+     "home": 1.9,
+     "away": 1.92
+    }
+   ],
+   "ou": [
+    {
+     "line": 225.5,
+     "active": true,
+     "created": "24,10,2026,02,27",
+     "over": 1.92,
+     "under": 1.9
+    },
+    {
+     "line": 226.5,
+     "active": false,
+     "created": "23,10,2026,15,15",
+     "over": 1.92,
+     "under": 1.9
+    },
+    {
+     "line": 228.5,
+     "active": false,
+     "created": "23,10,2026,14,30",
+     "over": 1.9,
+     "under": 1.92
+    }
+   ]
+  },
+  "NBA_20261024_POR@SAC": {
+   "officialId": "NBA_20261024_POR@SAC",
+   "league": "NBA",
+   "eventId": "bsUuHuqI",
+   "url": "https://www.betexplorer.com/basketball/usa/nba/sacramento-kings-portland-trail-blazers/bsUuHuqI/",
+   "siteStart": "24,10,2026,3,00",
+   "scheduledStart": "2026-10-24T02:00:00.000Z",
+   "away": "拓荒者",
+   "home": "國王",
+   "fetchedAt": "2026-10-24T04:47:48.304Z",
+   "complete": true,
+   "ml": {
+    "home": 4.5,
+    "away": 1.22,
+    "created": "24,10,2026,01,21"
+   },
+   "hd": [
+    {
+     "line": 6.5,
+     "active": false,
+     "created": "22,10,2026,09,35",
+     "home": 1.93,
+     "away": 1.88
+    },
+    {
+     "line": 7.5,
+     "active": false,
+     "created": "23,10,2026,08,35",
+     "home": 1.97,
+     "away": 1.85
+    },
+    {
+     "line": 8.5,
+     "active": false,
+     "created": "23,10,2026,13,07",
+     "home": 1.93,
+     "away": 1.88
+    },
+    {
+     "line": 9.5,
+     "active": true,
+     "created": "24,10,2026,01,20",
+     "home": 1.92,
+     "away": 1.9
+    },
+    {
+     "line": 10.5,
+     "active": false,
+     "created": "23,10,2026,20,15",
+     "home": 1.89,
+     "away": 1.93
+    }
+   ],
+   "ou": [
+    {
+     "line": 232.5,
+     "active": true,
+     "created": "24,10,2026,02,58",
+     "over": 1.9,
+     "under": 1.92
     }
    ]
   },
