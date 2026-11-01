@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "provider": "stake-official",
- "updated": "2026-11-01T01:04:12.599Z",
+ "updated": "2026-11-01T01:09:13.004Z",
  "health": {
   "preseason": {
    "status": "ok",
@@ -10,12 +10,12 @@
   },
   "regular": {
    "status": "ok",
-   "discovered": 10,
+   "discovered": 12,
    "failed": 0
   },
-  "targeted": 1,
+  "targeted": 3,
   "shiftedStarts": 1,
-  "succeeded": 1,
+  "succeeded": 3,
   "failures": []
  },
  "matches": {
@@ -20675,20 +20675,24 @@
    "away": "塞爾提克",
    "home": "魔術",
    "moneyline": {
-    "away": 1.35,
-    "home": 3.1
+    "away": 1.44,
+    "home": 2.7
    },
    "favorite": "away",
-   "line": 6.5,
+   "line": 5.5,
    "handicapOdds": {
-    "away": 1.87,
-    "home": 1.9
+    "away": 1.89,
+    "home": 1.88
    },
-   "total": null,
+   "total": {
+    "line": 223.5,
+    "over": 1.88,
+    "under": 1.9
+   },
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014912-orlando-magic-boston-celtics",
    "stakeDate": "2026-11-01T20:00:00.000Z",
    "officialId": "NBA_20261102_BOS@ORL",
-   "observedAt": "2026-11-01T01:04:12.599Z",
+   "observedAt": "2026-11-01T01:09:13.004Z",
    "frozenAt": null,
    "history": [
     {
@@ -20702,6 +20706,110 @@
      "handicapOdds": {
       "away": 1.87,
       "home": 1.9
+     },
+     "total": null
+    },
+    {
+     "observedAt": "2026-11-01T01:09:13.004Z",
+     "favorite": "away",
+     "line": 5.5,
+     "moneyline": {
+      "away": 1.44,
+      "home": 2.7
+     },
+     "handicapOdds": {
+      "away": 1.89,
+      "home": 1.88
+     },
+     "total": {
+      "line": 223.5,
+      "over": 1.88,
+      "under": 1.9
+     }
+    }
+   ]
+  },
+  "NBA_20261102_BKN@IND": {
+   "provider": "stake-official",
+   "fixtureId": "87cbc2be-2717-47a3-8e50-f63263dd15cc",
+   "slug": "47014914-indiana-pacers-brooklyn-nets",
+   "scheduledStart": "2026-11-01T22:00:00.000Z",
+   "away": "籃網",
+   "home": "溜馬",
+   "moneyline": {
+    "away": 2.16,
+    "home": 1.68
+   },
+   "favorite": "home",
+   "line": 2.5,
+   "handicapOdds": {
+    "away": 1.9,
+    "home": 1.87
+   },
+   "total": {
+    "line": 230.5,
+    "over": 1.88,
+    "under": 1.9
+   },
+   "sourceUrl": "https://stake.com/sports/basketball/usa/47014914-indiana-pacers-brooklyn-nets",
+   "officialId": "NBA_20261102_BKN@IND",
+   "observedAt": "2026-11-01T01:09:13.004Z",
+   "frozenAt": null,
+   "history": [
+    {
+     "observedAt": "2026-11-01T01:09:13.004Z",
+     "favorite": "home",
+     "line": 2.5,
+     "moneyline": {
+      "away": 2.16,
+      "home": 1.68
+     },
+     "handicapOdds": {
+      "away": 1.9,
+      "home": 1.87
+     },
+     "total": {
+      "line": 230.5,
+      "over": 1.88,
+      "under": 1.9
+     }
+    }
+   ]
+  },
+  "NBA_20261102_TOR@LAL": {
+   "provider": "stake-official",
+   "fixtureId": "b52a9f73-9ac0-4391-a68c-329c9b7d03d8",
+   "slug": "47014916-los-angeles-lakers-toronto-raptors",
+   "scheduledStart": "2026-11-02T02:00:00.000Z",
+   "away": "暴龍",
+   "home": "湖人",
+   "moneyline": {
+    "away": 2.55,
+    "home": 1.5
+   },
+   "favorite": "home",
+   "line": 4.5,
+   "handicapOdds": {
+    "away": 1.91,
+    "home": 1.86
+   },
+   "total": null,
+   "sourceUrl": "https://stake.com/sports/basketball/usa/47014916-los-angeles-lakers-toronto-raptors",
+   "officialId": "NBA_20261102_TOR@LAL",
+   "observedAt": "2026-11-01T01:09:13.004Z",
+   "frozenAt": null,
+   "history": [
+    {
+     "observedAt": "2026-11-01T01:09:13.004Z",
+     "favorite": "home",
+     "line": 4.5,
+     "moneyline": {
+      "away": 2.55,
+      "home": 1.5
+     },
+     "handicapOdds": {
+      "away": 1.91,
+      "home": 1.86
      },
      "total": null
     }
