@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "provider": "stake-official",
- "updated": "2026-11-01T01:09:13.004Z",
+ "updated": "2026-11-01T01:14:13.045Z",
  "health": {
   "preseason": {
    "status": "ok",
@@ -10,12 +10,12 @@
   },
   "regular": {
    "status": "ok",
-   "discovered": 12,
+   "discovered": 11,
    "failed": 0
   },
-  "targeted": 3,
+  "targeted": 2,
   "shiftedStarts": 1,
-  "succeeded": 3,
+  "succeeded": 2,
   "failures": []
  },
  "matches": {
@@ -20692,7 +20692,7 @@
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014912-orlando-magic-boston-celtics",
    "stakeDate": "2026-11-01T20:00:00.000Z",
    "officialId": "NBA_20261102_BOS@ORL",
-   "observedAt": "2026-11-01T01:09:13.004Z",
+   "observedAt": "2026-11-01T01:14:13.045Z",
    "frozenAt": null,
    "history": [
     {
@@ -20784,19 +20784,23 @@
    "away": "暴龍",
    "home": "湖人",
    "moneyline": {
-    "away": 2.55,
-    "home": 1.5
+    "away": 2.5,
+    "home": 1.51
    },
    "favorite": "home",
    "line": 4.5,
    "handicapOdds": {
     "away": 1.91,
-    "home": 1.86
+    "home": 1.87
    },
-   "total": null,
+   "total": {
+    "line": 227.5,
+    "over": 1.88,
+    "under": 1.89
+   },
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014916-los-angeles-lakers-toronto-raptors",
    "officialId": "NBA_20261102_TOR@LAL",
-   "observedAt": "2026-11-01T01:09:13.004Z",
+   "observedAt": "2026-11-01T01:14:13.045Z",
    "frozenAt": null,
    "history": [
     {
@@ -20812,6 +20816,24 @@
       "home": 1.86
      },
      "total": null
+    },
+    {
+     "observedAt": "2026-11-01T01:14:13.045Z",
+     "favorite": "home",
+     "line": 4.5,
+     "moneyline": {
+      "away": 2.5,
+      "home": 1.51
+     },
+     "handicapOdds": {
+      "away": 1.91,
+      "home": 1.87
+     },
+     "total": {
+      "line": 227.5,
+      "over": 1.88,
+      "under": 1.89
+     }
     }
    ]
   }
