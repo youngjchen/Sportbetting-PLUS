@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "provider": "stake-official",
- "updated": "2026-11-01T23:08:44.813Z",
+ "updated": "2026-11-01T23:13:44.800Z",
  "health": {
   "preseason": {
    "status": "ok",
@@ -10,12 +10,12 @@
   },
   "regular": {
    "status": "ok",
-   "discovered": 7,
+   "discovered": 8,
    "failed": 0
   },
-  "targeted": 2,
+  "targeted": 3,
   "shiftedStarts": 1,
-  "succeeded": 2,
+  "succeeded": 3,
   "failures": []
  },
  "matches": {
@@ -18866,7 +18866,7 @@
    },
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014916-los-angeles-lakers-toronto-raptors",
    "officialId": "NBA_20261102_TOR@LAL",
-   "observedAt": "2026-11-01T23:08:44.813Z",
+   "observedAt": "2026-11-01T23:13:44.800Z",
    "frozenAt": null,
    "history": [
     {
@@ -19198,7 +19198,7 @@
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014913-golden-state-warriors-la-clippers",
    "stakeDate": "2026-11-02T01:00:00.000Z",
    "officialId": "NBA_20261102_LAC@GS",
-   "observedAt": "2026-11-01T23:08:44.813Z",
+   "observedAt": "2026-11-01T23:13:44.800Z",
    "frozenAt": null,
    "history": [
     {
@@ -19434,6 +19434,45 @@
       "over": 1.86,
       "under": 1.91
      }
+    }
+   ]
+  },
+  "NBA_20261103_OKC@CLE": {
+   "provider": "stake-official",
+   "fixtureId": "553b97fe-144e-49e5-b933-495e93cbecb8",
+   "slug": "47014915-cleveland-cavaliers-oklahoma-city-thunder",
+   "scheduledStart": "2026-11-03T00:00:00.000Z",
+   "away": "雷霆",
+   "home": "騎士",
+   "moneyline": {
+    "away": 2.43,
+    "home": 1.54
+   },
+   "favorite": "home",
+   "line": 4.5,
+   "handicapOdds": {
+    "away": 1.89,
+    "home": 1.88
+   },
+   "total": null,
+   "sourceUrl": "https://stake.com/sports/basketball/usa/47014915-cleveland-cavaliers-oklahoma-city-thunder",
+   "officialId": "NBA_20261103_OKC@CLE",
+   "observedAt": "2026-11-01T23:13:44.800Z",
+   "frozenAt": null,
+   "history": [
+    {
+     "observedAt": "2026-11-01T23:13:44.800Z",
+     "favorite": "home",
+     "line": 4.5,
+     "moneyline": {
+      "away": 2.43,
+      "home": 1.54
+     },
+     "handicapOdds": {
+      "away": 1.89,
+      "home": 1.88
+     },
+     "total": null
     }
    ]
   }
