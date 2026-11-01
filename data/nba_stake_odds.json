@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "provider": "stake-official",
- "updated": "2026-11-01T23:13:44.800Z",
+ "updated": "2026-11-01T23:18:45.218Z",
  "health": {
   "preseason": {
    "status": "ok",
@@ -10,12 +10,12 @@
   },
   "regular": {
    "status": "ok",
-   "discovered": 8,
+   "discovered": 10,
    "failed": 0
   },
-  "targeted": 3,
-  "shiftedStarts": 1,
-  "succeeded": 3,
+  "targeted": 5,
+  "shiftedStarts": 2,
+  "succeeded": 5,
   "failures": []
  },
  "matches": {
@@ -18866,7 +18866,7 @@
    },
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014916-los-angeles-lakers-toronto-raptors",
    "officialId": "NBA_20261102_TOR@LAL",
-   "observedAt": "2026-11-01T23:13:44.800Z",
+   "observedAt": "2026-11-01T23:18:45.218Z",
    "frozenAt": null,
    "history": [
     {
@@ -19198,7 +19198,7 @@
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014913-golden-state-warriors-la-clippers",
    "stakeDate": "2026-11-02T01:00:00.000Z",
    "officialId": "NBA_20261102_LAC@GS",
-   "observedAt": "2026-11-01T23:13:44.800Z",
+   "observedAt": "2026-11-01T23:18:45.218Z",
    "frozenAt": null,
    "history": [
     {
@@ -19445,19 +19445,23 @@
    "away": "雷霆",
    "home": "騎士",
    "moneyline": {
-    "away": 2.43,
+    "away": 2.45,
     "home": 1.54
    },
    "favorite": "home",
    "line": 4.5,
    "handicapOdds": {
-    "away": 1.89,
-    "home": 1.88
+    "away": 1.91,
+    "home": 1.86
    },
-   "total": null,
+   "total": {
+    "line": 227.5,
+    "over": 1.9,
+    "under": 1.88
+   },
    "sourceUrl": "https://stake.com/sports/basketball/usa/47014915-cleveland-cavaliers-oklahoma-city-thunder",
    "officialId": "NBA_20261103_OKC@CLE",
-   "observedAt": "2026-11-01T23:13:44.800Z",
+   "observedAt": "2026-11-01T23:18:45.218Z",
    "frozenAt": null,
    "history": [
     {
@@ -19473,6 +19477,119 @@
       "home": 1.88
      },
      "total": null
+    },
+    {
+     "observedAt": "2026-11-01T23:18:45.218Z",
+     "favorite": "home",
+     "line": 4.5,
+     "moneyline": {
+      "away": 2.45,
+      "home": 1.54
+     },
+     "handicapOdds": {
+      "away": 1.91,
+      "home": 1.86
+     },
+     "total": {
+      "line": 227.5,
+      "over": 1.9,
+      "under": 1.88
+     }
+    }
+   ]
+  },
+  "NBA_20261103_DET@CHA": {
+   "provider": "stake-official",
+   "fixtureId": "e444995f-9ab9-4ad6-8a09-e59e8a03d51c",
+   "slug": "47014917-charlotte-hornets-detroit-pistons",
+   "scheduledStart": "2026-11-03T00:30:00.000Z",
+   "away": "活塞",
+   "home": "黃蜂",
+   "moneyline": {
+    "away": 1.56,
+    "home": 2.39
+   },
+   "favorite": "away",
+   "line": 4.5,
+   "handicapOdds": {
+    "away": 1.92,
+    "home": 1.85
+   },
+   "total": {
+    "line": 209.5,
+    "over": 1.91,
+    "under": 1.87
+   },
+   "sourceUrl": "https://stake.com/sports/basketball/usa/47014917-charlotte-hornets-detroit-pistons",
+   "stakeDate": "2026-11-03T00:00:00.000Z",
+   "officialId": "NBA_20261103_DET@CHA",
+   "observedAt": "2026-11-01T23:18:45.218Z",
+   "frozenAt": null,
+   "history": [
+    {
+     "observedAt": "2026-11-01T23:18:45.218Z",
+     "favorite": "away",
+     "line": 4.5,
+     "moneyline": {
+      "away": 1.56,
+      "home": 2.39
+     },
+     "handicapOdds": {
+      "away": 1.92,
+      "home": 1.85
+     },
+     "total": {
+      "line": 209.5,
+      "over": 1.91,
+      "under": 1.87
+     }
+    }
+   ]
+  },
+  "NBA_20261103_POR@DEN": {
+   "provider": "stake-official",
+   "fixtureId": "bbcff738-5feb-4663-bdf1-7dff632ec97a",
+   "slug": "47014927-denver-nuggets-portland-trail-blazers",
+   "scheduledStart": "2026-11-03T02:00:00.000Z",
+   "away": "拓荒者",
+   "home": "金塊",
+   "moneyline": {
+    "away": 2.36,
+    "home": 1.57
+   },
+   "favorite": "home",
+   "line": 4.5,
+   "handicapOdds": {
+    "away": 1.86,
+    "home": 1.91
+   },
+   "total": {
+    "line": 231.5,
+    "over": 1.89,
+    "under": 1.88
+   },
+   "sourceUrl": "https://stake.com/sports/basketball/usa/47014927-denver-nuggets-portland-trail-blazers",
+   "officialId": "NBA_20261103_POR@DEN",
+   "observedAt": "2026-11-01T23:18:45.218Z",
+   "frozenAt": null,
+   "history": [
+    {
+     "observedAt": "2026-11-01T23:18:45.218Z",
+     "favorite": "home",
+     "line": 4.5,
+     "moneyline": {
+      "away": 2.36,
+      "home": 1.57
+     },
+     "handicapOdds": {
+      "away": 1.86,
+      "home": 1.91
+     },
+     "total": {
+      "line": 231.5,
+      "over": 1.89,
+      "under": 1.88
+     }
     }
    ]
   }
