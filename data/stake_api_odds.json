@@ -1,14 +1,14 @@
 {
  "provider": "stake-official",
  "mode": "official-page",
- "updated": "2026-11-01T02:37:47.645Z",
+ "updated": "2026-11-01T02:42:47.386Z",
  "source": {
   "schedule": "/schedule/sport/ice-hockey/usa/tournament/nhl",
   "odds": "/odds/{fixtureSlug}",
   "page": "https://stake.com/sports/ice-hockey/usa/nhl/{fixtureSlug}"
  },
  "health": {
-  "discovered": 7,
+  "discovered": 6,
   "targeted": 5,
   "shiftedStarts": 1,
   "succeeded": 5,
@@ -37520,7 +37520,7 @@
    "homeTeam": "颶風",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/1793556000000-carolina-hurricanes-winnipeg-jets",
-   "lastPregameAt": "2026-11-01T02:37:47.645Z",
+   "lastPregameAt": "2026-11-01T02:42:47.386Z",
    "markets": {
     "ml": {
      "open": {
@@ -37529,7 +37529,7 @@
       "home": 1.39
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "away": 3.15,
       "home": 1.35
      }
@@ -37543,7 +37543,7 @@
       "home": 1.94
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.89,
@@ -37558,7 +37558,7 @@
       "under": 1.7
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 6.5,
       "over": 2.1,
       "under": 1.68
@@ -37583,31 +37583,31 @@
      {
       "name": "Minnesota Wild",
       "side": "away",
-      "odds": 1.9
+      "odds": 1.87
      },
      {
       "name": "Washington Capitals",
       "side": "home",
-      "odds": 1.88
+      "odds": 1.9
      }
     ]
    },
    "hd": {
     "market": "Handicap (Incl. Overtime and Penalties)",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "Minnesota Wild",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.36
+      "line": -1.5,
+      "odds": 3
      },
      {
       "name": "Washington Capitals",
       "side": "home",
-      "line": -1.5,
-      "odds": 3
+      "line": 1.5,
+      "odds": 1.36
      }
     ]
    },
@@ -37631,6 +37631,61 @@
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-11-01T02:42:47.386Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Minnesota Wild",
+        "side": "away",
+        "odds": 1.87
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "odds": 1.9
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Minnesota Wild",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.36
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.05
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.72
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-01T02:17:47.525Z",
      "ml": {
@@ -38734,6 +38789,12 @@
    ],
    "events": [
     {
+     "at": "2026-11-01T02:42:47.386Z",
+     "type": "favorite-flip",
+     "from": "Washington Capitals",
+     "to": "Minnesota Wild"
+    },
+    {
      "at": "2026-11-01T02:12:47.938Z",
      "type": "favorite-flip",
      "from": "Minnesota Wild",
@@ -38803,7 +38864,7 @@
    "homeTeam": "首都",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/1793565000000-washington-capitals-minnesota-wild",
-   "lastPregameAt": "2026-11-01T02:37:47.645Z",
+   "lastPregameAt": "2026-11-01T02:42:47.386Z",
    "markets": {
     "ml": {
      "open": {
@@ -38812,9 +38873,9 @@
       "home": 1.85
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
-      "away": 1.9,
-      "home": 1.88
+      "at": "2026-11-01T02:42:47.386Z",
+      "away": 1.87,
+      "home": 1.9
      }
     },
     "hd": {
@@ -38826,11 +38887,11 @@
       "home": 2.95
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 1.5,
-      "favorite": "home",
-      "away": 1.36,
-      "home": 3
+      "favorite": "away",
+      "away": 3,
+      "home": 1.36
      }
     },
     "ou": {
@@ -38841,7 +38902,7 @@
       "under": 1.73
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 6.5,
       "over": 2.05,
       "under": 1.72
@@ -39090,7 +39151,7 @@
    "homeTeam": "飛人",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/1793566800000-philadelphia-flyers-utah-mammoth",
-   "lastPregameAt": "2026-11-01T02:37:47.645Z",
+   "lastPregameAt": "2026-11-01T02:42:47.386Z",
    "markets": {
     "ml": {
      "open": {
@@ -39099,7 +39160,7 @@
       "home": 2.25
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "away": 1.62,
       "home": 2.26
      }
@@ -39113,7 +39174,7 @@
       "home": 1.51
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2.44,
@@ -39128,7 +39189,7 @@
       "under": 1.7
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 6.5,
       "over": 2.08,
       "under": 1.7
@@ -39377,7 +39438,7 @@
    "homeTeam": "遊騎兵",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/1793574000000-new-york-rangers-edmonton-oilers",
-   "lastPregameAt": "2026-11-01T02:37:47.645Z",
+   "lastPregameAt": "2026-11-01T02:42:47.386Z",
    "markets": {
     "ml": {
      "open": {
@@ -39386,7 +39447,7 @@
       "home": 1.78
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "away": 2.02,
       "home": 1.77
      }
@@ -39400,7 +39461,7 @@
       "home": 2.75
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 1.5,
       "favorite": "home",
       "away": 1.43,
@@ -39415,7 +39476,7 @@
       "under": 1.88
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 6.5,
       "over": 1.83,
       "under": 1.91
@@ -39476,18 +39537,73 @@
       "name": "Over",
       "side": "over",
       "line": 6.5,
-      "odds": 1.71
+      "odds": 1.72
      },
      {
       "name": "Under",
       "side": "under",
       "line": 6.5,
-      "odds": 2.07
+      "odds": 2.05
      }
     ]
    },
    "rawMarkets": [],
    "history": [
+    {
+     "at": "2026-11-01T02:42:47.386Z",
+     "ml": {
+      "market": "Winner (Incl. Overtime and Penalties)",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "odds": 1.81
+       },
+       {
+        "name": "Anaheim Ducks",
+        "side": "home",
+        "odds": 1.98
+       }
+      ]
+     },
+     "hd": {
+      "market": "Handicap (Incl. Overtime and Penalties)",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.75
+       },
+       {
+        "name": "Anaheim Ducks",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.42
+       }
+      ]
+     },
+     "tot": {
+      "market": "Total (Incl. Overtime and Penalties)",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.72
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 2.05
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-01T01:21:06.758Z",
      "ml": {
@@ -39609,7 +39725,7 @@
    "homeTeam": "巨鴨",
    "sourceMode": "official-page",
    "sourceUrl": "https://stake.com/sports/ice-hockey/usa/nhl/1793581200000-anaheim-ducks-ottawa-senators",
-   "lastPregameAt": "2026-11-01T02:37:47.645Z",
+   "lastPregameAt": "2026-11-01T02:42:47.386Z",
    "markets": {
     "ml": {
      "open": {
@@ -39618,7 +39734,7 @@
       "home": 1.97
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "away": 1.81,
       "home": 1.98
      }
@@ -39632,7 +39748,7 @@
       "home": 1.42
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 1.5,
       "favorite": "away",
       "away": 2.75,
@@ -39647,10 +39763,10 @@
       "under": 2.07
      },
      "active": {
-      "at": "2026-11-01T02:37:47.645Z",
+      "at": "2026-11-01T02:42:47.386Z",
       "line": 6.5,
-      "over": 1.71,
-      "under": 2.07
+      "over": 1.72,
+      "under": 2.05
      }
     }
    }
