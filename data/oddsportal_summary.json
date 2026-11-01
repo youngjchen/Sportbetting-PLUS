@@ -2,13 +2,12 @@
   "version": 1,
   "source": "OddsPortal",
   "bookmaker": "Stake.com",
-  "updatedAt": "2026-11-01T12:10:11+08:00",
+  "updatedAt": "2026-11-02T04:10:14+08:00",
   "health": {
+    "scheduled": 5,
     "discovered": 1,
     "succeeded": 1,
     "failed": 0,
-    "added": 0,
-    "updated": 1,
     "errors": []
   },
   "games": {
@@ -188357,7 +188356,7 @@
       "awayTeam": "起亞虎",
       "homeTeam": "三星獅",
       "sourceUrl": "https://www.oddsportal.com/baseball/h2h/kia-tigers-rXhOpG8E/samsung-lions-O6nTMCG7/#IerTSzHM",
-      "observedAt": "2026-11-01T12:10:11+08:00",
+      "observedAt": "2026-11-02T04:10:14+08:00",
       "markets": {
         "ml": {
           "open": {
@@ -188380,10 +188379,19 @@
             "favorite": "away"
           },
           "active": {
-            "at": "2026-11-01T10:30:08+08:00",
+            "at": "2026-11-02T04:10:14+08:00",
+            "home": 1.67,
+            "away": 2.21,
+            "line": 1.0,
+            "favorite": "away"
+          },
+          "close": {
+            "at": "2026-11-01T01:01:00+08:00",
+            "final": true,
+            "precision": "history",
             "home": 2.95,
-            "away": 1.4,
-            "line": 1.5,
+            "away": 1.41,
+            "line": -1.5,
             "favorite": "home"
           }
         },
@@ -188411,39 +188419,15 @@
         "last": null
       },
       "stakeSwap": {
-        "ever": false,
-        "activeSide": [
-          "away",
-          "home"
-        ],
-        "struckSide": [],
-        "lines": [
+        "ever": true,
+        "transitions": [
           {
-            "line": -1.5,
-            "active": true,
-            "created": "01,11,2026,03,09"
-          },
-          {
-            "line": 1.5,
-            "active": true,
-            "created": "01,11,2026,03,09"
-          },
-          {
-            "line": 2.5,
-            "active": true,
-            "created": "01,11,2026,02,38"
-          },
-          {
-            "line": 3.5,
-            "active": true,
-            "created": "31,10,2026,18,01"
-          },
-          {
-            "line": 4.5,
-            "active": true,
-            "created": "01,11,2026,03,09"
+            "from": "away",
+            "to": "home",
+            "at": "2026-11-01T01:01+08:00"
           }
-        ]
+        ],
+        "scanFavorite": "home"
       },
       "bet365": {
         "side": "away",
