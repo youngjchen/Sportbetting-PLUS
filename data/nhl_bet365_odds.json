@@ -1,7 +1,7 @@
 {
  "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-11-04T09:10:35.832Z",
+ "updated": "2026-11-04T09:15:35.200Z",
  "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
   "status": "fallback",
@@ -632,6 +632,62 @@
    "provider": "actionnetwork-bet365",
    "history": [
     {
+     "at": "2026-11-04T09:15:35.200Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Calgary Flames",
+        "side": "away",
+        "odds": 2.16
+       },
+       {
+        "name": "Seattle Kraken",
+        "side": "home",
+        "odds": 1.74
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Calgary Flames",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.45
+       },
+       {
+        "name": "Seattle Kraken",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.8
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.09
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.78
+       }
+      ]
+     }
+    },
+    {
      "at": "2026-11-04T07:30:35.952Z",
      "provider": "actionnetwork-bet365",
      "ml": {
@@ -1083,13 +1139,13 @@
       "name": "Over",
       "side": "over",
       "line": 6.5,
-      "odds": 2.05
+      "odds": 2.09
      },
      {
       "name": "Under",
       "side": "under",
       "line": 6.5,
-      "odds": 1.8
+      "odds": 1.78
      }
     ]
    }
