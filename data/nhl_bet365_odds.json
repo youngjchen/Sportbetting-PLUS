@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-11-05T13:26:45.920Z",
+ "updated": "2026-11-05T13:36:45.773Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -42,24 +42,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "BOS Bruins",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3
      },
      {
       "name": "PIT Penguins",
       "side": "home",
-      "line": -1.5,
-      "odds": 3
+      "line": 1.5,
+      "odds": 1.37
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-11-05T13:36:45.773Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "BOS Bruins",
+        "side": "away",
+        "odds": 1.86
+       },
+       {
+        "name": "PIT Penguins",
+        "side": "home",
+        "odds": 1.87
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "BOS Bruins",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3
+       },
+       {
+        "name": "PIT Penguins",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.37
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-05T13:21:45.379Z",
      "provider": "bet365-official",
@@ -1544,6 +1582,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-11-05T13:36:45.773Z",
+     "type": "favorite-flip",
+     "from": "home",
+     "to": "away"
+    },
     {
      "at": "2026-11-05T13:21:45.379Z",
      "type": "favorite-flip",
