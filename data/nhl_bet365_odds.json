@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-11-05T09:11:45.498Z",
+ "updated": "2026-11-05T09:16:45.843Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -36,30 +36,68 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020324-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020321-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020324-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020321-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "BOS Bruins",
       "side": "away",
-      "line": -1.5,
-      "odds": 3
+      "line": 1.5,
+      "odds": 1.35
      },
      {
       "name": "PIT Penguins",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3.1
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-11-05T09:16:45.843Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "BOS Bruins",
+        "side": "away",
+        "odds": 1.86
+       },
+       {
+        "name": "PIT Penguins",
+        "side": "home",
+        "odds": 1.87
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "BOS Bruins",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.35
+       },
+       {
+        "name": "PIT Penguins",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.1
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-05T09:11:45.498Z",
      "provider": "bet365-official",
@@ -785,6 +823,12 @@
    ],
    "events": [
     {
+     "at": "2026-11-05T09:16:45.843Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    },
+    {
      "at": "2026-11-05T09:11:45.498Z",
      "type": "favorite-flip",
      "from": "home",
@@ -860,8 +904,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020314-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020312-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020314-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020312-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -1407,8 +1451,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020320-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020318-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020320-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020318-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -1868,18 +1912,18 @@
      {
       "name": "DAL Stars",
       "side": "away",
-      "odds": 1.72
+      "odds": 1.74
      },
      {
       "name": "CLB Blue Jackets",
       "side": "home",
-      "odds": 2.05
+      "odds": 2.04
      }
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204043096-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204043094-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204043096-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204043094-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -1902,6 +1946,44 @@
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-11-05T09:16:45.843Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "DAL Stars",
+        "side": "away",
+        "odds": 1.74
+       },
+       {
+        "name": "CLB Blue Jackets",
+        "side": "home",
+        "odds": 2.04
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "DAL Stars",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.9
+       },
+       {
+        "name": "CLB Blue Jackets",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.38
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-05T08:02:16.654Z",
      "provider": "bet365-official",
@@ -2121,8 +2203,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204043099-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204043097-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204043099-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204043097-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -2430,18 +2512,18 @@
      {
       "name": "STL Blues",
       "side": "away",
-      "odds": 2.58
+      "odds": 2.56
      },
      {
       "name": "NJ Devils",
       "side": "home",
-      "odds": 1.47
+      "odds": 1.48
      }
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020311-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020309-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020311-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020309-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -2464,6 +2546,44 @@
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-11-05T09:16:45.843Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "STL Blues",
+        "side": "away",
+        "odds": 2.56
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "odds": 1.48
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "STL Blues",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.58
+       },
+       {
+        "name": "NJ Devils",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.31
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-05T08:22:16.611Z",
      "provider": "bet365-official",
@@ -2911,8 +3031,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020336-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020334-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020336-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020334-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -3230,8 +3350,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020339-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020337-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020339-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020337-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -3587,8 +3707,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020317-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020315-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020317-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020315-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -3754,8 +3874,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020343-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020341-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020343-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020341-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
@@ -3959,8 +4079,8 @@
     ]
    },
    "sourceUrls": {
-    "ml": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020347-0~0&bet=1",
-    "hd": "https://www.tn.bet365.com/dl/sportsbookredirect/?bs=204020344-0~0&bet=1"
+    "ml": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020347-0~0&bet=1",
+    "hd": "https://www.bet365.com/dl/sportsbookredirect/?bs=204020344-0~0&bet=1"
    },
    "hd": {
     "market": "Puck Line",
