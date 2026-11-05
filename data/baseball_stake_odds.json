@@ -1,12 +1,12 @@
 {
   "schemaVersion": 1,
-  "generatedAt": "2026-11-05T07:44:07.933Z",
+  "generatedAt": "2026-11-05T07:49:08.709Z",
   "officialScheduleCount": 2,
   "leagues": {
     "MLB": {
       "status": "ok",
-      "lastSuccessAt": "2026-11-05T07:44:07.933Z",
-      "lastAttemptAt": "2026-11-05T07:44:07.933Z",
+      "lastSuccessAt": "2026-11-05T07:49:08.709Z",
+      "lastAttemptAt": "2026-11-05T07:49:08.709Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -20,8 +20,8 @@
     },
     "NPB": {
       "status": "ok",
-      "lastSuccessAt": "2026-11-05T07:44:07.933Z",
-      "lastAttemptAt": "2026-11-05T07:44:07.933Z",
+      "lastSuccessAt": "2026-11-05T07:49:08.709Z",
+      "lastAttemptAt": "2026-11-05T07:49:08.709Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -35,23 +35,23 @@
     },
     "KBO": {
       "status": "ok",
-      "lastSuccessAt": "2026-11-05T07:44:07.933Z",
-      "lastAttemptAt": "2026-11-05T07:44:07.933Z",
+      "lastSuccessAt": "2026-11-05T07:49:08.709Z",
+      "lastAttemptAt": "2026-11-05T07:49:08.709Z",
       "error": null,
-      "matched": 0,
+      "matched": 1,
       "health": {
-        "discovered": 0,
-        "matched": 0,
+        "discovered": 1,
+        "matched": 1,
         "unmatched": 0,
-        "shiftedStarts": 0,
+        "shiftedStarts": 1,
         "failed": 0,
         "failures": []
       }
     },
     "CPBL": {
       "status": "ok",
-      "lastSuccessAt": "2026-11-05T07:44:07.933Z",
-      "lastAttemptAt": "2026-11-05T07:44:07.933Z",
+      "lastSuccessAt": "2026-11-05T07:49:08.709Z",
+      "lastAttemptAt": "2026-11-05T07:49:08.709Z",
       "error": null,
       "matched": 0,
       "health": {
@@ -4236,6 +4236,71 @@
           "sources": {
             "direction": "stake-official",
             "handicapOdds": "stake-official-alt",
+            "total": "stake-official",
+            "moneyline": "stake-official"
+          },
+          "partial": false
+        }
+      ]
+    },
+    "KBO_20261106_KT@SAMSUNG_1730": {
+      "league": "KBO",
+      "officialId": "KBO_20261106_KT@SAMSUNG_1730",
+      "scheduledStart": "2026-11-06T09:30:00.000Z",
+      "away": "巫師",
+      "home": "三星獅",
+      "fixtureId": "6f9fa0db-4f31-47d0-ad34-9731afd21bbb",
+      "slug": "1793957400000-samsung-lions-kt-wiz",
+      "sourceUrl": "https://stake.com/sports/baseball/republic-of-korea/kbo-league/1793957400000-samsung-lions-kt-wiz",
+      "favorite": "home",
+      "rawLine": 1.5,
+      "canonicalLine": 1.5,
+      "handicapOdds": {
+        "away": 1.56,
+        "home": 2.39
+      },
+      "moneyline": {
+        "away": 2.1,
+        "home": 1.71
+      },
+      "total": {
+        "line": 8.5,
+        "over": 1.81,
+        "under": 1.97
+      },
+      "sources": {
+        "direction": "stake-official",
+        "handicapOdds": "stake-official",
+        "total": "stake-official",
+        "moneyline": "stake-official"
+      },
+      "partial": false,
+      "observedAt": "2026-11-05T07:49:08.482Z",
+      "frozenAt": null,
+      "favoriteFlipCount": 0,
+      "favoriteTransitions": [],
+      "history": [
+        {
+          "observedAt": "2026-11-05T07:49:08.482Z",
+          "favorite": "home",
+          "rawLine": 1.5,
+          "canonicalLine": 1.5,
+          "handicapOdds": {
+            "away": 1.56,
+            "home": 2.39
+          },
+          "moneyline": {
+            "away": 2.1,
+            "home": 1.71
+          },
+          "total": {
+            "line": 8.5,
+            "over": 1.81,
+            "under": 1.97
+          },
+          "sources": {
+            "direction": "stake-official",
+            "handicapOdds": "stake-official",
             "total": "stake-official",
             "moneyline": "stake-official"
           },
