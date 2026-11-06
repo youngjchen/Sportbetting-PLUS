@@ -1,43 +1,38 @@
 {
   "schemaVersion": 1,
   "provider": "bet365-official-first",
-  "updated": "2026-11-06T06:59:52.365Z",
+  "updated": "2026-11-06T07:04:52.944Z",
   "source": "https://www.bet365.com/",
   "pages": {
     "MLB": {
       "ok": true
     },
     "ALL": {
-      "ok": false,
-      "error": "Request failed with status code 403"
+      "ok": true
     }
   },
   "leagues": {
     "MLB": {
-      "status": "error",
+      "status": "empty",
       "scheduled": 0,
       "officialMatched": 0,
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-06T06:59:52.365Z",
+      "lastAttemptAt": "2026-11-06T07:04:52.944Z",
       "lastSuccessAt": "2026-10-28T23:54:58.752Z",
-      "errors": [
-        "Request failed with status code 403"
-      ]
+      "errors": []
     },
     "NPB": {
-      "status": "error",
+      "status": "empty",
       "scheduled": 0,
       "officialMatched": 0,
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-06T06:59:52.365Z",
+      "lastAttemptAt": "2026-11-06T07:04:52.944Z",
       "lastSuccessAt": "2026-10-28T08:57:29.164Z",
-      "errors": [
-        "Request failed with status code 403"
-      ]
+      "errors": []
     },
     "KBO": {
       "status": "fallback",
@@ -46,24 +41,20 @@
       "fallbackMatched": 1,
       "oddsPortalMatched": 0,
       "matched": 1,
-      "lastAttemptAt": "2026-11-06T06:59:52.365Z",
-      "lastSuccessAt": "2026-11-06T06:59:52.365Z",
-      "errors": [
-        "Request failed with status code 403"
-      ]
+      "lastAttemptAt": "2026-11-06T07:04:52.944Z",
+      "lastSuccessAt": "2026-11-06T07:04:52.944Z",
+      "errors": []
     },
     "CPBL": {
-      "status": "error",
+      "status": "empty",
       "scheduled": 0,
       "officialMatched": 0,
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-06T06:59:52.365Z",
+      "lastAttemptAt": "2026-11-06T07:04:52.944Z",
       "lastSuccessAt": "2026-10-10T09:04:27.563Z",
-      "errors": [
-        "Request failed with status code 403"
-      ]
+      "errors": []
     }
   },
   "matches": {
@@ -2424,7 +2415,7 @@
       "away": "巫師",
       "home": "三星獅",
       "provider": "betexplorer-bet365",
-      "observedAt": "2026-11-06T06:59:52.365Z",
+      "observedAt": "2026-11-06T07:04:52.944Z",
       "favorite": "home",
       "markets": {
         "hd": {
@@ -2433,7 +2424,7 @@
           "away": 1.56,
           "home": 2.35,
           "provider": "betexplorer-bet365",
-          "observedAt": "2026-11-06T06:35:10.000Z",
+          "observedAt": "2026-11-06T07:00:18.000Z",
           "stale": false
         }
       },
@@ -2855,6 +2846,22 @@
               "stale": false
             }
           }
+        },
+        {
+          "provider": "betexplorer-bet365",
+          "observedAt": "2026-11-06T07:04:52.944Z",
+          "favorite": "home",
+          "markets": {
+            "hd": {
+              "favorite": "home",
+              "line": 1.5,
+              "away": 1.56,
+              "home": 2.35,
+              "provider": "betexplorer-bet365",
+              "observedAt": "2026-11-06T07:00:18.000Z",
+              "stale": false
+            }
+          }
         }
       ],
       "providerHistories": {
@@ -3271,6 +3278,22 @@
                 "home": 2.35,
                 "provider": "betexplorer-bet365",
                 "observedAt": "2026-11-06T06:35:10.000Z",
+                "stale": false
+              }
+            }
+          },
+          {
+            "provider": "betexplorer-bet365",
+            "observedAt": "2026-11-06T07:04:52.944Z",
+            "favorite": "home",
+            "markets": {
+              "hd": {
+                "favorite": "home",
+                "line": 1.5,
+                "away": 1.56,
+                "home": 2.35,
+                "provider": "betexplorer-bet365",
+                "observedAt": "2026-11-06T07:00:18.000Z",
                 "stale": false
               }
             }
