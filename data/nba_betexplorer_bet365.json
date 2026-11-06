@@ -1,15 +1,24 @@
 {
  "schemaVersion": 1,
  "provider": "betexplorer-bet365",
- "updated": "2026-11-06T12:57:15.743Z",
+ "updated": "2026-11-06T13:13:01.368Z",
  "siteOffsetHours": 7,
  "health": {
   "lists": 4,
   "targeted": 65,
-  "fetched": 9,
+  "fetched": 7,
   "cached": 56,
   "unmatched": [],
-  "failures": []
+  "failures": [
+   {
+    "officialId": "NBA_20261107_WAS@ATL",
+    "error": "The operation was aborted due to timeout"
+   },
+   {
+    "officialId": "NBA_20261107_BOS@CHA",
+    "error": "The operation was aborted due to timeout"
+   }
+  ]
  },
  "games": {
   "NBA_20261030_SAC@NO": {
@@ -3934,7 +3943,7 @@
    "scheduledStart": "2026-11-07T00:30:00.000Z",
    "away": "76人",
    "home": "騎士",
-   "fetchedAt": "2026-11-06T12:57:15.743Z",
+   "fetchedAt": "2026-11-06T13:13:01.368Z",
    "complete": false,
    "ml": {
     "home": 2.24,
@@ -3976,7 +3985,7 @@
    "scheduledStart": "2026-11-07T01:00:00.000Z",
    "away": "爵士",
    "home": "獨行俠",
-   "fetchedAt": "2026-11-06T12:57:15.743Z",
+   "fetchedAt": "2026-11-06T13:13:01.368Z",
    "complete": false,
    "ml": {
     "home": 1.36,
@@ -4025,7 +4034,7 @@
    "scheduledStart": "2026-11-07T01:00:00.000Z",
    "away": "雷霆",
    "home": "灰熊",
-   "fetchedAt": "2026-11-06T12:57:15.743Z",
+   "fetchedAt": "2026-11-06T13:13:01.368Z",
    "complete": false,
    "ml": {
     "home": 2.29,
@@ -4067,7 +4076,7 @@
    "scheduledStart": "2026-11-07T01:00:00.000Z",
    "away": "灰狼",
    "home": "鵜鶘",
-   "fetchedAt": "2026-11-06T12:57:15.743Z",
+   "fetchedAt": "2026-11-06T13:13:01.368Z",
    "complete": false,
    "ml": {
     "home": 2.51,
@@ -4123,7 +4132,7 @@
    "scheduledStart": "2026-11-07T01:00:00.000Z",
    "away": "暴龍",
    "home": "公鹿",
-   "fetchedAt": "2026-11-06T12:57:15.743Z",
+   "fetchedAt": "2026-11-06T13:13:01.368Z",
    "complete": false,
    "ml": {
     "home": 3.05,
@@ -4200,7 +4209,7 @@
    "scheduledStart": "2026-11-07T03:00:00.000Z",
    "away": "拓荒者",
    "home": "湖人",
-   "fetchedAt": "2026-11-06T12:57:15.743Z",
+   "fetchedAt": "2026-11-06T13:13:01.368Z",
    "complete": false,
    "ml": {
     "home": 1.68,
@@ -4227,9 +4236,9 @@
     {
      "line": 232.5,
      "active": true,
-     "created": "06,11,2026,13,16",
-     "over": 1.91,
-     "under": 1.91
+     "created": "06,11,2026,14,04",
+     "over": 1.93,
+     "under": 1.88
     },
     {
      "line": 233.5,
@@ -4249,7 +4258,7 @@
    "scheduledStart": "2026-11-07T03:00:00.000Z",
    "away": "馬刺",
    "home": "國王",
-   "fetchedAt": "2026-11-06T12:57:15.743Z",
+   "fetchedAt": "2026-11-06T13:13:01.368Z",
    "complete": false,
    "ml": {
     "home": 8,
@@ -4276,9 +4285,9 @@
     {
      "line": 229.5,
      "active": true,
-     "created": "06,11,2026,12,03",
-     "over": 1.92,
-     "under": 1.9
+     "created": "06,11,2026,14,18",
+     "over": 1.93,
+     "under": 1.88
     }
    ]
   },
