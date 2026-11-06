@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "provider": "bet365-official-first",
-  "updated": "2026-11-06T13:23:31.794Z",
+  "updated": "2026-11-06T13:28:31.918Z",
   "source": "https://www.bet365.com/",
   "pages": {
     "MLB": {
@@ -20,7 +20,7 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-06T13:23:31.794Z",
+      "lastAttemptAt": "2026-11-06T13:28:31.918Z",
       "lastSuccessAt": "2026-10-28T23:54:58.752Z",
       "errors": [
         "Request failed with status code 403"
@@ -33,21 +33,21 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-06T13:23:31.794Z",
+      "lastAttemptAt": "2026-11-06T13:28:31.918Z",
       "lastSuccessAt": "2026-10-28T08:57:29.164Z",
       "errors": [
         "Request failed with status code 403"
       ]
     },
     "KBO": {
-      "status": "error",
+      "status": "fallback",
       "scheduled": 1,
       "officialMatched": 0,
-      "fallbackMatched": 0,
-      "oddsPortalMatched": 0,
-      "matched": 0,
-      "lastAttemptAt": "2026-11-06T13:23:31.794Z",
-      "lastSuccessAt": "2026-11-06T09:24:53.318Z",
+      "fallbackMatched": 1,
+      "oddsPortalMatched": 1,
+      "matched": 1,
+      "lastAttemptAt": "2026-11-06T13:28:31.918Z",
+      "lastSuccessAt": "2026-11-06T13:28:31.918Z",
       "errors": [
         "Request failed with status code 403"
       ]
@@ -59,7 +59,7 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-06T13:23:31.794Z",
+      "lastAttemptAt": "2026-11-06T13:28:31.918Z",
       "lastSuccessAt": "2026-10-10T09:04:27.563Z",
       "errors": [
         "Request failed with status code 403"
@@ -2623,6 +2623,69 @@
                 "home": 2.35,
                 "provider": "betexplorer-bet365",
                 "observedAt": "2026-11-06T07:35:20.000Z",
+                "stale": false
+              }
+            }
+          }
+        ]
+      },
+      "events": [],
+      "favoriteFlipCount": 0
+    },
+    "KBO_20261107_KT@SAMSUNG_1300": {
+      "league": "KBO",
+      "officialId": "KBO_20261107_KT@SAMSUNG_1300",
+      "scheduledStart": "2026-11-07T05:00:00.000Z",
+      "away": "巫師",
+      "home": "三星獅",
+      "provider": "oddsportal-bet365",
+      "observedAt": "2026-11-06T13:28:31.918Z",
+      "favorite": "away",
+      "markets": {
+        "hd": {
+          "favorite": "away",
+          "line": 1.5,
+          "away": 1.8,
+          "home": 1.87,
+          "provider": "oddsportal-bet365",
+          "observedAt": "2026-11-06T13:25:49.000Z",
+          "stale": false
+        }
+      },
+      "mixedSources": false,
+      "frozenAt": null,
+      "history": [
+        {
+          "provider": "oddsportal-bet365",
+          "observedAt": "2026-11-06T13:28:31.918Z",
+          "favorite": "away",
+          "markets": {
+            "hd": {
+              "favorite": "away",
+              "line": 1.5,
+              "away": 1.8,
+              "home": 1.87,
+              "provider": "oddsportal-bet365",
+              "observedAt": "2026-11-06T13:25:49.000Z",
+              "stale": false
+            }
+          }
+        }
+      ],
+      "providerHistories": {
+        "oddsportal-bet365": [
+          {
+            "provider": "oddsportal-bet365",
+            "observedAt": "2026-11-06T13:28:31.918Z",
+            "favorite": "away",
+            "markets": {
+              "hd": {
+                "favorite": "away",
+                "line": 1.5,
+                "away": 1.8,
+                "home": 1.87,
+                "provider": "oddsportal-bet365",
+                "observedAt": "2026-11-06T13:25:49.000Z",
                 "stale": false
               }
             }
