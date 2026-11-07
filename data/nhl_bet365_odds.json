@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-11-07T06:51:03.414Z",
+ "updated": "2026-11-07T07:01:03.683Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -285,24 +285,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "away",
+    "favSide": "home",
     "outcomes": [
      {
       "name": "STL Blues",
       "side": "away",
-      "line": -1.5,
-      "odds": 3.25
+      "line": 1.5,
+      "odds": 1.34
      },
      {
       "name": "NSH Predators",
       "side": "home",
-      "line": 1.5,
-      "odds": 1.33
+      "line": -1.5,
+      "odds": 3.2
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-11-07T07:01:03.683Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "STL Blues",
+        "side": "away",
+        "odds": 1.86
+       },
+       {
+        "name": "NSH Predators",
+        "side": "home",
+        "odds": 1.86
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "STL Blues",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.34
+       },
+       {
+        "name": "NSH Predators",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.2
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-07T06:46:03.741Z",
      "provider": "bet365-official",
@@ -1331,6 +1369,12 @@
     }
    ],
    "events": [
+    {
+     "at": "2026-11-07T07:01:03.683Z",
+     "type": "favorite-flip",
+     "from": "away",
+     "to": "home"
+    },
     {
      "at": "2026-11-07T06:46:03.741Z",
      "type": "favorite-flip",
