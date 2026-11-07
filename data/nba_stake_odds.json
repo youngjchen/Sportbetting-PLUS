@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "provider": "stake-official",
- "updated": "2026-11-07T01:05:14.287Z",
+ "updated": "2026-11-07T01:10:14.080Z",
  "health": {
   "preseason": {
    "status": "ok",
@@ -10,12 +10,12 @@
   },
   "regular": {
    "status": "ok",
-   "discovered": 10,
+   "discovered": 11,
    "failed": 0
   },
-  "targeted": 7,
-  "shiftedStarts": 0,
-  "succeeded": 3,
+  "targeted": 8,
+  "shiftedStarts": 1,
+  "succeeded": 4,
   "failures": []
  },
  "matches": {
@@ -22131,7 +22131,7 @@
    },
    "sourceUrl": "https://stake.com/sports/basketball/usa/1794020400000-sacramento-kings-san-antonio-spurs",
    "officialId": "NBA_20261107_SA@SAC",
-   "observedAt": "2026-11-07T01:05:14.287Z",
+   "observedAt": "2026-11-07T01:10:14.080Z",
    "frozenAt": null,
    "history": [
     {
@@ -23828,7 +23828,7 @@
    },
    "sourceUrl": "https://stake.com/sports/basketball/usa/1794020400000-los-angeles-lakers-portland-trail-blazers",
    "officialId": "NBA_20261107_POR@LAL",
-   "observedAt": "2026-11-07T01:05:14.287Z",
+   "observedAt": "2026-11-07T01:10:14.080Z",
    "frozenAt": null,
    "history": [
     {
@@ -26051,19 +26051,23 @@
    "away": "金塊",
    "home": "溜馬",
    "moneyline": {
-    "away": 1.4,
-    "home": 2.9
+    "away": 1.43,
+    "home": 2.8
    },
    "favorite": "away",
    "line": 6.5,
    "handicapOdds": {
     "away": 1.89,
-    "home": 1.88
+    "home": 1.89
    },
-   "total": null,
+   "total": {
+    "line": 228.5,
+    "over": 1.89,
+    "under": 1.88
+   },
    "sourceUrl": "https://stake.com/sports/basketball/usa/1794088800000-indiana-pacers-denver-nuggets",
    "officialId": "NBA_20261108_DEN@IND",
-   "observedAt": "2026-11-07T01:05:14.287Z",
+   "observedAt": "2026-11-07T01:10:14.080Z",
    "frozenAt": null,
    "history": [
     {
@@ -26077,6 +26081,64 @@
      "handicapOdds": {
       "away": 1.89,
       "home": 1.88
+     },
+     "total": null
+    },
+    {
+     "observedAt": "2026-11-07T01:10:14.080Z",
+     "favorite": "away",
+     "line": 6.5,
+     "moneyline": {
+      "away": 1.43,
+      "home": 2.8
+     },
+     "handicapOdds": {
+      "away": 1.89,
+      "home": 1.89
+     },
+     "total": {
+      "line": 228.5,
+      "over": 1.89,
+      "under": 1.88
+     }
+    }
+   ]
+  },
+  "NBA_20261108_ORL@GS": {
+   "provider": "stake-official",
+   "fixtureId": "ea679a87-e6fb-4722-ab37-793d23a4b967",
+   "slug": "1794101400000-golden-state-warriors-orlando-magic",
+   "scheduledStart": "2026-11-08T01:30:00.000Z",
+   "away": "魔術",
+   "home": "勇士",
+   "moneyline": {
+    "away": 2.75,
+    "home": 1.44
+   },
+   "favorite": "home",
+   "line": 5.5,
+   "handicapOdds": {
+    "away": 1.93,
+    "home": 1.84
+   },
+   "total": null,
+   "sourceUrl": "https://stake.com/sports/basketball/usa/1794101400000-golden-state-warriors-orlando-magic",
+   "stakeDate": "2026-11-08T01:00:00.000Z",
+   "officialId": "NBA_20261108_ORL@GS",
+   "observedAt": "2026-11-07T01:10:14.080Z",
+   "frozenAt": null,
+   "history": [
+    {
+     "observedAt": "2026-11-07T01:10:14.080Z",
+     "favorite": "home",
+     "line": 5.5,
+     "moneyline": {
+      "away": 2.75,
+      "home": 1.44
+     },
+     "handicapOdds": {
+      "away": 1.93,
+      "home": 1.84
      },
      "total": null
     }
