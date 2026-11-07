@@ -319,9 +319,10 @@
     if (!m) return null;
     return { ml: m.moneyline, spread: m.handicapOdds && m.line != null && { line: m.line, favorite: m.favorite, away: m.handicapOdds.away, home: m.handicapOdds.home } };
   }
-  // 第 2 下的讓分線：NHL／MLB 固定 +1.5；NBA 用當下 Stake 該隊的線
+  // 第 2 下的讓分線：MLB 固定 +1.5；NBA、NHL 照當下 Stake 主盤（讓方負、受讓方正）。
+  // 2026-11-07 使用者：「Stake 盤口怎麼開，頁面就怎麼顯示」——NHL 開 ±2.5 就是 ±2.5（11/08 黑鷹@颶風 原本寫死 +1.5）
   function defaultSpreadLine(league, snap, side) {
-    if (league !== 'NBA') return 1.5;
+    if (league === 'MLB') return 1.5;
     const s = snap && snap.spread;
     if (!s || s.line == null) return null;
     return s.favorite === side ? -Number(s.line) : Number(s.line);
@@ -360,7 +361,7 @@
     if (cur.market === 'ML') {
       let line = defaultSpreadLine(g.league, stakeSnapshot(g.league, g), side);
       if (line == null) {
-        const v = window.prompt(`Stake 沒有這場的讓分線，請輸入 ${side === 'away' ? g.away : g.home} 的讓分（例：+6.5 或 -4.5）`);
+        const v = window.prompt(`Stake 沒有這場的讓分線，請輸入 ${side === 'away' ? g.away : g.home} 的讓分（例：${g.league === 'NHL' ? '+1.5 或 -2.5' : '+6.5 或 -4.5'}）`);
         if (v == null || !Number.isFinite(Number(v))) return;
         line = Number(v);
       }
@@ -547,7 +548,7 @@
     if (na && nh) tag = `<span class="tag c">衝突 ${Math.max(na, nh)}:${Math.min(na, nh)}</span>`;
     else if (na + nh >= 2) tag = `<span class="tag">同向 ${na + nh}:0</span>`;
     else if (na + nh === 1) tag = '<span class="tag">單人</span>';
-    const pen = g.league === 'NBA' ? ` <button class="pen" data-pen="${esc(g.officialId)}" title="改讓分線">✎</button>` : '';
+    const pen = g.league !== 'MLB' ? ` <button class="pen" data-pen="${esc(g.officialId)}" title="改讓分線">✎</button>` : '';
     return `<div class="info"><div class="who">客 ${sides.away.map(chip).join('') || '—'}</div><div class="who">主 ${sides.home.map(chip).join('') || '—'}</div><div>${tag}${pen}</div></div>`;
   }
   function renderList() {

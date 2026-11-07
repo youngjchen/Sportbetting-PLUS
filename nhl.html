@@ -1701,6 +1701,17 @@ function nhlCloseMlFor(id){
   const v = m && NHL_CLOSE_ML[`${m[1]}|${m[2]}|${m[3]}`];
   return v ? { away:v[0], home:v[1] } : null;
 }
+// 讓分基準（2026-11-07 使用者規格）：只看 Stake（BET365 冰球讓分一律 1.5）。開盤＝Stake 第一次抓到的線，收盤＝開賽前最後一筆。
+// ±2.5＝收盤讓 2.5；擴大＝收盤線比開盤大（1.5→2.5）；縮小＝收盤線比開盤小（2.5→1.5）。
+// 舊快照沒存線 → 查這張表（git 歷史 data/stake_api_odds.json 到 11/07；只列開或收不是 1.5 的場，其餘皆 1.5→1.5）；之後的快照自帶 stakeLine。
+const NHL_STAKE_LINES = {"20261018|加人|閃電":[2.5,2.5],"20261101|火焰|雪崩":[2.5,2.5],"20261106|黑鷹|閃電":[2.5,2.5]};
+function nhlStakeLines(it){
+  const own = [it && it.anomSnap, it && it.anomLive].find((s)=> s && s.stakeLine && Number(s.stakeLine.close)>0);
+  if(own) return own.stakeLine;
+  const m = /^NHL_(\d{8})_(.+)@(.+)_\d{4}$/.exec(String(it && it.id || ""));
+  const v = m && NHL_STAKE_LINES[`${m[1]}|${m[2]}|${m[3]}`];
+  return v ? { open:v[0], close:v[1] } : null;
+}
 function nhlEvidenceFromSnap(s, id){
   const own = s.mlOdds && Number(s.mlOdds.away)>1 && Number(s.mlOdds.home)>1 ? s.mlOdds : null;
   const odds = own || nhlCloseMlFor(id);
@@ -1727,7 +1738,9 @@ function nhlLiveSnap(g){
     flipState:_hist?_hist.classification:"none", relation:_hist?_hist.currentRelation:null,
     // 兩隊獨贏同賠＝"even"（沒有熱門）：仍算有賠率、完整度不降，才蓋得掉先前誤記成主隊的快照（2026-10-23 國王@島人 1.89/1.89 被判背離）
     mlFav: (_ma&&_mh&&Number.isFinite(Number(_ma.odds))&&Number.isFinite(Number(_mh.odds))) ? (Number(_ma.odds) < Number(_mh.odds) ? "away" : Number(_ma.odds) > Number(_mh.odds) ? "home" : "even") : null,
-    mlOdds: (_ma&&_mh&&Number(_ma.odds)>1&&Number(_mh.odds)>1) ? { away:Number(_ma.odds), home:Number(_mh.odds) } : null   // 背離 0.10 門檻用
+    mlOdds: (_ma&&_mh&&Number(_ma.odds)>1&&Number(_mh.odds)>1) ? { away:Number(_ma.odds), home:Number(_mh.odds) } : null,   // 背離 0.10 門檻用
+    stakeLine: (_stake&&_stake.hd&&Number(_stake.hd.line)) ? {                                 // 讓分基準 ±2.5／擴大／縮小用
+      open: Math.abs(Number((_stake.open&&_stake.open.hd&&_stake.open.hd.line) || _stake.hd.line)), close: Math.abs(Number(_stake.hd.line)) } : null
   };
   return nhlSnapHasData(snap) ? snap : null;
 }
@@ -1777,6 +1790,7 @@ function collectCrossTab(leagueFilter){
   const grp={};
   for(const k of ["flip","conv"]){ grp[k]={ all:cell(), div:cell(), unknown:cell() }; for(const c of NHL_ANOM_COMBOS[k]) grp[k][c]=cell(); }
   const other={ divOnly:cell() };
+  const lines={ l25:cell(), widen:cell(), narrow:cell() };                              // 讓分基準：不分顛倒／收斂，所有已結算場
   let total=0;
   for(const d of Object.keys(doc.boards||{})){
     for(const it of ((doc.boards[d]||{}).items||[])){
@@ -1784,26 +1798,37 @@ function collectCrossTab(leagueFilter){
       const rec=(doc.games||[]).find(x=>x.sid===it.id); if(!rec) continue;
       if(leagueFilter && leagueFilter!=="all" && String(rec.league||"").toLowerCase()!==leagueFilter) continue;
       const ev = nhlAnomEvidence(null, it);
-      const cls = nhlAnomClassify(ev, it, rec.hdFav); if(!cls) continue;
-      total++;
+      const cls = nhlAnomClassify(ev, it, rec.hdFav);
+      const L = nhlStakeLines(it), lo = Number(L && L.open), lc = Number(L && L.close);
+      const lineHit = lc===2.5 || (lo>0 && lc>0 && lo!==lc);
+      if(!cls && !lineHit) continue;
       const margin=rec.homeScore-rec.awayScore, winner=margin>0?"home":margin<0?"away":null;
       const favMargin = rec.hdFav ? (rec.hdFav==="home"?margin:-margin) : null;
       const o={ date:d, away:rec.awayTeam, home:rec.homeTeam, aScore:rec.awayScore, hScore:rec.homeScore, itId:it.id,
-                fv: ev && ev.mlFav || null, combo:cls.combo, div:cls.div, manual:!!cls.manual,
+                fv: ev && ev.mlFav || null, combo:cls?cls.combo:null, div:!!(cls&&cls.div), manual:!!(cls&&cls.manual),
                 hd: (favMargin!=null && rec.hdVal!=null) ? rvResultOf(favMargin, rec.hdVal) : null,
                 tot: rvTotalOf(rec.awayScore+rec.homeScore, rec.totBasis) };
-      const upd=(c)=>{
-        c.n++; c.games.push(o);
-        if(o.fv && winner){ c.fwN++; if(winner===o.fv) c.fw++; }                        // 熱門＝獨贏賠率較低的那隊
-        if(o.hd==="cover"||o.hd==="nocover"){ c.covN++; if(o.hd==="cover") c.cov++; }
-        if(o.tot==="over"||o.tot==="under"){ c.ovN++; if(o.tot==="over") c.ov++; }
+      const upd=(c, x=o)=>{
+        c.n++; c.games.push(x);
+        if(x.fv && winner){ c.fwN++; if(winner===x.fv) c.fw++; }                        // 熱門＝獨贏賠率較低的那隊
+        if(x.hd==="cover"||x.hd==="nocover"){ c.covN++; if(x.hd==="cover") c.cov++; }
+        if(x.tot==="over"||x.tot==="under"){ c.ovN++; if(x.tot==="over") c.ov++; }
       };
+      if(lineHit){
+        // 讓分基準列的過盤照 Stake 收盤線算（±2.5 的場不能用 1.5 判）
+        const oL={ ...o, lineTxt: lo>0 ? `${lo}→${lc}` : `${lc}`, hd: favMargin!=null ? rvResultOf(favMargin, lc) : null };
+        if(lc===2.5) upd(lines.l25, oL);
+        if(lo>0 && lc>lo) upd(lines.widen, oL);
+        if(lo>0 && lc<lo) upd(lines.narrow, oL);
+      }
+      if(!cls) continue;
+      total++;
       if(cls.kind==="other"){ upd(other.divOnly); continue; }
       const G=grp[cls.kind]; upd(G.all);
       upd(cls.div ? G.div : (cls.combo ? G[cls.combo] : G.unknown));
     }
   }
-  return { total, grp, other };
+  return { total, grp, other, lines };
 }
 function renderAnomSection(leagueFilter){
   const ct = collectCrossTab(leagueFilter||"all");
@@ -1811,7 +1836,7 @@ function renderAnomSection(leagueFilter){
   let h=`<div class="rv-section"><div class="rv-head">◆ 異常組合統計 <span class="rv-sub">Stake × BET365 收盤讓分方：顛倒／收斂／其他異常・熱門＝獨贏賠率較低的那隊・背離＝熱門不是讓分方且兩隊獨贏差≥0.10・✋＝手動歸類・點列看明細</span></div>`;
   if(!ct.total){ return h+`<div class="rv-empty">還沒有已結算的異常場。讓分方相反、曾換邊或背離的比賽結算後會自動進帳。</div></div>`; }
   const roleFn = g=>{
-    const tags=[g.manual ? "✋手動" : "", g.combo ? NHL_ANOM_COMBO_LABEL[g.combo] : "", g.div ? "背離" : ""].filter(Boolean).join("・");
+    const tags=[g.manual ? "✋手動" : "", g.lineTxt ? "讓分線 "+g.lineTxt : "", g.combo ? NHL_ANOM_COMBO_LABEL[g.combo] : "", g.div ? "背離" : ""].filter(Boolean).join("・");
     return `${rvWinText(g)}・讓分${rvHdText(g.hd)}・開${rvTotText(g.tot)}${tags?`・<span style="color:var(--ink-dim)">${tags}</span>`:""}`;
   };
   const cols = c=>[[c.fw,c.fwN],[c.cov,c.covN],[c.ov,c.ovN]];
@@ -1828,6 +1853,8 @@ function renderAnomSection(leagueFilter){
   h+=grpBlock("顛倒（收盤 Stake 與 BET365 讓分方相反）","flip");
   h+=grpBlock("收斂（收盤同向，賽前曾換邊）","conv");
   h+=`<div class="rv-head" style="font-size:14px;margin-top:14px">其他異常　<span class="rv-sub">非顛倒非收斂，但背離（獨贏熱門不是讓分方）</span></div>`+head+ROW("只背離", ct.other.divOnly)+`</tbody></table>`;
+  h+=`<div class="rv-head" style="font-size:14px;margin-top:14px">讓分基準（Stake）　<span class="rv-sub">不分顛倒／收斂，所有已結算場・開盤＝Stake 第一次抓到的線、收盤＝開賽前最後一筆・讓分過盤照 Stake 收盤線算</span></div>`+
+     head+ROW("讓分 ±2.5", ct.lines.l25)+ROW("讓分擴大", ct.lines.widen)+ROW("讓分縮小", ct.lines.narrow)+`</tbody></table>`;
   return h+`</div>`;
 }
 function crossTabCached(){ const n=Date.now(); if(!__ctMemo||n-__ctMemoAt>800){ try{ __ctMemo=collectCrossTab("all"); }catch(_){ __ctMemo=null; } __ctMemoAt=n; } return __ctMemo; }
