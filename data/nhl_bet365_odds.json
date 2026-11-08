@@ -1,7 +1,7 @@
 {
  "provider": "bet365-official",
  "strategy": "official-first",
- "updated": "2026-11-08T02:33:00.417Z",
+ "updated": "2026-11-08T02:37:59.967Z",
  "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
  "health": {
   "status": "ok",
@@ -1545,12 +1545,12 @@
      {
       "name": "PHI Flyers",
       "side": "away",
-      "odds": 1.86
+      "odds": 1.84
      },
      {
       "name": "CGY Flames",
       "side": "home",
-      "odds": 1.86
+      "odds": 1.89
      }
     ]
    },
@@ -1561,24 +1561,62 @@
    "hd": {
     "market": "Puck Line",
     "line": 1.5,
-    "favSide": "home",
+    "favSide": "away",
     "outcomes": [
      {
       "name": "PHI Flyers",
       "side": "away",
-      "line": 1.5,
-      "odds": 1.37
+      "line": -1.5,
+      "odds": 3.25
      },
      {
       "name": "CGY Flames",
       "side": "home",
-      "line": -1.5,
-      "odds": 3.05
+      "line": 1.5,
+      "odds": 1.33
      }
     ]
    },
    "provider": "bet365-official",
    "history": [
+    {
+     "at": "2026-11-08T02:37:59.967Z",
+     "provider": "bet365-official",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "PHI Flyers",
+        "side": "away",
+        "odds": 1.84
+       },
+       {
+        "name": "CGY Flames",
+        "side": "home",
+        "odds": 1.89
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "PHI Flyers",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.25
+       },
+       {
+        "name": "CGY Flames",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.33
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-08T00:07:58.721Z",
      "provider": "bet365-official",
@@ -1884,7 +1922,14 @@
      }
     }
    ],
-   "events": []
+   "events": [
+    {
+     "at": "2026-11-08T02:37:59.967Z",
+     "type": "favorite-flip",
+     "from": "home",
+     "to": "away"
+    }
+   ]
   },
   "1794186420000|PIT Penguins|ANA Ducks": {
    "startTime": 1794186420000,
