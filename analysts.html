@@ -136,7 +136,6 @@
   .chip.sm{padding:4px 10px;font-size:13px}
   /* ---------- 對決卡 ---------- */
   .duel{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0;background:var(--panel)}
-  .tcard .duel{background:var(--panel-2)}
   .d-title{font-weight:700;font-size:15px;margin-bottom:6px;line-height:1.45}
   .d-vs{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(0,1fr);align-items:center;gap:8px;text-align:center}
   .d-who{font-size:14px;color:var(--ink-dim);font-weight:700}
@@ -149,22 +148,39 @@
   .d-one{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
   .d-extra{font-size:13.5px;color:var(--ink-dim);margin-top:4px}
   .wrap-x{overflow-x:auto}
-  /* ---------- 登錄頁底部：今日組合 vs 歷史 ---------- */
-  .today{margin-top:22px;padding-top:6px;border-top:2px solid var(--line)}
-  .tcards{display:grid;grid-template-columns:repeat(auto-fill,minmax(440px,1fr));gap:12px}
-  .tcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);padding:12px 14px}
-  .tc-head{font-size:16px;margin-bottom:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
-  .tc-head b{font-size:17px}
-  .tc-head .tag{font-weight:700;font-size:15px}
-  .tc-head .tag.c{color:var(--conflict)}
-  .tc-sides{display:flex;flex-direction:column;gap:6px;margin-bottom:12px;font-size:14px}
-  .tc-lab{color:var(--ink-dim);display:inline-block;min-width:96px}
-  .tchip{padding:4px 11px;margin:2px 5px 2px 0;border:1px solid var(--lit);border-radius:8px;background:rgba(255,176,46,.12);color:var(--ink);font-weight:700;font-size:14.5px;cursor:pointer;font-family:inherit}
-  .tchip.off{border-color:var(--line);background:transparent;color:var(--ink-dim);text-decoration:line-through}
+  /* ---------- 登錄頁底部：今天押什麼 ---------- */
+  .today{margin-top:22px;padding-top:10px;border-top:2px solid var(--line)}
+  .ahead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
+  .ahead .hbtn{margin-left:auto;width:40px;text-align:center}
+  .aset{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:6px 11px;margin:6px 0}
+  .asec{margin:14px 0 4px;font-weight:700;font-size:16px}
+  .asec small{color:var(--ink-dim);font-weight:500;margin-left:4px}
+  .arow{display:grid;grid-template-columns:50px 82px minmax(150px,max-content) 78px minmax(0,1fr) 26px 14px;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+  .arow:hover,.arow.open{background:var(--panel)}
+  .arow .at{color:var(--ink-dim);font-size:14px}
+  .arow .ap{white-space:nowrap}
+  .arow .ap b{font-size:16px}
+  .arow .aw{color:var(--ink-dim);font-size:13.5px;line-height:1.45}
+  .arow .ar,.arow .ac{text-align:center;color:var(--ink-dim)}
+  .vchip{display:inline-block;width:82px;text-align:center;padding:3px 0;border-radius:7px;font-weight:700;font-size:13.5px;border:1px solid}
+  .vchip.fol{color:#d4f7e2;background:rgba(62,207,122,.20);border-color:var(--win)}
+  .vchip.agn{color:#e3d9ff;background:var(--rel-bg);border-color:var(--rel)}
+  .vchip.non{color:var(--ink);background:var(--panel-2);border-color:var(--line)}
+  .vchip.skip{color:var(--ink-dim);background:transparent;border-color:var(--line)}
+  .abadge{display:inline-block;padding:1px 7px;border-radius:6px;font-size:12.5px;font-weight:700;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
+  .abadge.hot{color:#1b1405;background:var(--lit);border-color:var(--lit)}
+  .abadge.flip{border-color:var(--loss);color:#ffd6dc}
+  .aev{padding:4px 8px 10px 58px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .evl{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px;font-size:14px;line-height:1.6;padding:3px 0}
+  .evl small{margin-left:3px;font-size:12.5px}
+  .evl .ig,.info .who span.ig{text-decoration:line-through;opacity:.5}
   .h-dim{color:var(--ink-dim)}
   @media (max-width:720px){
-    .tcards{grid-template-columns:1fr}
     .d-big{font-size:28px}
+    .arow{grid-template-columns:40px 62px minmax(0,1fr) 22px 10px;column-gap:6px;grid-template-areas:"t v p r c" ". a w w w";row-gap:4px}
+    .arow .at{grid-area:t}.arow .vchip{grid-area:v;width:62px;font-size:12.5px}.arow .ap{grid-area:p;overflow:hidden;text-overflow:ellipsis}.arow .ar{grid-area:r}.arow .ac{grid-area:c}
+    .arow .aa{grid-area:a}.arow .aw{grid-area:w}
+    .aev{padding-left:8px}
   }
   #toast{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--lit);color:var(--ink);padding:8px 15px;border-radius:10px;font-size:14.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
   #toast.show{opacity:1}
@@ -225,8 +241,9 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261021p"></script>
+<script src="./analyst-core.js?v=20261113adv"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
+<script src="./nhl_bet365_core.js?v=20261004total2"></script>
 <script>
 (function () {
   'use strict';
@@ -247,7 +264,7 @@
   const VIEW_KEY = 'analyst_picks_view_v1';
   const PAT_KEY = 'gh_sync_pat';   // 與 github-sync.js 共用
   const SRC = {
-    NHL: { pregame: 'data/nhl_pregame.json', stake: 'data/stake_api_odds.json' },
+    NHL: { pregame: 'data/nhl_pregame.json', stake: 'data/stake_api_odds.json', b365: 'data/nhl_bet365_odds.json' },
     MLB: { pregame: 'data/pregame_data.json', stake: 'data/baseball_stake_odds.json' },
     NBA: { pregame: 'data/nba_pregame.json', stake: 'data/nba_stake_odds.json' },
   };
@@ -267,8 +284,8 @@
   const REVISERS = Core.REVISERS || [];
   const canRevise = (a) => isWatch(a) || REVISERS.includes(a);
   const revMode = () => !view.multi && view.rev && canRevise(view.analyst);   // ✎ 改版：左鍵改記「改版另計」
-  view.st = Object.assign({ league: 'ALL', range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [], tab: 'duel', hero: 'BANKROLL', heroM: 'PLUS', oppMode: 'any', opp: [], oppM: 'ML', rel: 'oppose' }, view.st || {});
-  const DATA = { NHL: { games: [], stake: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
+  view.st = Object.assign({ league: view.league, range: 'all', from: '', to: '', phase: 'default', scenario: 'all', matrix: 'same', min: 20, sel: [], tab: 'duel', hero: 'BANKROLL', heroM: 'PLUS', oppMode: 'any', opp: [], oppM: 'ML', rel: 'oppose' }, view.st || {});
+  const DATA = { NHL: { games: [], stake: null, b365: null }, MLB: { games: [], stake: null }, NBA: { games: [], stake: null } };
   let RESULTS = {};   // data/analyst_results.json（analyst-settle 工作流寫）：官方核對後的比分、賽季階段、Stake 收盤價
   let RESULTS_VER = 0;   // 結算檔內容變了就 +1（卡片快取跟著失效）
   let picks = (readJson(LOCAL_KEY) || {}).picks || [];
@@ -534,12 +551,12 @@
     const sides = { away: [], home: [] };
     for (const a of ANALYSTS) {
       const p = mainPick(a, g.officialId);
-      if (p) sides[p.side].push({ a, lotto: p.layer === 'lotto', res: g.final ? Core.settlePick(p, g).result : null });
+      if (p) sides[p.side].push({ a, ig: ignored(a), lotto: p.layer === 'lotto', res: g.final ? Core.settlePick(p, g).result : null });
     }
     const RES_CLS = { win: 'w', loss: 'x', push: 'p', refund: 'p' };
     const RES_TXT = { win: '命中', loss: '沒中', push: '走盤', refund: '退款' };
-    const chip = (x) => `<span class="${[x.lotto ? 'l' : '', x.watch ? 'wt' : '', RES_CLS[x.res] || ''].join(' ').trim()}"${x.res || x.watch ? ` title="${x.a}${x.watch ? '（觀察中，不算同向／衝突）' : ''} ${RES_TXT[x.res] || ''}"` : ''}>${x.watch ? '👁' : ''}${SHORT[x.a]}</span>`;
-    const na = sides.away.length; const nh = sides.home.length;
+    const chip = (x) => `<span class="${[x.lotto ? 'l' : '', x.watch ? 'wt' : '', x.ig ? 'ig' : '', RES_CLS[x.res] || ''].join(' ').trim()}"${x.res || x.watch || x.ig ? ` title="${x.a}${x.watch ? '（觀察中，不算同向／衝突）' : ''}${x.ig ? '（⚙ 忽略中，不算人數）' : ''} ${RES_TXT[x.res] || ''}"` : ''}>${x.watch ? '👁' : ''}${SHORT[x.a]}</span>`;
+    const na = sides.away.filter((x) => !x.ig).length; const nh = sides.home.filter((x) => !x.ig).length;
     for (const a of WATCH) {
       const p = mainPick(a, g.officialId);
       if (p) sides[p.side].push({ a, watch: true, lotto: p.layer === 'lotto', res: g.final ? Core.settlePick(p, g).result : null });
@@ -567,7 +584,7 @@
         const state = g.review ? '⚠ 待核對' : g.final ? (g.officialCheck === 'ok' ? '完賽 ✔官方' : '完賽') : Date.now() >= g.startMs ? '進行中' : '';
         return `<div class="game"><div class="gtime"><b>${esc(g.time)}</b>${state}</div>${teamButton(g, 'away', snap)}${teamButton(g, 'home', snap)}${infoCell(g)}</div>`;
       }).join('');
-    $('list').insertAdjacentHTML('beforeend', renderToday(games));
+    $('list').insertAdjacentHTML('beforeend', renderAdvice(games));
   }
   function renderSummary() {
     const games = gamesFor(view.league, view.date);
@@ -630,7 +647,7 @@
   function addDays(date, n) { const d = new Date(`${date}T00:00:00Z`); d.setUTCDate(d.getUTCDate() + n); return d.toISOString().slice(0, 10); }
   function statsFilter() {
     const st = view.st;
-    const f = { league: st.league === 'ALL' ? undefined : st.league };
+    const f = { league: LEAGUES.includes(st.league) ? st.league : view.league };
     if (st.range === '7' || st.range === '30') f.from = addDays(twToday(), -Number(st.range));
     if (st.range === 'custom') { f.from = st.from || undefined; f.to = st.to || undefined; }
     f.phases = { default: DEFAULT_PHASES, withPre: ['preseason', 'regular', 'postseason', null], post: ['postseason'], pre: ['preseason'] }[st.phase];
@@ -926,7 +943,8 @@
 
   function renderStats() {
     const st = view.st;
-    $('rail').innerHTML = ['ALL', ...LEAGUES].map((lg) => `<button class="lg${lg === st.league ? ' on' : ''}" data-sl="${lg}">${lg === 'ALL' ? '全部' : lg}</button>`).join('');
+    if (!LEAGUES.includes(st.league)) st.league = view.league;   // 2026-11-13：不再有「全部」，各球種分開看
+    $('rail').innerHTML = LEAGUES.map((lg) => `<button class="lg${lg === st.league ? ' on' : ''}" data-sl="${lg}">${lg}</button>`).join('');
     if (!HISTORY) { $('list').innerHTML = '<div class="empty">載入歷史紀錄中…</div>'; loadHistory(); return; }
     const chips = (key, opts) => `<div class="chips">${opts.map(([v, t]) => `<button class="chip${String(st[key]) === v ? ' on' : ''}" data-st="${key}" data-v="${v}">${t}</button>`).join('')}</div>`;
     const allRows = Core.filterRows(statsLedger(), statsFilter());
@@ -941,7 +959,7 @@
       ${chips('phase', [['default', '例行＋季後'], ['withPre', '含季前'], ['post', '只季後'], ['pre', '只季前']])}
       <label>最少樣本 <input type="number" id="minIn" min="0" step="1" value="${minN}" style="width:60px"></label>
       </div>`;
-    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起；左側切換聯盟。損益用收盤賠率、每張 1 單位（Stake 優先，沒有才用 bet365）。顏色：灰＝低、金＝高；樣本少於 ${minN} 變淡。</div>`;
+    html += `<div class="st-help">${HISTORY.failed ? '⚠ 歷史紀錄載入失敗，只顯示 10/13 起的推薦。' : ''}資料：MLB 美國 4/1 起、NHL 9/29 起、NBA 10/13 起；左側切換聯盟（各球種分開看，不再合併）。損益用收盤賠率、每張 1 單位（Stake 優先，沒有才用 bet365）。顏色：灰＝低、金＝高；樣本少於 ${minN} 變淡。</div>`;
     if (tab === 'duel') html += renderDuelTab(ann, minN);
     else if (tab === 'overview') html += renderOverviewTab(rows, ann, minN);
     else if (tab === 'pairs') html += renderPairsTab(ann, minN);
@@ -951,132 +969,193 @@
     box.innerHTML = html;
     box.scrollTop = keep;   // 原地展開，不跳回頂端
     const main = rows.filter((r) => r.countsInMain && (r.result === 'win' || r.result === 'loss'));
-    $('summary').innerHTML = `<span>${st.league === 'ALL' ? '全部聯盟' : st.league}｜主帳已結算 <b>${main.length}</b> 張</span>`;
+    $('summary').innerHTML = `<span>${st.league}｜主帳已結算 <b>${main.length}</b> 張</span>`;
   }
 
-  /* ---------- 登錄頁最下面：今天每場的對決卡 ---------- */
-  // 賽前基準＝到「看的那天的前一天」為止（一整天固定不動，也不會把這場自己的結果算進去）；
-  // 某場結算後，另外算「基準＋這一場」給卡片顯示賽後數字與升降。
-  let IDX_CACHE = {}; let AFTER_CACHE = {};
-  function buildIdx(ann) {
-    const val = { ann, idx: Core.sideIndex(ann), solo: {}, byCount: {} };
-    for (const a of ANALYSTS) val.solo[a] = Core.summarize(ann.filter((r) => r.analyst === a && r.ctx.alignment === 'solo'));
-    for (const s of val.idx.sides) {
-      if (s.oppKey !== '') continue;
-      const n = s.key.split('+').length; const b = val.byCount[n] || (val.byCount[n] = { games: 0, dirWins: 0 });
-      b.games++; if (s.dirWin) b.dirWins++;
-    }
-    return val;
-  }
-  function leagueIndex(league, beforeDate) {
-    if (!HISTORY) return null;
-    const settledLive = Core.livePicks(picks).filter((p) => RESULTS[p.officialId] && RESULTS[p.officialId].final).length;
-    const key = `${RESULTS_VER}|${settledLive}|${beforeDate}`;
-    if (IDX_CACHE[league] && IDX_CACHE[league].key === key) return IDX_CACHE[league];
-    const rows = mainOnly(Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES, to: addDays(beforeDate, -1) }));
-    const val = Object.assign(buildIdx(Core.annotateContexts(rows)), { key });
-    IDX_CACHE[league] = val;
-    return val;
-  }
-  function gameLedger(id) {   // 只算這一場的主帳票（同 statsLedger 的比賽合併規則）
-    const live = Core.livePicks(picks).filter((p) => p.officialId === id);
-    const hist = HISTORY ? HISTORY.picks.filter((p) => p.officialId === id) : [];
-    let g = Object.assign({}, HISTORY && HISTORY.games[id] || {});
-    if (!Object.keys(g).length) for (const lg of LEAGUES) { const x = DATA[lg].games.find((y) => y.officialId === id); if (x) { g = Object.assign({}, x); break; } }
-    const r = RESULTS[id]; if (r) Object.assign(g, r, r.review ? { final: false } : {});
-    return Core.buildLedger(Core.mergePicks(hist, live), { [id]: g });
-  }
-  function afterIndex(L, g) {
-    if (!g.final) return null;
-    const k = `${L.key}|${g.officialId}`;
-    if (!(k in AFTER_CACHE)) {
-      const extra = Core.annotateContexts(mainOnly(Core.filterRows(gameLedger(g.officialId), { league: g.league, phases: DEFAULT_PHASES })));
-      AFTER_CACHE[k] = extra.length ? buildIdx(L.ann.concat(extra)) : null;
-    }
-    return AFTER_CACHE[k];
-  }
-  function afterLine(bw, bn, aw, an) {   // 賽前 bw/bn → 賽後 aw/an
+  /* ---------- 登錄頁最下面：「今天押什麼」（2026-11-13 取代今日對決卡） ----------
+     每場一列：押哪隊＋盤口＋現價｜跟不跟主跟的人｜一句理由；點開看最多 3 條證據。
+     規則在 analyst-core.js adviseGame()。歷史只用同一聯盟、到前一天為止，不混球種。
+     ⚙：主跟誰、忽略誰（記在這台裝置）；忽略的人今天和歷史都拿掉。 */
+  function afterLine(bw, bn, aw, an) {   // 分析頁對決卡用：賽前 bw/bn → 賽後 aw/an
     if (!an || an === bn && aw === bw) return '<div class="d-after">賽後 不變 ＝</div>';
     const diff = (aw / an) - (bn ? bw / bn : 0);
     const arrow = !bn || Math.abs(diff) < 0.0005 ? '＝' : diff > 0 ? '<b class="up">▲</b>' : '<b class="dn">▼</b>';
     return `<div class="d-after">賽後 ${pctOf(aw, an)}（${aw}／${an}）${arrow}</div>`;
   }
-  const sideKey = (list) => list.slice().sort((a, b) => ANALYSTS.indexOf(a) - ANALYSTS.indexOf(b)).join('+');
-  const EXCL = new Set();   // 暫時排除的分析師：點任一張卡的名字＝所有比賽一起排除（只影響卡片數據，不動推薦）
-  function oneSided(title, wins, n, what, note, after) {
-    const tail = after ? afterLine(wins, n, after.wins, after.n) : '';
-    if (!n) return `<div class="duel"><div class="d-title">${title}</div><div class="h-dim">過去沒出現過。${note ? `<br>${note}` : ''}</div>${tail}</div>`;
-    const r = wins / n;
-    return `<div class="duel${n < 10 ? ' few' : ''}"><div class="d-title">${title}</div><div class="d-one"><span class="d-big" style="color:${rateText(r)}">${pctOf(wins, n)}</span><span class="d-sub">${what} ${wins}／${n}${n < 10 ? '｜<b>樣本少於 10 場</b>' : ''}</span></div>${tail}${note ? `<div class="d-note">${note}</div>` : ''}</div>`;
-  }
-  function todayCard(g, L, L2, league2) {
-    const ex = EXCL;
-    const AF = afterIndex(L, g);   // 這場已結算：基準＋這一場
-    const all = ANALYSTS.map((a) => mainPick(a, g.officialId)).filter(Boolean);
-    if (!all.length) return '';
-    const chip = (p) => `<button class="tchip${ex.has(p.analyst) ? ' off' : ''}" data-ex="${p.analyst}" title="${ex.has(p.analyst) ? '加回' : '所有比賽暫時排除'} ${p.analyst}">${p.analyst} <small>${p.market === 'ML' ? 'ML' : signed(p.line)}</small></button>`;
-    const sideChips = (side) => all.filter((p) => p.side === side).map(chip).join('') || '<span class="h-dim">—</span>';
-    const live = all.filter((p) => !ex.has(p.analyst));
-    const A = live.filter((p) => p.side === 'away'); const H = live.filter((p) => p.side === 'home');
-    const names = (ps) => ps.map((p) => SHORT[p.analyst]).join('・');
-    const mkOf = (ps) => { const k = new Set(ps.map((p) => Core.marketKind(p))); return k.size === 1 ? [...k][0] : 'any'; };
-    const label = (p) => `${esc(p.team)} ${p.market === 'ML' ? 'ML' : signed(p.line)}`;
-    let tag = ''; let body = '';
-    if (A.length && H.length) {
-      const [maj, min] = A.length >= H.length ? [A, H] : [H, A];
-      tag = `<span class="tag c">衝突 ${maj.length}:${min.length}</span>`;
-      const majM = mkOf(maj);
-      for (const m of min.slice(0, 2)) {
-        const q = { hero: m.analyst, heroMarket: Core.marketKind(m), oppMarket: majM, relation: 'oppose' };
-        const d = Core.duel(L.ann, q);
-        const after = AF ? Core.duel(AF.ann, q) : null;
-        let note = '';
-        if (L2) { const d2 = Core.duel(L2.ann, q); note = d2.games ? `${league2} 同情境 ${d2.games} 場：${SHORT[m.analyst]} ${pctOf(d2.hero.wins, d2.hero.settled)} vs 對手 ${pctOf(d2.opp.wins, d2.opp.settled)}` : `${league2} 沒有同情境`; }
-        body += duelCard(d, `${SHORT[m.analyst]} ${MK_TXT[q.heroMarket]}`, `對手 ${MK_TXT[majM]}`, {
-          title: `過去 ${SHORT[m.analyst]} 押${MK_TXT[q.heroMarket]}、對面有人押${MK_TXT[majM]}（${g.league}）`, note, after, heroShort: SHORT[m.analyst],
-        });
+  const ADV_KEY = 'analyst_advice_v1';
+  const adv = Object.assign({ core: 'BOOKIE', ignore: ['BANKROLL'], set: false }, readJson(ADV_KEY) || {});
+  const advCore = () => (ANALYSTS.includes(adv.core) ? adv.core : 'BOOKIE');
+  const ignored = (a) => (adv.ignore || []).includes(a) && a !== advCore();
+  function saveAdv() { try { localStorage.setItem(ADV_KEY, JSON.stringify({ core: adv.core, ignore: adv.ignore, set: adv.set })); } catch (e) {} }
+  let advOpen = new Set();   // 展開證據的場
+
+  // 冰球頁存在這台裝置的 doc（同網域 localStorage）：手動異常標記、賽前快照、讓分方紀錄 → 異常歷史
+  const NHL_DOC_KEY = 'sportbetting_nhl_doc_v1';
+  let NHLDOC = { ver: 0, items: new Map(), games: new Map(), labels: new Map(), found: false };
+  function readNhlDoc() {
+    const d = readJson(NHL_DOC_KEY);
+    const items = new Map(); const recs = new Map(); const labels = new Map();
+    if (d && d.boards) {
+      for (const g of d.games || []) if (g && g.sid) recs.set(g.sid, g);
+      for (const b of Object.values(d.boards)) for (const it of (b && b.items) || []) if (it && it.id) items.set(it.id, it);
+      for (const [id, it] of items) {
+        if (!it.settled || it.settled.awayScore == null) continue;
+        const rec = recs.get(id); if (!rec || !rec.hdFav) continue;
+        const snap = Core.anomBestSnap(it);
+        const cls = Core.anomClassify(snap ? Core.anomEvidenceFromSnap(snap) : null, it, rec.hdFav);
+        if (cls) labels.set(id, { cls, hdFav: rec.hdFav });
       }
-      const oq = { key: sideKey(maj.map((p) => p.analyst)), opposed: true };
-      const o = L.idx.query(oq); const o2 = AF ? AF.idx.query(oq) : null;
-      const oAfter = o2 && o2.games ? `｜賽後 ${pctOf(o2.dirWins, o2.games)}${o.games ? (o2.dirWins / o2.games > o.dirWins / o.games ? ' <b style="color:var(--win)">▲</b>' : o2.dirWins / o2.games < o.dirWins / o.games ? ' <b style="color:var(--loss)">▼</b>' : ' ＝') : ''}` : '';
-      body += `<div class="d-extra">${names(maj)} 同一邊但有人反對時：${o.games ? `直勝 <b style="color:${rateText(o.dirWins / o.games)}">${pctOf(o.dirWins, o.games)}</b>（${o.dirWins}／${o.games}）` : '過去沒出現過'}${oAfter}</div>`;
-    } else if (A.length + H.length >= 2) {
-      const side = A.length ? A : H; const k = sideKey(side.map((p) => p.analyst));
-      tag = `<span class="tag">同向 ${side.length}:0</span>`;
-      const u = L.idx.query({ key: k, opposed: false });
-      const c = L.byCount[side.length] || { games: 0, dirWins: 0 };
-      const u2 = AF ? AF.idx.query({ key: k, opposed: false }) : null;
-      const c2 = AF ? (AF.byCount[side.length] || { games: 0, dirWins: 0 }) : null;
-      const anyNote = `任何 ${side.length} 人同向、沒人反對：${c.games ? `直勝 ${pctOf(c.dirWins, c.games)}（${c.dirWins}／${c.games}）` : '過去沒出現過'}`;
-      body += u.games ? oneSided(`${names(side)} 同向、沒人反對（${g.league}）`, u.dirWins, u.games, '球隊直勝', anyNote, u2 && { wins: u2.dirWins, n: u2.games })
-        : oneSided(`任何 ${side.length} 人同向、沒人反對（${g.league}）`, c.dirWins, c.games, '球隊直勝', `${names(side)} 這個組合過去沒出現過，改看任何 ${side.length} 人`, c2 && { wins: c2.dirWins, n: c2.games });
-    } else if (A.length + H.length === 1) {
-      const p = live[0]; tag = '<span class="tag">單人</span>';
-      const s = L.solo[p.analyst]; const s2 = AF ? AF.solo[p.analyst] : null;
-      body += oneSided(`${SHORT[p.analyst]} 單獨推薦（${g.league}）`, s.wins, s.settled, '命中', '', s2 && { wins: s2.wins, n: s2.settled });
-    } else {
-      tag = '<span class="tag">已全部排除</span>';
     }
-    return `<div class="tcard">
-      <div class="tc-head"><b>${esc(g.time)}</b> ${esc(g.away)} @ ${esc(g.home)} ${tag}</div>
-      <div class="tc-sides"><div><span class="tc-lab">客 ${esc(g.away)}</span>${sideChips('away')}</div><div><span class="tc-lab">主 ${esc(g.home)}</span>${sideChips('home')}</div></div>
-      ${body}
+    const sig = `${items.size}|${labels.size}|${[...labels.values()].map((l) => Core.anomRule(l.cls) || '').join('')}`;
+    if (sig !== NHLDOC.sig) NHLDOC = { ver: NHLDOC.ver + 1, sig, items, games: recs, labels, found: !!(d && d.boards) };
+  }
+  // 今天這場的異常：賽前用最新 Stake／BET365 讓分紀錄即時算（同冰球頁 nhlLiveSnap）；開賽後或資料檔沒這場時用冰球頁存的快照；手動標記一律優先
+  function liveAnomaly(g) {
+    if (g.league !== 'NHL' || !window.NhlStake) return null;
+    const it = NHLDOC.items.get(g.officialId) || null; const rec = NHLDOC.games.get(g.officialId) || null;
+    const pg = { date: g.date, time: g.time, away: g.away, home: g.home };
+    const sm = DATA.NHL.stake ? window.NhlStake.findStakeGame(DATA.NHL.stake, pg) : null;
+    const bm = DATA.NHL.b365 && window.NhlBet365 ? window.NhlBet365.findBet365Game(DATA.NHL.b365, pg) : null;
+    let ev = null;
+    if (sm || bm) {
+      const h = window.NhlStake.summarizeHandicapHistory(sm, bm);
+      const mlo = (sm && sm.ml) || (bm && bm.ml); const api = sm && sm.ml ? window.NhlStake : window.NhlBet365;
+      const oa = mlo && api && api.marketOutcome(mlo, 'away'); const oh = mlo && api && api.marketOutcome(mlo, 'home');
+      const mlOdds = oa && oh && Number(oa.odds) > 1 && Number(oh.odds) > 1 ? { away: Number(oa.odds), home: Number(oh.odds) } : null;
+      const snap = { relation: h.currentRelation, stakeSwaps: h.stake.swapCount, bet365Swaps: h.bet365.swapCount, mlOdds, mlFav: null };
+      if (snap.relation || snap.stakeSwaps || snap.bet365Swaps || mlOdds) ev = Core.anomEvidenceFromSnap(snap);
+    }
+    const stored = Core.anomBestSnap(it);
+    if (stored && (Date.now() >= g.startMs || !ev || !ev.relation)) ev = Core.anomEvidenceFromSnap(stored);
+    const fav = (v) => (v === 'away' || v === 'home' ? v : null);
+    let hdFav = fav(sm && sm.hd && sm.hd.favorite) || fav(bm && bm.hd && bm.hd.favSide) || fav(rec && rec.hdFav);
+    if (it && fav(it.hdFavOverride)) hdFav = it.hdFavOverride;
+    else if (it && it.hdSwap && hdFav) hdFav = hdFav === 'away' ? 'home' : 'away';
+    const cls = Core.anomClassify(ev, it, hdFav);
+    return cls ? { cls, hdFav } : null;
+  }
+
+  // 同聯盟、到「看的那天的前一天」為止的歷史（已排除忽略名單與觀察名單）
+  let ADV_IDX = null;
+  function adviceIndex(league, beforeDate) {
+    if (!HISTORY) return null;
+    const settledLive = Core.livePicks(picks).filter((p) => RESULTS[p.officialId] && RESULTS[p.officialId].final).length;
+    const key = [league, RESULTS_VER, settledLive, beforeDate, (adv.ignore || []).join('+'), advCore(), NHLDOC.ver].join('|');
+    if (ADV_IDX && ADV_IDX.key === key) return ADV_IDX;
+    const rows = mainOnly(Core.filterRows(statsLedger(), { league, phases: DEFAULT_PHASES, to: addDays(beforeDate, -1) })).filter((r) => !ignored(r.analyst));
+    const ann = Core.annotateContexts(rows);
+    const anomRecs = league === 'NHL' && NHLDOC.labels.size
+      ? { convBoth: Core.anomalyRecord(ann, NHLDOC.labels, 'convBoth'), convOne: Core.anomalyRecord(ann, NHLDOC.labels, 'convOne') } : {};
+    ADV_IDX = { key, ann, anomRecs };
+    return ADV_IDX;
+  }
+
+  const TIER = { bet: ['✅', '推薦'], small: ['🟡', '小注'], skip: ['⏭', '跳過'] };
+  const pctS = (s) => (s && s.settled ? `${Math.round(s.hitRate * 100)}%` : '—');
+  const roiS = (s) => (s && s.priced ? `<small class="${s.roi >= 0 ? 'pos' : 'neg'}">${s.roi >= 0 ? '+' : ''}${Math.round(s.roi * 100)}%</small>` : '');
+  const numS = (s) => `<b class="${s && s.priced ? (s.roi >= 0 ? 'pos' : 'neg') : ''}">${pctS(s)}</b>${roiS(s)}`;
+  const sigTxt = (v, games) => (games < Core.ADVICE_MIN_N ? '<span class="h-dim">樣本不足</span>' : v > 0 ? `<b class="pos">挺 ${SHORT[advCore()]}</b>` : v < 0 ? `<b class="neg">不挺 ${SHORT[advCore()]}</b>` : '<span class="h-dim">差不多</span>');
+  const shortAnom = (c) => (!c ? '' : c.kind === 'other' ? '背離' : `${c.kind === 'flip' ? '顛倒' : '收斂'}·${{ none: '都沒', stake: 'Stake', bet365: 'BET365', both: '雙方' }[c.combo] || '?'}`);
+  // 建議盤口的價：Stake 現價（開賽後用收盤）；受讓盤在 Stake 主盤已換邊（隊伍變讓分方）就改 ML
+  function adviceQuote(g, side, pk) {
+    const snap = stakeSnapshot(g.league, g) || g.closing;
+    let p = { side, market: pk.market, line: pk.market === 'ML' ? 0 : pk.line }; let note = '';
+    let odds = Core.priceFrom(snap, p);
+    if (odds == null && p.market === 'SPREAD' && p.line > 0) {
+      const now = defaultSpreadLine(g.league, snap, side);
+      const ml = Core.priceFrom(snap, { side, market: 'ML', line: 0 });
+      if (now != null && now < 0 && ml != null) { p = { side, market: 'ML', line: 0 }; odds = ml; note = `推薦時是 ${signed(pk.line)}，現在 Stake 主盤這隊變讓分方 → 改看 ML`; }
+    }
+    return { pick: p, odds, note };
+  }
+  function adviceRow(g, L) {
+    const core = advCore();
+    const all = ANALYSTS.map((a) => mainPick(a, g.officialId)).filter(Boolean);
+    if (!all.length) return null;
+    const live = all.filter((p) => !ignored(p.analyst));
+    const anomaly = liveAnomaly(g);
+    const a = Core.adviseGame({ picks: live, core, ann: L.ann, anomaly, anomRecs: L.anomRecs });
+    const team = (s) => (s === 'away' ? g.away : g.home);
+    let pickHtml = '<span class="h-dim">—</span>'; let res = ''; let note = '';
+    if (a.side) {
+      const fallback = { market: 'SPREAD', line: defaultSpreadLine(g.league, stakeSnapshot(g.league, g) || g.closing, a.side) || 1.5 };
+      const pk = Core.advicePick(a, live, a.ev.anomaly && a.ev.anomaly.rule === 'convOne' ? fallback : null);
+      const q = adviceQuote(g, a.side, pk);
+      note = q.note;
+      pickHtml = `<b>${esc(team(a.side))}</b> ${q.pick.market === 'ML' ? 'ML' : signed(q.pick.line)} <small class="h-dim">${q.odds != null ? q.odds.toFixed(2) : '—'}</small>`;
+      if (g.final) { const r = Core.settlePick(q.pick, g).result; res = ICON[r] || ''; }
+    }
+    const chip = !a.side ? '<span class="vchip skip">跳過</span>'
+      : a.follow === 'core' ? `<span class="vchip fol">跟 ${SHORT[core]}</span>`
+        : a.follow === 'against' ? `<span class="vchip agn">反 ${SHORT[core]}</span>`
+          : `<span class="vchip non">${SHORT[core]} 沒推</span>`;
+    const anomBadge = a.ev.anomaly ? `<span class="abadge ${a.ev.anomaly.cls.kind}${a.ev.anomaly.rule ? ' hot' : ''}" title="${esc(a.ev.anomaly.label)}">${esc(shortAnom(a.ev.anomaly.cls))}</span>` : '';
+    const open = advOpen.has(g.officialId);
+    // 證據（最多 3 條，順序固定）：異常 → 兩組對上（沒人反對時＝同樣人數同邊的過去）→ 單挑
+    const names = (list) => list.map((x) => SHORT[x]).join('・');
+    const sideList = (s) => all.filter((p) => p.side === s).map((p) => `<span class="${ignored(p.analyst) ? 'ig' : ''}">${SHORT[p.analyst]} ${p.market === 'ML' ? 'ML' : signed(Core.pickLine(p))}${p.layer === 'lotto' ? 'ᴸ' : ''}</span>`).join(' ') || '<span class="h-dim">—</span>';
+    let evh = `<div class="evl"><span class="evk">👥</span><span>客 ${esc(g.away)}：${sideList('away')}｜主 ${esc(g.home)}：${sideList('home')}</span></div>`;
+    if (a.ev.anomaly) {
+      const an = a.ev.anomaly; const rec = an.record;
+      let t = `<b>${esc(an.label)}</b>${an.hdFav ? `（讓分方 ${esc(team(an.hdFav))}）` : ''}`;
+      if (!an.rule) t += '｜<span class="h-dim">這類不影響建議</span>';
+      else if (!NHLDOC.found) t += '｜<span class="h-dim">這台裝置沒有冰球頁的紀錄，歷史數字從缺（規則照樣套用）</span>';
+      else if (rec && rec.games) {
+        const tgt = an.rule === 'convBoth' ? '讓分方' : '另一邊'; const cond = an.rule === 'convBoth' ? '讓分方有人推' : '另一邊人數 ≥ 讓分方';
+        t += `｜過去 ${rec.games} 場：${cond}時${tgt}直勝 <b>${rec.backed.win}/${rec.backed.n}</b>、其他時候 ${rec.unbacked.win}/${rec.unbacked.n}｜票：押讓分方 ${numS(rec.fav)}　另一邊 ${numS(rec.other)}`;
+      }
+      else t += '｜<span class="h-dim">過去沒有這類場有人推</span>';
+      if (an.rule && an.hdFav) t += Core.anomBacked(an.rule, an.hdFav, live) ? '｜今天：有人撐 ✓' : '｜今天：<b class="neg">沒人撐</b>';
+      evh += `<div class="evl"><span class="evk">⚡</span><span>${t}</span></div>`;
+    }
+    if (a.ev.clash) {
+      const c = a.ev.clash;
+      const lhs = c.awayFirst ? `客 ${names(c.mine)}` : names(c.mine); const rhs = c.awayFirst ? `主 ${names(c.theirs)}` : names(c.theirs);
+      evh += `<div class="evl"><span class="evk">⚔</span><span>兩組對上 ${lhs} vs ${rhs}｜過去 ${c.games} 場：${c.awayFirst ? '客隊這組' : '這組'}的票 ${numS(c.x)}　對面 ${numS(c.y)}　${c.awayFirst ? '' : sigTxt(a.ev.signals.clash, c.games)}</span></div>`;
+    } else if (a.ev.agree) {
+      const r = a.ev.agree.rec;
+      evh += `<div class="evl"><span class="evk">🤝</span><span>沒人反對｜過去 ${g.league} ${a.ev.agree.n} 人同邊、沒人反對：票 ${numS(r)}（${r.settled} 張）</span></div>`;
+    }
+    if (a.ev.h2h) {
+      const h = a.ev.h2h;
+      const each = h.opps.map((o) => { const e = h.each[o]; return e.games ? `對 ${SHORT[o]} ${pctS(e.hero)}:${pctS(e.opp)}（${e.games}）` : `對 ${SHORT[o]} 沒對上過`; }).join('、');
+      evh += `<div class="evl"><span class="evk">🥊</span><span>${SHORT[h.who]} 單挑｜${each}｜合計 ${numS(h.hero)} vs ${numS(h.opp)}　${sigTxt(a.ev.signals.h2h, h.games)}</span></div>`;
+    }
+    if (note) evh += `<div class="evl"><span class="evk">ℹ</span><span>${esc(note)}</span></div>`;
+    const html = `<div class="arow${open ? ' open' : ''}" data-adv="${esc(g.officialId)}">
+        <span class="at">${esc(g.time)}</span>${chip}<span class="ap">${pickHtml}</span><span class="aa">${anomBadge}</span>
+        <span class="aw">${esc(a.reason)}</span><span class="ar">${res}</span><span class="ac">${open ? '▾' : '▸'}</span>
+      </div>${open ? `<div class="aev">${evh}</div>` : ''}`;
+    return { tier: a.side ? a.tier : 'skip', time: g.startMs, html };
+  }
+  function renderAdviceSettings() {
+    if (!adv.set) return '';
+    const core = advCore();
+    return `<div class="aset">
+      <div class="chips"><span class="clab">主跟</span>${ANALYSTS.map((a) => `<button class="chip sm${a === core ? ' on' : ''}" data-advcore="${a}">${a}</button>`).join('')}</div>
+      <div class="chips"><span class="clab">忽略</span>${ANALYSTS.filter((a) => a !== core).map((a) => `<button class="chip sm${ignored(a) ? ' on' : ''}" data-advign="${a}">${a}</button>`).join('')}</div>
+      <div class="st-help">忽略＝今天的分邊人數和所有歷史數字都不算他（登錄頁上他的名字會劃線）。記在這台裝置。</div>
+      <div class="st-help"><b>判斷規則</b>（由上而下，先符合先用）：①冰球 收斂·雙方對調 → 讓分方（開賽前讓分熱門）至少一人推＝押讓分方 ML，推薦；沒人推＝跳過（訊號相反）。②冰球 收斂·只有一家對調 → 另一邊人數 ≥ 讓分方＝押另一邊，小注；否則照下面。③只有一邊有人推 → 跟（${core} 在裡面或 ≥2 人＝推薦，只有一位＝小注；同聯盟同樣人數「沒人反對」過去報酬是負的 → 降成小注）。④兩邊都有人 → 看「兩組對上」和「${core} 單挑」兩個訊號（過盤率差 ≥5 點且報酬沒反向才算，不到 ${Core.ADVICE_MIN_N} 場不算）：都挺或一挺一沒資料＝跟；都沒資料＝照跟；一挺一反＝跳過；只有一反＝跳過；兩個都反＝押對面小注。兩邊人數一樣（例 2:2）→ 降一級。${core} 沒推 → 只看兩組對上。</div>
     </div>`;
   }
-  function renderToday(games) {
+  function renderAdvice(games) {
     if (!games.some((g) => ANALYSTS.some((a) => mainPick(a, g.officialId)))) return '';
-    const head = `今日對決 vs 歷史（${view.league}｜${view.date.slice(5).replace('-', '/')}）`;
+    const core = advCore();
+    const ign = (adv.ignore || []).filter((a) => a !== core);
+    const head = `<div class="ahead"><span class="st-sec" style="margin:0">今天押什麼</span><span class="h-dim">${view.league}｜${view.date.slice(5).replace('-', '/')}｜主跟 <b style="color:var(--ink)">${core}</b>${ign.length ? `｜忽略 ${ign.join('、')}` : ''}</span><button class="hbtn${adv.set ? ' on' : ''}" data-advset="1" title="主跟誰、忽略誰、判斷規則">⚙</button></div>`;
     if (view.league === 'NBA' && games.every((g) => g.startMs < Date.parse('2026-10-20T04:00:00Z'))) {
-      return `<div class="today"><div class="st-sec">${head}</div><div class="st-help">NBA 季前賽不比對（例行賽 10/20 起才有歷史可對照）。</div></div>`;
+      return `<div class="today">${head}<div class="st-help">NBA 季前賽不判斷（例行賽 10/20 起才有歷史）。</div></div>`;
     }
-    const L = leagueIndex(view.league, view.date);
-    if (!L) return `<div class="today"><div class="st-sec">${head}</div><div class="st-help">${histLoading ? '載入歷史中…' : '歷史紀錄載入失敗'}</div></div>`;
-    const league2 = view.league === 'NHL' ? 'MLB' : view.league === 'MLB' ? 'NHL' : null;
-    const L2 = league2 ? leagueIndex(league2, view.date) : null;
-    return `<div class="today"><div class="st-sec">${head}</div>
-      <div class="st-help">依你目前的登錄即時計算（${view.league} 歷史，例行＋季後）。大數字＝賽前（到 ${addDays(view.date, -1).slice(5).replace('-', '/')} 為止）的過盤率，灰→金、少於 10 場變淡；比賽結算後多一行「賽後 ▲升／▼降」。點任一張卡的分析師名字＝所有比賽一起排除他（不會改到推薦），再點一次加回。</div>
-      ${EXCL.size ? `<div class="st-help"><b>目前排除：${ANALYSTS.filter((a) => EXCL.has(a)).join('、')}</b></div>` : ''}
-      <div class="tcards">${games.map((g) => todayCard(g, L, L2, league2)).join('')}</div></div>`;
+    const L = adviceIndex(view.league, view.date);
+    if (!L) return `<div class="today">${head}${renderAdviceSettings()}<div class="st-help">${histLoading ? '載入歷史中…' : '歷史紀錄載入失敗'}</div></div>`;
+    const rows = games.map((g) => adviceRow(g, L)).filter(Boolean);
+    let html = `<div class="today">${head}${renderAdviceSettings()}<div class="st-help">只用 ${view.league} 歷史（到 ${addDays(view.date, -1).slice(5).replace('-', '/')} 為止）。數字＝過盤率，顏色＝收盤報酬（綠賺紅賠）。點一列看證據。</div>`;
+    for (const t of ['bet', 'small', 'skip']) {
+      const list = rows.filter((r) => r.tier === t).sort((a, b) => a.time - b.time);
+      if (!list.length) continue;
+      html += `<div class="asec ${t}">${TIER[t][0]} ${TIER[t][1]} <small>${list.length}</small></div>${list.map((r) => r.html).join('')}`;
+    }
+    return `${html}</div>`;
   }
 
   function render() {
@@ -1103,11 +1182,14 @@
     cycle(g, 'lotto', btn.dataset.s); render();
   }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-ex],[data-sel],[data-opp],[data-multi],[data-rev]');
+    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-adv],[data-advset],[data-advcore],[data-advign],[data-sel],[data-opp],[data-multi],[data-rev]');
     if (!t) return;
     if (t.dataset.sl) { view.st.league = t.dataset.sl; drill = null; saveView(); render(); return; }
     if (t.dataset.st) { view.st[t.dataset.st] = t.dataset.v; if (t.dataset.st !== 'matrix') drill = null; saveView(); render(); return; }
-    if (t.dataset.ex) { const a = t.dataset.ex; if (EXCL.has(a)) EXCL.delete(a); else EXCL.add(a); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
+    if (t.dataset.adv) { const id = t.dataset.adv; if (advOpen.has(id)) advOpen.delete(id); else advOpen.add(id); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
+    if (t.dataset.advset) { adv.set = !adv.set; saveAdv(); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
+    if (t.dataset.advcore) { adv.core = t.dataset.advcore; adv.ignore = (adv.ignore || []).filter((a) => a !== adv.core); saveAdv(); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
+    if (t.dataset.advign) { const set = new Set(adv.ignore || []); if (set.has(t.dataset.advign)) set.delete(t.dataset.advign); else set.add(t.dataset.advign); adv.ignore = ANALYSTS.filter((a) => set.has(a)); saveAdv(); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
     if (t.dataset.rev) { view.rev = !view.rev; saveView(); render(); toast(view.rev ? '✎ 改版模式：左鍵記成「改版另計」' : '改版模式已關閉，左鍵回到表單'); return; }
     if (t.dataset.multi) { view.multi = !view.multi; if (view.multi && !multiSel().length) view.multiSel = [view.analyst]; saveView(); render(); return; }
     if (t.dataset.sel) { const sel = new Set(view.st.sel || []); if (sel.has(t.dataset.sel)) sel.delete(t.dataset.sel); else sel.add(t.dataset.sel); view.st.sel = ANALYSTS.filter((a) => sel.has(a)); drill = null; saveView(); render(); return; }
@@ -1160,9 +1242,11 @@
   /* ---------- 啟動 ---------- */
   async function boot() {
     render();
-    const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]).concat([fetchJson('data/analyst_results.json')]));
+    readNhlDoc();
+    const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]).concat([fetchJson('data/analyst_results.json'), fetchJson(SRC.NHL.b365)]));
     LEAGUES.forEach((lg, i) => { DATA[lg].games = normalizeGames(lg, loaded[i * 2]); DATA[lg].stake = loaded[i * 2 + 1]; });
     RESULTS = (loaded[LEAGUES.length * 2] && loaded[LEAGUES.length * 2].games) || {};
+    DATA.NHL.b365 = loaded[LEAGUES.length * 2 + 1];
     RESULTS_VER++;
     render();
     syncNow();
@@ -1174,7 +1258,9 @@
     if (refreshing) return;
     refreshing = true;
     try {
-      const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]).concat([fetchJson('data/analyst_results.json')]));
+      readNhlDoc();
+      const loaded = await Promise.all(LEAGUES.flatMap((lg) => [fetchJson(SRC[lg].pregame), fetchJson(SRC[lg].stake)]).concat([fetchJson('data/analyst_results.json'), fetchJson(SRC.NHL.b365)]));
+      if (loaded[LEAGUES.length * 2 + 1]) DATA.NHL.b365 = loaded[LEAGUES.length * 2 + 1];
       LEAGUES.forEach((lg, i) => { if (loaded[i * 2]) DATA[lg].games = normalizeGames(lg, loaded[i * 2]); if (loaded[i * 2 + 1]) DATA[lg].stake = loaded[i * 2 + 1]; });
       const res = loaded[LEAGUES.length * 2];
       if (res && res.games && JSON.stringify(res.games) !== JSON.stringify(RESULTS)) { RESULTS = res.games; RESULTS_VER++; }

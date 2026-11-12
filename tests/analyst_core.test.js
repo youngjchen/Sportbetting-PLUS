@@ -211,3 +211,107 @@ test('revision layer (改版另計) never counts in the main ledger, even withou
   assert.equal(by('G2', 'lotto').countsInMain, true);   // 沒表單的 LOTTO 照舊算主帳
   assert.ok(core.ANALYSTS.includes('LEO') && !core.WATCH.includes('LEO') && core.REVISERS.includes('LEO'));
 });
+
+/* ---------- 今天押什麼（2026-11-13） ---------- */
+// 歷史：n 場 hero 押客、opps 押主；前 wins 場客勝（ML 對 ML，賠率 1.9）
+function history(hero, opps, n, wins, { heroPartners = [], prefix = 'H' } = {}) {
+  const picks = []; const results = {};
+  for (let i = 0; i < n; i++) {
+    const id = `${prefix}${i}`;
+    results[id] = { awayScore: i < wins ? 3 : 1, homeScore: i < wins ? 1 : 3, final: true, phase: 'regular', closing: { ml: { away: 1.9, home: 1.9 } } };
+    for (const a of [hero, ...heroPartners]) picks.push(pick({ analyst: a, officialId: id, side: 'away' }));
+    for (const a of opps) picks.push(pick({ analyst: a, officialId: id, side: 'home' }));
+  }
+  return core.annotateContexts(core.buildLedger(picks, results));
+}
+const today = (list) => list.map(([analyst, side, market = 'ML', line = 0]) => pick({ analyst, officialId: 'T', side, market, line }));
+
+test('advice: 收斂·雙方對調 → 讓分方有人推就押讓分方 ML（推薦）；沒人推＝跳過', () => {
+  const picks = today([['BOOKIE', 'home', 'SPREAD', 1.5], ['APE', 'away']]);
+  const anomaly = { cls: { kind: 'conv', combo: 'both', div: false }, hdFav: 'home' };
+  const a = core.adviseGame({ picks, core: 'BOOKIE', ann: [], anomaly });
+  assert.deepEqual([a.tier, a.side, a.follow, a.by], ['bet', 'home', 'core', 'anomaly']);
+  assert.deepEqual(core.advicePick(a, picks), { market: 'ML', line: 0 });
+  assert.equal(a.ev.anomaly.label, '收斂·雙方對調');
+  const none = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['APE', 'away']]), core: 'BOOKIE', ann: [], anomaly });
+  assert.deepEqual([none.tier, none.side], ['skip', null]);
+});
+
+test('advice: 收斂·只有一家對調 → 另一邊人數 ≥ 讓分方才押另一邊（小注）；分析師也推那邊時保留推薦', () => {
+  const anomaly = { cls: { kind: 'conv', combo: 'stake', div: false }, hdFav: 'home' };
+  const homePicks = today([['BOOKIE', 'home'], ['APE', 'home']]);
+  const n = core.adviseGame({ picks: homePicks, core: 'BOOKIE', ann: [], anomaly });   // 沒人撐另一邊 → 照分析師規則
+  assert.deepEqual([n.tier, n.side, n.by], ['bet', 'home', 'analysts']);
+  const split = today([['BOOKIE', 'home'], ['APE', 'away', 'SPREAD', 1.5], ['MONEY', 'away', 'SPREAD', 1.5]]);
+  const a = core.adviseGame({ picks: split, core: 'BOOKIE', ann: [], anomaly });
+  assert.deepEqual([a.tier, a.side, a.follow], ['small', 'away', 'against']);
+  assert.deepEqual(core.advicePick(a, split), { market: 'SPREAD', line: 1.5 });
+  const b = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['APE', 'away']]), core: 'BOOKIE', ann: [], anomaly });
+  assert.deepEqual([b.tier, b.side, b.follow], ['bet', 'away', 'core']);
+});
+
+test('advice: 沒人反對 → 跟；同樣人數沒人反對的過去報酬是負的 → 小注', () => {
+  const picks = today([['BOOKIE', 'away'], ['APE', 'away']]);
+  assert.equal(core.adviseGame({ picks, core: 'BOOKIE', ann: [] }).tier, 'bet');
+  // 過去 12 場兩人同邊沒人反對，只贏 4 場（ML 1.9）→ 報酬負
+  const ann = history('BOOKIE', [], 12, 4, { heroPartners: ['APE'] });
+  const a = core.adviseGame({ picks, core: 'BOOKIE', ann });
+  assert.deepEqual([a.tier, a.side, a.ev.agree.n], ['small', 'away', 2]);
+  assert.equal(core.adviseGame({ picks: today([['APE', 'home']]), core: 'BOOKIE', ann: [] }).tier, 'small');
+});
+
+test('advice: 有人反對 → 兩組對上與單挑都挺主跟的人＝推薦；人數一樣降成小注', () => {
+  const ann = history('BOOKIE', ['APE'], 10, 8, { heroPartners: ['SNIPER'] });
+  const a = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['SNIPER', 'away'], ['APE', 'home']]), core: 'BOOKIE', ann });
+  assert.deepEqual([a.tier, a.side, a.follow], ['bet', 'away', 'core']);
+  assert.deepEqual(a.ev.signals, { clash: 1, h2h: 1 });
+  assert.equal(a.ev.clash.games, 10);
+  assert.equal(a.ev.h2h.each.APE.games, 10);
+  const tie = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['SNIPER', 'away'], ['APE', 'home'], ['MONEY', 'home']]), core: 'BOOKIE', ann });
+  assert.deepEqual([tie.tier, tie.side], ['small', 'away']);
+  assert.match(tie.reason, /2:2/);
+});
+
+test('advice: 兩個訊號都反 → 押對面小注；樣本不足照跟；主跟的人沒推 → 只看兩組對上', () => {
+  const bad = history('BOOKIE', ['APE'], 10, 2);
+  const a = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['APE', 'home'], ['MONEY', 'home']]), core: 'BOOKIE', ann: bad });
+  assert.deepEqual([a.tier, a.side, a.follow], ['small', 'home', 'against']);
+  const thin = history('BOOKIE', ['APE'], 3, 0);
+  const b = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['APE', 'home']]), core: 'BOOKIE', ann: thin });
+  assert.deepEqual([b.tier, b.side], ['small', 'away']);   // 1:1 人數一樣 → 降一級
+  const c = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['SNIPER', 'away'], ['APE', 'home']]), core: 'BOOKIE', ann: thin });
+  assert.deepEqual([c.tier, c.side], ['bet', 'away']);
+  const noCore = core.adviseGame({ picks: today([['SNIPER', 'away'], ['APE', 'home']]), core: 'BOOKIE', ann: history('SNIPER', ['APE'], 8, 7) });
+  assert.deepEqual([noCore.tier, noCore.side, noCore.follow], ['small', 'away', null]);
+});
+
+test('advice: 兩組對上挺、單挑反 → 跳過', () => {
+  // 兩組對上（BOOKIE＋SNIPER vs APE）贏 8/10；另有 20 場 BOOKIE 對 APE＋SNIPER 只贏 2 場（SNIPER 換邊 → 不算兩組對上，只算單挑）
+  const ann = history('BOOKIE', ['APE'], 10, 8, { heroPartners: ['SNIPER'] }).concat(history('BOOKIE', ['APE', 'SNIPER'], 20, 2, { prefix: 'K' }));
+  const a = core.adviseGame({ picks: today([['BOOKIE', 'away'], ['SNIPER', 'away'], ['APE', 'home']]), core: 'BOOKIE', ann });
+  assert.deepEqual(a.ev.signals, { clash: 1, h2h: -1 });
+  assert.deepEqual([a.tier, a.side], ['skip', null]);
+});
+
+test('anomClassify: 手動歸類優先；flipStateManual 收斂·雙方；快照讀法同冰球頁', () => {
+  assert.deepEqual(core.anomClassify(null, { anomManual: { kind: 'conv', combo: 'stake' } }, 'home'), { kind: 'conv', combo: 'stake', div: false, manual: true });
+  assert.equal(core.anomClassify({ relation: 'diverged', stakeSwaps: 1, bet365Swaps: 0 }, { anomManual: { kind: 'none' } }, 'home'), null);
+  assert.deepEqual(core.anomClassify({ relation: 'aligned', stakeSwaps: 0, bet365Swaps: 0 }, { flipStateManual: 'converged_both' }, 'home'), { kind: 'conv', combo: 'both', div: false });
+  const snap = { flip: false, stakeSwaps: 1, bet365Swaps: 2, relation: 'aligned', mlOdds: { away: 1.6, home: 2.4 } };
+  const it = { anomSnap: { relation: null, stakeSwaps: 0 }, anomLive: snap };
+  const ev = core.anomEvidenceFromSnap(core.anomBestSnap(it));
+  assert.deepEqual(core.anomClassify(ev, it, 'home'), { kind: 'conv', combo: 'both', div: true });
+  assert.equal(core.anomRule(core.anomClassify(ev, it, 'home')), 'convBoth');
+  assert.equal(core.anomLabel({ kind: 'conv', combo: 'bet365', div: false }), '收斂·只有 BET365 對調');
+});
+
+test('anomalyRecord: 押讓分方 vs 另一邊（票）與讓分方直勝', () => {
+  const ann = history('BOOKIE', ['APE'], 4, 3);   // 客勝 3／4
+  const labels = new Map(['H0', 'H1', 'H2', 'H3'].map((id) => [id, { cls: { kind: 'conv', combo: 'both' }, hdFav: 'away' }]));
+  labels.set('H3', { cls: { kind: 'conv', combo: 'stake' }, hdFav: 'away' });
+  const r = core.anomalyRecord(ann, labels, 'convBoth');
+  assert.deepEqual([r.games, r.fav.wins, r.fav.settled, r.other.wins, r.favDir, r.dirN], [3, 3, 3, 0, 3, 3]);
+  assert.deepEqual([r.backed, r.unbacked], [{ n: 3, win: 3 }, { n: 0, win: 0 }]);
+  const one = core.anomalyRecord(ann, labels, 'convOne');   // H3：讓分方客、另一邊（主）1:1 有人撐、主勝
+  assert.deepEqual([one.games, one.backed, one.unbacked], [1, { n: 1, win: 1 }, { n: 0, win: 0 }]);
+});

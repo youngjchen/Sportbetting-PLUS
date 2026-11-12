@@ -348,7 +348,261 @@
     };
   }
 
+  /* ================= 「今天押什麼」（2026-11-13 使用者要求） =================
+     每場一個建議：押哪隊、什麼盤口、推薦／小注／跳過，理由攤開。歷史一律只用同一聯盟（不混球種）。
+     規則（優先序由上而下）：
+       1. 冰球 收斂·雙方對調 → 讓分方（開賽前的讓分熱門）至少有一人推 → 押讓分方 ML，推薦；沒人推 → 跳過（訊號相反）。
+          （11/12 前 26 場：有人推讓分方 23 場、讓分方直勝 17；沒人推 3 場只贏 1）
+       2. 冰球 收斂·只有一家對調 → 另一邊人數 ≥ 讓分方 → 押另一邊，小注（樣本少）；否則照分析師規則。
+          （20 場：另一邊人數 ≥ 讓分方 11 場、另一邊直勝 10；人數較少 9 場只贏 3）
+       3. 只有一邊有人推 → 跟（主跟的人在裡面或 ≥2 人＝推薦；只有一位非主跟＝小注）。
+       4. 兩邊都有人 → 看兩個訊號挺不挺主跟的人：
+            a. 兩組對上：今天這兩組人（到場的人各自全押同一邊）過去對上，誰那邊的票較好；
+            b. 單挑：主跟的人過去對上今天對面那幾位時，誰的票較好。
+          訊號 = 過盤率差 ≥ 5 個百分點、且收盤報酬沒有反向；不到 5 場＝不算。
+          加總 ≥ +1 → 跟；兩個都沒資料 → 照跟；一正一負 → 跳過；−1 → 跳過；−2 → 押對面（小注）。
+          兩邊人數一樣（例 2:2）→ 降一級（推薦→小注、小注→跳過）。
+          主跟的人沒推 → 只看兩組對上：有一邊明顯較好＝小注那邊，否則跳過。 */
+  const ADVICE_MIN_N = 5;
+  const ADVICE_EDGE = 0.05;
+
+  function groupByGame(rows) {
+    const by = new Map();
+    for (const r of rows) {
+      if (!by.has(r.officialId)) by.set(r.officialId, []);
+      by.get(r.officialId).push(r);
+    }
+    return by;
+  }
+
+  // 兩組對上：X、Y 各自「到場的人」全押同一邊、兩組押不同邊（每組至少一人到場）
+  function groupClash(annotated, X, Y) {
+    const xs = []; const ys = []; const games = [];
+    let xDir = 0;
+    for (const list of groupByGame(annotated).values()) {
+      const gx = list.filter((r) => X.includes(r.analyst)); const gy = list.filter((r) => Y.includes(r.analyst));
+      if (!gx.length || !gy.length) continue;
+      const sx = new Set(gx.map((r) => r.side)); const sy = new Set(gy.map((r) => r.side));
+      if (sx.size !== 1 || sy.size !== 1 || gx[0].side === gy[0].side) continue;
+      games.push(gx[0].officialId);
+      if (gx[0].direction === 'win') xDir++;
+      xs.push(...gx); ys.push(...gy);
+    }
+    return { games: games.length, ids: games, xDir, x: summarize(xs), y: summarize(ys) };
+  }
+
+  // 單挑：hero 對上 opps 裡任何一位押另一邊的場；hero 的票一場一張，對面的票是當場對面那幾位的
+  function headToHead(annotated, hero, opps) {
+    const hs = []; const os = []; const per = {};
+    for (const o of opps) per[o] = { games: 0, hero: [], opp: [] };
+    for (const list of groupByGame(annotated).values()) {
+      const h = list.find((r) => r.analyst === hero);
+      if (!h) continue;
+      const against = list.filter((r) => opps.includes(r.analyst) && r.side !== h.side);
+      if (!against.length) continue;
+      hs.push(h); os.push(...against);
+      for (const r of against) { const p = per[r.analyst]; p.games++; p.hero.push(h); p.opp.push(r); }
+    }
+    const each = {};
+    for (const [o, p] of Object.entries(per)) each[o] = { games: p.games, hero: summarize(p.hero), opp: summarize(p.opp) };
+    return { games: hs.length, hero: summarize(hs), opp: summarize(os), each };
+  }
+
+  // a 那邊比 b 那邊好？ +1／−1／0（樣本不足或差不多）。過盤率差 ≥ 5 點，且報酬沒有反向。
+  function edgeSign(a, b, games) {
+    if (games < ADVICE_MIN_N || a.hitRate == null || b.hitRate == null) return 0;
+    const dh = a.hitRate - b.hitRate;
+    const dr = a.roi != null && b.roi != null ? a.roi - b.roi : null;
+    if (dh >= ADVICE_EDGE && (dr == null || dr >= 0)) return 1;
+    if (dh <= -ADVICE_EDGE && (dr == null || dr <= 0)) return -1;
+    return 0;
+  }
+
+  /* ---- 冰球異常（移植 nhl.html nhlAnomClassify／nhlEvidenceFromSnap；那邊改規則時這裡要跟著改） ---- */
+  const NHL_ANOM_COMBOS = { flip: ['none', 'stake', 'bet365', 'both'], conv: ['stake', 'bet365', 'both'] };
+  const NHL_DIV_MIN_GAP = 0.10;
+  function normalizeFlipState(v) {
+    if (v === 'converged_intl' || v === 'converged_lottery') return 'converged_unknown';
+    return ['none', 'flipped', 'converged_stake', 'converged_bet365', 'converged_both', 'converged_unknown'].includes(v) ? v : 'none';
+  }
+  function anomSnapHasData(s) { return !!(s && (s.relation || s.mlFav || Number(s.stakeSwaps) > 0 || Number(s.bet365Swaps) > 0)); }
+  function anomSnapScore(s) { if (!s) return 0; return (s.relation ? 4 : 0) + (s.mlFav ? 2 : 0) + ((Number(s.stakeSwaps) > 0 || Number(s.bet365Swaps) > 0) ? 1 : 0); }
+  function anomBestSnap(it) {
+    const snap = it && it.anomSnap; const live = it && it.anomLive;
+    const best = anomSnapScore(live) > anomSnapScore(snap) ? live : snap;
+    return anomSnapHasData(best) ? best : null;
+  }
+  function anomEvidenceFromSnap(s) {
+    const odds = s.mlOdds && Number(s.mlOdds.away) > 1 && Number(s.mlOdds.home) > 1 ? s.mlOdds : null;
+    const a = odds ? Number(odds.away) : NaN; const h = odds ? Number(odds.home) : NaN;
+    const mlFav = odds ? (a < h ? 'away' : a > h ? 'home' : null) : ((s.mlFav === 'away' || s.mlFav === 'home') ? s.mlFav : null);
+    return { relation: s.relation !== undefined ? (s.relation || null) : (s.flip ? 'diverged' : null),
+      stakeSwaps: Number(s.stakeSwaps) || 0, bet365Swaps: Number(s.bet365Swaps) || 0,
+      mlFav, mlGap: odds ? Math.round(Math.abs(a - h) * 100) / 100 : null };
+  }
+  function anomClassify(ev, it, hdFav) {
+    const am = it && it.anomManual;
+    if (am && ['flip', 'conv', 'other', 'none'].includes(am.kind)) {
+      if (am.kind === 'none') return null;
+      if (am.kind === 'other') return { kind: 'other', combo: null, div: true, manual: true };
+      return { kind: am.kind, combo: NHL_ANOM_COMBOS[am.kind].includes(am.combo) ? am.combo : null, div: !!am.div, manual: true };
+    }
+    const manual = it ? (it.flipStateManual != null ? normalizeFlipState(it.flipStateManual)
+      : it.platformFlip ? 'flipped' : it.flipVanished ? normalizeFlipState(it.flipDir || 'converged_unknown') : null) : null;
+    if (!ev && !manual) return null;
+    let relation = ev ? ev.relation : null;
+    let s = !!(ev && ev.stakeSwaps > 0); let b = !!(ev && ev.bet365Swaps > 0); let comboKnown = !!(ev && (ev.relation || s || b));
+    if (manual === 'none') return null;
+    if (manual === 'flipped') relation = 'diverged';
+    else if (manual && manual.startsWith('converged')) {
+      relation = 'aligned';
+      if (manual === 'converged_stake') { s = true; b = false; comboKnown = true; }
+      else if (manual === 'converged_bet365') { s = false; b = true; comboKnown = true; }
+      else if (manual === 'converged_both') { s = true; b = true; comboKnown = true; }
+    }
+    const combo = (s && b) ? 'both' : s ? 'stake' : b ? 'bet365' : 'none';
+    const div = !!(ev && ev.mlFav && hdFav && ev.mlFav !== hdFav && ev.mlGap != null && ev.mlGap >= NHL_DIV_MIN_GAP);
+    let kind = null;
+    if (relation === 'diverged') kind = 'flip';
+    else if (relation === 'aligned' && (combo !== 'none' || (manual && manual.startsWith('converged')))) kind = 'conv';
+    if (!kind) return div ? { kind: 'other', combo: null, div: true } : null;
+    const known = comboKnown && NHL_ANOM_COMBOS[kind].includes(combo);
+    return { kind, combo: known ? combo : null, div };
+  }
+  function anomLabel(c) {
+    if (!c) return '';
+    if (c.kind === 'other') return '只背離';
+    const combo = { none: '都沒對調', stake: '只有 Stake 對調', bet365: '只有 BET365 對調', both: '雙方對調' }[c.combo] || '換邊未記';
+    return `${c.kind === 'flip' ? '顛倒' : '收斂'}·${combo}${c.div ? '＋背離' : ''}`;
+  }
+  // 規則用的異常類別：convBoth＝收斂·雙方對調、convOne＝收斂·只有一家對調；其他異常不影響建議（只顯示）
+  function anomRule(c) {
+    if (!c || c.kind !== 'conv') return null;
+    if (c.combo === 'both') return 'convBoth';
+    if (c.combo === 'stake' || c.combo === 'bet365') return 'convOne';
+    return null;
+  }
+  // 歷史異常場：labels＝Map(officialId → { cls, hdFav })；回傳押讓分方 vs 另一邊（票）與讓分方直勝
+  // 異常指向哪邊：雙方對調＝讓分方；只有一家＝另一邊
+  function anomTarget(rule, hdFav) { return rule === 'convBoth' ? hdFav : hdFav === 'away' ? 'home' : 'away'; }
+  // 這場的分析師有沒有撐異常指向的那邊：雙方對調＝那邊至少一人；只有一家＝那邊人數 ≥ 讓分方且至少一人
+  function anomBacked(rule, hdFav, list) {
+    const t = anomTarget(rule, hdFav);
+    const nt = list.filter((p) => p.side === t).length; const nf = list.length - nt;
+    return rule === 'convBoth' ? nt >= 1 : nt >= 1 && nt >= nf;
+  }
+  function anomalyRecord(annotated, labels, rule) {
+    const fav = []; const other = []; const ids = new Set(); let favDir = 0; let dirN = 0;
+    const backed = { n: 0, win: 0 }; const unbacked = { n: 0, win: 0 };
+    for (const [id, list] of groupByGame(annotated)) {
+      const lab = labels && labels.get(id);
+      if (!lab || !lab.hdFav || anomRule(lab.cls) !== rule) continue;
+      ids.add(id);
+      for (const r of list) (r.side === lab.hdFav ? fav : other).push(r);
+      const ref = list[0];
+      const favWon = ref.side === lab.hdFav ? ref.direction : ({ win: 'loss', loss: 'win' }[ref.direction] || ref.direction);
+      if (favWon === 'win' || favWon === 'loss') {
+        dirN++; if (favWon === 'win') favDir++;
+        const targetWon = rule === 'convBoth' ? favWon === 'win' : favWon === 'loss';
+        const b = anomBacked(rule, lab.hdFav, list) ? backed : unbacked;
+        b.n++; if (targetWon) b.win++;
+      }
+    }
+    return { games: ids.size, fav: summarize(fav), other: summarize(other), favDir, dirN, backed, unbacked };
+  }
+
+  // picks＝今天這場每人一張主帳票（已排除忽略名單）；ann＝同聯盟、到前一天為止的歷史（已排除忽略名單）
+  // anomaly＝{ cls, hdFav } 或 null；anomRecs＝{ convBoth, convOne }（anomalyRecord 結果，可缺）
+  function adviseGame({ picks = [], core = 'BOOKIE', ann = [], anomaly = null, anomRecs = {} } = {}) {
+    const sideOf = (s) => picks.filter((p) => p.side === s);
+    const away = sideOf('away'); const home = sideOf('home');
+    const corePick = picks.find((p) => p.analyst === core) || null;
+    const ev = { anomaly: null, clash: null, h2h: null, counts: { away: away.length, home: home.length } };
+    const out = (tier, side, reason, extra = {}) => Object.assign({ tier, side, reason, core, corePick,
+      follow: side && corePick ? (corePick.side === side ? 'core' : 'against') : null, ev }, extra);
+    const rule = anomaly ? anomRule(anomaly.cls) : null;
+    if (anomaly && anomaly.cls) {
+      ev.anomaly = { cls: anomaly.cls, label: anomLabel(anomaly.cls), hdFav: anomaly.hdFav || null, rule,
+        record: rule ? anomRecs[rule] || null : null };
+    }
+    if (rule === 'convBoth' && anomaly.hdFav) {
+      if (anomBacked(rule, anomaly.hdFav, picks)) return out('bet', anomaly.hdFav, '收斂·雙方對調、讓分方有人推 → 押讓分方', { by: 'anomaly' });
+      if (picks.length) return out('skip', null, '收斂·雙方對調指向讓分方，但沒人推那邊 → 訊號相反', { by: 'anomaly' });
+    }
+
+    // 分析師規則
+    let base = null;
+    if (!away.length && !home.length) base = { tier: 'none', side: null, reason: '沒有人推' };
+    else if (!away.length || !home.length) {
+      const side = away.length ? 'away' : 'home'; const list = away.length ? away : home;
+      if (corePick) base = { tier: 'bet', side, reason: list.length > 1 ? `${core} 等 ${list.length} 人同邊、沒人反對` : `只有 ${core} 推、沒人反對` };
+      else if (list.length > 1) base = { tier: 'bet', side, reason: `${list.length} 人同邊、沒人反對（${core} 沒推）` };
+      else base = { tier: 'small', side, reason: `只有 ${list[0].analyst} 推（${core} 沒推）` };
+      // 同聯盟「同樣人數同邊、沒人反對」過去的報酬是負的 → 降成小注（例 NBA 4 人同邊 −12%）
+      const agree = summarize(ann.filter((r) => r.ctx.oppCount === 0 && r.ctx.ownCount === list.length));
+      ev.agree = { n: list.length, rec: agree };
+      if (base.tier === 'bet' && agree.priced >= 10 && agree.roi < 0) {
+        base.tier = 'small';
+        base.reason += `；但過去 ${list.length} 人同邊沒人反對時報酬是負的`;
+      }
+    } else {
+      const tie = away.length === home.length;
+      if (corePick) {
+        const mine = corePick.side === 'away' ? away : home; const theirs = corePick.side === 'away' ? home : away;
+        const clash = groupClash(ann, mine.map((p) => p.analyst), theirs.map((p) => p.analyst));
+        const h2h = headToHead(ann, core, theirs.map((p) => p.analyst));
+        ev.clash = Object.assign({ mine: mine.map((p) => p.analyst), theirs: theirs.map((p) => p.analyst) }, clash);
+        ev.h2h = Object.assign({ who: core, opps: theirs.map((p) => p.analyst) }, h2h);   // h2h.hero／h2h.opp＝兩邊的票統計
+        const sg = edgeSign(clash.x, clash.y, clash.games); const sh = edgeSign(h2h.hero, h2h.opp, h2h.games);
+        ev.signals = { clash: sg, h2h: sh };
+        const s = sg + sh; const other = corePick.side === 'away' ? 'home' : 'away';
+        if (s >= 1) base = { tier: 'bet', side: corePick.side, reason: sg && sh ? `兩組對上、${core} 單挑都挺 ${core}` : sg ? `兩組對上挺 ${core}` : `${core} 單挑對面較好` };
+        else if (s === 0 && !sg && !sh) base = { tier: mine.length >= theirs.length ? 'bet' : 'small', side: corePick.side, reason: `對上紀錄不夠（< ${ADVICE_MIN_N} 場）或差不多，照跟 ${core}` };
+        else if (s === 0) base = { tier: 'skip', side: null, reason: '兩組對上和單挑結論相反' };
+        else if (s === -1) base = { tier: 'skip', side: null, reason: `證據不挺 ${core}` };
+        else base = { tier: 'small', side: other, reason: `兩組對上、單挑都是對面較好` };
+        if (tie && base.tier !== 'skip') {
+          base.tier = base.tier === 'bet' ? 'small' : 'skip';
+          if (base.tier === 'skip') base.side = null;
+          base.reason += `（${away.length}:${home.length} 人數一樣，降一級）`;
+        }
+      } else {
+        const clash = groupClash(ann, away.map((p) => p.analyst), home.map((p) => p.analyst));
+        ev.clash = Object.assign({ mine: away.map((p) => p.analyst), theirs: home.map((p) => p.analyst), awayFirst: true }, clash);
+        const sg = edgeSign(clash.x, clash.y, clash.games);
+        ev.signals = { clash: sg, h2h: 0 };
+        base = sg ? { tier: 'small', side: sg > 0 ? 'away' : 'home', reason: `${core} 沒推；兩組對上這邊較好` }
+          : { tier: 'skip', side: null, reason: `${core} 沒推，兩組對上分不出高下` };
+      }
+    }
+    if (rule === 'convOne' && anomaly.hdFav && anomBacked(rule, anomaly.hdFav, picks)) {
+      const other = anomTarget(rule, anomaly.hdFav);
+      if (base.side === other && base.tier === 'bet') return out(base.tier, other, `${base.reason}；收斂·只有一家對調也指向這邊`, { by: 'both' });
+      return out('small', other, '收斂·只有一家對調、另一邊人數不少 → 押另一邊（小注）', { by: 'anomaly', analystView: base });
+    }
+    return out(base.tier, base.side, base.reason, { by: 'analysts' });
+  }
+
+  // 建議的盤口：跟主跟的人＝他的盤口；否則用那邊最多人押的盤口；沒人押那邊＝ML（收斂·只有一家＝受讓）
+  function advicePick(advice, picks, fallbackMarket) {
+    if (!advice || !advice.side) return null;
+    // 收斂·雙方對調：讓分方就是熱門，+1.5 是另開盤（賠率很低）→ 一律 ML（11/12 前 26 場：ML 74%、報酬 +36%）
+    if (advice.by === 'anomaly' && advice.ev && advice.ev.anomaly && advice.ev.anomaly.rule === 'convBoth') return { market: 'ML', line: 0 };
+    if (advice.corePick && advice.corePick.side === advice.side) return { market: advice.corePick.market, line: pickLine(advice.corePick) };
+    const same = picks.filter((p) => p.side === advice.side);
+    if (same.length) {
+      const counts = new Map();
+      for (const p of same) { const k = `${p.market}|${pickLine(p)}`; counts.set(k, (counts.get(k) || 0) + 1); }
+      const [k] = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
+      const [market, line] = k.split('|');
+      return { market, line: Number(line) };
+    }
+    return fallbackMarket || { market: 'ML', line: 0 };
+  }
+
   return {
+    groupClash, headToHead, edgeSign, adviseGame, advicePick, anomClassify, anomEvidenceFromSnap, anomBestSnap, anomSnapScore,
+    anomLabel, anomRule, anomalyRecord, anomTarget, anomBacked, ADVICE_MIN_N,
     ANALYSTS, WATCH, REVISERS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,
     pickKey, pickLine, mergePicks, livePicks, settlePick, priceQuote, priceFrom, priceFor, relationToCard,
     buildLedger, summarize, filterRows, annotateContexts, inScenario, scenarioStats, pairMatrix, comboBoard,
