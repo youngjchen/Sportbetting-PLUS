@@ -1,11 +1,13 @@
 {
  "schemaVersion": 2,
  "provider": "bet365-official-first",
- "updated": "2026-11-13T01:12:55.894Z",
+ "updated": "2026-11-13T01:17:55.880Z",
  "source": "https://www.bet365.com/",
  "health": {
-  "status": "ok",
-  "errors": []
+  "status": "partial",
+  "errors": [
+   "Request failed with status code 403"
+  ]
  },
  "leagues": {
   "NBA": {
@@ -14,19 +16,23 @@
    "officialMatched": 6,
    "fallbackMatched": 7,
    "matched": 7,
-   "lastAttemptAt": "2026-11-13T01:12:55.894Z",
-   "lastSuccessAt": "2026-11-13T01:12:55.894Z",
-   "errors": []
+   "lastAttemptAt": "2026-11-13T01:17:55.880Z",
+   "lastSuccessAt": "2026-11-13T01:17:55.880Z",
+   "errors": [
+    "Request failed with status code 403"
+   ]
   },
   "WNBA": {
-   "status": "empty",
+   "status": "error",
    "scheduled": 0,
    "officialMatched": 0,
    "fallbackMatched": 0,
    "matched": 0,
-   "lastAttemptAt": "2026-11-13T01:12:55.894Z",
+   "lastAttemptAt": "2026-11-13T01:17:55.880Z",
    "lastSuccessAt": "2026-10-31T23:58:34.674Z",
-   "errors": []
+   "errors": [
+    "Request failed with status code 403"
+   ]
   }
  },
  "matches": {
@@ -668060,7 +668066,7 @@
    "away": "黃蜂",
    "home": "太陽",
    "provider": "bet365-official",
-   "observedAt": "2026-11-13T01:12:55.894Z",
+   "observedAt": "2026-11-13T01:17:55.880Z",
    "favorite": "home",
    "line": 6.5,
    "moneyline": {
@@ -668081,7 +668087,7 @@
      "away": 2.9,
      "home": 1.42,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "hd": {
@@ -668090,7 +668096,7 @@
      "away": 1.9,
      "home": 1.9,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "total": {
@@ -668105,29 +668111,6 @@
    "mixedSources": true,
    "frozenAt": null,
    "history": [
-    {
-     "provider": "bet365-official",
-     "observedAt": "2026-11-12T03:56:26.356Z",
-     "favorite": "home",
-     "markets": {
-      "ml": {
-       "away": 3,
-       "home": 1.4,
-       "provider": "bet365-official",
-       "observedAt": "2026-11-12T03:56:26.356Z",
-       "stale": false
-      },
-      "hd": {
-       "favorite": "home",
-       "line": 6.5,
-       "away": 1.9,
-       "home": 1.9,
-       "provider": "bet365-official",
-       "observedAt": "2026-11-12T03:56:26.356Z",
-       "stale": false
-      }
-     }
-    },
     {
      "provider": "bet365-official",
      "observedAt": "2026-11-12T04:01:27.158Z",
@@ -673720,33 +673703,41 @@
        "stale": false
       }
      }
+    },
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-11-13T01:17:55.880Z",
+     "favorite": "home",
+     "markets": {
+      "ml": {
+       "away": 2.9,
+       "home": 1.42,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "hd": {
+       "favorite": "home",
+       "line": 6.5,
+       "away": 1.9,
+       "home": 1.9,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "total": {
+       "line": 214.5,
+       "over": 1.93,
+       "under": 1.88,
+       "provider": "betexplorer-bet365",
+       "observedAt": "2026-11-13T00:11:28.405Z",
+       "stale": false
+      }
+     }
     }
    ],
    "providerHistories": {
     "bet365-official": [
-     {
-      "provider": "bet365-official",
-      "observedAt": "2026-11-12T03:56:26.356Z",
-      "favorite": "home",
-      "markets": {
-       "ml": {
-        "away": 3,
-        "home": 1.4,
-        "provider": "bet365-official",
-        "observedAt": "2026-11-12T03:56:26.356Z",
-        "stale": false
-       },
-       "hd": {
-        "favorite": "home",
-        "line": 6.5,
-        "away": 1.9,
-        "home": 1.9,
-        "provider": "bet365-official",
-        "observedAt": "2026-11-12T03:56:26.356Z",
-        "stale": false
-       }
-      }
-     },
      {
       "provider": "bet365-official",
       "observedAt": "2026-11-12T04:01:27.158Z",
@@ -679328,6 +679319,37 @@
         "home": 1.9,
         "provider": "bet365-official",
         "observedAt": "2026-11-13T01:12:55.894Z",
+        "stale": false
+       },
+       "total": {
+        "line": 214.5,
+        "over": 1.93,
+        "under": 1.88,
+        "provider": "betexplorer-bet365",
+        "observedAt": "2026-11-13T00:11:28.405Z",
+        "stale": false
+       }
+      }
+     },
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-11-13T01:17:55.880Z",
+      "favorite": "home",
+      "markets": {
+       "ml": {
+        "away": 2.9,
+        "home": 1.42,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "hd": {
+        "favorite": "home",
+        "line": 6.5,
+        "away": 1.9,
+        "home": 1.9,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
         "stale": false
        },
        "total": {
@@ -711696,7 +711718,7 @@
    "away": "尼克",
    "home": "溜馬",
    "provider": "betexplorer-bet365",
-   "observedAt": "2026-11-13T01:12:55.894Z",
+   "observedAt": "2026-11-13T01:17:55.880Z",
    "favorite": "away",
    "line": 2.5,
    "moneyline": {
@@ -711866,7 +711888,7 @@
    "away": "老鷹",
    "home": "公牛",
    "provider": "bet365-official",
-   "observedAt": "2026-11-13T01:12:55.894Z",
+   "observedAt": "2026-11-13T01:17:55.880Z",
    "favorite": "away",
    "line": 6.5,
    "moneyline": {
@@ -711887,7 +711909,7 @@
      "away": 1.37,
      "home": 3.15,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "hd": {
@@ -711896,7 +711918,7 @@
      "away": 1.87,
      "home": 1.94,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "total": {
@@ -712282,6 +712304,37 @@
        "stale": false
       }
      }
+    },
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-11-13T01:17:55.880Z",
+     "favorite": "away",
+     "markets": {
+      "ml": {
+       "away": 1.37,
+       "home": 3.15,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "hd": {
+       "favorite": "away",
+       "line": 6.5,
+       "away": 1.87,
+       "home": 1.94,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "total": {
+       "line": 244.5,
+       "over": 1.91,
+       "under": 1.91,
+       "provider": "betexplorer-bet365",
+       "observedAt": "2026-11-13T00:11:28.405Z",
+       "stale": false
+      }
+     }
     }
    ],
    "providerHistories": {
@@ -712657,6 +712710,37 @@
         "stale": false
        }
       }
+     },
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-11-13T01:17:55.880Z",
+      "favorite": "away",
+      "markets": {
+       "ml": {
+        "away": 1.37,
+        "home": 3.15,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "hd": {
+        "favorite": "away",
+        "line": 6.5,
+        "away": 1.87,
+        "home": 1.94,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "total": {
+        "line": 244.5,
+        "over": 1.91,
+        "under": 1.91,
+        "provider": "betexplorer-bet365",
+        "observedAt": "2026-11-13T00:11:28.405Z",
+        "stale": false
+       }
+      }
      }
     ]
    },
@@ -712670,7 +712754,7 @@
    "away": "爵士",
    "home": "火箭",
    "provider": "bet365-official",
-   "observedAt": "2026-11-13T01:12:55.894Z",
+   "observedAt": "2026-11-13T01:17:55.880Z",
    "favorite": "home",
    "line": 17.5,
    "moneyline": {
@@ -712691,7 +712775,7 @@
      "away": 10.5,
      "home": 1.058,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "hd": {
@@ -712700,7 +712784,7 @@
      "away": 1.9,
      "home": 1.9,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "total": {
@@ -713086,6 +713170,37 @@
        "stale": false
       }
      }
+    },
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-11-13T01:17:55.880Z",
+     "favorite": "home",
+     "markets": {
+      "ml": {
+       "away": 10.5,
+       "home": 1.058,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "hd": {
+       "favorite": "home",
+       "line": 17.5,
+       "away": 1.9,
+       "home": 1.9,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "total": {
+       "line": 218.5,
+       "over": 1.91,
+       "under": 1.91,
+       "provider": "betexplorer-bet365",
+       "observedAt": "2026-11-13T00:11:28.405Z",
+       "stale": false
+      }
+     }
     }
    ],
    "providerHistories": {
@@ -713461,6 +713576,37 @@
         "stale": false
        }
       }
+     },
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-11-13T01:17:55.880Z",
+      "favorite": "home",
+      "markets": {
+       "ml": {
+        "away": 10.5,
+        "home": 1.058,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "hd": {
+        "favorite": "home",
+        "line": 17.5,
+        "away": 1.9,
+        "home": 1.9,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "total": {
+        "line": 218.5,
+        "over": 1.91,
+        "under": 1.91,
+        "provider": "betexplorer-bet365",
+        "observedAt": "2026-11-13T00:11:28.405Z",
+        "stale": false
+       }
+      }
      }
     ]
    },
@@ -713474,7 +713620,7 @@
    "away": "勇士",
    "home": "馬刺",
    "provider": "bet365-official",
-   "observedAt": "2026-11-13T01:12:55.894Z",
+   "observedAt": "2026-11-13T01:17:55.880Z",
    "favorite": "home",
    "line": 13.5,
    "moneyline": {
@@ -713495,7 +713641,7 @@
      "away": 6.5,
      "home": 1.12,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "hd": {
@@ -713504,7 +713650,7 @@
      "away": 1.9,
      "home": 1.9,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "total": {
@@ -713890,6 +714036,37 @@
        "stale": false
       }
      }
+    },
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-11-13T01:17:55.880Z",
+     "favorite": "home",
+     "markets": {
+      "ml": {
+       "away": 6.5,
+       "home": 1.12,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "hd": {
+       "favorite": "home",
+       "line": 13.5,
+       "away": 1.9,
+       "home": 1.9,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "total": {
+       "line": 218.5,
+       "over": 1.93,
+       "under": 1.88,
+       "provider": "betexplorer-bet365",
+       "observedAt": "2026-11-13T00:11:28.405Z",
+       "stale": false
+      }
+     }
     }
    ],
    "providerHistories": {
@@ -714265,6 +714442,37 @@
         "stale": false
        }
       }
+     },
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-11-13T01:17:55.880Z",
+      "favorite": "home",
+      "markets": {
+       "ml": {
+        "away": 6.5,
+        "home": 1.12,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "hd": {
+        "favorite": "home",
+        "line": 13.5,
+        "away": 1.9,
+        "home": 1.9,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "total": {
+        "line": 218.5,
+        "over": 1.93,
+        "under": 1.88,
+        "provider": "betexplorer-bet365",
+        "observedAt": "2026-11-13T00:11:28.405Z",
+        "stale": false
+       }
+      }
      }
     ]
    },
@@ -714278,7 +714486,7 @@
    "away": "拓荒者",
    "home": "國王",
    "provider": "bet365-official",
-   "observedAt": "2026-11-13T01:12:55.894Z",
+   "observedAt": "2026-11-13T01:17:55.880Z",
    "favorite": "away",
    "line": 10.5,
    "moneyline": {
@@ -714299,7 +714507,7 @@
      "away": 1.17,
      "home": 5.25,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "hd": {
@@ -714308,7 +714516,7 @@
      "away": 1.86,
      "home": 1.95,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "total": {
@@ -714694,6 +714902,37 @@
        "stale": false
       }
      }
+    },
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-11-13T01:17:55.880Z",
+     "favorite": "away",
+     "markets": {
+      "ml": {
+       "away": 1.17,
+       "home": 5.25,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "hd": {
+       "favorite": "away",
+       "line": 10.5,
+       "away": 1.86,
+       "home": 1.95,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "total": {
+       "line": 230.5,
+       "over": 1.93,
+       "under": 1.88,
+       "provider": "betexplorer-bet365",
+       "observedAt": "2026-11-13T00:11:28.405Z",
+       "stale": false
+      }
+     }
     }
    ],
    "providerHistories": {
@@ -715069,6 +715308,37 @@
         "stale": false
        }
       }
+     },
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-11-13T01:17:55.880Z",
+      "favorite": "away",
+      "markets": {
+       "ml": {
+        "away": 1.17,
+        "home": 5.25,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "hd": {
+        "favorite": "away",
+        "line": 10.5,
+        "away": 1.86,
+        "home": 1.95,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "total": {
+        "line": 230.5,
+        "over": 1.93,
+        "under": 1.88,
+        "provider": "betexplorer-bet365",
+        "observedAt": "2026-11-13T00:11:28.405Z",
+        "stale": false
+       }
+      }
      }
     ]
    },
@@ -715082,7 +715352,7 @@
    "away": "雷霆",
    "home": "快艇",
    "provider": "bet365-official",
-   "observedAt": "2026-11-13T01:12:55.894Z",
+   "observedAt": "2026-11-13T01:17:55.880Z",
    "favorite": "away",
    "line": 7.5,
    "moneyline": {
@@ -715103,7 +715373,7 @@
      "away": 1.33,
      "home": 3.4,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "hd": {
@@ -715112,7 +715382,7 @@
      "away": 1.87,
      "home": 1.94,
      "provider": "bet365-official",
-     "observedAt": "2026-11-13T01:12:55.894Z",
+     "observedAt": "2026-11-13T01:17:55.880Z",
      "stale": false
     },
     "total": {
@@ -715498,6 +715768,37 @@
        "stale": false
       }
      }
+    },
+    {
+     "provider": "bet365-official",
+     "observedAt": "2026-11-13T01:17:55.880Z",
+     "favorite": "away",
+     "markets": {
+      "ml": {
+       "away": 1.33,
+       "home": 3.4,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "hd": {
+       "favorite": "away",
+       "line": 7.5,
+       "away": 1.87,
+       "home": 1.94,
+       "provider": "bet365-official",
+       "observedAt": "2026-11-13T01:17:55.880Z",
+       "stale": false
+      },
+      "total": {
+       "line": 222.5,
+       "over": 1.95,
+       "under": 1.87,
+       "provider": "betexplorer-bet365",
+       "observedAt": "2026-11-13T00:11:28.405Z",
+       "stale": false
+      }
+     }
     }
    ],
    "providerHistories": {
@@ -715862,6 +716163,37 @@
         "home": 1.94,
         "provider": "bet365-official",
         "observedAt": "2026-11-13T01:12:55.894Z",
+        "stale": false
+       },
+       "total": {
+        "line": 222.5,
+        "over": 1.95,
+        "under": 1.87,
+        "provider": "betexplorer-bet365",
+        "observedAt": "2026-11-13T00:11:28.405Z",
+        "stale": false
+       }
+      }
+     },
+     {
+      "provider": "bet365-official",
+      "observedAt": "2026-11-13T01:17:55.880Z",
+      "favorite": "away",
+      "markets": {
+       "ml": {
+        "away": 1.33,
+        "home": 3.4,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
+        "stale": false
+       },
+       "hd": {
+        "favorite": "away",
+        "line": 7.5,
+        "away": 1.87,
+        "home": 1.94,
+        "provider": "bet365-official",
+        "observedAt": "2026-11-13T01:17:55.880Z",
         "stale": false
        },
        "total": {
