@@ -315,3 +315,57 @@ test('anomalyRecord: 押讓分方 vs 另一邊（票）與讓分方直勝', () =
   const one = core.anomalyRecord(ann, labels, 'convOne');   // H3：讓分方客、另一邊（主）1:1 有人撐、主勝
   assert.deepEqual([one.games, one.backed, one.unbacked], [1, { n: 1, win: 1 }, { n: 0, win: 0 }]);
 });
+
+/* ---------- NBA：不設主跟、讓分加深、冷門獨贏降一級（2026-11-13） ---------- */
+test('lineMoveOf／lineMoveGroup：開盤＝最早、現在＝最晚；加深 ≥2、縮小 ≤−2、換邊', () => {
+  const rows = [{ at: '2026-11-12T10:00:00Z', fav: 'home', line: -10.5 }, { at: '2026-11-12T01:00:00Z', fav: 'home', line: 7.5 }, { at: 'x', fav: null, line: 3 }];
+  const m = core.lineMoveOf(rows);
+  assert.deepEqual(m, { openFav: 'home', openLine: 7.5, closeFav: 'home', closeLine: 10.5 });
+  assert.equal(core.lineMoveGroup(m), 'deeper');
+  assert.equal(core.lineMoveGroup({ openFav: 'home', openLine: 7.5, closeFav: 'home', closeLine: 8.5 }), 'small');
+  assert.equal(core.lineMoveGroup({ openFav: 'home', openLine: 7.5, closeFav: 'home', closeLine: 5.5 }), 'shallower');
+  assert.equal(core.lineMoveGroup({ openFav: 'away', openLine: 1.5, closeFav: 'home', closeLine: 1.5 }), 'swap');
+  assert.equal(core.lineMoveOf([]), null);
+});
+
+test('NBA 讓分加深：熱門有人推 → 押熱門獨贏（推薦）；沒人推 → 跳過', () => {
+  const lineMove = { openFav: 'home', openLine: 4.5, closeFav: 'home', closeLine: 7.5 };
+  const picks = today([['APE', 'home', 'SPREAD', -7.5], ['MONEY', 'away']]);
+  const a = core.adviseGame({ picks, core: null, ann: [], lineMove });
+  assert.deepEqual([a.tier, a.side, a.by, a.follow], ['bet', 'home', 'lineMove', null]);
+  assert.deepEqual(core.advicePick(a, picks), { market: 'ML', line: 0 });
+  assert.equal(a.ev.lineMove.label, '加深');
+  const none = core.adviseGame({ picks: today([['APE', 'away']]), core: null, ann: [], lineMove });
+  assert.deepEqual([none.tier, none.side], ['skip', null]);
+  const small = core.adviseGame({ picks, core: null, ann: [], lineMove: { openFav: 'home', openLine: 4.5, closeFav: 'home', closeLine: 5.5 } });
+  assert.equal(small.ev.lineMove.label, '微調');
+  assert.notEqual(small.by, 'lineMove');
+});
+
+test('NBA 不設主跟：理由不出現主跟的人；衝突只看兩組對上', () => {
+  const one = core.adviseGame({ picks: today([['APE', 'away']]), core: null, ann: [] });
+  assert.deepEqual([one.tier, one.reason], ['small', '只有 APE 推']);
+  const two = core.adviseGame({ picks: today([['APE', 'away'], ['MONEY', 'away']]), core: null, ann: [] });
+  assert.deepEqual([two.tier, two.reason], ['bet', '2 人同邊、沒人反對']);
+  const cf = core.adviseGame({ picks: today([['SNIPER', 'away'], ['APE', 'home']]), core: null, ann: history('SNIPER', ['APE'], 8, 7) });
+  assert.deepEqual([cf.tier, cf.side, cf.reason], ['small', 'away', '兩組對上這邊較好']);
+  assert.equal(cf.ev.h2h, null);
+});
+
+test('dogMlAdjust：押冷門獨贏降一級；冷門讓分、熱門獨贏不動', () => {
+  const lineMove = { openFav: 'home', openLine: 6.5, closeFav: 'home', closeLine: 6.5 };
+  const bet = { tier: 'bet', side: 'away', reason: 'x' };
+  assert.deepEqual(core.dogMlAdjust(bet, { market: 'ML', line: 0 }, lineMove), { tier: 'small', side: 'away', reason: 'x；押冷門獨贏，降一級', dogMl: true });
+  assert.deepEqual([core.dogMlAdjust({ tier: 'small', side: 'away', reason: 'y' }, { market: 'ML', line: 0 }, lineMove).tier], ['skip']);
+  assert.equal(core.dogMlAdjust(bet, { market: 'SPREAD', line: 6.5 }, lineMove), bet);
+  assert.equal(core.dogMlAdjust({ tier: 'bet', side: 'home', reason: 'z' }, { market: 'ML', line: 0 }, lineMove).tier, 'bet');
+  assert.equal(core.dogMlAdjust(bet, { market: 'ML', line: 0 }, null), bet);
+});
+
+test('lineMoveRecord：加深場熱門有人推／沒人推的直勝，押熱門獨贏與冷門獨贏的票', () => {
+  const ann = history('BOOKIE', ['APE'], 4, 3);   // BOOKIE 押客（客勝 3／4）、APE 押主，都是 ML
+  const labels = new Map([['H0', { group: 'deeper', fav: 'away' }], ['H1', { group: 'deeper', fav: 'away' }], ['H2', { group: 'small', fav: 'away' }], ['H3', { group: 'deeper', fav: 'away' }]]);
+  const r = core.lineMoveRecord(ann, labels);
+  assert.deepEqual([r.games, r.backed, r.unbacked], [3, { n: 3, win: 2 }, { n: 0, win: 0 }]);
+  assert.deepEqual([r.favML.wins, r.favML.settled, r.dogML.wins, r.dogML.settled], [2, 3, 1, 4]);
+});
