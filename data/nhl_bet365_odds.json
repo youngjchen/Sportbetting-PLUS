@@ -1,13 +1,13 @@
 {
- "provider": "bet365-official",
+ "provider": "actionnetwork-bet365",
  "strategy": "official-first",
- "updated": "2026-11-13T18:52:08.962Z",
- "source": "https://www.bet365.com/hub/en-us/ice-hockey/nhl",
+ "updated": "2026-11-13T18:57:09.112Z",
+ "source": "https://api.actionnetwork.com/web/v2/scoreboard/nhl",
  "health": {
-  "status": "ok",
-  "gameCount": 2,
-  "marketCount": 4,
-  "totalCount": 0
+  "status": "fallback",
+  "gameCount": 11,
+  "marketCount": 33,
+  "totalCount": 11
  },
  "games": {
   "1794622020000|NY Rangers|VAN Canucks": {
@@ -17,21 +17,20 @@
    "awayZh": "遊騎兵",
    "homeZh": "加人",
    "fixtureIds": {
-    "ml": "204468357",
-    "hd": "204468355"
+    "actionNetwork": "293608"
    },
    "ml": {
     "market": "Money Line",
     "outcomes": [
      {
-      "name": "NY Rangers",
+      "name": "New York Rangers",
       "side": "away",
-      "odds": 1.42
+      "odds": 1.45
      },
      {
-      "name": "VAN Canucks",
+      "name": "Vancouver Canucks",
       "side": "home",
-      "odds": 2.75
+      "odds": 2.8
      }
     ]
    },
@@ -45,21 +44,77 @@
     "favSide": "away",
     "outcomes": [
      {
-      "name": "NY Rangers",
+      "name": "New York Rangers",
       "side": "away",
       "line": -1.5,
-      "odds": 2.11
+      "odds": 2.16
      },
      {
-      "name": "VAN Canucks",
+      "name": "Vancouver Canucks",
       "side": "home",
       "line": 1.5,
-      "odds": 1.69
+      "odds": 1.74
      }
     ]
    },
-   "provider": "bet365-official",
+   "provider": "actionnetwork-bet365",
    "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "New York Rangers",
+        "side": "away",
+        "odds": 1.45
+       },
+       {
+        "name": "Vancouver Canucks",
+        "side": "home",
+        "odds": 2.8
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "New York Rangers",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.16
+       },
+       {
+        "name": "Vancouver Canucks",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.74
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.95
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.87
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-13T18:37:08.883Z",
      "provider": "bet365-official",
@@ -327,7 +382,33 @@
      }
     }
    ],
-   "events": []
+   "events": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "type": "source-change",
+     "from": "bet365-official",
+     "to": "actionnetwork-bet365"
+    }
+   ],
+   "status": "scheduled",
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 1.95
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.87
+     }
+    ]
+   }
   },
   "1794625620000|NSH Predators|VGS Golden Knights": {
    "startTime": 1794625620000,
@@ -336,21 +417,20 @@
    "awayZh": "掠奪者",
    "homeZh": "騎士",
    "fixtureIds": {
-    "ml": "204468360",
-    "hd": "204468358"
+    "actionNetwork": "293609"
    },
    "ml": {
     "market": "Money Line",
     "outcomes": [
      {
-      "name": "NSH Predators",
+      "name": "Nashville Predators",
       "side": "away",
-      "odds": 2.3
+      "odds": 2.35
      },
      {
-      "name": "VGS Golden Knights",
+      "name": "Vegas Golden Knights",
       "side": "home",
-      "odds": 1.58
+      "odds": 1.63
      }
     ]
    },
@@ -364,21 +444,77 @@
     "favSide": "home",
     "outcomes": [
      {
-      "name": "NSH Predators",
+      "name": "Nashville Predators",
       "side": "away",
       "line": 1.5,
-      "odds": 1.5
+      "odds": 1.54
      },
      {
-      "name": "VGS Golden Knights",
+      "name": "Vegas Golden Knights",
       "side": "home",
       "line": -1.5,
-      "odds": 2.49
+      "odds": 2.54
      }
     ]
    },
-   "provider": "bet365-official",
+   "provider": "actionnetwork-bet365",
    "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Nashville Predators",
+        "side": "away",
+        "odds": 2.35
+       },
+       {
+        "name": "Vegas Golden Knights",
+        "side": "home",
+        "odds": 1.63
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Nashville Predators",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.54
+       },
+       {
+        "name": "Vegas Golden Knights",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.54
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 5.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 5.5,
+        "odds": 1.71
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 5.5,
+        "odds": 2.2
+       }
+      ]
+     }
+    },
     {
      "at": "2026-11-13T18:22:08.557Z",
      "provider": "bet365-official",
@@ -717,6 +853,1139 @@
         "side": "home",
         "line": -1.5,
         "odds": 2.32
+       }
+      ]
+     }
+    }
+   ],
+   "events": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "type": "source-change",
+     "from": "bet365-official",
+     "to": "actionnetwork-bet365"
+    }
+   ],
+   "status": "scheduled",
+   "total": {
+    "market": "Game Totals",
+    "line": 5.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 5.5,
+      "odds": 1.71
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 5.5,
+      "odds": 2.2
+     }
+    ]
+   }
+  },
+  "1794679200000|Seattle Kraken|Carolina Hurricanes": {
+   "startTime": 1794679200000,
+   "away": "Seattle Kraken",
+   "home": "Carolina Hurricanes",
+   "awayZh": "海怪",
+   "homeZh": "颶風",
+   "fixtureIds": {
+    "actionNetwork": "293610"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Seattle Kraken",
+      "side": "away",
+      "odds": 3.7
+     },
+     {
+      "name": "Carolina Hurricanes",
+      "side": "home",
+      "odds": 1.29
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "home",
+    "outcomes": [
+     {
+      "name": "Seattle Kraken",
+      "side": "away",
+      "line": 1.5,
+      "odds": 2.12
+     },
+     {
+      "name": "Carolina Hurricanes",
+      "side": "home",
+      "line": -1.5,
+      "odds": 1.76
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 1.98
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.85
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Seattle Kraken",
+        "side": "away",
+        "odds": 3.7
+       },
+       {
+        "name": "Carolina Hurricanes",
+        "side": "home",
+        "odds": 1.29
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Seattle Kraken",
+        "side": "away",
+        "line": 1.5,
+        "odds": 2.12
+       },
+       {
+        "name": "Carolina Hurricanes",
+        "side": "home",
+        "line": -1.5,
+        "odds": 1.76
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.98
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.85
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794688200000|Winnipeg Jets|Chicago Blackhawks": {
+   "startTime": 1794688200000,
+   "away": "Winnipeg Jets",
+   "home": "Chicago Blackhawks",
+   "awayZh": "噴射機",
+   "homeZh": "黑鷹",
+   "fixtureIds": {
+    "actionNetwork": "293611"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Winnipeg Jets",
+      "side": "away",
+      "odds": 1.63
+     },
+     {
+      "name": "Chicago Blackhawks",
+      "side": "home",
+      "odds": 2.33
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "away",
+    "outcomes": [
+     {
+      "name": "Winnipeg Jets",
+      "side": "away",
+      "line": -1.5,
+      "odds": 2.6
+     },
+     {
+      "name": "Chicago Blackhawks",
+      "side": "home",
+      "line": 1.5,
+      "odds": 1.53
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 2.09
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.78
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Winnipeg Jets",
+        "side": "away",
+        "odds": 1.63
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "odds": 2.33
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Winnipeg Jets",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.6
+       },
+       {
+        "name": "Chicago Blackhawks",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.53
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.09
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.78
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794700800000|Florida Panthers|St. Louis Blues": {
+   "startTime": 1794700800000,
+   "away": "Florida Panthers",
+   "home": "St. Louis Blues",
+   "awayZh": "佛羅里",
+   "homeZh": "藍調",
+   "fixtureIds": {
+    "actionNetwork": "293612"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Florida Panthers",
+      "side": "away",
+      "odds": 1.83
+     },
+     {
+      "name": "St. Louis Blues",
+      "side": "home",
+      "odds": 2.01
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "away",
+    "outcomes": [
+     {
+      "name": "Florida Panthers",
+      "side": "away",
+      "line": -1.5,
+      "odds": 3.8
+     },
+     {
+      "name": "St. Louis Blues",
+      "side": "home",
+      "line": 1.5,
+      "odds": 1.28
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 5.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 5.5,
+      "odds": 2.11
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 5.5,
+      "odds": 1.76
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Florida Panthers",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "St. Louis Blues",
+        "side": "home",
+        "odds": 2.01
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Florida Panthers",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.8
+       },
+       {
+        "name": "St. Louis Blues",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.28
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 5.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 5.5,
+        "odds": 2.11
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 5.5,
+        "odds": 1.76
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794700800000|Ottawa Senators|Pittsburgh Penguins": {
+   "startTime": 1794700800000,
+   "away": "Ottawa Senators",
+   "home": "Pittsburgh Penguins",
+   "awayZh": "參議員",
+   "homeZh": "企鵝",
+   "fixtureIds": {
+    "actionNetwork": "293614"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Ottawa Senators",
+      "side": "away",
+      "odds": 1.83
+     },
+     {
+      "name": "Pittsburgh Penguins",
+      "side": "home",
+      "odds": 2.01
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "away",
+    "outcomes": [
+     {
+      "name": "Ottawa Senators",
+      "side": "away",
+      "line": -1.5,
+      "odds": 3.4
+     },
+     {
+      "name": "Pittsburgh Penguins",
+      "side": "home",
+      "line": 1.5,
+      "odds": 1.33
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 1.87
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.95
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "Pittsburgh Penguins",
+        "side": "home",
+        "odds": 2.01
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Ottawa Senators",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.4
+       },
+       {
+        "name": "Pittsburgh Penguins",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.33
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.87
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.95
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794700800000|New Jersey Devils|Washington Capitals": {
+   "startTime": 1794700800000,
+   "away": "New Jersey Devils",
+   "home": "Washington Capitals",
+   "awayZh": "魔鬼",
+   "homeZh": "首都",
+   "fixtureIds": {
+    "actionNetwork": "293615"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "New Jersey Devils",
+      "side": "away",
+      "odds": 1.83
+     },
+     {
+      "name": "Washington Capitals",
+      "side": "home",
+      "odds": 2
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "away",
+    "outcomes": [
+     {
+      "name": "New Jersey Devils",
+      "side": "away",
+      "line": -1.5,
+      "odds": 4.25
+     },
+     {
+      "name": "Washington Capitals",
+      "side": "home",
+      "line": 1.5,
+      "odds": 1.24
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 2.02
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.82
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "odds": 1.83
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "odds": 2
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "New Jersey Devils",
+        "side": "away",
+        "line": -1.5,
+        "odds": 4.25
+       },
+       {
+        "name": "Washington Capitals",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.24
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.02
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.82
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794700800000|Edmonton Oilers|Toronto Maple Leafs": {
+   "startTime": 1794700800000,
+   "away": "Edmonton Oilers",
+   "home": "Toronto Maple Leafs",
+   "awayZh": "油人",
+   "homeZh": "楓葉",
+   "fixtureIds": {
+    "actionNetwork": "293616"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Edmonton Oilers",
+      "side": "away",
+      "odds": 1.62
+     },
+     {
+      "name": "Toronto Maple Leafs",
+      "side": "home",
+      "odds": 2.37
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "away",
+    "outcomes": [
+     {
+      "name": "Edmonton Oilers",
+      "side": "away",
+      "line": -1.5,
+      "odds": 2.45
+     },
+     {
+      "name": "Toronto Maple Leafs",
+      "side": "home",
+      "line": 1.5,
+      "odds": 1.59
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 1.69
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 2.22
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Edmonton Oilers",
+        "side": "away",
+        "odds": 1.62
+       },
+       {
+        "name": "Toronto Maple Leafs",
+        "side": "home",
+        "odds": 2.37
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Edmonton Oilers",
+        "side": "away",
+        "line": -1.5,
+        "odds": 2.45
+       },
+       {
+        "name": "Toronto Maple Leafs",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.59
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 1.69
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 2.22
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794700800000|Minnesota Wild|Boston Bruins": {
+   "startTime": 1794700800000,
+   "away": "Minnesota Wild",
+   "home": "Boston Bruins",
+   "awayZh": "荒野",
+   "homeZh": "棕熊",
+   "fixtureIds": {
+    "actionNetwork": "293617"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Minnesota Wild",
+      "side": "away",
+      "odds": 1.82
+     },
+     {
+      "name": "Boston Bruins",
+      "side": "home",
+      "odds": 2.02
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "away",
+    "outcomes": [
+     {
+      "name": "Minnesota Wild",
+      "side": "away",
+      "line": -1.5,
+      "odds": 3.7
+     },
+     {
+      "name": "Boston Bruins",
+      "side": "home",
+      "line": 1.5,
+      "odds": 1.29
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 2.14
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.75
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Minnesota Wild",
+        "side": "away",
+        "odds": 1.82
+       },
+       {
+        "name": "Boston Bruins",
+        "side": "home",
+        "odds": 2.02
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "away",
+      "outcomes": [
+       {
+        "name": "Minnesota Wild",
+        "side": "away",
+        "line": -1.5,
+        "odds": 3.7
+       },
+       {
+        "name": "Boston Bruins",
+        "side": "home",
+        "line": 1.5,
+        "odds": 1.29
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.14
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.75
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794700800000|Colorado Avalanche|Montreal Canadiens": {
+   "startTime": 1794700800000,
+   "away": "Colorado Avalanche",
+   "home": "Montreal Canadiens",
+   "awayZh": "雪崩",
+   "homeZh": "加拿大",
+   "fixtureIds": {
+    "actionNetwork": "293618"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Colorado Avalanche",
+      "side": "away",
+      "odds": 1.94
+     },
+     {
+      "name": "Montreal Canadiens",
+      "side": "home",
+      "odds": 1.88
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "home",
+    "outcomes": [
+     {
+      "name": "Colorado Avalanche",
+      "side": "away",
+      "line": 1.5,
+      "odds": 1.38
+     },
+     {
+      "name": "Montreal Canadiens",
+      "side": "home",
+      "line": -1.5,
+      "odds": 3.1
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 2
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.83
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Colorado Avalanche",
+        "side": "away",
+        "odds": 1.94
+       },
+       {
+        "name": "Montreal Canadiens",
+        "side": "home",
+        "odds": 1.88
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Colorado Avalanche",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.38
+       },
+       {
+        "name": "Montreal Canadiens",
+        "side": "home",
+        "line": -1.5,
+        "odds": 3.1
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.83
+       }
+      ]
+     }
+    }
+   ],
+   "events": []
+  },
+  "1794700800000|Detroit Red Wings|Tampa Bay Lightning": {
+   "startTime": 1794700800000,
+   "away": "Detroit Red Wings",
+   "home": "Tampa Bay Lightning",
+   "awayZh": "紅翼",
+   "homeZh": "閃電",
+   "fixtureIds": {
+    "actionNetwork": "293619"
+   },
+   "provider": "actionnetwork-bet365",
+   "status": "scheduled",
+   "ml": {
+    "market": "Money Line",
+    "outcomes": [
+     {
+      "name": "Detroit Red Wings",
+      "side": "away",
+      "odds": 2.8
+     },
+     {
+      "name": "Tampa Bay Lightning",
+      "side": "home",
+      "odds": 1.45
+     }
+    ]
+   },
+   "hd": {
+    "market": "Puck Line",
+    "line": 1.5,
+    "favSide": "home",
+    "outcomes": [
+     {
+      "name": "Detroit Red Wings",
+      "side": "away",
+      "line": 1.5,
+      "odds": 1.79
+     },
+     {
+      "name": "Tampa Bay Lightning",
+      "side": "home",
+      "line": -1.5,
+      "odds": 2.07
+     }
+    ]
+   },
+   "total": {
+    "market": "Game Totals",
+    "line": 6.5,
+    "outcomes": [
+     {
+      "name": "Over",
+      "side": "over",
+      "line": 6.5,
+      "odds": 2.13
+     },
+     {
+      "name": "Under",
+      "side": "under",
+      "line": 6.5,
+      "odds": 1.75
+     }
+    ]
+   },
+   "history": [
+    {
+     "at": "2026-11-13T18:57:09.112Z",
+     "provider": "actionnetwork-bet365",
+     "ml": {
+      "market": "Money Line",
+      "outcomes": [
+       {
+        "name": "Detroit Red Wings",
+        "side": "away",
+        "odds": 2.8
+       },
+       {
+        "name": "Tampa Bay Lightning",
+        "side": "home",
+        "odds": 1.45
+       }
+      ]
+     },
+     "hd": {
+      "market": "Puck Line",
+      "line": 1.5,
+      "favSide": "home",
+      "outcomes": [
+       {
+        "name": "Detroit Red Wings",
+        "side": "away",
+        "line": 1.5,
+        "odds": 1.79
+       },
+       {
+        "name": "Tampa Bay Lightning",
+        "side": "home",
+        "line": -1.5,
+        "odds": 2.07
+       }
+      ]
+     },
+     "total": {
+      "market": "Game Totals",
+      "line": 6.5,
+      "outcomes": [
+       {
+        "name": "Over",
+        "side": "over",
+        "line": 6.5,
+        "odds": 2.13
+       },
+       {
+        "name": "Under",
+        "side": "under",
+        "line": 6.5,
+        "odds": 1.75
        }
       ]
      }
