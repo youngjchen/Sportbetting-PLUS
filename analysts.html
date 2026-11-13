@@ -151,36 +151,51 @@
   /* ---------- 登錄頁底部：今天押什麼 ---------- */
   .today{margin-top:22px;padding-top:10px;border-top:2px solid var(--line)}
   .ahead{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:4px}
-  .ahead .hbtn{margin-left:auto;width:40px;text-align:center}
+  .ahead .st-sec{font-size:20px}
+  .ahead .hbtn{margin-left:auto;width:42px;text-align:center}
   .aset{border:1px solid var(--line);border-radius:10px;background:var(--panel);padding:6px 11px;margin:6px 0}
-  .asec{margin:14px 0 4px;font-weight:700;font-size:16px}
-  .asec small{color:var(--ink-dim);font-weight:500;margin-left:4px}
-  .arow{display:grid;grid-template-columns:50px 82px minmax(150px,max-content) 78px minmax(0,1fr) 26px 14px;gap:8px;align-items:center;padding:9px 6px;border-bottom:1px solid var(--line);cursor:pointer;font-size:15px}
+  .asec{margin:20px 0 4px;padding-bottom:6px;font-weight:700;font-size:19px;border-bottom:2px solid var(--line)}
+  .asec small{color:var(--ink-dim);font-weight:500;margin-left:6px;font-size:15px}
+  /* 每列兩行：①判定＋押什麼（跳過＝對戰兩隊）＋標籤 ②對戰兩隊・理由；時間在左、結果與展開鈕在右 */
+  .arow{display:grid;grid-template-columns:60px minmax(0,1fr) 30px 16px;gap:12px;align-items:center;padding:12px 8px;border-bottom:1px solid var(--line);cursor:pointer}
   .arow:hover,.arow.open{background:var(--panel)}
-  .arow .at{color:var(--ink-dim);font-size:14px}
-  .arow .ap{white-space:nowrap}
-  .arow .ap b{font-size:16px}
-  .arow .aw{color:var(--ink-dim);font-size:13.5px;line-height:1.45}
-  .arow .ar,.arow .ac{text-align:center;color:var(--ink-dim)}
-  .vchip{display:inline-block;width:82px;text-align:center;padding:3px 0;border-radius:7px;font-weight:700;font-size:13.5px;border:1px solid}
+  .arow .at{color:var(--ink-dim);font-size:16px;font-variant-numeric:tabular-nums;align-self:start;padding-top:4px}
+  .amain{min-width:0}
+  .a1{display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap;font-size:18px;line-height:1.35}
+  .a1 .ap{white-space:nowrap}
+  .a1 .ap b{font-size:20px}
+  .a1 .ap small{font-size:15.5px;margin-left:2px}
+  .a1 .am{font-size:18px;color:var(--ink)}
+  .a2{margin-top:5px;color:var(--ink-dim);font-size:15.5px;line-height:1.55}
+  .a2 .am{color:var(--ink)}
+  .am b{color:var(--lit)}
+  .arow .ar{text-align:center;font-size:19px}
+  .arow .ac{text-align:center;color:var(--ink-dim);font-size:15px}
+  .vchip{display:inline-block;min-width:88px;text-align:center;padding:4px 10px;border-radius:8px;font-weight:700;font-size:15px;border:1px solid;white-space:nowrap}
   .vchip.fol{color:#d4f7e2;background:rgba(62,207,122,.20);border-color:var(--win)}
   .vchip.agn{color:#e3d9ff;background:var(--rel-bg);border-color:var(--rel)}
   .vchip.non{color:var(--ink);background:var(--panel-2);border-color:var(--line)}
   .vchip.skip{color:var(--ink-dim);background:transparent;border-color:var(--line)}
-  .abadge{display:inline-block;padding:1px 7px;border-radius:6px;font-size:12.5px;font-weight:700;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
+  .abadge{display:inline-block;padding:2px 9px;border-radius:7px;font-size:14px;font-weight:700;border:1px solid var(--line);color:var(--ink-dim);white-space:nowrap}
   .abadge.hot{color:#1b1405;background:var(--lit);border-color:var(--lit)}
   .abadge.flip{border-color:var(--loss);color:#ffd6dc}
-  .aev{padding:4px 8px 10px 58px;border-bottom:1px solid var(--line);background:var(--panel)}
-  .evl{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px;font-size:14px;line-height:1.6;padding:3px 0}
-  .evl small{margin-left:3px;font-size:12.5px}
+  .aev{padding:6px 12px 14px 80px;border-bottom:1px solid var(--line);background:var(--panel)}
+  .evl{display:grid;grid-template-columns:28px minmax(0,1fr);gap:4px;font-size:15.5px;line-height:1.7;padding:4px 0}
+  .evl small{margin-left:3px;font-size:13.5px}
   .evl .ig,.info .who span.ig{text-decoration:line-through;opacity:.5}
   .h-dim{color:var(--ink-dim)}
   @media (max-width:720px){
     .d-big{font-size:28px}
-    .arow{grid-template-columns:40px 62px minmax(0,1fr) 22px 10px;column-gap:6px;grid-template-areas:"t v p r c" ". a w w w";row-gap:4px}
-    .arow .at{grid-area:t}.arow .vchip{grid-area:v;width:62px;font-size:12.5px}.arow .ap{grid-area:p;overflow:hidden;text-overflow:ellipsis}.arow .ar{grid-area:r}.arow .ac{grid-area:c}
-    .arow .aa{grid-area:a}.arow .aw{grid-area:w}
-    .aev{padding-left:8px}
+    .arow{grid-template-columns:38px minmax(0,1fr) 22px 10px;gap:8px;padding:11px 4px}
+    .arow .at{font-size:13.5px}
+    .a1{font-size:16.5px;gap:6px 8px}
+    .a1 .ap b{font-size:17.5px}
+    .a1 .am{font-size:16.5px}
+    .a2{font-size:14.5px}
+    .vchip{min-width:0;padding:2px 7px;font-size:13.5px}
+    .abadge{font-size:13px;padding:1px 7px}
+    .aev{padding:6px 8px 12px}
+    .evl{font-size:14.5px;grid-template-columns:24px minmax(0,1fr)}
   }
   #toast{position:fixed;left:50%;bottom:58px;transform:translateX(-50%);background:var(--panel-2);border:1px solid var(--lit);color:var(--ink);padding:8px 15px;border-radius:10px;font-size:14.5px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:50}
   #toast.show{opacity:1}
@@ -1186,9 +1201,14 @@
       evh += `<div class="evl"><span class="evk">🥊</span><span>${SHORT[h.who]} 單挑｜${each}｜合計 ${numS(h.hero)} vs ${numS(h.opp)}　${sigTxt(a.ev.signals.h2h, h.games)}</span></div>`;
     }
     if (note) evh += `<div class="evl"><span class="evk">ℹ</span><span>${esc(note)}</span></div>`;
+    // 對戰兩隊（押的那隊標亮）；跳過的列在第一行顯示對戰，有押的列放第二行、接理由
+    const matchup = `<span class="am">${a.side === 'away' ? `<b>${esc(g.away)}</b>` : esc(g.away)} @ ${a.side === 'home' ? `<b>${esc(g.home)}</b>` : esc(g.home)}</span>`;
+    const line1 = a.side && q ? `${chip}<span class="ap">${pickHtml}</span>${anomBadge}` : `${chip}${matchup}${anomBadge}`;
+    const line2 = a.side && q ? `${matchup}<span class="h-dim">・</span>${esc(a.reason)}` : esc(a.reason);
     const html = `<div class="arow${open ? ' open' : ''}" data-adv="${esc(g.officialId)}">
-        <span class="at">${esc(g.time)}</span>${chip}<span class="ap">${pickHtml}</span><span class="aa">${anomBadge}</span>
-        <span class="aw">${esc(a.reason)}</span><span class="ar">${res}</span><span class="ac">${open ? '▾' : '▸'}</span>
+        <span class="at">${esc(g.time)}</span>
+        <div class="amain"><div class="a1">${line1}</div><div class="a2">${line2}</div></div>
+        <span class="ar">${res}</span><span class="ac">${open ? '▾' : '▸'}</span>
       </div>${open ? `<div class="aev">${evh}</div>` : ''}`;
     return { tier: a.side ? a.tier : 'skip', time: g.startMs, html };
   }
