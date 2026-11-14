@@ -278,6 +278,7 @@
   const RAW = `https://raw.githubusercontent.com/${REPO}/main/`;
   const PICKS_PATH = 'state/analyst_picks.json';
   const API = `https://api.github.com/repos/${REPO}/contents/${PICKS_PATH}`;
+  const BLOB_API = `https://api.github.com/repos/${REPO}/git/blobs/`;
   const LOCAL_KEY = 'analyst_picks_v1';
   const VIEW_KEY = 'analyst_picks_view_v1';
   const PAT_KEY = 'gh_sync_pat';   // 與 github-sync.js 共用
@@ -447,7 +448,14 @@
       throw new Error(`讀取失敗 HTTP ${r.status}`);
     }
     const meta = await r.json();
-    const doc = JSON.parse(b64ToUtf8(meta.content || ''));
+    let b64 = meta.content || '';
+    // 檔案超過 1MB 時 Contents API 只給 sha、content 空白（encoding "none"）→ 用同一個 sha 向 git blob 取內容（上限 100MB）
+    if (!b64 && meta.sha && meta.size > 0) {
+      const br = await fetch(`${BLOB_API}${meta.sha}`, { headers });
+      if (!br.ok) throw new Error(`讀取失敗 HTTP ${br.status}`);
+      b64 = (await br.json()).content || '';
+    }
+    const doc = JSON.parse(b64ToUtf8(b64));
     return { sha: meta.sha, picks: doc.picks || [] };
   }
   async function remotePut(list, sha) {
