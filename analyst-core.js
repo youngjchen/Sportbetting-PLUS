@@ -366,7 +366,12 @@
      NBA（2026-11-13 使用者：「NBA 不用主跟分析師，因為幾乎所有人都是賠錢的」）：core＝null，衝突只看兩組對上。
        5. Stake 讓分加深（開盤→現在，同一讓分方、多 ≥2 分）→ 熱門至少一人推＝押熱門獨贏，推薦；沒人推＝跳過。
           （11/12 前例行賽 26 場：熱門直勝 23、讓方過盤只有 12；押熱門獨贏的票 90%、報酬 +18%，NBA 全體押熱門獨贏 +1%）
-       6. 建議押的是冷門獨贏 → 降一級（NBA 全體押冷門獨贏 32%、報酬 −30%；冷門讓分各人差很多，不降）。 */
+       6. 建議押的是冷門獨贏 → 降一級（NBA 全體押冷門獨贏 32%、報酬 −30%；冷門讓分各人差很多，不降）。
+     冰球（2026-11-14 使用者：遊騎兵 −1.5 過了，「把這個納入系統」）：
+       7. 熱門讓分（−1.5）賠率 < 冷門獨贏賠率，且熱門那邊人數 ≥ 冷門那邊 → 押熱門，推薦；主推獨贏，附 −1.5 的價。
+          （9/30～11/14 共 88 場：熱門直勝 69（78%）、押獨贏 +13%；−1.5 過盤 48（55%）、+14%；
+            熱門那邊人數 ≥ 冷門的 85 場直勝 68；冷門那邊人多只有 3 場、熱門 1 勝）
+          不屬於這類的場，熱門 −1.5 整季只過約 30%（報酬 −17%）→ 建議押熱門讓分時加註。 */
   const ADVICE_MIN_N = 5;
   const ADVICE_EDGE = 0.05;
 
@@ -549,10 +554,47 @@
     return { games, backed, unbacked, favML: summarize(favML), dogML: summarize(dogML) };
   }
 
+  /* ---- 冰球：熱門讓分價 vs 冷門獨贏價 ---- */
+  // snap＝{ ml:{away,home}, spread:{line,favorite,away,home} 或 spreads:[…] }（Stake 現價或收盤）→ 熱門、兩種價、是否「讓分價低於冷門獨贏」
+  function priceSpot(snap) {
+    if (!snap || !snap.ml) return null;
+    const a = Number(snap.ml.away); const h = Number(snap.ml.home);
+    if (!(a > 1 && h > 1) || a === h) return null;
+    const fav = a < h ? 'away' : 'home';
+    const raw = [].concat(snap.spread || [], snap.spreads || []).map((x) => x && orientSpread(x, snap.ml)).find((x) => x && x.favorite === fav);
+    if (!raw) return null;
+    const favHd = Number(raw[fav]); const line = Math.abs(Number(raw.line));
+    if (!(favHd > 1) || !(line > 0)) return null;
+    const favMl = fav === 'away' ? a : h; const dogMl = fav === 'away' ? h : a;
+    return { fav, favMl, dogMl, favHd, favLine: -line, cheap: favHd < dogMl, gap: Math.round((dogMl - favHd) * 100) / 100 };
+  }
+  // 熱門那邊人數 ≥ 冷門那邊（且至少一人）＝有人撐
+  function spotBacked(spot, list) {
+    const nf = list.filter((p) => p.side === spot.fav).length;
+    return nf >= 1 && nf >= list.length - nf;
+  }
+  // 歷史：games＝officialId → 比賽（closing＝收盤快照、awayScore/homeScore/final）；只算「讓分價低於冷門獨贏」的場
+  function spotRecord(annotated, games) {
+    const backed = { n: 0, win: 0, mlP: 0, cover: 0, hdP: 0 }; const unbacked = { n: 0, win: 0 };
+    for (const [id, list] of groupByGame(annotated)) {
+      const g = games && games[id];
+      if (!g || !g.final || g.awayScore == null || g.homeScore == null) continue;
+      const sp = priceSpot(g.closing);
+      if (!sp || !sp.cheap) continue;
+      const margin = (sp.fav === 'away' ? 1 : -1) * (Number(g.awayScore) - Number(g.homeScore));
+      if (!spotBacked(sp, list)) { unbacked.n++; if (margin > 0) unbacked.win++; continue; }
+      backed.n++;
+      if (margin > 0) { backed.win++; backed.mlP += sp.favMl - 1; } else backed.mlP -= 1;
+      if (margin + sp.favLine > 0) { backed.cover++; backed.hdP += sp.favHd - 1; } else backed.hdP -= 1;
+    }
+    const r = (p) => (backed.n ? Math.round((p / backed.n) * 1000) / 1000 : null);
+    return { games: backed.n + unbacked.n, backed: Object.assign(backed, { mlRoi: r(backed.mlP), hdRoi: r(backed.hdP) }), unbacked };
+  }
+
   // picks＝今天這場每人一張主帳票（已排除忽略名單）；ann＝同聯盟、到前一天為止的歷史（已排除忽略名單）
   // anomaly＝{ cls, hdFav } 或 null；anomRecs＝{ convBoth, convOne }（anomalyRecord 結果，可缺）
   // lineMove＝NBA 今天 Stake 開盤→現在 { openFav, openLine, closeFav, closeLine }（fav 為 'away'|'home'）；core＝null＝不設主跟（NBA）
-  function adviseGame({ picks = [], core = 'BOOKIE', ann = [], anomaly = null, anomRecs = {}, lineMove = null, lineRec = null } = {}) {
+  function adviseGame({ picks = [], core = 'BOOKIE', ann = [], anomaly = null, anomRecs = {}, lineMove = null, lineRec = null, spot = null, spotRec = null } = {}) {
     const sideOf = (s) => picks.filter((p) => p.side === s);
     const away = sideOf('away'); const home = sideOf('home');
     const corePick = picks.find((p) => p.analyst === core) || null;
@@ -571,9 +613,15 @@
       if (picks.some((p) => p.side === fav)) return out('bet', fav, `Stake 讓分加深 ${lineMove.openLine}→${lineMove.closeLine}、熱門有人推 → 押熱門獨贏`, { by: 'lineMove' });
       if (picks.length) return out('skip', null, '讓分加深指向熱門，但沒人推那邊 → 訊號相反', { by: 'lineMove' });
     }
+    if (spot) ev.spot = Object.assign({ record: spotRec || null, backed: spotBacked(spot, picks) }, spot);
     if (rule === 'convBoth' && anomaly.hdFav) {
       if (anomBacked(rule, anomaly.hdFav, picks)) return out('bet', anomaly.hdFav, '收斂·雙方對調、讓分方有人推 → 押讓分方', { by: 'anomaly' });
       if (picks.length) return out('skip', null, '收斂·雙方對調指向讓分方，但沒人推那邊 → 訊號相反', { by: 'anomaly' });
+    }
+
+    const convOneOn = rule === 'convOne' && anomaly.hdFav && anomBacked(rule, anomaly.hdFav, picks);
+    if (spot && spot.cheap && !convOneOn && spotBacked(spot, picks)) {
+      return out('bet', spot.fav, `熱門讓分 ${spot.favHd} 比冷門獨贏 ${spot.dogMl} 低、熱門那邊人數不少 → 押熱門`, { by: 'spot' });
     }
 
     // 分析師規則
@@ -635,6 +683,8 @@
     if (!advice || !advice.side) return null;
     // 收斂·雙方對調：讓分方就是熱門，+1.5 是另開盤（賠率很低）→ 一律 ML（11/12 前 26 場：ML 74%、報酬 +36%）
     if (advice.by === 'anomaly' && advice.ev && advice.ev.anomaly && advice.ev.anomaly.rule === 'convBoth') return { market: 'ML', line: 0 };
+    // 冰球價差：主推獨贏、附熱門 −1.5（兩種整季報酬差不多，獨贏起伏較小）
+    if (advice.by === 'spot' && advice.ev && advice.ev.spot) return { market: 'ML', line: 0, alt: { market: 'SPREAD', line: advice.ev.spot.favLine } };
     // NBA 讓分加深：熱門會贏但常贏不夠讓分（讓方過盤 12/26）→ 一律獨贏
     if (advice.by === 'lineMove') return { market: 'ML', line: 0 };
     if (advice.corePick && advice.corePick.side === advice.side) return { market: advice.corePick.market, line: pickLine(advice.corePick) };
@@ -658,7 +708,7 @@
   }
 
   return {
-    lineMoveOf, lineMoveGroup, lineMoveRecord, dogMlAdjust, LINE_GROUP_TXT,
+    lineMoveOf, lineMoveGroup, lineMoveRecord, dogMlAdjust, LINE_GROUP_TXT, priceSpot, spotBacked, spotRecord,
     groupClash, headToHead, edgeSign, adviseGame, advicePick, anomClassify, anomEvidenceFromSnap, anomBestSnap, anomSnapScore,
     anomLabel, anomRule, anomalyRecord, anomTarget, anomBacked, ADVICE_MIN_N,
     ANALYSTS, WATCH, REVISERS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,

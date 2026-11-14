@@ -256,7 +256,7 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261113nba"></script>
+<script src="./analyst-core.js?v=20261114spot"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
 <script src="./nhl_bet365_core.js?v=20261004total2"></script>
 <script>
@@ -1102,7 +1102,8 @@
     const anomRecs = league === 'NHL' && NHLDOC.labels.size
       ? { convBoth: Core.anomalyRecord(ann, NHLDOC.labels, 'convBoth'), convOne: Core.anomalyRecord(ann, NHLDOC.labels, 'convOne') } : {};
     const lineRec = league === 'NBA' && NBADOC.labels.size ? Core.lineMoveRecord(ann, NBADOC.labels) : null;
-    ADV_IDX = { key, ann, anomRecs, lineRec };
+    const spotRec = league === 'NHL' ? Core.spotRecord(ann, GAMES) : null;   // GAMES＝statsLedger() 合併的比賽（含收盤價）
+    ADV_IDX = { key, ann, anomRecs, lineRec, spotRec };
     return ADV_IDX;
   }
 
@@ -1131,20 +1132,27 @@
     const live = all.filter((p) => !ignored(p.analyst));
     const anomaly = liveAnomaly(g);
     const lineMove = liveLineMove(g);
-    let a = Core.adviseGame({ picks: live, core, ann: L.ann, anomaly, anomRecs: L.anomRecs, lineMove, lineRec: L.lineRec });
+    const snapNow = stakeSnapshot(g.league, g) || g.closing;
+    const spot = g.league === 'NHL' ? Core.priceSpot(snapNow) : null;   // 熱門讓分價 vs 冷門獨贏價
+    let a = Core.adviseGame({ picks: live, core, ann: L.ann, anomaly, anomRecs: L.anomRecs, lineMove, lineRec: L.lineRec, spot, spotRec: L.spotRec });
     const team = (s) => (s === 'away' ? g.away : g.home);
     let pickHtml = '<span class="h-dim">—</span>'; let res = ''; let note = '';
-    let q = null;
+    let q = null; let pkAlt = null;
     if (a.side) {
       const fallback = { market: 'SPREAD', line: defaultSpreadLine(g.league, stakeSnapshot(g.league, g) || g.closing, a.side) || 1.5 };
       const pk = Core.advicePick(a, live, a.ev.anomaly && a.ev.anomaly.rule === 'convOne' ? fallback : null);
       q = adviceQuote(g, a.side, pk);
       note = q.note;
+      pkAlt = pk && pk.alt ? Object.assign({ side: a.side }, pk.alt) : null;
       if (g.league === 'NBA') a = Core.dogMlAdjust(a, q.pick, lineMove);   // 押冷門獨贏 → 降一級（降到跳過＝不押）
     }
     if (a.side && q) {
       pickHtml = `<b>${esc(team(a.side))}</b> ${q.pick.market === 'ML' ? 'ML' : signed(q.pick.line)} <small class="h-dim">${q.odds != null ? q.odds.toFixed(2) : '—'}</small>`;
       if (g.final) { const r = Core.settlePick(q.pick, g).result; res = ICON[r] || ''; }
+      if (pkAlt) {   // 附熱門讓分的價（與結果）
+        const ao = Core.priceFrom(snapNow, pkAlt);
+        pickHtml += ` <small class="h-dim">／${signed(pkAlt.line)} ${ao != null ? ao.toFixed(2) : '—'}${g.final ? ` ${ICON[Core.settlePick(pkAlt, g).result] || ''}` : ''}</small>`;
+      }
     }
     const cnt = (sd) => live.filter((p) => p.side === sd).length;
     const chip = !a.side ? '<span class="vchip skip">跳過</span>'
@@ -1154,7 +1162,9 @@
           : `<span class="vchip non">${SHORT[core]} 沒推</span>`;
     const lm = a.ev.lineMove;
     const lineBadge = lm && lm.group !== 'small' ? `<span class="abadge${lm.group === 'deeper' ? ' hot' : ''}" title="Stake 讓分 開 ${lm.openLine} → 現 ${lm.closeLine}">${lm.label} ${lm.group === 'swap' ? '' : `${lm.openLine}→${lm.closeLine}`}</span>` : '';
-    const anomBadge = lineBadge || (a.ev.anomaly ? `<span class="abadge ${a.ev.anomaly.cls.kind}${a.ev.anomaly.rule ? ' hot' : ''}" title="${esc(a.ev.anomaly.label)}">${esc(shortAnom(a.ev.anomaly.cls))}</span>` : '');
+    const sp = a.ev.spot;
+    const spotBadge = sp && sp.cheap ? `<span class="abadge${sp.backed ? ' hot' : ''}" title="熱門讓分價低於冷門獨贏">熱門讓分 ${sp.favHd.toFixed(2)} < 冷門獨贏 ${sp.dogMl.toFixed(2)}</span>` : '';
+    const anomBadge = spotBadge + lineBadge + (a.ev.anomaly ? `<span class="abadge ${a.ev.anomaly.cls.kind}${a.ev.anomaly.rule ? ' hot' : ''}" title="${esc(a.ev.anomaly.label)}">${esc(shortAnom(a.ev.anomaly.cls))}</span>` : '');
     const open = advOpen.has(g.officialId);
     // 證據（最多 3 條，順序固定）：異常 → 兩組對上（沒人反對時＝同樣人數同邊的過去）→ 單挑
     const names = (list) => list.map((x) => SHORT[x]).join('・');
@@ -1182,6 +1192,17 @@
       else t += '｜<span class="h-dim">過去沒有加深場有人推</span>';
       if (lm.group === 'deeper') t += live.some((p) => p.side === lm.closeFav) ? '｜今天：有人撐 ✓' : '｜今天：<b class="neg">沒人撐</b>';
       evh += `<div class="evl"><span class="evk">📈</span><span>${t}</span></div>`;
+    }
+    if (sp && sp.cheap) {
+      const r = sp.record && sp.record.backed; const u = sp.record && sp.record.unbacked;
+      const nf = live.filter((p) => p.side === sp.fav).length;
+      let t = `熱門 ${esc(team(sp.fav))} ${signed(sp.favLine)} @${sp.favHd.toFixed(2)} &lt; 冷門 ${esc(team(sp.fav === 'away' ? 'home' : 'away'))} 獨贏 @${sp.dogMl.toFixed(2)}（差 ${sp.gap.toFixed(2)}）`;
+      const roi = (x) => `<b class="${x >= 0 ? 'pos' : 'neg'}">${x >= 0 ? '+' : ''}${Math.round(x * 100)}%</b>`;
+      t += r && r.n ? `｜過去 ${r.n} 場（熱門那邊人數不少）：熱門直勝 <b>${r.win}/${r.n}</b>、押獨贏 ${roi(r.mlRoi)}；${signed(sp.favLine)} 過盤 ${r.cover}/${r.n}、${roi(r.hdRoi)}${u && u.n ? `｜冷門那邊人多 ${u.n} 場熱門 ${u.win} 勝` : ''}` : '｜<span class="h-dim">結算檔還沒有這類場</span>';
+      t += sp.backed ? `｜今天：熱門 ${nf}:${live.length - nf} ✓` : `｜今天：<b class="neg">冷門那邊人多</b>`;
+      evh += `<div class="evl"><span class="evk">💰</span><span>${t}</span></div>`;
+    } else if (sp && a.side === sp.fav && q && q.pick.market === 'SPREAD' && q.pick.line < 0) {
+      evh += `<div class="evl"><span class="evk">💰</span><span>熱門 ${signed(q.pick.line)} @${sp.favHd.toFixed(2)} 比冷門獨贏 @${sp.dogMl.toFixed(2)} 高：這類場熱門 −1.5 整季只過約 30%（報酬約 −17%），改押獨贏較穩</span></div>`;
     }
     if (a.dogMl) {
       const r = lm && lm.record && lm.record.dogML;
@@ -1220,6 +1241,7 @@
       <div class="chips"><span class="clab">忽略</span>${ANALYSTS.filter((a) => a !== core).map((a) => `<button class="chip sm${ignored(a) ? ' on' : ''}" data-advign="${a}">${a}</button>`).join('')}</div>
       <div class="st-help">忽略＝今天的分邊人數和所有歷史數字都不算他（登錄頁上他的名字會劃線）。記在這台裝置。</div>
       <div class="st-help"><b>判斷規則</b>（由上而下，先符合先用）：①冰球 收斂·雙方對調 → 讓分方（開賽前讓分熱門）至少一人推＝押讓分方 ML，推薦；沒人推＝跳過（訊號相反）。②冰球 收斂·只有一家對調 → 另一邊人數 ≥ 讓分方＝押另一邊，小注；否則照下面。③只有一邊有人推 → 跟（${core} 在裡面或 ≥2 人＝推薦，只有一位＝小注；同聯盟同樣人數「沒人反對」過去報酬是負的 → 降成小注）。④兩邊都有人 → 看「兩組對上」和「${core} 單挑」兩個訊號（過盤率差 ≥5 點且報酬沒反向才算，不到 ${Core.ADVICE_MIN_N} 場不算）：都挺或一挺一沒資料＝跟；都沒資料＝照跟；一挺一反＝跳過；只有一反＝跳過；兩個都反＝押對面小注。兩邊人數一樣（例 2:2）→ 降一級。${core} 沒推 → 只看兩組對上。</div>
+      <div class="st-help"><b>冰球價差</b>：⑦熱門讓分（−1.5）賠率比冷門獨贏低、且熱門那邊人數 ≥ 冷門那邊 → 推薦熱門（主推獨贏，旁邊附 −1.5 的價）；排在 ①收斂·雙方 與 ②收斂·只有一家 之後。不屬於這類卻要押熱門讓分 → 加註提醒。</div>
       <div class="st-help"><b>NBA</b>：不設主跟（幾乎每位都賠錢），有衝突只看兩組對上。⑤Stake 讓分加深（開盤→現在，同一讓分方多 ≥2 分）→ 熱門至少一人推＝押熱門<b>獨贏</b>，推薦；沒人推＝跳過。⑥建議押的是冷門獨贏 → 降一級（冷門讓分不降）。</div>
     </div>`;
   }
