@@ -371,7 +371,10 @@
        7. 熱門讓分（−1.5）賠率 < 冷門獨贏賠率，且熱門那邊人數 ≥ 冷門那邊 → 押熱門，推薦；主推獨贏，附 −1.5 的價。
           （9/30～11/14 共 88 場：熱門直勝 69（78%）、押獨贏 +13%；−1.5 過盤 48（55%）、+14%；
             熱門那邊人數 ≥ 冷門的 85 場直勝 68；冷門那邊人多只有 3 場、熱門 1 勝）
-          不屬於這類的場，熱門 −1.5 整季只過約 30%（報酬 −17%）→ 建議押熱門讓分時加註。 */
+          不屬於這類的場，熱門 −1.5 整季只過約 30%（報酬 −17%）→ 建議押熱門讓分時加註。
+          −1.5 另有分界（2026-11-15 使用者確認）：差距＝冷門獨贏 − 熱門 −1.5 ≥ 0.30 才標「可加 −1.5」；
+          < 0.30 只推獨贏、−1.5 標不穩（整季到 11/14：差距 > 0.30 共 63 場、−1.5 過盤 57%、+16%；
+          0～0.30 共 25 場時好時壞：0～0.15 +50%、0.15～0.30 −19%）。獨贏不分段（差距 > 0 共 88 場 +13%）。 */
   const ADVICE_MIN_N = 5;
   const ADVICE_EDGE = 0.05;
 
@@ -556,6 +559,7 @@
 
   /* ---- 冰球：熱門讓分價 vs 冷門獨贏價 ---- */
   // snap＝{ ml:{away,home}, spread:{line,favorite,away,home} 或 spreads:[…] }（Stake 現價或收盤）→ 熱門、兩種價、是否「讓分價低於冷門獨贏」
+  const SPOT_HD_GAP = 0.30;   // −1.5 分界
   function priceSpot(snap) {
     if (!snap || !snap.ml) return null;
     const a = Number(snap.ml.away); const h = Number(snap.ml.home);
@@ -566,7 +570,8 @@
     const favHd = Number(raw[fav]); const line = Math.abs(Number(raw.line));
     if (!(favHd > 1) || !(line > 0)) return null;
     const favMl = fav === 'away' ? a : h; const dogMl = fav === 'away' ? h : a;
-    return { fav, favMl, dogMl, favHd, favLine: -line, cheap: favHd < dogMl, gap: Math.round((dogMl - favHd) * 100) / 100 };
+    const gap = Math.round((dogMl - favHd) * 100) / 100;
+    return { fav, favMl, dogMl, favHd, favLine: -line, cheap: favHd < dogMl, gap, hdOk: gap >= SPOT_HD_GAP };
   }
   // 熱門那邊人數 ≥ 冷門那邊（且至少一人）＝有人撐
   function spotBacked(spot, list) {
@@ -575,7 +580,8 @@
   }
   // 歷史：games＝officialId → 比賽（closing＝收盤快照、awayScore/homeScore/final）；只算「讓分價低於冷門獨贏」的場
   function spotRecord(annotated, games) {
-    const backed = { n: 0, win: 0, mlP: 0, cover: 0, hdP: 0 }; const unbacked = { n: 0, win: 0 };
+    const cell = () => ({ n: 0, win: 0, mlP: 0, cover: 0, hdP: 0 });
+    const backed = cell(); const unbacked = { n: 0, win: 0 }; const seg = { wide: cell(), narrow: cell() };   // wide＝差距 ≥ 0.30
     for (const [id, list] of groupByGame(annotated)) {
       const g = games && games[id];
       if (!g || !g.final || g.awayScore == null || g.homeScore == null) continue;
@@ -583,12 +589,14 @@
       if (!sp || !sp.cheap) continue;
       const margin = (sp.fav === 'away' ? 1 : -1) * (Number(g.awayScore) - Number(g.homeScore));
       if (!spotBacked(sp, list)) { unbacked.n++; if (margin > 0) unbacked.win++; continue; }
-      backed.n++;
-      if (margin > 0) { backed.win++; backed.mlP += sp.favMl - 1; } else backed.mlP -= 1;
-      if (margin + sp.favLine > 0) { backed.cover++; backed.hdP += sp.favHd - 1; } else backed.hdP -= 1;
+      for (const c of [backed, sp.hdOk ? seg.wide : seg.narrow]) {
+        c.n++;
+        if (margin > 0) { c.win++; c.mlP += sp.favMl - 1; } else c.mlP -= 1;
+        if (margin + sp.favLine > 0) { c.cover++; c.hdP += sp.favHd - 1; } else c.hdP -= 1;
+      }
     }
-    const r = (p) => (backed.n ? Math.round((p / backed.n) * 1000) / 1000 : null);
-    return { games: backed.n + unbacked.n, backed: Object.assign(backed, { mlRoi: r(backed.mlP), hdRoi: r(backed.hdP) }), unbacked };
+    const fin = (c) => Object.assign(c, { mlRoi: c.n ? Math.round((c.mlP / c.n) * 1000) / 1000 : null, hdRoi: c.n ? Math.round((c.hdP / c.n) * 1000) / 1000 : null });
+    return { games: backed.n + unbacked.n, backed: fin(backed), unbacked, wide: fin(seg.wide), narrow: fin(seg.narrow) };
   }
 
   // picks＝今天這場每人一張主帳票（已排除忽略名單）；ann＝同聯盟、到前一天為止的歷史（已排除忽略名單）
@@ -684,7 +692,7 @@
     // 收斂·雙方對調：讓分方就是熱門，+1.5 是另開盤（賠率很低）→ 一律 ML（11/12 前 26 場：ML 74%、報酬 +36%）
     if (advice.by === 'anomaly' && advice.ev && advice.ev.anomaly && advice.ev.anomaly.rule === 'convBoth') return { market: 'ML', line: 0 };
     // 冰球價差：主推獨贏、附熱門 −1.5（兩種整季報酬差不多，獨贏起伏較小）
-    if (advice.by === 'spot' && advice.ev && advice.ev.spot) return { market: 'ML', line: 0, alt: { market: 'SPREAD', line: advice.ev.spot.favLine } };
+    if (advice.by === 'spot' && advice.ev && advice.ev.spot) return { market: 'ML', line: 0, alt: { market: 'SPREAD', line: advice.ev.spot.favLine, ok: !!advice.ev.spot.hdOk } };
     // NBA 讓分加深：熱門會贏但常贏不夠讓分（讓方過盤 12/26）→ 一律獨贏
     if (advice.by === 'lineMove') return { market: 'ML', line: 0 };
     if (advice.corePick && advice.corePick.side === advice.side) return { market: advice.corePick.market, line: pickLine(advice.corePick) };
@@ -708,7 +716,7 @@
   }
 
   return {
-    lineMoveOf, lineMoveGroup, lineMoveRecord, dogMlAdjust, LINE_GROUP_TXT, priceSpot, spotBacked, spotRecord,
+    lineMoveOf, lineMoveGroup, lineMoveRecord, dogMlAdjust, LINE_GROUP_TXT, priceSpot, spotBacked, spotRecord, SPOT_HD_GAP,
     groupClash, headToHead, edgeSign, adviseGame, advicePick, anomClassify, anomEvidenceFromSnap, anomBestSnap, anomSnapScore,
     anomLabel, anomRule, anomalyRecord, anomTarget, anomBacked, ADVICE_MIN_N,
     ANALYSTS, WATCH, REVISERS, LAYERS, SCENARIOS: Object.keys(SCENARIOS), sideIndex, duel, marketKind,

@@ -375,9 +375,11 @@ test('lineMoveRecord：加深場熱門有人推／沒人推的直勝，押熱門
 const rangers = { ml: { away: 1.46, home: 2.65 }, spread: { line: 1.5, favorite: 'away', away: 2.1, home: 1.71 } };
 
 test('priceSpot：熱門 −1.5 價低於冷門獨贏＝cheap；方向對不上就不判', () => {
-  assert.deepEqual(core.priceSpot(rangers), { fav: 'away', favMl: 1.46, dogMl: 2.65, favHd: 2.1, favLine: -1.5, cheap: true, gap: 0.55 });
+  assert.deepEqual(core.priceSpot(rangers), { fav: 'away', favMl: 1.46, dogMl: 2.65, favHd: 2.1, favLine: -1.5, cheap: true, gap: 0.55, hdOk: true });
   const knights = { ml: { away: 2.28, home: 1.61 }, spread: { line: 1.5, favorite: 'home', away: 1.53, home: 2.45 } };
   assert.equal(core.priceSpot(knights).cheap, false);
+  const narrow = core.priceSpot({ ml: { away: 1.55, home: 2.45 }, spread: { line: 1.5, favorite: 'away', away: 2.3, home: 1.62 } });
+  assert.deepEqual([narrow.cheap, narrow.gap, narrow.hdOk], [true, 0.15, false]);
   assert.equal(core.priceSpot({ ml: { away: 1.9, home: 1.9 }, spread: rangers.spread }), null);
   assert.equal(core.priceSpot({ ml: rangers.ml }), null);
 });
@@ -387,7 +389,7 @@ test('advice：讓分價低＋熱門那邊人數不少 → 推薦熱門獨贏、
   const spot = core.priceSpot(rangers);
   const a = core.adviseGame({ picks, core: 'BOOKIE', ann: [], spot });
   assert.deepEqual([a.tier, a.side, a.by, a.follow], ['bet', 'away', 'spot', 'core']);
-  assert.deepEqual(core.advicePick(a, picks), { market: 'ML', line: 0, alt: { market: 'SPREAD', line: -1.5 } });
+  assert.deepEqual(core.advicePick(a, picks), { market: 'ML', line: 0, alt: { market: 'SPREAD', line: -1.5, ok: true } });
   // BOOKIE 押冷門、但熱門那邊 2:2 → 仍推熱門（反 BOOKIE）
   const tie = core.adviseGame({ picks: today([['SNIPER', 'away'], ['MONEY', 'away'], ['BOOKIE', 'home', 'SPREAD', 1.5], ['APE', 'home']]), core: 'BOOKIE', ann: [], spot });
   assert.deepEqual([tie.tier, tie.side, tie.follow], ['bet', 'away', 'against']);
@@ -409,4 +411,8 @@ test('spotRecord：只算讓分價低的場；熱門有人撐的直勝、獨贏�
   assert.deepEqual([r.games, r.backed.n, r.backed.win, r.backed.cover, r.unbacked.n], [3, 3, 3, 1, 0]);
   assert.equal(r.backed.mlRoi, 0.46);
   assert.equal(r.backed.hdRoi, Math.round(((2.1 - 1) - 2) / 3 * 1000) / 1000);
+  assert.deepEqual([r.wide.n, r.narrow.n], [3, 0]);   // 2.65 − 2.10＝0.55 ≥ 0.30
+  games.H2.closing = { ml: { away: 1.55, home: 2.45 }, spread: { line: 1.5, favorite: 'away', away: 2.3, home: 1.62 } };   // 差距 0.15
+  const r2 = core.spotRecord(ann, games);
+  assert.deepEqual([r2.wide.n, r2.narrow.n, r2.narrow.win, r2.narrow.cover], [2, 1, 1, 0]);
 });
