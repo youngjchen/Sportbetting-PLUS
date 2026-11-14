@@ -259,7 +259,7 @@
 <footer id="summary"></footer>
 <div id="toast"></div>
 
-<script src="./analyst-core.js?v=20261115gap"></script>
+<script src="./analyst-core.js?v=20261115l15"></script>
 <script src="./nhl_stake_core.js?v=20261004total2"></script>
 <script src="./nhl_bet365_core.js?v=20261004total2"></script>
 <script>
@@ -341,7 +341,8 @@
       const hit = window.NhlStake && window.NhlStake.findStakeGame(feed, { date: g.date, time: g.time, away: g.away, home: g.home });
       if (!hit) return null;
       return { ml: hit.ml && { away: hit.ml.away, home: hit.ml.home },
-        spread: hit.hd && { line: hit.hd.line, favorite: hit.hd.favorite, away: hit.hd.away, home: hit.hd.home } };
+        spread: hit.hd && { line: hit.hd.line, favorite: hit.hd.favorite, away: hit.hd.away, home: hit.hd.home },
+        lines: hit.game && Array.isArray(hit.game.hdLines) ? hit.game.hdLines : undefined };   // Stake 副盤（±1.5／2.5／3.5…，2026-11-15 起）
     }
     if (league === 'MLB') {
       const m = feed.matches && feed.matches[g.officialId];
@@ -1249,7 +1250,7 @@
       <div class="chips"><span class="clab">忽略</span>${ANALYSTS.filter((a) => a !== core).map((a) => `<button class="chip sm${ignored(a) ? ' on' : ''}" data-advign="${a}">${a}</button>`).join('')}</div>
       <div class="st-help">忽略＝今天的分邊人數和所有歷史數字都不算他（登錄頁上他的名字會劃線）。記在這台裝置。</div>
       <div class="st-help"><b>判斷規則</b>（由上而下，先符合先用）：①冰球 收斂·雙方對調 → 讓分方（開賽前讓分熱門）至少一人推＝押讓分方 ML，推薦；沒人推＝跳過（訊號相反）。②冰球 收斂·只有一家對調 → 另一邊人數 ≥ 讓分方＝押另一邊，小注；否則照下面。③只有一邊有人推 → 跟（${core} 在裡面或 ≥2 人＝推薦，只有一位＝小注；同聯盟同樣人數「沒人反對」過去報酬是負的 → 降成小注）。④兩邊都有人 → 看「兩組對上」和「${core} 單挑」兩個訊號（過盤率差 ≥5 點且報酬沒反向才算，不到 ${Core.ADVICE_MIN_N} 場不算）：都挺或一挺一沒資料＝跟；都沒資料＝照跟；一挺一反＝跳過；只有一反＝跳過；兩個都反＝押對面小注。兩邊人數一樣（例 2:2）→ 降一級。${core} 沒推 → 只看兩組對上。</div>
-      <div class="st-help"><b>冰球價差</b>：⑦熱門讓分（−1.5）賠率比冷門獨贏低、且熱門那邊人數 ≥ 冷門那邊 → 推薦熱門（主推獨贏）；−1.5 看差距（冷門獨贏減熱門 −1.5）：≥ 0.30 標「可加」，< 0.30 標「不穩」只押獨贏；排在 ①收斂·雙方 與 ②收斂·只有一家 之後。不屬於這類卻要押熱門讓分 → 加註提醒。</div>
+      <div class="st-help"><b>冰球價差</b>：⑦熱門讓分（−1.5）賠率比冷門獨贏低、且熱門那邊人數 ≥ 冷門那邊 → 推薦熱門（主推獨贏）；−1.5 看差距（冷門獨贏減熱門 −1.5）：≥ 0.30 標「可加」，< 0.30 標「不穩」只押獨贏；一律用 −1.5 判斷（Stake 主線是 2.5 時取副盤 −1.5，沒有 −1.5 價就不判斷），−2.5 還沒驗證、不標可加；排在 ①收斂·雙方 與 ②收斂·只有一家 之後。不屬於這類卻要押熱門讓分 → 加註提醒。</div>
       <div class="st-help"><b>NBA</b>：不設主跟（幾乎每位都賠錢），有衝突只看兩組對上。⑤Stake 讓分加深（開盤→現在，同一讓分方多 ≥2 分）→ 熱門至少一人推＝押熱門<b>獨贏</b>，推薦；沒人推＝跳過。⑥建議押的是冷門獨贏 → 降一級（冷門讓分不降）。</div>
     </div>`;
   }

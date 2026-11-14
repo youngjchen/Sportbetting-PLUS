@@ -88,7 +88,7 @@
       const v = snapshot.ml && snapshot.ml[p.side];
       return Number.isFinite(Number(v)) && Number(v) > 1 ? { odds: Number(v), book: snapshot.ml.book || null } : null;
     }
-    for (const s of [].concat(snapshot.spread || [], snapshot.spreads || [])) {
+    for (const s of [].concat(snapshot.spread || [], snapshot.spreads || [], snapshot.lines || [])) {   // lines＝Stake 副盤（2026-11-15 起）
       const q = spreadQuote(s, p, snapshot.ml);
       if (q) return q;
     }
@@ -374,7 +374,8 @@
           不屬於這類的場，熱門 −1.5 整季只過約 30%（報酬 −17%）→ 建議押熱門讓分時加註。
           −1.5 另有分界（2026-11-15 使用者確認）：差距＝冷門獨贏 − 熱門 −1.5 ≥ 0.30 才標「可加 −1.5」；
           < 0.30 只推獨贏、−1.5 標不穩（整季到 11/14：差距 > 0.30 共 63 場、−1.5 過盤 57%、+16%；
-          0～0.30 共 25 場時好時壞：0～0.15 +50%、0.15～0.30 −19%）。獨贏不分段（差距 > 0 共 88 場 +13%）。 */
+          0～0.30 共 25 場時好時壞：0～0.15 +50%、0.15～0.30 −19%）。獨贏不分段（差距 > 0 共 88 場 +13%）。
+          一律用 −1.5 判斷（2026-11-15：海怪@颶風 主線 2.5，誤用 −2.5 標「可加 −2.5」）：主線不是 1.5 就取副盤 −1.5，沒有 −1.5 價＝不判斷；−2.5 未驗證，不標可加。 */
   const ADVICE_MIN_N = 5;
   const ADVICE_EDGE = 0.05;
 
@@ -565,10 +566,12 @@
     const a = Number(snap.ml.away); const h = Number(snap.ml.home);
     if (!(a > 1 && h > 1) || a === h) return null;
     const fav = a < h ? 'away' : 'home';
-    const raw = [].concat(snap.spread || [], snap.spreads || []).map((x) => x && orientSpread(x, snap.ml)).find((x) => x && x.favorite === fav);
+    // 只用熱門 −1.5（規則只用 −1.5 驗證過）：主盤、多組盤口、副盤裡找熱門讓 1.5 的那組
+    const raw = [].concat(snap.spread || [], snap.spreads || [], snap.lines || []).map((x) => x && orientSpread(x, snap.ml))
+      .find((x) => x && x.favorite === fav && Math.abs(Number(x.line)) === 1.5);
     if (!raw) return null;
-    const favHd = Number(raw[fav]); const line = Math.abs(Number(raw.line));
-    if (!(favHd > 1) || !(line > 0)) return null;
+    const favHd = Number(raw[fav]); const line = 1.5;
+    if (!(favHd > 1)) return null;
     const favMl = fav === 'away' ? a : h; const dogMl = fav === 'away' ? h : a;
     const gap = Math.round((dogMl - favHd) * 100) / 100;
     return { fav, favMl, dogMl, favHd, favLine: -line, cheap: favHd < dogMl, gap, hdOk: gap >= SPOT_HD_GAP };

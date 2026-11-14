@@ -416,3 +416,15 @@ test('spotRecord：只算讓分價低的場；熱門有人撐的直勝、獨贏�
   const r2 = core.spotRecord(ann, games);
   assert.deepEqual([r2.wide.n, r2.narrow.n, r2.narrow.win, r2.narrow.cover], [2, 1, 1, 0]);
 });
+
+test('priceSpot 一律用熱門 −1.5：主線 2.5 時取副盤；沒有 −1.5 價就不判斷（11/15 海怪@颶風）', () => {
+  const canes = { ml: { away: 4, home: 1.25 }, spread: { line: 2.5, favorite: 'home', away: 1.75, home: 2.08 },
+    lines: [{ line: 1.5, favorite: 'away', away: 8, home: 1.08 }, { line: 1.5, favorite: 'home', away: 2.28, home: 1.63 }, { line: 2.5, favorite: 'home', away: 1.75, home: 2.08 }] };
+  const sp = core.priceSpot(canes);
+  assert.deepEqual([sp.fav, sp.favHd, sp.favLine, sp.gap, sp.hdOk], ['home', 1.63, -1.5, 2.37, true]);
+  assert.equal(core.priceSpot({ ml: canes.ml, spread: canes.spread }), null);
+  // 副盤也拿得到報價：颶風 −1.5、颶風 +1.5（海怪讓 1.5 那組）
+  assert.equal(core.priceFrom(canes, pick({ side: 'home', market: 'SPREAD', line: -1.5 })), 1.63);
+  assert.equal(core.priceFrom(canes, pick({ side: 'home', market: 'SPREAD', line: 1.5 })), 1.08);
+  assert.equal(core.priceFrom(canes, pick({ side: 'home', market: 'SPREAD', line: -2.5 })), 2.08);
+});
