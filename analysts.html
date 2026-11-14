@@ -170,8 +170,15 @@
   .a2 .am{color:var(--ink)}
   .am b{color:var(--lit)}
   .a1 .alt{font-size:15.5px;white-space:nowrap}
-  .a1 .dots{color:var(--lit);font-size:13px;letter-spacing:1px;white-space:nowrap}
-  .arec{margin:6px 0 2px;font-size:15px;cursor:pointer;line-height:1.6}
+  .arow .at .dots{display:block;color:var(--lit);font-size:11px;letter-spacing:0;margin-top:3px;white-space:nowrap}
+  .ahead .otime{font-size:14.5px;color:var(--ink-dim);white-space:nowrap}
+  .arec{font-size:15px;cursor:pointer;white-space:nowrap;padding:4px 8px;border:1px solid var(--line);border-radius:8px}
+  .arec-tbl{padding:6px 12px 10px}
+  .chip.info{min-width:40px}
+  .sdot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:6px;vertical-align:middle;background:var(--ink-dim)}
+  .sdot.ok{background:var(--win)} .sdot.wait{background:var(--lit)} .sdot.bad{background:var(--loss)}
+  .a2 .abadge{margin-left:8px}
+  .abadge sup{font-size:10px;margin-left:1px}
   .arec b.pos{color:var(--win)} .arec b.neg{color:var(--loss)}
   .a1 .alt.ok{color:var(--lit);font-weight:700}
   .a1 .alt.no{color:var(--ink-dim);opacity:.75}
@@ -211,7 +218,20 @@
     .logo{font-size:17px}
     .pill .t{display:none}
     .pill{padding:4px 9px}
-    #sync{flex-basis:100%;text-align:right;font-size:12.5px}
+    #sync{flex-basis:auto;margin-left:auto;font-size:12.5px}
+    #sync .stxt{display:none}
+    .hbtn .t{display:none}
+    .hbtn{min-width:40px;min-height:38px;padding:6px 9px}
+    /* 底部命中：一行、橫向捲動，不再吃掉半個畫面 */
+    footer{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;gap:12px;padding:6px 10px;font-size:13px;scrollbar-width:none}
+    footer::-webkit-scrollbar{display:none}
+    footer > span{flex:0 0 auto}
+    /* 今天押什麼：觸控目標放大 */
+    .ahead{gap:8px}
+    .ahead .st-sec{font-size:18px}
+    .chip.sm{padding:8px 12px;font-size:14px;min-height:40px}
+    .arow{min-height:56px}
+    .aev .evl{font-size:14px;line-height:1.6}
     nav.rail{flex-basis:60px}
     .lg{font-size:14px}
     .game{grid-template-columns:46px minmax(0,1fr) minmax(0,1fr);grid-template-areas:"t a h" "i i i"}
@@ -247,11 +267,12 @@
   <a class="pill" href="index.html" title="棒球排盤板">⚾<span class="t"> 棒球</span></a>
   <a class="pill" href="nba.html" title="籃球排盤板">🏀<span class="t"> 籃球</span></a>
   <a class="pill" href="nhl.html" title="冰球排盤板">🏒<span class="t"> 冰球</span></a>
+  <button class="hbtn" id="jumpBtn" title="跳到今天押什麼">🎯</button>
   <button class="hbtn" id="modeBtn" title="切換登錄／分析">📊 分析</button>
-  <button class="hbtn" id="retroBtn" title="補登過去的推薦：不提示開賽，狀態標「回溯」">回溯模式</button>
+  <button class="hbtn" id="retroBtn" title="補登過去的推薦：不提示開賽，狀態標「回溯」">⏪<span class="t"> 回溯模式</span></button>
   <button class="hbtn" id="patBtn" title="設定 GitHub 權杖（與盤面同步共用）">🔑</button>
   <button class="hbtn" id="syncBtn" title="立即與 GitHub 同步">↻</button>
-  <span id="sync">載入中…</span>
+  <span id="sync" title="載入中"><i class="sdot wait"></i><span class="stxt">載入中…</span></span>
 </header>
 <div class="tabs" id="tabs"></div>
 <div class="datebar" id="dates"></div>
@@ -448,7 +469,11 @@
   const same = (a, b) => JSON.stringify(a.map(ORDER_FULL).sort()) === JSON.stringify(b.map(ORDER_FULL).sort());
   function ORDER_FULL(p) { return JSON.stringify(Object.keys(p).sort().reduce((o, k) => { o[k] = p[k]; return o; }, {})); }
   let syncing = false; let again = false; let timer = null;
-  function setSync(text, err) { const el = $('sync'); el.textContent = text; el.classList.toggle('err', !!err); }
+  // 同步狀態：小燈＋字（手機只留燈，字在提示）；綠＝已同步、黃＝等待／唯讀、紅＝失敗
+  function setSync(text, err) {
+    const el = $('sync'); const st = err ? 'bad' : /^已(同步|上傳)/.test(text) ? 'ok' : 'wait';
+    el.innerHTML = `<i class="sdot ${st}"></i><span class="stxt">${esc(text)}</span>`; el.title = text; el.classList.toggle('err', !!err);
+  }
   function scheduleUpload() { setSync('已存本機，等待上傳…'); clearTimeout(timer); timer = setTimeout(syncNow, 3000); }
   async function syncNow() {
     if (syncing) { again = true; return; }
@@ -1077,8 +1102,8 @@
         const al = dec.alt; const v = a.ev.spot && a.ev.spot.verdict;
         const aRes = g.final ? ` ${ICON[Core.settlePick(al, g).result] || ''}` : '';
         const price = `${signed(al.line)} ${al.odds != null ? al.odds.toFixed(2) : '—'}`;
-        altHtml = al.ok ? `<span class="alt ok">＋可加 ${price}${aRes}</span>`
-          : `<span class="alt no">${price} ${v && v.seg === 'wide' ? '不划算' : '不穩'}${aRes}</span>`;
+        altHtml = al.ok ? `<span class="alt ok" title="可加 ${price}">＋${price}${aRes}</span>` : '';   // 不划算／不穩不顯示（細節在 💰）
+        void v;
       }
     }
     const cnt = (sd) => live.filter((p) => p.side === sd).length;
@@ -1094,136 +1119,134 @@
       if (ev.lone && ev.lone.side === 'core' && coreSide === a.side) dots++;
       if (move && move.big && move.team === a.side) dots++;
     }
-    const dotHtml = a.side ? `<span class="dots" title="支持這個押注的證據 ${dots} 條">${'●'.repeat(Math.min(dots, 4))}${'○'.repeat(Math.max(0, 3 - Math.min(dots, 3)))}</span>` : '';
-    const chip = !a.side ? '<span class="vchip skip">跳過</span>'
-      : !core ? `<span class="vchip non" title="這邊 ${cnt(a.side)} 人、對面 ${cnt(a.side === 'away' ? 'home' : 'away')} 人">${cnt(a.side)}:${cnt(a.side === 'away' ? 'home' : 'away')}</span>`
-      : a.follow === 'core' ? `<span class="vchip fol">跟 ${SHORT[core]}</span>`
-        : a.follow === 'against' ? `<span class="vchip agn">反 ${SHORT[core]}</span>`
-          : `<span class="vchip non">${SHORT[core]} 沒推</span>`;
-    const lm = a.ev.lineMove;
-    const lineBadge = lm && lm.group !== 'small' ? `<span class="abadge${lm.group === 'deeper' ? ' hot' : ''}" title="Stake 讓分 開 ${lm.openLine} → 現 ${lm.closeLine}">${lm.label} ${lm.group === 'swap' ? '' : `${lm.openLine}→${lm.closeLine}`}</span>` : '';
-    const sp = a.ev.spot;
-    const spotBadge = sp && sp.cheap ? `<span class="abadge${sp.backed ? ' hot' : ''}" title="熱門讓分價低於冷門獨贏">熱門讓分 ${sp.favHd.toFixed(2)} < 冷門獨贏 ${sp.dogMl.toFixed(2)}</span>` : '';
-    const moveBadge = move && move.big ? `<span class="abadge${a.side && move.team !== a.side ? ' flip' : ''}" title="Stake 獨贏開盤→現在，換算勝率變化">獨贏轉向 ${esc(team(move.team))} +${move.pp}${move.onlyStake ? '（只有 Stake）' : ''}</span>` : '';
-    const anomBadge = spotBadge + lineBadge + moveBadge + (a.ev.anomaly ? `<span class="abadge ${a.ev.anomaly.cls.kind}${a.ev.anomaly.rule ? ' hot' : ''}" title="${esc(a.ev.anomaly.label)}">${esc(shortAnom(a.ev.anomaly.cls))}</span>` : '');
+    const dotHtml = a.side ? `<span class="dots" title="證據 ${dots} 條">${'●'.repeat(Math.min(dots, 4))}${'○'.repeat(Math.max(0, 3 - Math.min(dots, 3)))}</span>` : '';
+    const reasonTip = esc(a.reason);
+    const chip = !a.side ? `<span class="vchip skip" title="${reasonTip}">跳過</span>`
+      : !core ? `<span class="vchip non" title="${reasonTip}">${cnt(a.side)}:${cnt(a.side === 'away' ? 'home' : 'away')}</span>`
+      : a.follow === 'core' ? `<span class="vchip fol" title="${reasonTip}">跟 ${SHORT[core]}</span>`
+        : a.follow === 'against' ? `<span class="vchip agn" title="${reasonTip}">反 ${SHORT[core]}</span>`
+          : `<span class="vchip non" title="${reasonTip}">${SHORT[core]} 沒推</span>`;
+    // 標籤：只放圖示＋短數字，細節在展開層與滑鼠提示（2026-11-15 使用者：說明文字太多，照遊戲介面要求）
+    const lm = a.ev.lineMove; const sp = a.ev.spot;
+    const opp = (s) => (s === 'away' ? 'home' : 'away');
+    const tags = [];
+    if (a.ev.anomaly) tags.push(`<span class="abadge ${a.ev.anomaly.cls.kind}${a.ev.anomaly.rule ? ' hot' : ''}" title="${esc(a.ev.anomaly.label)}">${esc(shortAnom(a.ev.anomaly.cls))}</span>`);
+    if (sp && sp.cheap) tags.push(`<span class="abadge${sp.backed ? ' hot' : ''}" title="熱門讓分 ${sp.favHd.toFixed(2)} < 冷門獨贏 ${sp.dogMl.toFixed(2)}">💰</span>`);
+    if (lm && lm.group !== 'small') tags.push(`<span class="abadge${lm.group === 'deeper' ? ' hot' : ''}" title="Stake 讓分 ${lm.label}">📈${lm.group === 'swap' ? '⇄' : `${lm.openLine}→${lm.closeLine}`}</span>`);
+    if (move && move.big) tags.push(`<span class="abadge${a.side && move.team !== a.side ? ' flip' : ''}" title="獨贏轉向 ${esc(team(move.team))}${move.onlyStake ? '（只有 Stake）' : ''}">📉${esc(team(move.team))}+${move.pp}${move.onlyStake ? '<sup>S</sup>' : ''}</span>`);
+    const tagHtml = tags.join('');
     const open = advOpen.has(g.officialId);
-    // 證據（最多 3 條，順序固定）：異常 → 兩組對上（沒人反對時＝同樣人數同邊的過去）→ 單挑
+    // 展開層：每行「圖示＋結論數字」；訊號 ✓挺／✗反／＝差不多／…樣本不足（給開發看的字留在註解）
     const names = (list) => list.map((x) => SHORT[x]).join('・');
+    const mark = (v, n) => (n < Core.ADVICE_MIN_N ? '<span class="h-dim" title="樣本不足">…</span>' : v > 0 ? '<b class="pos">✓</b>' : v < 0 ? '<b class="neg">✗</b>' : '<span class="h-dim">＝</span>');
+    const okMark = (ok) => (ok ? '<b class="pos">✓</b>' : '<b class="neg">✗</b>');
+    const pp = (x) => `<b class="${x >= 0 ? 'pos' : 'neg'}">${x >= 0 ? '+' : ''}${Math.round(x * 100)}%</b>`;
+    const line = (icon, html, tip) => `<div class="evl"${tip ? ` title="${esc(tip)}"` : ''}><span class="evk">${icon}</span><span>${html}</span></div>`;
     const sideList = (s) => all.filter((p) => p.side === s).map((p) => `<span class="${ignored(p.analyst) ? 'ig' : ''}">${SHORT[p.analyst]} ${p.market === 'ML' ? 'ML' : signed(Core.pickLine(p))}${p.layer === 'lotto' ? 'ᴸ' : ''}</span>`).join(' ') || '<span class="h-dim">—</span>';
-    let evh = `<div class="evl"><span class="evk">👥</span><span>客 ${esc(g.away)}：${sideList('away')}｜主 ${esc(g.home)}：${sideList('home')}</span></div>`;
+    let evh = line('🧭', esc(a.reason));
+    evh += line('👥', `${esc(g.away)} ${sideList('away')}　｜　${esc(g.home)} ${sideList('home')}`);
     if (a.ev.anomaly) {
       const an = a.ev.anomaly; const rec = an.record;
-      let t = `<b>${esc(an.label)}</b>${an.hdFav ? `（讓分方 ${esc(team(an.hdFav))}）` : ''}`;
-      if (!an.rule) t += '｜<span class="h-dim">這類不影響建議</span>';
-      else if (!NHLDOC.found) t += '｜<span class="h-dim">這台裝置沒有冰球頁的紀錄，歷史數字從缺（規則照樣套用）</span>';
-      else if (rec && rec.games) {
-        const tgt = an.rule === 'convBoth' ? '讓分方' : '另一邊'; const cond = an.rule === 'convBoth' ? '讓分方有人推' : '另一邊人數 ≥ 讓分方';
-        t += `｜過去 ${rec.games} 場：${cond}時${tgt}直勝 <b>${rec.backed.win}/${rec.backed.n}</b>、其他時候 ${rec.unbacked.win}/${rec.unbacked.n}｜票：押讓分方 ${numS(rec.fav)}　另一邊 ${numS(rec.other)}`;
-      }
-      else t += '｜<span class="h-dim">過去沒有這類場有人推</span>';
-      if (an.rule && an.hdFav) t += Core.anomBacked(an.rule, an.hdFav, live) ? '｜今天：有人撐 ✓' : '｜今天：<b class="neg">沒人撐</b>';
-      evh += `<div class="evl"><span class="evk">⚡</span><span>${t}</span></div>`;
+      let t = `${esc(an.label)}${an.hdFav ? ` · 讓分方 ${esc(team(an.hdFav))}` : ''}`;
+      if (an.rule && rec && rec.games) t += ` · 有人撐 <b>${rec.backed.win}/${rec.backed.n}</b> · 沒人撐 ${rec.unbacked.win}/${rec.unbacked.n}`;
+      if (an.rule && an.hdFav) t += ` · 今天 ${okMark(Core.anomBacked(an.rule, an.hdFav, live))}`;
+      evh += line('⚡', t, an.rule ? (NHLDOC.found ? '' : '這台裝置沒有冰球頁紀錄，歷史從缺') : '這類異常不影響判斷');
     }
     if (lm) {
-      let t = `Stake 讓分 開 ${esc(team(lm.openFav))} 讓 ${lm.openLine} → 現 ${esc(team(lm.closeFav))} 讓 ${lm.closeLine}（<b>${lm.label}</b>）`;
+      let t = `${esc(team(lm.closeFav))} ${lm.openLine}→${lm.closeLine} · ${lm.label}`;
       const rec = lm.record;
-      if (lm.group !== 'deeper') t += '｜<span class="h-dim">這類不影響建議</span>';
-      else if (!NBADOC.found) t += '｜<span class="h-dim">這台裝置沒有籃球頁的紀錄，歷史數字從缺（規則照樣套用）</span>';
-      else if (rec && rec.games) t += `｜過去 ${rec.games} 場加深：熱門有人推時熱門直勝 <b>${rec.backed.win}/${rec.backed.n}</b>、沒人推 ${rec.unbacked.win}/${rec.unbacked.n}｜押熱門獨贏的票 ${numS(rec.favML)}`;
-      else t += '｜<span class="h-dim">過去沒有加深場有人推</span>';
-      if (lm.group === 'deeper') t += live.some((p) => p.side === lm.closeFav) ? '｜今天：有人撐 ✓' : '｜今天：<b class="neg">沒人撐</b>';
-      evh += `<div class="evl"><span class="evk">📈</span><span>${t}</span></div>`;
+      if (lm.group === 'deeper' && rec && rec.games) t += ` · 熱門 <b>${rec.backed.win}/${rec.backed.n}</b> · 獨贏票 ${numS(rec.favML)}`;
+      if (lm.group === 'deeper') t += ` · 今天 ${okMark(live.some((p) => p.side === lm.closeFav))}`;
+      evh += line('📈', t, lm.group === 'deeper' ? '' : '這類讓分變化不影響判斷');
     }
     if (sp && sp.cheap) {
-      const r = sp.record && sp.record.backed; const u = sp.record && sp.record.unbacked;
-      const nf = live.filter((p) => p.side === sp.fav).length;
-      let t = `熱門 ${esc(team(sp.fav))} ${signed(sp.favLine)} @${sp.favHd.toFixed(2)} &lt; 冷門 ${esc(team(sp.fav === 'away' ? 'home' : 'away'))} 獨贏 @${sp.dogMl.toFixed(2)}（差 ${sp.gap.toFixed(2)}）`;
-      const roi = (x) => `<b class="${x >= 0 ? 'pos' : 'neg'}">${x >= 0 ? '+' : ''}${Math.round(x * 100)}%</b>`;
-      const seg = sp.record && (sp.hdOk ? sp.record.wide : sp.record.narrow); const segName = sp.hdOk ? '差距 ≥ 0.30' : '差距 < 0.30';
-      t += r && r.n ? `｜<b>獨贏</b>：過去 ${r.n} 場熱門直勝 <b>${r.win}/${r.n}</b>、${roi(r.mlRoi)}${u && u.n ? `（冷門那邊人多 ${u.n} 場熱門 ${u.win} 勝）` : ''}` : '｜<span class="h-dim">結算檔還沒有這類場</span>';
-      t += `｜<b>${signed(sp.favLine)}</b>（${segName}）：${seg && seg.n ? `過去 ${seg.n} 場過盤 <b>${seg.cover}/${seg.n}</b>（${Math.round(100 * seg.cover / seg.n)}%）、${roi(seg.hdRoi)}` : '還沒有紀錄'}｜今天 ${sp.favHd.toFixed(2)} 要過 ${Math.round(100 / sp.favHd)}% 才不賠 → ${sp.verdict && sp.verdict.ok ? '<b class="pos">可加</b>' : sp.hdOk ? '<b class="neg">不划算，只押獨贏</b>' : '<b class="neg">不穩，只押獨贏</b>'}`;
-      t += sp.backed ? `｜今天：熱門 ${nf}:${live.length - nf} ✓` : `｜今天：<b class="neg">冷門那邊人多</b>`;
-      evh += `<div class="evl"><span class="evk">💰</span><span>${t}</span></div>`;
+      const r = sp.record && sp.record.backed; const seg = sp.record && (sp.hdOk ? sp.record.wide : sp.record.narrow);
+      let t = `${esc(team(sp.fav))} ${signed(sp.favLine)} ${sp.favHd.toFixed(2)} &lt; ${esc(team(opp(sp.fav)))} ${sp.dogMl.toFixed(2)}`;
+      if (r && r.n) t += ` · 獨贏 <b>${r.win}/${r.n}</b> ${pp(r.mlRoi)}`;
+      if (seg && seg.n) t += ` · ${signed(sp.favLine)} <b>${Math.round(100 * seg.cover / seg.n)}%</b>（兩平 ${Math.round(100 / sp.favHd)}%）${okMark(sp.verdict && sp.verdict.ok)}`;
+      evh += line('💰', t, `差距 ${sp.gap.toFixed(2)}；−1.5 要差距 ≥ 0.30 且過盤率比兩平高 3 點才標可加`);
     } else if (sp && a.side === sp.fav && q && q.pick.market === 'SPREAD' && q.pick.line < 0) {
-      evh += `<div class="evl"><span class="evk">💰</span><span>熱門 ${signed(q.pick.line)} @${sp.favHd.toFixed(2)} 比冷門獨贏 @${sp.dogMl.toFixed(2)} 高：這類場熱門 −1.5 整季只過約 30%（報酬約 −17%），改押獨贏較穩</span></div>`;
+      evh += line('💰', `${signed(q.pick.line)} ${sp.favHd.toFixed(2)} &gt; 冷門 ${sp.dogMl.toFixed(2)} · 整季熱門 −1.5 約 30% ${pp(-0.17)}`);
     }
     if (a.dogMl) {
       const r = lm && lm.record && lm.record.dogML;
-      evh += `<div class="evl"><span class="evk">🐶</span><span>押冷門獨贏 → 跳過｜${r && r.settled ? `過去 NBA 押冷門獨贏的票 ${numS(r)}（${r.settled} 張）` : '11/12 前 NBA 押冷門獨贏 32%、報酬 −30%（72 張）'}</span></div>`;
+      evh += line('🐶', `冷門獨贏 ${r && r.settled ? numS(r) : `32% ${pp(-0.30)}`}`);
     }
     if (a.ev.lone) {
       const lo = a.ev.lone; const r = lo.rec;
-      evh += `<div class="evl"><span class="evk">👤</span><span>${SHORT[lo.who] || lo.who} 單人反對｜他過去單人反對 ${r.games} 場：他的票 ${numS(r.own)}、多數那邊 ${numS(r.majority)}${r.games < Core.ADVICE_LONE_MIN ? '　<span class="h-dim">不到 10 場，不採用</span>' : ''}</span></div>`;
+      evh += line('👤', `${SHORT[lo.who] || lo.who} 單人反對 · 他 ${numS(r.own)} · 多數 ${numS(r.majority)}（${r.games}）`, r.games < Core.ADVICE_LONE_MIN ? '不到 10 場，不採用' : '');
     }
     if (move && move.stake && move.stake.open && move.stake.now) {
-      const fmt = (x) => `${x.away.toFixed(2)}／${x.home.toFixed(2)}`;
-      const b = move.bet365 && move.bet365.open && move.bet365.now ? `｜BET365 開 ${fmt(move.bet365.open)} → 現 ${fmt(move.bet365.now)}（${move.bpp >= 0 ? '+' : ''}${move.bpp} 點）` : '';
-      evh += `<div class="evl"><span class="evk">📉</span><span>獨贏（客／主）Stake 開 ${fmt(move.stake.open)} → 現 ${fmt(move.stake.now)}｜${esc(team(move.team))} 換算勝率 +${move.pp} 點${move.big ? '（大幅轉向）' : ''}${b}${move.onlyStake ? '｜<b class="neg">只有 Stake 在動</b>' : ''}｜<span class="h-dim">只顯示、不影響判斷</span></span></div>`;
+      const fmt = (x) => `${x.away.toFixed(2)}/${x.home.toFixed(2)}`;
+      const b = move.bet365 && move.bet365.open && move.bet365.now ? ` · B365 ${fmt(move.bet365.open)}→${fmt(move.bet365.now)}` : '';
+      evh += line('📉', `${fmt(move.stake.open)}→${fmt(move.stake.now)} · ${esc(team(move.team))} +${move.pp}${b}${move.onlyStake ? ' · <b class="neg">只有 Stake</b>' : ''}`, '獨贏（客/主）開盤→現在；只顯示，不影響判斷');
     }
     if (a.ev.clash) {
       const c = a.ev.clash;
-      const lhs = c.awayFirst ? `客 ${names(c.mine)}` : names(c.mine); const rhs = c.awayFirst ? `主 ${names(c.theirs)}` : names(c.theirs);
-      evh += `<div class="evl"><span class="evk">⚔</span><span>兩組對上 ${lhs} vs ${rhs}｜過去 ${c.games} 場：${c.awayFirst ? '客隊這組' : '這組'}的票 ${numS(c.x)}　對面 ${numS(c.y)}　${c.awayFirst ? '' : sigTxt(a.ev.signals.clash, c.games)}</span></div>`;
+      evh += line('⚔', `${names(c.mine)} vs ${names(c.theirs)} · ${c.games} 場 ${numS(c.x)} : ${numS(c.y)} ${c.awayFirst ? '' : mark(a.ev.signals.clash, c.games)}`, '兩組對上：兩邊各自的票');
     } else if (a.ev.agree) {
       const r = a.ev.agree.rec;
-      evh += `<div class="evl"><span class="evk">🤝</span><span>沒人反對｜過去 ${g.league} ${a.ev.agree.n} 人同邊、沒人反對：票 ${numS(r)}（${r.settled} 張）</span></div>`;
+      evh += line('🤝', `${a.ev.agree.n} 人同邊沒人反對 · ${numS(r)}（${r.settled}）`);
     }
     if (a.ev.h2h) {
       const h = a.ev.h2h;
-      const each = h.opps.map((o) => { const e = h.each[o]; return e.games ? `對 ${SHORT[o]} ${pctS(e.hero)}:${pctS(e.opp)}（${e.games}）` : `對 ${SHORT[o]} 沒對上過`; }).join('、');
-      evh += `<div class="evl"><span class="evk">🥊</span><span>${SHORT[h.who]} 單挑｜${each}｜合計 ${numS(h.hero)} vs ${numS(h.opp)}　${sigTxt(a.ev.signals.h2h, h.games)}</span></div>`;
+      const each = h.opps.map((o) => { const e = h.each[o]; return e.games ? `${SHORT[o]} ${pctS(e.hero)}:${pctS(e.opp)}（${e.games}）` : `${SHORT[o]} —`; }).join(' · ');
+      evh += line('🥊', `${SHORT[h.who]} 單挑 ${each} ${mark(a.ev.signals.h2h, h.games)}`);
     }
-    if (note) evh += `<div class="evl"><span class="evk">ℹ</span><span>${esc(note)}</span></div>`;
-    // 對戰兩隊（押的那隊標亮）；跳過的列在第一行顯示對戰，有押的列放第二行、接理由
+    if (note) evh += line('ℹ', esc(note));
     const matchup = `<span class="am">${a.side === 'away' ? `<b>${esc(g.away)}</b>` : esc(g.away)} @ ${a.side === 'home' ? `<b>${esc(g.home)}</b>` : esc(g.home)}</span>`;
-    const line1 = a.side && q ? `${chip}${dotHtml}<span class="ap">${pickHtml}</span>${altHtml}${anomBadge}` : `${chip}${matchup}${anomBadge}`;
-    const line2 = a.side && q ? `${matchup}<span class="h-dim">・</span>${esc(a.reason)}` : esc(a.reason);
-    const html = `<div class="arow${open ? ' open' : ''}" data-adv="${esc(g.officialId)}">
-        <span class="at">${esc(g.time)}</span>
-        <div class="amain"><div class="a1">${line1}</div><div class="a2">${line2}</div></div>
+    const line1 = a.side && q ? `${chip}<span class="ap">${pickHtml}</span>${altHtml}` : `${chip}${matchup}`;   // 證據點數放在左欄時間底下
+    const line2 = a.side && q ? `${matchup}${tagHtml}` : tagHtml;
+    const html = `<div class="arow${open ? ' open' : ''}" data-adv="${esc(g.officialId)}" title="${reasonTip}">
+        <span class="at">${esc(g.time)}${dotHtml}</span>
+        <div class="amain"><div class="a1">${line1}</div>${line2 ? `<div class="a2">${line2}</div>` : ''}</div>
         <span class="ar">${res}</span><span class="ac">${open ? '▾' : '▸'}</span>
       </div>${open ? `<div class="aev">${evh}</div>` : ''}`;
     return { tier: a.side ? 'bet' : 'skip', time: g.startMs, html };
   }
+  let advRules = false;   // ⓘ 規則展開
   function renderAdviceSettings() {
     if (!adv.set) return '';
     const core = advCore();
     return `<div class="aset">
-      <div class="chips"><span class="clab">主跟</span><span class="h-dim" style="font-size:12.5px">（冰球、棒球；NBA 不設）</span>${ANALYSTS.map((a) => `<button class="chip sm${a === core ? ' on' : ''}" data-advcore="${a}">${a}</button>`).join('')}</div>
-      <div class="chips"><span class="clab">忽略</span>${ANALYSTS.filter((a) => a !== core).map((a) => `<button class="chip sm${ignored(a) ? ' on' : ''}" data-advign="${a}">${a}</button>`).join('')}</div>
-      <div class="st-help">忽略＝今天的分邊人數和所有歷史數字都不算他（登錄頁上他的名字會劃線）。記在這台裝置。</div>
-      <div class="st-help"><b>判斷規則</b>（由上而下，先符合先用；只分「押／跳過」）：
+      <div class="chips"><span class="clab" title="冰球、棒球；NBA 不設">主跟</span>${ANALYSTS.map((a) => `<button class="chip sm${a === core ? ' on' : ''}" data-advcore="${a}">${a}</button>`).join('')}</div>
+      <div class="chips"><span class="clab" title="今天的人數與所有歷史都不算他；記在這台裝置">忽略</span>${ANALYSTS.filter((a) => a !== core).map((a) => `<button class="chip sm${ignored(a) ? ' on' : ''}" data-advign="${a}">${a}</button>`).join('')}<button class="chip sm info${advRules ? ' on' : ''}" data-advrules="1" title="判斷規則">ⓘ</button></div>
+      ${advRules ? `<div class="st-help"><b>判斷規則</b>（由上而下，先符合先用；只分「押／跳過」）：
         ①冰球 收斂·雙方對調 → 讓分方至少一人推＝押讓分方獨贏；沒人推＝跳過。
         ②冰球 熱門讓分（−1.5）賠率比冷門獨贏低、熱門那邊人數 ≥ 冷門 → 押熱門獨贏；−1.5 只在「差距 ≥ 0.30 且那一段過去過盤率比損益兩平高 3 點以上（≥20 場）」才標可加（一律用 −1.5，Stake 主線 2.5 時取副盤）。
         ③NBA Stake 讓分加深 ≥2 分、熱門有人推 → 押熱門獨贏；沒人推＝跳過。
         ④只有一邊有人推 → 押（${core} 在裡面或 ≥2 人）；只有一位非主跟、或同人數「沒人反對」過去報酬為負 → 跳過。
         ⑤兩邊都有人：${core} 單人反對且他過去單人反對有賺（≥10 場）→ 跟他；別人單人反對、過去他單人反對時多數那邊賠錢（≥10 場）→ 跳過；其他看「兩組對上」和「${core} 單挑」：有挺沒反＝押，一挺一反、只有反＝跳過；都沒資料＝${core} 那邊人不少就押。
         ⑥冰球 收斂·只有一家對調、另一邊人數不少 → 押另一邊。NBA 不設主跟，兩邊都有人就跳過；建議押冷門獨贏也跳過。
-        市場移動（📉）、證據點數（●）只顯示、不影響判斷。</div>
+        市場移動（📉）、證據點數（●）只顯示、不影響判斷。</div>` : ''}
     </div>`;
   }
   // 賠率時間：Stake 資料檔最後更新（超過 30 分鐘標紅）
   function oddsAge(league) {
     const feed = DATA[league] && DATA[league].stake; const t = feed && Date.parse(feed.updated || feed.updatedAt || '');
-    if (!Number.isFinite(t)) return '賠率時間不明';
+    if (!Number.isFinite(t)) return '<span class="otime" title="賠率時間不明">⏱ —</span>';
     const min = Math.round((Date.now() - t) / 60000);
     const hm = new Date(t + 8 * 3600e3).toISOString().slice(11, 16);
-    return `<span class="${min > 30 ? 'neg' : ''}" title="開賽前盤口還會變，下注前請再看一次">Stake 賠率 ${hm}（${min} 分鐘前）</span>`;
+    return `<span class="otime${min > 30 ? ' neg' : ''}" title="Stake 賠率 ${hm}（${min} 分鐘前）；開賽前還會變">⏱ ${hm}</span>`;
   }
   // 系統戰績：結算程式在開賽前存下的判斷（advice），完賽後照存檔時的價結算；只算存檔開始之後
   let advRecOpen = false;
-  function renderAdviceRecord() {
+  function renderAdviceRecord(table) {
     const rec = window.AnalystAdvice.adviceRecord(RESULTS, Core);
-    const fmt = (c) => (c && c.n ? `${c.w}/${c.n}（${Math.round(100 * c.w / c.n)}%）${c.priced ? `、報酬 <b class="${c.profit >= 0 ? 'pos' : 'neg'}">${c.profit >= 0 ? '+' : ''}${Math.round(100 * c.profit / c.priced)}%</b>` : ''}` : '—');
-    if (!rec.since) return '<div class="arec h-dim">📒 系統戰績：從 11/15 起每場開賽前自動存檔判斷，完賽後在這裡累積。</div>';
+    const fmt = (c) => (c && c.n ? `${c.w}/${c.n} ${Math.round(100 * c.w / c.n)}%${c.priced ? ` <b class="${c.profit >= 0 ? 'pos' : 'neg'}">${c.profit >= 0 ? '+' : ''}${Math.round(100 * c.profit / c.priced)}%</b>` : ''}` : '—');
+    // 系統戰績：伺服器在開賽前存下的判斷（預設主跟 BOOKIE、忽略 BANKROLL、沒有冰球頁手動標記），照存檔時的 Stake 價結算
+    if (!rec.since) return '';
     const lg = rec.byLeague[view.league];
-    let h = `<div class="arec" data-advrec="1">📒 系統戰績（存檔判斷，自 ${rec.since.slice(5).replace('-', '/')}）｜${view.league}：押 ${fmt(lg)}${lg && lg.skip ? `｜跳過 ${lg.skip} 場` : ''}｜全部：${fmt(rec.all)} <span class="h-dim">${advRecOpen ? '▾' : '▸'}</span></div>`;
-    if (advRecOpen) {
-      const RULE = { anomaly: '冰球收斂異常', both: '分析師＋異常同向', spot: '熱門讓分價差', lineMove: 'NBA 讓分加深', analysts: '分析師規則' };
-      h += `<div class="aev" style="padding-left:12px">${Object.entries(rec.byRule).map(([k, c]) => `<div class="evl"><span class="evk">•</span><span>${RULE[k] || k}：${fmt(c)}</span></div>`).join('')}
-        <div class="evl"><span class="evk">•</span><span>−1.5 標「可加」：${fmt(rec.alt.ok)}｜沒標可加（只看獨贏）：${fmt(rec.alt.no)}</span></div>
-        ${Object.entries(rec.byLeague).map(([k, c]) => `<div class="evl"><span class="evk">•</span><span>${k}：押 ${fmt(c)}｜跳過 ${c.skip} 場</span></div>`).join('')}
-        <div class="evl"><span class="evk">ℹ</span><span class="h-dim">用伺服器預設（主跟 BOOKIE、忽略 BANKROLL；沒有冰球頁手動標記），價格是存檔當下的 Stake 價。</span></div></div>`;
+    const short = (c) => (c && c.n ? `${c.w}/${c.n}${c.priced ? ` <b class="${c.profit >= 0 ? 'pos' : 'neg'}">${c.profit >= 0 ? '+' : ''}${Math.round(100 * c.profit / c.priced)}%</b>` : ''}` : '—');
+    if (!table) return `<span class="arec" data-advrec="1" title="系統戰績（存檔判斷，自 ${rec.since.slice(5).replace('-', '/')}）">📒 ${short(lg)}</span>`;
+    let h = '';
+    {
+      const RULE = { anomaly: '收斂異常', both: '分析師＋異常', spot: '熱門價差', lineMove: '讓分加深', analysts: '分析師' };
+      const RULE_ICON = { anomaly: '⚡', both: '⚡', spot: '💰', lineMove: '📈', analysts: '👥' };
+      h += `<div class="aev arec-tbl">${Object.entries(rec.byLeague).map(([k, c]) => `<div class="evl"><span class="evk">🏟</span><span>${k} ${fmt(c)}${c.skip ? ` · ⏭ ${c.skip}` : ''}</span></div>`).join('')}
+        ${Object.entries(rec.byRule).map(([k, c]) => `<div class="evl"><span class="evk">${RULE_ICON[k] || '•'}</span><span>${RULE[k] || k} ${fmt(c)}</span></div>`).join('')}
+        ${rec.alt.ok.n || rec.alt.no.n ? `<div class="evl"><span class="evk">＋</span><span>−1.5 可加 ${fmt(rec.alt.ok)}</span></div>` : ''}
+      </div>`;
     }
     return h;
   }
@@ -1231,14 +1254,15 @@
     if (!games.some((g) => ANALYSTS.some((a) => mainPick(a, g.officialId)))) return '';
     const core = advCore();
     const ign = (adv.ignore || []).filter((a) => a !== core);
-    const head = `<div class="ahead"><span class="st-sec" style="margin:0">今天押什麼</span><span class="h-dim">${view.league}｜${view.date.slice(5).replace('-', '/')}｜${leagueCore(view.league) ? `主跟 <b style="color:var(--ink)">${core}</b>` : '不設主跟'}${ign.length ? `｜忽略 ${ign.join('、')}` : ''}｜${oddsAge(view.league)}</span><button class="hbtn${adv.set ? ' on' : ''}" data-advset="1" title="主跟誰、忽略誰、判斷規則">⚙</button></div>${renderAdviceRecord()}`;
+    const head = `<div class="ahead" id="advTop"><span class="st-sec" style="margin:0">🎯 今天押什麼</span>${oddsAge(view.league)}${renderAdviceRecord()}<button class="hbtn${adv.set ? ' on' : ''}" data-advset="1" title="主跟${leagueCore(view.league) ? ` ${core}` : '：NBA 不設'}${ign.length ? `｜忽略 ${ign.join('、')}` : ''}">⚙</button></div>${advRecOpen ? renderAdviceRecord(true) : ''}`;
     if (view.league === 'NBA' && games.every((g) => g.startMs < Date.parse('2026-10-20T04:00:00Z'))) {
-      return `<div class="today">${head}<div class="st-help">NBA 季前賽不判斷（例行賽 10/20 起才有歷史）。</div></div>`;
+      return `<div class="today">${head}<div class="st-help">⏸ 季前賽</div></div>`;
     }
     const L = adviceIndex(view.league, view.date);
     if (!L) return `<div class="today">${head}${renderAdviceSettings()}<div class="st-help">${histLoading ? '載入歷史中…' : '歷史紀錄載入失敗'}</div></div>`;
     const rows = games.map((g) => adviceRow(g, L)).filter(Boolean);
-    let html = `<div class="today">${head}${renderAdviceSettings()}<div class="st-help">只用 ${view.league} 歷史（到 ${addDays(view.date, -1).slice(5).replace('-', '/')} 為止）。數字＝過盤率，顏色＝收盤報酬（綠賺紅賠）。點一列看證據。</div>`;
+    // 只用同聯盟、到前一天為止的歷史；數字＝過盤率、顏色＝收盤報酬（綠賺紅賠）；點一列看證據
+    let html = `<div class="today">${head}${renderAdviceSettings()}`;
     for (const t of ['bet', 'skip']) {
       const list = rows.filter((r) => r.tier === t).sort((a, b) => a.time - b.time);
       if (!list.length) continue;
@@ -1252,7 +1276,8 @@
     $('tabs').style.display = stats ? 'none' : '';
     $('dates').style.display = stats ? 'none' : '';
     $('retroBtn').style.display = stats ? 'none' : '';
-    $('modeBtn').textContent = stats ? '✏️ 登錄' : '📊 分析';
+    $('modeBtn').innerHTML = stats ? '✏️<span class="t"> 登錄</span>' : '📊<span class="t"> 分析</span>';
+    $('jumpBtn').style.display = stats ? 'none' : '';
     if (stats) { renderStats(); return; }
     renderTabs(); renderDates(); renderRail(); renderList(); renderSummary();
     $('retroBtn').classList.toggle('on', view.retro);
@@ -1271,11 +1296,12 @@
     cycle(g, 'lotto', btn.dataset.s); render();
   }
   document.addEventListener('click', (e) => {
-    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-adv],[data-advrec],[data-advset],[data-advcore],[data-advign],[data-sel],[data-opp],[data-multi],[data-rev]');
+    const t = e.target.closest('[data-a],[data-d],[data-l],.team,[data-pen],[data-sl],[data-st],[data-anchor],[data-adv],[data-advrec],[data-advrules],[data-advset],[data-advcore],[data-advign],[data-sel],[data-opp],[data-multi],[data-rev]');
     if (!t) return;
     if (t.dataset.sl) { view.st.league = t.dataset.sl; drill = null; saveView(); render(); return; }
     if (t.dataset.st) { view.st[t.dataset.st] = t.dataset.v; if (t.dataset.st !== 'matrix') drill = null; saveView(); render(); return; }
     if (t.dataset.adv) { const id = t.dataset.adv; if (advOpen.has(id)) advOpen.delete(id); else advOpen.add(id); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
+    if (t.dataset.advrules) { advRules = !advRules; const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
     if (t.dataset.advrec) { advRecOpen = !advRecOpen; const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
     if (t.dataset.advset) { adv.set = !adv.set; saveAdv(); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
     if (t.dataset.advcore) { adv.core = t.dataset.advcore; adv.ignore = (adv.ignore || []).filter((a) => a !== adv.core); saveAdv(); const keep = $('list').scrollTop; render(); $('list').scrollTop = keep; return; }
@@ -1323,6 +1349,16 @@
   $('modeBtn').onclick = () => { view.mode = view.mode === 'stats' ? 'entry' : 'stats'; drill = null; saveView(); render(); };
   $('retroBtn').onclick = () => { view.retro = !view.retro; saveView(); render(); toast(view.retro ? '回溯模式：新登錄標「回溯」' : '回溯模式已關閉'); };
   $('syncBtn').onclick = () => syncNow();
+  // 🎯 跳到今天押什麼（清單在 #list 裡捲動；再按一次回到最上面）
+  $('jumpBtn').onclick = () => {
+    const box = $('list'); const top = $('advTop');
+    if (!top) { toast('這天沒有推薦'); return; }
+    const y = top.getBoundingClientRect().top - box.getBoundingClientRect().top + box.scrollTop - 6;
+    const target = Math.abs(box.scrollTop - y) < 40 ? 0 : y;
+    const start = box.scrollTop;
+    box.scrollTo({ top: target, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+    setTimeout(() => { if (Math.abs(box.scrollTop - start) < 2 && Math.abs(target - start) > 2) box.scrollTop = target; }, 700);   // 平滑捲動沒動（背景分頁等）就直接跳
+  };
   $('patBtn').onclick = () => {
     const t = window.prompt('貼上 GitHub 權杖（fine-grained PAT，只需本 repo 的 Contents 讀寫；與盤面同步共用，只存在這台裝置）。留空＝不變更：');
     if (t && t.trim()) { try { localStorage.setItem(PAT_KEY, t.trim()); } catch (e) {} toast('權杖已更新'); syncNow(); }
