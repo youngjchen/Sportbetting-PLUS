@@ -625,6 +625,29 @@ const NHL_TOT_FIX_20261010 = {   // 日期: [客, 主, 錯值, 正確值]
   }
   if(n){ doc.gamesVersion = (doc.gamesVersion||0) + 1; saveDoc(doc); console.info(`[冰球] 大小線更正 ${n} 場`); }
 })();
+// ===== 一次性資料更正：獨贏有沒有開（2026-11-15 使用者：「我要確保所有數據的完善與準確」）=====
+// 隊伍統計的獨贏戰績只算「有開獨贏」的場。冰球以 Stake／BET365 為準；台彩不開 NHL 獨贏，種子檔 data/nhl_games.json 每場都寫 false，
+// 每次開頁載入種子、以及盤口滾出資料檔後的自動結算，都把舊比賽改成「沒開」→ 整季獨贏戰績只剩最近約 3 天的場。
+// 查證：git 歷史 data/stake_api_odds.json、nhl_oddsportal_stake.json、nhl_bet365_odds.json（每 3 小時取樣）9/27–11/14 共 339 場有獨贏賠率；
+// 季賽種子 9/30–11/14 共 311 場全部有 Stake 獨贏（309 場 BET365 也有），沒有任何一場兩邊都沒開。
+// 只把「現值 false 且表上有證據」的場改回 true（手動結算的紀錄也改，只動這一欄）；每次開頁都跑、重跑不重複改，舊備份再匯入也會自動更正。
+const NHL_ML_EVIDENCE_20261115 = {"2026-09-27":["企鵝@軍刀","加拿大@參議員","巨鴨@國王","海怪@加人","火焰@油人","藍衣@紅翼","藍調@黑鷹","閃電@佛羅里","雪崩@猛瑪象","颶風@掠奪者","首都@飛人","魔鬼@島人","鯊魚@騎士"],"2026-09-30":["佛羅里@颶風","加人@油人","加拿大@楓葉","遊騎兵@棕熊","黑鷹@騎士"],"2026-10-01":["企鵝@飛人","國王@雪崩","島人@楓葉"],"2026-10-02":["佛羅里@鯊魚","加人@油人","掠奪者@荒野","油人@加人","海怪@火焰","火焰@海怪","猛瑪象@黑鷹","荒野@掠奪者","藍衣@軍刀","軍刀@藍衣","遊騎兵@閃電","閃電@遊騎兵","飛人@魔鬼","魔鬼@飛人","鯊魚@佛羅里","黑鷹@猛瑪象"],"2026-10-03":["噴射機@棕熊","巨鴨@騎士","棕熊@噴射機","紅翼@遊騎兵","藍調@達拉斯","遊騎兵@紅翼","達拉斯@藍調","首都@颶風"],"2026-10-04":["加拿大@企鵝","參議員@楓葉","國王@鯊魚","棕熊@荒野","海怪@油人","火焰@加人","猛瑪象@藍衣","藍調@雪崩","達拉斯@掠奪者","颶風@飛人","首都@閃電","魔鬼@島人","黑鷹@軍刀"],"2026-10-05":["佛羅里@巨鴨","噴射機@紅翼","火焰@海怪","猛瑪象@遊騎兵","騎士@加人"],"2026-10-06":["參議員@棕熊","噴射機@企鵝","飛人@閃電","鯊魚@達拉斯"],"2026-10-07":["佛羅里@國王","參議員@紅翼","島人@遊騎兵","掠奪者@楓葉","猛瑪象@魔鬼","荒野@軍刀","藍調@黑鷹","颶風@加拿大","騎士@海怪"],"2026-10-08":["企鵝@首都","油人@巨鴨","雪崩@噴射機"],"2026-10-09":["加人@颶風","掠奪者@加拿大","楓葉@騎士","猛瑪象@棕熊","荒野@閃電","達拉斯@軍刀","雪崩@火焰","飛人@參議員","鯊魚@藍調","黑鷹@島人"],"2026-10-10":["企鵝@藍衣","巨鴨@噴射機","海怪@紅翼","遊騎兵@首都"],"2026-10-11":["加人@魔鬼","國王@騎士","巨鴨@火焰","掠奪者@參議員","楓葉@雪崩","油人@鯊魚","猛瑪象@軍刀","紅翼@加拿大","荒野@佛羅里","藍衣@藍調","達拉斯@企鵝","閃電@島人","颶風@黑鷹","飛人@棕熊"],"2026-10-12":["加人@遊騎兵","海怪@首都","颶風@飛人"],"2026-10-13":["佛羅里@軍刀","參議員@魔鬼","騎士@荒野"],"2026-10-14":["企鵝@黑鷹","佛羅里@藍衣","加人@島人","棕熊@鯊魚","楓葉@猛瑪象","油人@國王","海怪@飛人","火焰@巨鴨","荒野@噴射機","藍調@參議員","軍刀@加拿大","閃電@遊騎兵","雪崩@達拉斯","首都@颶風","騎士@掠奪者","魔鬼@紅翼"],"2026-10-15":["加拿大@首都","達拉斯@雪崩"],"2026-10-16":["加人@佛羅里","噴射機@黑鷹","島人@參議員","海怪@閃電","火焰@騎士","猛瑪象@油人","藍調@荒野","軍刀@楓葉","遊騎兵@魔鬼","飛人@紅翼","鯊魚@掠奪者"],"2026-10-17":["企鵝@雪崩","棕熊@巨鴨"],"2026-10-18":["企鵝@騎士","加人@閃電","參議員@飛人","島人@楓葉","棕熊@國王","油人@猛瑪象","海怪@佛羅里","藍調@掠奪者","軍刀@加拿大","遊騎兵@藍衣","達拉斯@黑鷹","颶風@噴射機","魔鬼@首都","鯊魚@紅翼"],"2026-10-19":["藍衣@荒野","颶風@火焰"],"2026-10-20":["企鵝@猛瑪象","巨鴨@遊騎兵","雪崩@飛人","鯊魚@楓葉"],"2026-10-21":["噴射機@藍調","國王@首都","巨鴨@島人","棕熊@達拉斯","楓葉@藍衣","紅翼@海怪","荒野@油人","閃電@騎士","雪崩@魔鬼","颶風@加人","鯊魚@加拿大"],"2026-10-22":["佛羅里@參議員","飛人@軍刀"],"2026-10-23":["佛羅里@企鵝","噴射機@達拉斯","國王@島人","巨鴨@魔鬼","掠奪者@棕熊","猛瑪象@海怪","紅翼@加人","荒野@火焰","遊騎兵@楓葉","颶風@油人","騎士@藍調","鯊魚@參議員"],"2026-10-24":["加拿大@黑鷹","閃電@雪崩"],"2026-10-25":["國王@魔鬼","巨鴨@飛人","掠奪者@企鵝","楓葉@油人","紅翼@火焰","荒野@海怪","軍刀@首都","遊騎兵@參議員","閃電@猛瑪象","颶風@藍調","騎士@藍衣","鯊魚@棕熊"],"2026-10-26":["佛羅里@黑鷹","加拿大@噴射機","島人@達拉斯","荒野@加人","雪崩@掠奪者"],"2026-10-27":["國王@遊騎兵","楓葉@火焰","紅翼@油人"],"2026-10-28":["佛羅里@噴射機","加人@巨鴨","加拿大@藍調","參議員@騎士","國王@黑鷹","島人@掠奪者","棕熊@颶風","荒野@猛瑪象","藍衣@飛人","軍刀@鯊魚","魔鬼@達拉斯"],"2026-10-29":["楓葉@海怪","火焰@油人","飛人@首都","魔鬼@雪崩"],"2026-10-30":["加人@鯊魚","加拿大@達拉斯","參議員@國王","噴射機@閃電","島人@荒野","棕熊@藍調","猛瑪象@企鵝","藍衣@颶風","軍刀@巨鴨","首都@掠奪者","黑鷹@紅翼"],"2026-10-31":["噴射機@佛羅里","海怪@火焰","魔鬼@騎士"],"2026-11-01":["企鵝@加拿大","參議員@鯊魚","楓葉@加人","油人@島人","火焰@雪崩","藍衣@達拉斯","藍調@紅翼","軍刀@國王","閃電@掠奪者","黑鷹@棕熊"],"2026-11-02":["參議員@巨鴨","噴射機@颶風","油人@遊騎兵","火焰@鯊魚","猛瑪象@飛人","紅翼@佛羅里","荒野@首都","雪崩@黑鷹","騎士@棕熊"],"2026-11-03":["火焰@鯊魚","紅翼@佛羅里","雪崩@黑鷹","騎士@棕熊"],"2026-11-04":["噴射機@加拿大","巨鴨@加人","油人@魔鬼","猛瑪象@楓葉","紅翼@閃電","荒野@飛人","藍調@遊騎兵","達拉斯@首都","雪崩@藍衣","颶風@掠奪者","騎士@企鵝"],"2026-11-05":["參議員@軍刀","火焰@海怪","鯊魚@國王","黑鷹@佛羅里"],"2026-11-06":["加人@噴射機","巨鴨@油人","掠奪者@雪崩","棕熊@企鵝","猛瑪象@加拿大","藍調@魔鬼","達拉斯@藍衣","颶風@島人","飛人@遊騎兵","騎士@紅翼","黑鷹@閃電"],"2026-11-07":["巨鴨@火焰","藍衣@軍刀","鯊魚@荒野"],"2026-11-08":["企鵝@國王","佛羅里@首都","加人@油人","加拿大@楓葉","猛瑪象@參議員","紅翼@雪崩","藍調@掠奪者","遊騎兵@海怪","閃電@荒野","魔鬼@島人","鯊魚@達拉斯","黑鷹@颶風"],"2026-11-09":["企鵝@巨鴨","佛羅里@棕熊","閃電@噴射機","飛人@火焰","騎士@軍刀","魔鬼@楓葉"],"2026-11-10":["島人@鯊魚","遊騎兵@油人","飛人@加人"],"2026-11-11":["佛羅里@藍衣","掠奪者@國王","紅翼@藍調","荒野@加拿大","雪崩@楓葉","首都@參議員","魔鬼@噴射機"],"2026-11-12":["企鵝@鯊魚","掠奪者@巨鴨","猛瑪象@騎士","遊騎兵@火焰","閃電@軍刀","飛人@油人"],"2026-11-13":["加拿大@棕熊","噴射機@達拉斯","島人@國王","紅翼@佛羅里","荒野@楓葉","藍調@猛瑪象","軍刀@黑鷹","閃電@藍衣","雪崩@參議員","颶風@海怪","首都@魔鬼"],"2026-11-14":["掠奪者@騎士","遊騎兵@加人"]};
+(function fixNhlMlOffered20261115(){
+  let n = 0;
+  for(const rec of doc.games||[]){
+    if(rec.league!=="NHL" || rec.mlOffered!==false) continue;
+    const list = NHL_ML_EVIDENCE_20261115[rec.date];
+    if(list && list.includes(`${rec.awayTeam}@${rec.homeTeam}`)){ rec.mlOffered = true; n++; }
+  }
+  if(n){ doc.gamesVersion = (doc.gamesVersion||0) + 1; saveDoc(doc); console.info(`[冰球] 獨贏開盤更正 ${n} 場`); }
+})();
+// 之後的判定（自動結算、存檔補齊、手動結算共用）：有 Stake／BET365 獨贏 → 有開；這次沒抓到盤口 → 沿用紀錄；
+// 連紀錄都沒有 → 視為有開（Stake 每場都開）；只有「抓到 Stake／BET365 盤口卻都沒有獨贏」的新場才記為沒開。台彩的 mlOffered 不參與。
+function nhlMlOffered(model, old){
+  if((model && model.stake && model.stake.ml) || (model && model.bet365 && model.bet365.ml)) return true;
+  if(old && typeof old.mlOffered==="boolean") return old.mlOffered;
+  return !(model && (model.stake || model.bet365));
+}
 // ===== 復原（棒球 snapshot 系統移植;燈/注/⇄/收合/刪除/結算前存快照,⌘Z 或選單復原） =====
 const _snaps = [];
 function snapshot(){
@@ -818,6 +841,8 @@ async function loadSeedGames(){
       // 管線種子（nhl_games.json）只有比分、沒有盤口線：本機已記到的讓分／大小要保留，不可被空值洗掉
       // （2026-10-09：42 場的讓分就是這樣被洗掉的）
       const rec = { ...g };
+      // 種子的 mlOffered 是台彩口徑（台彩不開 NHL 獨贏，每場都是 false）→ 不採用；沿用本機紀錄，沒有紀錄視為有開（Stake 每場都開）
+      rec.mlOffered = old ? old.mlOffered!==false : true;
       if(old){
         if((rec.hdFav==null || rec.hdVal==null) && old.hdFav && old.hdVal!=null){ rec.hdFav=old.hdFav; rec.hdVal=old.hdVal; }
         if(rec.totBasis==null && old.totBasis!=null) rec.totBasis=old.totBasis;
@@ -896,13 +921,13 @@ function autoSettleFromPregame(){
     const it = ensureItem(g.date, g.officialId);
     const model = modelFromPregame(g);
     const useHd = model.hdFav && model.hdVal!=null;
-    const useMl = !!((model.stake&&model.stake.ml)||(model.bet365&&model.bet365.ml)) || g.mlOffered!==false;
+    const old = gameFind(g.officialId, g.date, "NHL", g.away, g.home);
+    const useMl = nhlMlOffered(model, old);               // 盤口滾出資料檔後沿用紀錄，不再被改成「沒開」
     const rec = { sid:g.officialId, date:g.date, league:"NHL", awayTeam:g.away, homeTeam:g.home,
       awayScore:g.awayScore, homeScore:g.homeScore,
       hdFav:useHd?model.hdFav:null, hdVal:useHd?model.hdVal:null,
       totBasis:totalLineFor(it, model), mlOffered:useMl,
       decidedBy:g.decidedBy||null };
-    const old = gameFind(rec.sid, rec.date, "NHL", rec.awayTeam, rec.homeTeam);
     if(old && old.manual) continue;                      // 手動覆蓋不被管線洗掉
     // 盤口資料已滾出資料檔時（Stake／BET365 都沒有這場），保留先前記到的讓分與大小，不用空值或預設 6.5 覆蓋
     if(old){
@@ -975,7 +1000,7 @@ function nhlArchiveApply(arch){
       const useHd = !!(model.hdFav && model.hdVal!=null);
       const old = gameFind(g.officialId, g.date, "NHL", g.away, g.home);
       if(!old){
-        const useMl = !!((model.stake&&model.stake.ml)||(model.bet365&&model.bet365.ml)) || g.mlOffered!==false;
+        const useMl = nhlMlOffered(model, null);
         gameUpsert({ sid:g.officialId, date:g.date, league:"NHL", awayTeam:g.away, homeTeam:g.home,
           awayScore:g.awayScore, homeScore:g.homeScore,
           hdFav:useHd?model.hdFav:null, hdVal:useHd?model.hdVal:null,
@@ -1591,7 +1616,7 @@ $("#settleConfirm").onclick = ()=>{
   gameUpsert({ sid:m.officialId, date:m.date, league:m.league, awayTeam:m.away, homeTeam:m.home,
     awayScore:a, homeScore:h, hdFav:(s.hd&&s.hd!=="push")?fav:fav, hdVal:!isNaN(hdLine)?Math.abs(hdLine):(m.hdVal!=null?m.hdVal:null),
     totBasis:totalLineFor(it, m),
-    mlOffered:m.mlOffered!==false, manual:true });
+    mlOffered:nhlMlOffered(m, gameFind(m.officialId, m.date, m.league, m.away, m.home)), manual:true });
   bumpGamesVersion(); saveDoc(doc);
   $("#settleModal").classList.remove("show"); render();
 };
