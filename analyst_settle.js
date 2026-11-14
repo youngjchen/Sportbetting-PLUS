@@ -6,18 +6,23 @@
    為什麼要另存：賽程／賠率檔只留最近幾天，沒結算到的比賽會從檔案消失。
    官方核對：NHL（api-web.nhle.com）、MLB（statsapi.mlb.com）比分不一致 → 標 review、不結算；
             官方連不上不擋結算（officialCheck 記 unavailable）。NBA 無官方源，只用玩運彩比分。
+   今天押什麼存檔（2026-11-15）：每輪替「還沒開賽、有推薦」的場跑一次 analyst-advice.js 的判斷，寫進該場的 advice；
+   開賽後就不再改（＝開賽前 15 分內的最後判斷），頁面拿它算「系統戰績」。用預設設定：主跟 BOOKIE（NBA 不設）、忽略 BANKROLL；
+   伺服器沒有冰球頁的手動異常標記。這段失敗不影響結算。
    ============================================================ */
 const fs = require('node:fs');
 const path = require('node:path');
 const Core = require('./analyst-core.js');
 const NhlStake = require('./nhl_stake_core.js');
-const { TEAM_ZH: NHL_TEAM_ZH } = require('./nhl_bet365_core.js');
+const NhlBet365 = require('./nhl_bet365_core.js');
+const Advice = require('./analyst-advice.js');
+const { TEAM_ZH: NHL_TEAM_ZH } = NhlBet365;
 
 const ROOT = __dirname;
 const PICKS = 'state/analyst_picks.json';
 const RESULTS = 'data/analyst_results.json';
 const SRC = {
-  NHL: { pregame: 'data/nhl_pregame.json', stake: 'data/stake_api_odds.json' },
+  NHL: { pregame: 'data/nhl_pregame.json', stake: 'data/stake_api_odds.json', b365: 'data/nhl_bet365_odds.json' },
   MLB: { pregame: 'data/pregame_data.json', stake: 'data/baseball_stake_odds.json' },
   NBA: { pregame: 'data/nba_pregame.json', stake: 'data/nba_stake_odds.json' },
 };
@@ -25,6 +30,9 @@ const SRC = {
 const NBA_REGULAR_START_MS = Date.parse('2026-10-20T04:00:00Z');
 const MLB_ABBR_ALIAS = { AZ: 'ARI', CHW: 'CWS', WSN: 'WSH', KCR: 'KC', SDP: 'SD', SFG: 'SF', TBR: 'TB', ATH: 'OAK' };
 const MISSING_AFTER_MS = 3 * 24 * 3600e3;
+const HISTORY = 'data/analyst_history.json';
+const ADVICE_IGNORE = ['BANKROLL'];
+const DEFAULT_PHASES = ['regular', 'postseason', null];
 
 function readJson(rel, fallback) {
   try { return JSON.parse(fs.readFileSync(path.join(ROOT, rel), 'utf8')); } catch (e) { return fallback; }
@@ -170,6 +178,46 @@ async function settle({ picks, results, schedule, stake, now = Date.now(), offic
   return { results: out, changed };
 }
 
+/* ---------- 今天押什麼存檔 ---------- */
+// 回傳 { games: { officialId: advice }, count }；只處理還沒開賽的場
+function adviceSnapshots({ picks, results, schedule, feeds, history, now = Date.now() }) {
+  const live = Core.livePicks(picks);
+  const H = history || { games: {}, picks: [] };
+  const histPicks = (H.picks || []).map((p) => { const g = (H.games || {})[p.officialId] || {}; return Object.assign({ date: g.date, time: g.time, away: g.away, home: g.home, status: '回溯' }, p); });
+  const games = Object.assign({}, H.games || {});
+  for (const [id, r] of Object.entries((results && results.games) || {})) games[id] = Object.assign({}, games[id] || {}, r, r.review ? { final: false } : {});
+  const ledger = Core.buildLedger(Core.mergePicks(histPicks, live), games);
+  const ctxCache = new Map();
+  const ctxFor = (league, date) => {
+    const k = `${league}|${date}`;
+    if (!ctxCache.has(k)) {
+      const rows = Core.filterRows(ledger, { league, phases: DEFAULT_PHASES, to: addDays(date, -1) })
+        .filter((r) => !Core.WATCH.includes(r.analyst) && !ADVICE_IGNORE.includes(r.analyst));
+      const ann = Core.annotateContexts(rows);
+      ctxCache.set(k, { ann, spotRec: league === 'NHL' ? Core.spotRecord(ann, games) : null });
+    }
+    return ctxCache.get(k);
+  };
+  const deps = { Core, NhlStake, NhlBet365 };
+  const at = new Date(now).toISOString();
+  const out = {};
+  for (const id of new Set(live.map((p) => p.officialId))) {
+    const p0 = live.find((p) => p.officialId === id);
+    const g = schedule[p0.league] && schedule[p0.league].get(id);
+    if (!g || !(now < g.startMs)) continue;                                        // 只在開賽前判斷
+    if (g.league === 'NBA' && g.startMs < NBA_REGULAR_START_MS) continue;          // NBA 季前賽不判斷
+    const all = Core.ANALYSTS.map((a) => {
+      const mine = live.filter((p) => p.officialId === id && p.analyst === a);
+      return mine.find((p) => p.layer === 'card') || mine.find((p) => p.layer === 'lotto') || null;
+    }).filter(Boolean);
+    if (!all.length) continue;
+    const dec = Advice.decide({ g, all, ignored: (a) => ADVICE_IGNORE.includes(a), core: g.league === 'NBA' ? null : 'BOOKIE',
+      L: ctxFor(g.league, g.date), feeds, docs: null, deps });
+    out[id] = Advice.freeze(dec, at);
+  }
+  return out;
+}
+
 function serialize(results) {
   const ids = Object.keys(results.games).sort((a, b) => {
     const x = results.games[a]; const y = results.games[b];
@@ -183,7 +231,21 @@ async function main() {
   if (!picksDoc || !Array.isArray(picksDoc.picks)) { console.log('INFO 尚無推薦檔，跳過'); return; }
   const schedule = {}; const stake = {};
   for (const lg of Object.keys(SRC)) { schedule[lg] = normalizeGames(lg, readJson(SRC[lg].pregame, [])); stake[lg] = readJson(SRC[lg].stake, null); }
-  const { results, changed } = await settle({ picks: picksDoc.picks, results: readJson(RESULTS, { games: {} }), schedule, stake });
+  const settled = await settle({ picks: picksDoc.picks, results: readJson(RESULTS, { games: {} }), schedule, stake });
+  const { results } = settled; let { changed } = settled;
+  try {
+    const feeds = { NHL: { stake: stake.NHL, b365: readJson(SRC.NHL.b365, null) }, MLB: { stake: stake.MLB }, NBA: { stake: stake.NBA } };
+    const snaps = adviceSnapshots({ picks: picksDoc.picks, results, schedule, feeds, history: readJson(HISTORY, null) });
+    let n = 0;
+    for (const [id, adv] of Object.entries(snaps)) {
+      const p = picksDoc.picks.find((x) => x.officialId === id) || {};
+      const prev = results.games[id] || { league: p.league, officialId: id, date: p.date, time: p.time, away: p.away, home: p.home };
+      if (Advice.sameAdvice(prev.advice, adv)) continue;
+      results.games[id] = Object.assign({}, prev, { advice: adv }); n++;
+    }
+    if (n) console.log(`OK 今天押什麼存檔 ${n} 場`);
+    changed += n;
+  } catch (e) { console.log(`WARN 今天押什麼存檔失敗（不影響結算）：${e && e.message}`); }
   if (!changed) { console.log('INFO 沒有新結果'); return; }
   fs.writeFileSync(path.join(ROOT, RESULTS), serialize(results), 'utf8');
   const g = Object.values(results.games);
@@ -192,4 +254,4 @@ async function main() {
 
 if (require.main === module) main().catch((e) => { console.error(e); process.exit(1); });
 
-module.exports = { normalizeGames, stakeClosing, compareOfficial, nhlOfficialFrom, mlbOfficialFrom, settle, serialize, NBA_REGULAR_START_MS };
+module.exports = { normalizeGames, stakeClosing, compareOfficial, nhlOfficialFrom, mlbOfficialFrom, settle, serialize, adviceSnapshots, NBA_REGULAR_START_MS };

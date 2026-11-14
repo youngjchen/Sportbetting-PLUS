@@ -3,6 +3,7 @@ name: analyst-settle
 # 分析師推薦自動結算（寫 data/analyst_results.json）。
 # 與其他爬蟲同一套：單次執行迴圈 5h10m、每 15 分結算一輪，結束前用 WORKFLOW_PAT 自我接棒；
 # cron 只負責斷鏈重點火（cron 常遲到或整批丟，不能當主力）。
+# 每輪也替還沒開賽的場存「今天押什麼」判斷（analyst-advice.js，寫進結算檔的 advice；2026-11-15）。
 # 推薦檔（state/analyst_picks.json）更新會觸發一次；迴圈進行中則排隊，迴圈每輪也會重抓最新推薦。
 # 絕不取消執行中的 run（concurrency 死鎖）；要停用請在 Actions 頁 Disable workflow。
 on:
@@ -13,6 +14,7 @@ on:
       - state/analyst_picks.json
       - analyst_settle.js
       - analyst-core.js
+      - analyst-advice.js
       - .github/workflows/analyst-settle.yml
   schedule:
     - cron: '17 */2 * * *'
@@ -35,7 +37,7 @@ jobs:
         with:
           node-version: '20'
       - name: 驗證結算程式
-        run: node --test tests/analyst_core.test.js tests/analyst_settle.test.js
+        run: node --test tests/analyst_core.test.js tests/analyst_settle.test.js tests/analyst_advice.test.js
       - name: 5h10m 結算迴圈（每 15 分）
         run: |
           git config user.name "github-actions[bot]"
