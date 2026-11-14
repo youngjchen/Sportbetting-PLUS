@@ -1,15 +1,16 @@
 {
   "schemaVersion": 1,
   "provider": "bet365-official-first",
-  "updated": "2026-11-14T17:36:09.284Z",
+  "updated": "2026-11-14T17:42:12.676Z",
   "source": "https://www.bet365.com/",
   "pages": {
     "MLB": {
-      "ok": true
+      "ok": false,
+      "error": "RuntimeError: solve-cloudflare returned challenge/status 403"
     },
     "ALL": {
       "ok": false,
-      "error": "Bet365 official content unavailable"
+      "error": "Request failed with status code 403"
     }
   },
   "leagues": {
@@ -20,10 +21,11 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-14T17:36:09.284Z",
+      "lastAttemptAt": "2026-11-14T17:42:12.676Z",
       "lastSuccessAt": "2026-10-28T23:54:58.752Z",
       "errors": [
-        "Bet365 official content unavailable"
+        "RuntimeError: solve-cloudflare returned challenge/status 403",
+        "Request failed with status code 403"
       ]
     },
     "NPB": {
@@ -33,10 +35,11 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-14T17:36:09.284Z",
+      "lastAttemptAt": "2026-11-14T17:42:12.676Z",
       "lastSuccessAt": "2026-10-28T08:57:29.164Z",
       "errors": [
-        "Bet365 official content unavailable"
+        "RuntimeError: solve-cloudflare returned challenge/status 403",
+        "Request failed with status code 403"
       ]
     },
     "KBO": {
@@ -46,10 +49,11 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-14T17:36:09.284Z",
+      "lastAttemptAt": "2026-11-14T17:42:12.676Z",
       "lastSuccessAt": "2026-11-08T04:49:14.467Z",
       "errors": [
-        "Bet365 official content unavailable"
+        "RuntimeError: solve-cloudflare returned challenge/status 403",
+        "Request failed with status code 403"
       ]
     },
     "CPBL": {
@@ -59,10 +63,11 @@
       "fallbackMatched": 0,
       "oddsPortalMatched": 0,
       "matched": 0,
-      "lastAttemptAt": "2026-11-14T17:36:09.284Z",
+      "lastAttemptAt": "2026-11-14T17:42:12.676Z",
       "lastSuccessAt": "2026-10-10T09:04:27.563Z",
       "errors": [
-        "Bet365 official content unavailable"
+        "RuntimeError: solve-cloudflare returned challenge/status 403",
+        "Request failed with status code 403"
       ]
     }
   },
