@@ -1,0 +1,56 @@
+# ============================================================
+#  NHL 收盤存檔（2026-11-15 使用者要求：電腦隔一週再開，也要自動補齊異常場）
+#  · 冰球卡片／異常快照只算在打開 nhl.html 的裝置；雲端賠率檔只留約 3 天。
+#  · 每小時把已完賽場次的賽程比分＋Stake／BET365 最後一版存進 data/nhl_close_archive.json（保留 30 天）；
+#    nhl.html 久未開啟時讀它，只補缺的卡片／比分／異常快照。
+#  · 短工作（不是迴圈）：只讀三份冰球資料檔、只寫存檔；內容沒變不提交。
+#  · 存檔要在賠率滾出即時檔（約 3 天）前跑到；cron 常遲到或丟幾輪也還有很大餘裕。
+# ============================================================
+name: nhl-close-archive
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/nhl-close-archive.yml'
+      - 'nhl_close_archive.js'
+  schedule:
+    - cron: '43 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: nhl-close-archive
+  cancel-in-progress: false
+
+jobs:
+  archive:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: 驗證存檔程式
+        run: node --test tests/nhl_close_archive.test.js
+      - name: 更新存檔並推送
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for i in 1 2 3 4 5; do
+            git rebase --abort 2>/dev/null || true
+            git fetch --depth 1 origin main || true
+            git reset --hard origin/main || true
+            node nhl_close_archive.js || { echo "WARN 存檔程式失敗"; exit 1; }
+            git add data/nhl_close_archive.json 2>/dev/null || true
+            if git diff --cached --quiet; then echo "OK 沒有變動"; break; fi
+            git commit -m "nhl close archive $(date -u +%FT%TZ) [skip ci]" || break
+            if git push origin HEAD:main; then echo "OK 已推送"; break; fi
+            echo "WARN 推送被拒（爬蟲同時提交），第 $i 次重試"
+            sleep $(( i * 7 ))
+          done

@@ -839,9 +839,11 @@ let stakeOddsCache = { updated:null, games:{} };
 let oddsCache = { updated:null, games:{} };
 let seriesCache = {};
 async function loadPregame(){
+  let archiveOk = false;
+  try{ archiveOk = await nhlArchiveFillIfDue(); }catch(_){}   // 太久沒開：先用收盤存檔補齊，再跑自動結算
   try{
     const r = await fetch(`data/nhl_pregame.json?t=${Date.now()}`);
-    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.games)){ pregameCache = j; autoSettleFromPregame();
+    if(r.ok){ const j = await r.json(); if(j && Array.isArray(j.games)){ pregameCache = j; if(archiveOk) nhlArchiveMarkSeen(); autoSettleFromPregame();
       const st=$("#stamp"); if(st && j.updated){ const d=new Date(j.updated); if(!isNaN(d)){ const t=new Date(d.getTime()+8*3600e3);
         st.textContent = `資料更新 ${String(t.getUTCMonth()+1).padStart(2,"0")}-${String(t.getUTCDate()).padStart(2,"0")} ${String(t.getUTCHours()).padStart(2,"0")}:${String(t.getUTCMinutes()).padStart(2,"0")}`; } }
       render(); } }
@@ -926,6 +928,89 @@ function autoSettleFromPregame(){
     gameUpsert(rec); changed = true;
   }
   if(changed){ bumpGamesVersion(); saveDoc(doc); }
+}
+
+// ===== 收盤存檔補齊（2026-11-15 使用者要求：電腦隔一週再開，也要自動補齊異常場）=====
+// 卡片與異常快照只算在打開本頁的裝置；雲端 Stake／BET365 檔只留約 3 天，太久沒開的裝置就算不出滾出去那幾天的異常場。
+// nhl-close-archive.yml 每小時把已完賽場次（賽程比分＋Stake／BET365 最後一版）存進 data/nhl_close_archive.json（保留 30 天）。
+// 這台裝置超過 36 小時沒載入過賽程 → 先讀存檔補齊，再跑一般自動結算（順序要緊：反過來的話滾出的場會先被預設大小 6.5 結算）。
+// 只補缺的：卡片沒有才建立；異常快照只在更完整時換（完整的絕不覆蓋）；結算只補空欄位、手動結算不碰；
+// 比賽紀錄沒有才新增、有則只補讓分／大小空值、手動紀錄不碰；沒有真實大小盤口時不補大小（不用預設 6.5）。
+const NHL_ARCHIVE_SEEN_KEY = DOC_KEY+"_archive_seen";
+const NHL_ARCHIVE_GAP_MS = 36*3600e3;
+let nhlArchiveBusy = null;
+function nhlArchiveApply(arch){
+  const res = { cards:0, recs:0, snaps:0, settles:0 };
+  const blank = (v)=> v==null || v==="";
+  const stakeFeed = { provider:"stake-official", updated:arch.updated||null, games:{} };
+  const b365Feed = { provider:"nhl-close-archive", updated:arch.updated||null, games:{} };
+  for(const [id,e] of Object.entries(arch.games||{})){
+    if(e && e.stake) stakeFeed.games[id] = e.stake;
+    if(e && e.b365) b365Feed.games[id] = e.b365;
+  }
+  const liveStake = stakeOddsCache, liveB365 = oddsCache;
+  try{
+    stakeOddsCache = stakeFeed; oddsCache = b365Feed;          // 同步執行、算完立刻換回，沿用與即時完全相同的判定程式
+    for(const e of Object.values(arch.games||{})){
+      const g = e && e.pregame;
+      if(!g || !g.officialId || g.status!=="finished" || g.awayScore==null || g.homeScore==null) continue;
+      if(!e.stake && !e.b365) continue;                          // 存檔沒有盤口＝沒有可補的，交給一般流程
+      const b0 = doc.boards[g.date];
+      const had = !!(b0 && b0.items && b0.items.some(x=>x.id===g.officialId));
+      const model = modelFromPregame(g);                          // 卡片沒有才建立
+      const it = model._item;
+      if(!had) res.cards++;
+      if(nhlSnapScore(it.anomSnap) < 4){
+        const snap = nhlLiveSnap(g);
+        if(snap && nhlSnapScore(snap) > nhlSnapScore(it.anomSnap)){ it.anomSnap = { ...snap, source:"nhl_close_archive" }; res.snaps++; }
+      }
+      const totManual = it.totVal!=null && it.totVal!=="";
+      const realTot = model.totLine!=null || totManual;
+      const auto = computeAutoSettled(model);
+      if(auto && !realTot) delete auto.tot;
+      if(auto && !(it.settled && it.settled.manual)){
+        if(!it.settled){ it.settled = auto; res.settles++; }
+        else { let n=0; for(const k of Object.keys(auto)) if(blank(it.settled[k]) && !blank(auto[k])){ it.settled[k] = auto[k]; n++; } if(n) res.settles++; }
+      }
+      const useHd = !!(model.hdFav && model.hdVal!=null);
+      const old = gameFind(g.officialId, g.date, "NHL", g.away, g.home);
+      if(!old){
+        const useMl = !!((model.stake&&model.stake.ml)||(model.bet365&&model.bet365.ml)) || g.mlOffered!==false;
+        gameUpsert({ sid:g.officialId, date:g.date, league:"NHL", awayTeam:g.away, homeTeam:g.home,
+          awayScore:g.awayScore, homeScore:g.homeScore,
+          hdFav:useHd?model.hdFav:null, hdVal:useHd?model.hdVal:null,
+          totBasis:realTot?totalLineFor(it, model):null, mlOffered:useMl, decidedBy:g.decidedBy||null });
+        res.recs++;
+      } else if(!old.manual){
+        let n=0;
+        if(useHd && (blank(old.hdFav) || blank(old.hdVal))){ old.hdFav = model.hdFav; old.hdVal = model.hdVal; n++; }
+        if(realTot && blank(old.totBasis)){ old.totBasis = totalLineFor(it, model); n++; }
+        if(n) res.recs++;
+      }
+    }
+  } finally { stakeOddsCache = liveStake; oddsCache = liveB365; }
+  return res;
+}
+function nhlArchiveMarkSeen(){ try{ localStorage.setItem(NHL_ARCHIVE_SEEN_KEY, new Date().toISOString()); }catch(_){} }
+// 回傳 true＝不必補或已補好（可以記「看過」）；false＝該補但存檔抓不到（不記，下次載入再試）
+async function nhlArchiveFillIfDue(){
+  let last = NaN; try{ last = Date.parse(localStorage.getItem(NHL_ARCHIVE_SEEN_KEY)||""); }catch(_){}
+  if(Number.isFinite(last) && Date.now()-last < NHL_ARCHIVE_GAP_MS) return true;
+  if(nhlArchiveBusy) return nhlArchiveBusy;
+  nhlArchiveBusy = (async()=>{
+    try{
+      const r = await fetch(`data/nhl_close_archive.json?t=${Date.now()}`);
+      if(!r.ok) return false;
+      const arch = await r.json();
+      if(!arch || !arch.games) return false;
+      const res = nhlArchiveApply(arch);
+      if(res.cards||res.recs||res.snaps||res.settles){ bumpGamesVersion(); saveDoc(doc); }
+      console.info(`[冰球] 收盤存檔補齊：新增 ${res.cards} 張卡；補 ${res.recs} 筆比賽紀錄、${res.snaps} 個異常快照、${res.settles} 場結算`);
+      return true;
+    }catch(e){ return false; }
+    finally{ nhlArchiveBusy = null; }
+  })();
+  return nhlArchiveBusy;
 }
 
 // ===== 使用者卡片狀態（棒球 item 同構:每選項 {lights,bet}） =====
