@@ -274,3 +274,42 @@ test('collector never stores odds for a fixture Stake marks live', async () => {
   assert.deepEqual(output.games['det-phi'], previous.games['det-phi']);
   assert.ok(output.games.other);
 });
+
+/* ---------- 讓分所有線（2026-11-15：開始記錄 −2.5 副盤） ---------- */
+const LINES = [
+  { line: 1.5, favorite: 'away', away: 2.6, home: 1.45 },
+  { line: 2.5, favorite: 'away', away: 3.75, home: 1.24 },
+  { line: 3.5, favorite: 'away', away: 7.4, home: 1.07 },
+];
+
+test('official page keeps every handicap line (main line unchanged)', () => {
+  const markets = parseStakeOfficialPage(EVENT_HTML, { name: 'New York Rangers - Tampa Bay Lightning' });
+  assert.deepEqual(markets.hdLines, LINES);
+  assert.equal(markets.hd.line, 1.5);
+});
+
+test('collector stores hdLines and hdLinesOpen outside the snapshots; alt-only moves add no history', async () => {
+  const schedule = { schedule: [{ fixtures: [
+    { slug: 'future-game', name: 'New York Rangers - Tampa Bay Lightning', date: FUTURE, status: 'active', preMatchEnabled: true },
+  ] }] };
+  const run = (html, previous, now) => collectStakeOdds({
+    apiKey: '', now, previous,
+    request: async (endpoint) => { if (endpoint.includes('/schedule/')) return schedule; throw new Error('no api'); },
+    fetchPage: async () => html,
+  });
+  const first = await run(EVENT_HTML, { games: {} }, NOW);
+  const g1 = first.games['future-game'];
+  assert.deepEqual(g1.hdLines, LINES);
+  assert.deepEqual(g1.hdLinesOpen, { at: new Date(NOW).toISOString(), lines: LINES });
+  assert.equal(g1.history.length, 1);
+  assert.equal(g1.history[0].hdLines, undefined);
+
+  const moved = EVENT_HTML.replace('3.75', '3.90');
+  const later = NOW + 600000;
+  const second = await run(moved, first, later);
+  const g2 = second.games['future-game'];
+  assert.equal(g2.hdLines.find((x) => x.line === 2.5).away, 3.9);
+  assert.equal(g2.hdLinesAt, new Date(later).toISOString());
+  assert.deepEqual(g2.hdLinesOpen, g1.hdLinesOpen);
+  assert.equal(g2.history.length, 1);
+});

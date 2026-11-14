@@ -199,6 +199,29 @@ function pairedButtons($, accordion) {
   return pairs;
 }
 
+// 讓分所有線（2026-11-15 使用者：「開始記錄」−2.5 副盤）：官方頁 Handicap 區每一對按鈕＝一條線（主隊在前）。
+// 以 aria-label 的隊名確認主客，對不上才用「主隊在前」。回傳 [{ line, favorite, away, home }]（favorite＝讓 line 的那隊）。
+function buttonSide(button, away, home) {
+  const text = normalizedTeamName(button && button.aria);
+  const homeKey = normalizedTeamName(home); const awayKey = normalizedTeamName(away);
+  if (homeKey && text.startsWith(homeKey)) return 'home';
+  if (awayKey && text.startsWith(awayKey)) return 'away';
+  return null;
+}
+function handicapLinesFromPairs(pairs, away, home) {
+  const lines = new Map();
+  for (const pair of pairs) {
+    if (!validOdds(pair.first.odds) || !validOdds(pair.second.odds)) continue;
+    const firstSide = buttonSide(pair.first, away, home);
+    const [homeButton, awayButton] = firstSide === 'away' ? [pair.second, pair.first] : [pair.first, pair.second];
+    const line = Math.abs(homeButton.line);
+    const favorite = homeButton.line < 0 ? 'home' : 'away';
+    const key = `${favorite}|${line}`;
+    if (!lines.has(key)) lines.set(key, { line, favorite, away: Number(awayButton.odds), home: Number(homeButton.odds) });
+  }
+  return [...lines.values()].sort((left, right) => left.line - right.line || (left.favorite < right.favorite ? -1 : 1));
+}
+
 function parseStakeOfficialPage(html, fixture) {
   const { away, home } = stakeHomeAway(fixture && fixture.name);
   const $ = cheerio.load(String(html || ''));
@@ -235,7 +258,7 @@ function parseStakeOfficialPage(html, fixture) {
     };
   }
 
-  const handicapPair = balancedPair(pairedButtons($, marketAccordion($, 'Handicap (Incl. Overtime and Penalties)'))
+  const handicapPairs = pairedButtons($, marketAccordion($, 'Handicap (Incl. Overtime and Penalties)'))
     .map((pair) => ({
       first: { ...pair.first, line: lineNumber(`${pair.first.name} ${pair.first.aria}`) },
       second: { ...pair.second, line: lineNumber(`${pair.second.name} ${pair.second.aria}`) },
@@ -243,7 +266,10 @@ function parseStakeOfficialPage(html, fixture) {
     .filter((pair) => Number.isFinite(pair.first.line) && Number.isFinite(pair.second.line)
       && pair.first.line !== 0 && pair.second.line !== 0
       && Math.sign(pair.first.line) !== Math.sign(pair.second.line)
-      && Math.abs(pair.first.line) === Math.abs(pair.second.line)));
+      && Math.abs(pair.first.line) === Math.abs(pair.second.line));
+  const handicapPair = balancedPair(handicapPairs);
+  const hdLines = handicapLinesFromPairs(handicapPairs, away, home);
+  if (hdLines.length) result.hdLines = hdLines;
   if (handicapPair) {
     const line = Math.abs(handicapPair.first.line);
     const favSide = handicapPair.first.line < 0 ? 'home' : 'away';
@@ -395,6 +421,7 @@ async function collectStakeOdds(options) {
             combined[kind] = pageMarkets[kind];
           }
         }
+        if (pageMarkets.hdLines) { combined.hdLines = pageMarkets.hdLines; combined.hdLinesAt = observedAt; }
         markets = combined;
         sourceMode = sourceMode === 'official-api' ? 'hybrid' : 'official-page';
         pageSucceeded++;
@@ -415,6 +442,7 @@ async function collectStakeOdds(options) {
       if (!(current.startTime > now) || current.status === 'live') continue;
       const previousGame = repairStoredOrientation(games[current.slug], current.name);
       const merged = mergeStakeGame(previousGame, current, observedAt);
+      if (merged.hdLines && !merged.hdLinesOpen) merged.hdLinesOpen = { at: merged.hdLinesAt || observedAt, lines: merged.hdLines };
       games[current.slug] = withUiMarkets(merged, observedAt, sourceMode);
       succeeded++;
     } catch (error) {
