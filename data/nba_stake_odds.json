@@ -1,7 +1,7 @@
 {
  "schemaVersion": 1,
  "provider": "stake-official",
- "updated": "2026-11-14T03:44:13.272Z",
+ "updated": "2026-11-14T03:49:13.949Z",
  "health": {
   "preseason": {
    "status": "ok",
@@ -10,7 +10,7 @@
   },
   "regular": {
    "status": "ok",
-   "discovered": 7,
+   "discovered": 5,
    "failed": 0
   },
   "targeted": 1,
@@ -22523,19 +22523,23 @@
    "away": "活塞",
    "home": "熱火",
    "moneyline": {
-    "away": 1.53,
-    "home": 2.45
+    "away": 1.54,
+    "home": 2.44
    },
    "favorite": "away",
    "line": 4.5,
    "handicapOdds": {
-    "away": 1.85,
-    "home": 1.92
+    "away": 1.87,
+    "home": 1.91
    },
-   "total": null,
+   "total": {
+    "line": 225.5,
+    "over": 1.85,
+    "under": 1.92
+   },
    "sourceUrl": "https://stake.com/sports/basketball/usa/1794704400000-miami-heat-detroit-pistons",
    "officialId": "NBA_20261115_DET@MIA",
-   "observedAt": "2026-11-14T03:44:13.272Z",
+   "observedAt": "2026-11-14T03:49:13.949Z",
    "frozenAt": null,
    "history": [
     {
@@ -22551,6 +22555,24 @@
       "home": 1.92
      },
      "total": null
+    },
+    {
+     "observedAt": "2026-11-14T03:49:13.949Z",
+     "favorite": "away",
+     "line": 4.5,
+     "moneyline": {
+      "away": 1.54,
+      "home": 2.44
+     },
+     "handicapOdds": {
+      "away": 1.87,
+      "home": 1.91
+     },
+     "total": {
+      "line": 225.5,
+      "over": 1.85,
+      "under": 1.92
+     }
     }
    ]
   }
